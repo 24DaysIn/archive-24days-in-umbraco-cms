@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Turbo charging websites with PJAX</title>
+<meta name="description" content="Turbo charge website load times with PJAX, a JavaScript module that uses AJAX and pushState() to deliver a faster browsing experience.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Turbo charging websites with PJAX</h1>
+      <p class="byline"> by Tom Pipe, <span class="pubdate">posted on <time datetime="2015-12-23">Dec 23, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>PJAX?</h2>
+<p>No that's not a typo! PJAX is a combination of technologies, neatly combining the HTML5 History API (aka pushState) together with AJAX. It offers an almost effortless way to transform the user experience of a website. Reducing load time and making the site feel more like a native app, especially useful on mobile devices.</p>
+<h2>Why?</h2>
+<p class="intro">Consider a normal page load. A user clicks a link on a page and the browser requests the new page content from the server. When the server responds, the browser removes all the HTML that's needed to display the current page, and replaces it with all the HTML required to display that new page. </p>
+<p>It's highly probable that a large proportion of the HTML is similar/identical to the HTML used on the new page, <span>e</span><span>specially if the site is built using templated layout engines such as razor views or masterpages. Generally, the markup of h</span><span>eaders, footers and sidebars remain pretty consistent across pages and the content of resource files such as <span>fonts, CSS &amp; JS</span> change even less.</span></p>
+<p>So why ditch them only to reload them immediately? Reloading adds lag to the browser and can cause a flash as it redraws <span>and reinitialises </span>everything its just binned.</p>
+<p>If only there was an easy way to keep the layout and structure that's consistent between pages, and efficiently load just the markup that differs between pages...</p>
+<h2>PJAX to the rescue</h2>
+<p>PJAX will intercept a link click and instructs the browser to cancel the full page load. Instead, it <span>retrieves </span>the new content via a single AJAX request. This content (or a subset of it) is then injected into the DOM, and all markup that's consistent between pages is retained.</p>
+<p>Finally the URL in the address bar gets updated via pushState, giving the impression that the browser has navigated normally to the page, albeit much quicker, and with less of a flash.</p>
+<p>PJAX is also clever enough to test the browser's capabilities, and it will gracefully fall back to normal page loading techniques if it's not supported.</p>
+<h2>Try it</h2>
+<p>To demonstrate, I've set up two sites, both running the LocalGov starterkit. One has PJAX enabled, the other is as normal. <a href="http://pjaxdemo.tompipe.co.uk/wrap.html" target="_blank" title="Go take a look">Go take a look</a>, then return here to find out how to implement it. </p>
+<h2>Install</h2>
+<p>There appears to be a couple of versions of PJAX available online, <a href="https://github.com/defunkt/jquery-pjax" target="_blank" title="JQuery-Pjax">JQuery-Pjax</a> by defunkt and <a href="https://github.com/MoOx/pjax" title="pjax">pjax</a> by MoOx. There are subtle differences between them, but the big one is that one has a dependency on JQuery, which isn't everyone's cup of tea.</p>
+<p>I favour the MoOx version for various reasons, but mainly because it has inbuilt support for analytics.</p>
+<p>To install this version into your project via <a href="https://www.npmjs.com/" target="_blank" title="NPM">NPM</a>, open a command prompt and run:</p>
+<pre class="language-markup"><code>npm install pjax</code></pre>
+<p>Once that's installed, add the script to the head of your templates:</p>
+<pre class="language-markup"><code>&lt;script src="/node_modules/pjax/src/pjax.js"&gt;&lt;/script&gt;</code></pre>
+<h2>Configure</h2>
+<p>Now we need to instruct PJAX what elements to listen to clicks on, and what elements need their content swapping. In this simple example, I want PJAX to update the page title and swap the contents of the body.</p>
+<pre class="language-markup"><code>&lt;script&gt;
+  new Pjax(
+  { 
+    elements: "a",
+    selectors: ["title", "body"] 
+  })
+&lt;/script&gt;</code></pre>
+<p>And that's it! <span>PJAX will begin intercepting links and will swap the content of the body and title elements.</span></p>
+<p><img src="/archive/media/2015/simples2_1__1__1__359x159.jpg" width="359" height="159" alt="Simples2 1 1 1 "></p>
+<h2>Higher Octane</h2>
+<p>Although the above is the absolute minimum, we can go a little further to squeeze out every last drop of performance.</p>
+<p>The server is unaware of PJAX and will still deliver the entire page contents, yet we've told PJAX to only use the title and the body, everything else is thrown away.</p>
+<p>PJAX injects a HTTP header and adds a querystring parameter when it issues a request. With those we can differentiate a PJAX request from a standard request at the server side, and reduce the amount of unnecessary markup in the response. A simple way to check would be the following:</p>
+<pre class="language-markup"><code>public bool IsPjaxRequest
+{
+  get
+  {
+
+    var header = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
+    var query = Request.QueryString["pjax"] == "true";
+
+    return header &amp;&amp; query;
+  }
+}</code></pre>
+<p>We can then use conditional statements around elements which are unnecessary to PJAX, such as below:</p>
+<pre class="language-javascript"><code>@inherits PjaxDemo.App_Code.PjaxTemplatePage
+@using ClientDependency.Core.Mvc
+&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+
+@{
+    Layout = null;
+
+    if (IsPjaxRequest)
+    {
+        @RenderTitle()
+
+        @RenderBody()
+    }
+    else
+    {
+        Html.RequiresCss("~/css/bootstrap.min.css", 1);
+
+        Html.RequiresJs("~/scripts/jquery-1.11.3.min.js", 1);
+        Html.RequiresJs("~/scripts/bootstrap.min.js", 2);
+
+        &lt;head&gt;
+            &lt;meta charset="utf-8" /&gt;
+            &lt;meta name="viewport" content="width=device-width, initial-scale=1.0" /&gt;
+
+            @RenderTitle()
+
+            @Html.RenderCssHere()
+
+            &lt;!--[if lt IE 9]&gt;
+                &lt;script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"&gt;&lt;/script&gt;
+                &lt;script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"&gt;&lt;/script&gt;
+            &lt;![endif]--&gt;
+
+            &lt;script src="/node_modules/pjax/src/pjax.js"&gt;&lt;/script&gt;
+        &lt;/head&gt;
+        &lt;body&gt;
+            @RenderBody()
+            @Html.RenderJsHere()
+			&lt;script&gt;
+			
+			new Pjax( {selectors:  ["title", "#pjaxContainer"]});
+			
+            &lt;/script&gt;
+        &lt;/body&gt;
+    }
+}
+&lt;/html&gt;
+
+
+@helper RenderTitle()
+{
+    &lt;title&gt;
+        @Umbraco.Field("title")
+        @Umbraco.Field("siteName", recursive: true, insertBefore: " - ")
+    &lt;/title&gt;
+}</code></pre>
+<p>When the above content is requested via PJAX, we only output the title and body, skipping any of the CSS, JS and contents of the head, navigation and footers etc. </p>
+<p>With some thoughtful structuring of your templates, you can really minimise the amount of data returned. I've tried to keep this example simple, but I'm fond of using MVC's _ViewStart.cshtml to switch the Layout of a view to a PJAX friendly one. </p>
+<p>Reducing the response content makes a massive difference to the speed and goes a long way to making the site feel faster and much more like an app. It also reduces your (or your clients) bandwidth bill!</p>
+<h2>Advanced Use</h2>
+<p>I've kept it simple, but PJAX has a vast array of configuration options which are well documented on the github/npm pages. Probably the most important features to note are the events and support for analytics.</p>
+<p>Although this version of PJAX should trigger page view tracking in Google Analytics, other tracking scripts may cease to function. However, utilising the events that PJAX fires at various stages of the lifecycle you can easily get them working again. As always it's <span>imperative </span>to fully test your implementation.</p>
+<h2>Real world use</h2>
+<p>I've put PJAX into production on a couple of sites now, and it's had a fantastic result. My favourite by far is <a href="http://www.leedsbradfordairport.co.uk" target="_blank" title="www.leedsbradfordairport.co.uk">www.leedsbradfordairport.co.uk</a> it really lends itself well to the design of the site, and totally transforms the feel especially on a mobile device. Ironically, we had to implement a loading bar to provide feedback to users as the pages were loading too quickly! </p>
+<p>At the beginning of the year, I did some investigation into the performance of PJAX on the site. In the three months of data I analysed, I found that using PJAX had reduced the bandwidth by <strong>325GB </strong>or around <strong>30%, </strong>equating to well over <strong>1TB</strong> saved per annum. With some hosting providers, that could be quite a financial saving.</p>
+<p><span>Additionally</span>, there are less HTTP requests per visitor, so the server can support more simultaneous users, meaning less hardware is required.</p>
+<p>The most impressive statistic however, is the total amount of time saved just because the pages load faster with PJAX. In three months that totalled a massive <strong>367 hours! </strong>That's a lot of time saved for your visitors, and there's oodles of research to indicate that faster loading can increase conversion rate.</p>
+<h2>Conclusion</h2>
+<p>So that's PJAX. I hope you've enjoyed reading this, and that I've intrigued you enough for you to go try it for yourself. If so, you can get a copy of the demo site on my <a href="https://github.com/tompipe/24Days.PJAXDemo" target="_blank" title="github">github</a>, and feel free to hit me up with any questions or comments.</p>
+<p>Merry Christmas!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/app/" title="See all articles tagged with App">App</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/caching/" title="See all articles tagged with Caching">Caching</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/masterpages/" title="See all articles tagged with Masterpages">Masterpages</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/responsive/" title="See all articles tagged with Responsive">Responsive</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/templates/" title="See all articles tagged with Templates">Templates</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/webforms/" title="See all articles tagged with Webforms">Webforms</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Tom Pipe"><img src="//gravatar.com/avatar/993ea6de7ecded6a600722a5839d0ebd.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/993ea6de7ecded6a600722a5839d0ebd.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Tom Pipe</h1>
+        <p>Tom is on Twitter as <a href="//twitter.com/toepimp" title="Tom Pipe on Twitter" rel="author">@toepimp</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li class="selected"><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

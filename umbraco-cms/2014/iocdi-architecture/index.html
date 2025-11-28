@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Architecture based on IoC/DI for Umbraco package</title>
+<meta name="description" content="Using Inversion Of Control (IoC), Dependency Injection (DI) in an Umbraco MVC website/package and how it fits well with auto mapping of umbraco document type to view model.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Architecture based on IoC/DI for Umbraco packages</h1>
+      <p class="byline"> by Fabrice Loudet, <span class="pubdate">posted on <time datetime="2014-12-13">Dec 13, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>1) Introduction</h2>
+<p>This article is about using Inversion Of Control (IoC), Dependency Injection (DI) in an Umbraco MVC website and how it fits well with auto mapping of umbraco document type properties to view model.<br>We will see that this architecture fits very well with the creation of a custom Umbraco package where you need to extend or modify the core functionalities of the package without having to give the source code.<br><br>To fully understand this article, you need to have some basic notions about MVC in Umbraco and IoC/DI in general :<br><br>Doc about MVC in Umbraco : <br>- <a href="http://our.umbraco.org/documentation/Reference/Templating/Mvc/" target="_blank" title="http://our.umbraco.org/documentation/Reference/Templating/Mvc/">http://our.umbraco.org/documentation/Reference/Templating/Mvc/</a><br>Doc about IoC/DI with autofac : <br>- <a href="http://docs.autofac.org/en/latest/getting-started/index.html" target="_blank" title="http://docs.autofac.org/en/latest/getting-started/index.html">http://docs.autofac.org/en/latest/getting-started/index.html</a><br>- <a href="http://docs.autofac.org/en/latest/integration/mvc.html" target="_blank" title="http://docs.autofac.org/en/latest/integration/mvc.html">http://docs.autofac.org/en/latest/integration/mvc.html</a><br>Doc about getting started with Umbraco and autofac : <br> - <a href="http://our.umbraco.org/documentation/Reference/Mvc/using-ioc" target="_blank" title="http://our.umbraco.org/documentation/Reference/Mvc/using-ioc">http://our.umbraco.org/documentation/Reference/Mvc/using-ioc</a></p>
+<h2>2) Background</h2>
+<p class="intro">I'm a developer at <a href="http://www.novicell.dk/" target="_blank" title="www.novicell.dk">www.novicell.dk</a>. I have developed a Novicell internal Umbraco 6 package called "Novicell Event Module". <br>The package allows to create and manage event pages. You can signup for an event choosing options like "which session you want to participate" or "what kind of food you want at the event".<br>A custom section allows the client to manage the participants per event and export them to excel.</p>
+<p>Each time we sold the module, we encountered the same problem : the customer wanted to highly customize the behaviour, like adding a maximum of participants per event, send an email/sms reminder etc.<br>The architecture was not very flexible and we end up having to modify the source code per project in order to satisfy the needs.<br><br>I decided to rewrite the project entirely (together with the talented Mads Pedersen) for Umbraco 7 MVC with a more flexible architecture based on IoC, DI and auto-mapping of view models.</p>
+<p>This architecture provides a solution to extend the behaviours of the package without having to change the source code.</p>
+<p>The package is finally called <strong>uEvent</strong> and will be available as an Umbraco commercial package in February 2015.</p>
+<p>The package will come together with some extended DI classes (that add new functionalities to the package) available for free on Github.</p>
+<h2>3) Inversion of Control in an Umbraco MVC architecture.</h2>
+<p>In a "true" MVC Umbraco solution, you would have a custom Controller (umbraco hijacking routes) creating a View Model based on the current node properties and return this view model to a View.<br><br>So your controller classes should look something like :</p>
+<pre class="language-csharp"><code>// Custom controller to display the view
+public class DocTypeNameController : RenderMvcController 
+{
+    public override ActionResult Index(RenderModel model)
+    {
+	    MyViewModelClass myViewModel = BusinessHelper.CreateViewModel(model);
+        return CurrentTemplate(myViewModel);        
+    }	
+}
+
+// Custom controller for actions like post a form or render a Action Child view
+public class MySurfacteController : SurfaceController
+{
+	[HttpPost]
+    public ActionResult DoSomething(MyViewModelClass model)
+    {
+		if (!ModelState.IsValid)
+            return CurrentUmbracoPage();
+				
+	    BusinessHelper.DoSomeLogic(model);
+		
+		return to partial view or something else
+	}
+}</code></pre>
+<p>Even if the logic is encapsulated in a business layer (BusinessHelper in the example), there is no way for a user of these classes to change the logic. IoC/DI can solve this problem.<br><br>At first, we will execute the logic by an external "Service" class (IoC):</p>
+<pre class="language-csharp"><code>// Custom controller to display the view
+public class DocTypeNameController : RenderMvcController 
+{
+    private readonly IMyService _myService;
+
+    public UEventListController(IMyService theService)
+    {
+         _myService = theService;
+    }
+
+    public override ActionResult Index(RenderModel model)
+    {
+	    MyViewModelClass myViewModel = _myService.CreateViewModel(model);
+        return CurrentTemplate(myViewModel);        
+    }	
+}
+
+// Custom controller for actions like post a form
+public class MySurfacteController : SurfaceController
+{
+	private readonly ISurfaceMyService _myService;
+
+    public UEventListController(ISurfaceMyService theService)
+    {
+         _myService = theService;
+    }
+
+	[HttpPost]
+    public ActionResult DoSomething(MyViewModelClass model)
+    {
+		if (!ModelState.IsValid)
+                return CurrentUmbracoPage();
+				
+	    _myService.DoSomeLogic(model);
+		
+		return to partial view or something else
+	}
+}</code></pre>
+<p>In this case, the services are responsible to do all logics instead of the BusinessHelper in the controllers. <br>So if you create an instance of your controller with a different service, you can have a different/enhance behaviour for your page.<br><br>But how to "inject" a service into a controller ? That's where Dependency Injection comes into the picture...</p>
+<h2>4) Dependency Injection in Umbraco</h2>
+<p>We first had to choose a Dependency Injection Framework. There are lots available for .NET but we chose Autofac after reading this great reference article : <a href="http://our.umbraco.org/documentation/Reference/Mvc/using-ioc" target="_blank" title="http://our.umbraco.org/documentation/Reference/Mvc/using-ioc">http://our.umbraco.org/documentation/Reference/Mvc/using-ioc</a><br>This article explains in more detail what I wrote above and also explains how to use Autofac to inject a service class into a controller. I won't repeat the article more, please read it thraugh if you want more detail about it.<br><br>To install Autofac, just use nuget : <a href="https://www.nuget.org/packages/Autofac.Mvc4/" target="_blank" title="https://www.nuget.org/packages/Autofac.Mvc4/">https://www.nuget.org/packages/Autofac.Mvc4/</a><br><br>We will go a bit further in this chapter and explain how to use a config file to select which classes to inject.<br><br>The initialisation of Autofac is done in the OnApplicationStarted method. <br>In the official Umbraco reference article mentioned above, the implementation of the service/context that will execute the logic is hardcoded in OnApplicationStarted :<br><em>"builder.RegisterType&lt;MyAwesomeService&gt;();"</em><br>And the class MyAwesomeService, will be injected in all constructors that need it.<br><br>It would be more flexible to use a config file to define these classes. And it can be done very easily with Autofac by adding a config file path as parameter of the RegisterModule method.<br><br>Example of OnApplicationStarted :</p>
+<pre class="language-csharp"><code>public void OnApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+{
+	var builder = new ContainerBuilder();
+	
+	//register all controllers found in this assembly
+	builder.RegisterControllers(typeof(SomeClassInMyAssembly).Assembly);
+
+	// specify the config file here :
+	builder.RegisterModule(new XmlFileReader(HttpContext.Current.Server.MapPath("config/autofac.config")));
+	builder.RegisterModelBinderProvider();	
+	builder.RegisterApiControllers(typeof(UmbracoContext).Assembly);
+
+	// my custom section (the class the inherit from TreeController) stopped working after adding autofac and I found the solution here :
+	// http://our.umbraco.org/forum/getting-started/installing-umbraco/46674-U701-build-200-Failed-to-retrieve-data-for-application-tree-content
+	// see answer from Martin that point to http://blogs.msdn.com/b/roncain/archive/2012/07/16/dependency-injection-with-asp-net-web-api-and-autofac.aspx	
+	builder.RegisterAssemblyTypes(typeof(SomeClassInMyAssembly).Assembly).Where(t =&gt; !t.IsAbstract &amp;&amp; typeof(ApiController).IsAssignableFrom(t)).InstancePerMatchingLifetimeScope(AutofacWebApiDependencyResolver.ApiRequestTag);
+
+	IContainer container = builder.Build();
+	DependencyResolver.SetResolver(new AutofacDependencyResolver(container));
+}</code></pre>
+<p>Example of config file :</p>
+<pre class="language-markup"><code>&lt;autofac defaultAssembly="myProject.Library"&gt;
+  &lt;components&gt;        
+    &lt;!-- Service to map to View Model properties --&gt;
+    &lt;component type="myProject.Library.Services.MapService, myProject.Library" service="myProject.Library.Services.IMapService" /&gt;    
+    &lt;!-- Service to custom logic on post --&gt;
+    &lt;component type="myProject.Library.Services.CustomLogicOnPostService, myProject.Library" service="myProject.Library.Services.ICustomLogicOnPostService" /&gt;    
+    &lt;!-- View model to use --&gt;    
+    &lt;component type="myProject.Library.ViewModels.MyViewModel, myProject.Library" service="myProject.Library.ViewModels.IMyViewModel" /&gt;   
+  &lt;/components&gt;
+&lt;/autofac&gt;</code></pre>
+<p>As you can see, you can use dependency injection to specify the services that do some logic (myProject.Library.Services.MapService in the example) but also any kind of classes like which ViewModel class to use (myProject.Library.ViewModels.MyViewModel). <br>This is really useful when you add new property to your document type, you just need to inherit and extend the base view class (or interface) and if the service uses auto mapping, it will automatically map the extended node to the custom view model.<br><br>With this architecture, you can distribute an Umbraco package with some basic doc types and basic services, and the developers should be able to add new functionalities by extending the base classes/interfaces and register the new classes in the autofac.config<br><br>Example of Controller using the custom service and view :</p>
+<pre class="language-csharp"><code>public class DocTypeNameController : RenderMvcController
+{
+	private readonly IMyService _myService;
+
+    public UEventListController(IMyService theService) // "theService" is injected automatically by Autofac with the class specified in the autofac.config
+    {
+         _myService = theService;
+    }
+
+    public override ActionResult Index(RenderModel model)
+    {
+		// we get the view model configured in the autofac.config. You can use an interface or a class if some properties are mandatory.
+        IMyViewModelClass viewModel = DependencyResolver.Current.GetService&lt;IMyViewModel&gt;();            
+        
+		// we will speak later about how to do the Map method that will get all properties and init the view model
+		IMyViewModelClass mappedViewModel = eventListService.Map(viewModel, model.Content);		
+		
+        return CurrentTemplate(myAutoMappedViewModel);        
+    }	   
+}   </code></pre>
+<h2>5) Property mapping</h2>
+<p>The last step of our "architecture package" is to map the Umbraco properties (from the doc type) to our view model.<br><br>A first genuine way to implement the "Map" method would be:</p>
+<pre class="language-csharp"><code>public void Map(MyViewModelClass viewmodel, IPublishedContent node)  
+{	
+	viewmodel.Title = node.GetPropertyValue&lt;string&gt;("title");
+	etc...	
+}</code></pre>
+<p><br>If a developer using your package need to add a new document type property, (like "image"), he will have to :<br>1) Create an extended ViewModel with a <em>string ImagePath</em> property<br>2) Create an extended Service that get the <em>"image"</em> property from umbraco and put the image url into the ImagePath of the view model<br>3) Update the autofac.config to use these classes.<br><br>This works ok but for <strong>uEvent</strong> we wanted to simplify the process and have a Service that can automap the Umbraco properties to the View model in a flexible way.<br><br>There are plenty of great frameworks available in Umbraco to solve this problem, like :<br> - <a href="https://github.com/zpqrtbnk/Zbu.ModelsBuilder/wiki/Zbu.ModelsBuilder" target="_blank" title="https://github.com/zpqrtbnk/Zbu.ModelsBuilder/wiki/Zbu.ModelsBuilder">https://github.com/zpqrtbnk/Zbu.ModelsBuilder/wiki/Zbu.ModelsBuilder</a><br> - <a href="https://github.com/leekelleher/umbraco-ditto" target="_blank" title="https://github.com/leekelleher/umbraco-ditto">https://github.com/leekelleher/umbraco-ditto</a><br> - <a href="https://github.com/AndyButland/UmbracoMapper" target="_blank" title="https://github.com/AndyButland/UmbracoMapper">https://github.com/AndyButland/UmbracoMapper</a><br> - many more... <br><br>But we didn't want to add an extra dependency to <strong>uEvent</strong> and have more flexibility so we rewrite our own based on <em>.NET reflection</em>.<br><br>Our implementation of automapping is doing the following algorithm:<br><br>For each property of the view model do :</p>
+<ul>
+<li>Step 1 : try to find a method in the service that has the exact same name of the property and use it to init the view model property. =&gt; this allows great flexibility for custom mapping</li>
+</ul>
+<ul>
+<li>Step 2 : if no methods have been found in the service, use Umbraco GetPropertyValue method to do the mapping (that works even better in you have installed the great package <a href="http://our.umbraco.org/projects/developer-tools/umbraco-core-property-value-converters" target="_blank" title="http://our.umbraco.org/projects/developer-tools/umbraco-core-property-value-converters">http://our.umbraco.org/projects/developer-tools/umbraco-core-property-value-converters</a>)</li>
+</ul>
+<ul>
+<li>Step 3 : finally if we still can't map the property, we try to map with the IPublishedContent native properties like Name, Url, CreateDate etc...</li>
+</ul>
+<p><br>And we have developped the same mapper for the Archetype (but we use GetValue instead of GetPropertyValue for Step 2) as the "signup options" of each events are based on the great <a href="https://github.com/imulus/Archetype" target="_blank" title="https://github.com/imulus/Archetype">Archetype</a>. <br><br>I won't go further in the implementation on our automapping, if you want to know more about it, please contact Mads (mpe@novicell.dk) or me (flo@novicell.dk).<br>You can also get a extended version of our automapping that Mads Pedersen released on Github here : <a href="https://github.com/kalabakas1/UmbracoObjectMapping/tree/master/MyUmbraco7" target="_blank" title="https://github.com/kalabakas1/UmbracoObjectMapping/tree/master/MyUmbraco7">https://github.com/kalabakas1/UmbracoObjectMapping/tree/master/MyUmbraco7</a><br><br></p>
+<h2>Bonus:</h2>
+<p>If you are interested in strongly type view in MVC with hijacked route controller, I would recommend you to read :<br>- <a href="http://web-matters.blogspot.dk/2014/06/umbraco-mvc-and-strongly-typed-view.htm" target="_blank" title="http://web-matters.blogspot.dk/2014/06/umbraco-mvc-and-strongly-typed-view.htm">http://web-matters.blogspot.dk/2014/06/umbraco-mvc-and-strongly-typed-view.htm</a>l <br>- <a href="http://our.umbraco.org/projects/developer-tools/hybrid-framework-for-umbraco-v7" target="_blank" title="http://our.umbraco.org/projects/developer-tools/hybrid-framework-for-umbraco-v7">http://our.umbraco.org/projects/developer-tools/hybrid-framework-for-umbraco-v7</a><br><br></p>
+<p>If you have any questions or improvements, please write them in the comments.</p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Fabrice Loudet"><img src="//gravatar.com/avatar/2358c52dbfc2ba3ac161c577cc0abf48.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/2358c52dbfc2ba3ac161c577cc0abf48.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Fabrice Loudet</h1>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li class="selected"><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

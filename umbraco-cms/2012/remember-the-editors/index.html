@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco Back Office: Remember the Editors!</title>
+<meta name="description" content="This post will give you some pointers to how you can implement a more user friendly Umbraco Back Office for the Editors and the Webmaster using the CMS every day.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Remember the Editors!</h1>
+      <p class="byline"> by Kim Andersen, <span class="pubdate">posted on <time datetime="2012-12-13">Dec 13, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Hi there fellow Umbracians!</p>
+<p class="intro">My name is Kim Andersen and I'm from Denmark, working for <a href="http://www.nytcms.dk" target="_blank" title="Kraftvaerk">Kraftvaerk</a> in Aarhus as a frontend developer.</p>
+<p>In this post I'll be talking a bit about the back-office inside of Umbraco. Not about how to extend it or redesign it, but I'll be talking about how to give the editors and the webmasters a good experience. After all, they are the ones that are using Umbraco every single day.</p>
+<p>So you won't see a single line of code in this post, and maybe you won't even learn anything new. Still, I think that you should read along :)</p>
+<p>In my time working with Umbraco, I've seen a lot of implementations. A lot of good ones, but also a whole lot of bad ones.</p>
+<p>A typical implementation focuses 100% on the frontend of the website. The stuff that the end-users are seeing. Of course they are also the ones to please, as they are our clients' customers.</p>
+<p>Unfortunately, there's a lot of developers and consultants, that forgets the editors and the webmasters that are using Umbraco every day. The editors should have a good experience as well, otherwise they'll end up being frustrated and in the end they'll maybe talk bad about Umbraco. Either way, they will never ever recommend Umbraco to anyone again. And that's a shame if the reason is that they've had some bad experiences inside of the back-office, right?</p>
+<p>Actually, it doesn't take much effort to give the editors a good experience working with Umbraco. I'll say it's a combination of icons, descriptions and consistency. It's all about helping the editors as much as possible, and making sure that they can maintain and use their new CMS as easy as possible.</p>
+<h2>Icons and thumbnails</h2>
+<p>So, icons and thumbnails really helps the editors a lot - a whole lot! Those small icons can give the editors a nice and quick overview over their content, without thinking of every single page and document type.</p>
+<p>In a lot of those implementations that I have seen through the years, the most used icon must be that <span style="text-decoration: line-through;">damn</span> folder icon - The default icon for new document types in Umbraco. The folder icon doesn't help the editors a lot, especially not if it's the icon on most of the document types. So if we have a site with several different document types, and all of them are using the folder icon, no one, not even the folks that have implemented it, can get an overview over the content.</p>
+<p>Try to have a look at the following screenshot:</p>
+<figure>
+  <a href="/archive/media/2012/content_tree_icons_small.png">
+    <img src="/archive/media/2012/content_tree_icons_small.png" width="838" alt="See the difference?">
+  </a>
+  <figcaption>See the difference?</figcaption>
+</figure>
+<p>See what I'm talking about?</p>
+<p>I know that you might think that it sucks to spend time selecting and creating icons and thumbnails for every single document type, but there are actually a lot of free icons out there. For example you can install the <a href="http://our.umbraco.org/projects/developer-tools/famfamfam-icons" target="_blank" title="FamFamFam Icons package">"FamFamFam icons"-package</a> that gives you hundreds of free icons. That's a good starting point. The next step could be to <a href="http://www.iconfinder.com/" target="_blank" title="IconFinder">find an icon</a> or two and maybe combine those to a single icon, that symbolizes what content we're talking about on each single page type.</p>
+<h2>Descriptions</h2>
+<p>Descriptions on each property field and on each document type can also make a huge difference for the editors (and also for yourself when the customer suddenly needs help, new features etc. a year after the site was implemented).</p>
+<p>Again you might thing that it's a waste of time describing every field on all document types, but if you are just making it a natural part of creating a property, then it doesn't take you many seconds to describe a property. Since I began doing this, there's not a single property in any of the solutions that I've implemented that doesn't have a description. Not even a basic title field on a sub page.</p>
+<h2>Consistency</h2>
+<p>This part can be a challenge for even a very skilled and experienced Umbraco developer. When I say consistency, I mean the way that the different document types are built and structured. If it's possible, then try using the same property names and tab names on different document types, if the functionality is sort of the same.</p>
+<p>Create similar properties under the same tabs across document types, and sort them in the same order from document type to document type. That way the editors can easier find the fields they are looking for, instead of having to search around the different tabs for a property that's called one thing on one document type, but another thing on another document type.</p>
+<h2>Packages</h2>
+<p>I also want to mention a couple of packages for helping the editors even more.</p>
+<p>First off, I want to mention the <a href="http://our.umbraco.org/projects/backoffice-extensions/document-type-fieldsets" target="_blank" title="Document Type Fieldsets package">"Document Type Fieldsets"-package</a> by Tom Fulton. This package gives you the ability to group the properties under the different tabs, giving the editors a better overview of the properties under one single tab.</p>
+<p>Another package I want to mention is the <a href="http://our.umbraco.org/projects/backoffice-extensions/attackmonkey-tab-hider" target="_blank" title="Tab Hider package">"Attackmonkey Tab Hider"-package</a> by Tim Payne. This package can help you personalize the back-office for each user by hiding selected tabs from specific users. A very great package as well.</p>
+<h2>How about Belle?</h2>
+<p>As you have probably heard, the back office will be redesigned in project Belle. This will of course affect some of the things that I've talked about in this post, but the overall thoughts will still be the same; Help the editors, and make it as easy as possible for them to find the right nodes, navigate the back-office, maintaining their content etc.</p>
+<h2>Conclusion and your thoughts</h2>
+<p>In the end it's a benefit for all of us whenever a new great Umbraco solution is implemented, but on the other hand it can also be a problem for all of us whenever a bad Umbraco solution is implemented.</p>
+<p>I hope that you liked the post, and I would love to discuss the stuff that I've talked about, in the comments, so please give me your view on the topic. Do you think it's a waste of time? Are you already doing this stuff? Have I forgotten some important parts? Or do you have any other comments/questions, then please don't hesitate commenting below.</p>
+<p>Merry Christmas Everyone.</p>
+<p> </p>
+<h3>Some extra ressources:</h3>
+<p>Here's acouple of extra ressources mentioned in the comments:</p>
+<ul>
+<li><a href="/archive/media/2012/folder_categories.png" target="_blank" title="Categories folder-icon">Categories folder-icon</a></li>
+<li><a href="http://our.umbraco.org/projects/backoffice-extensions/icon-picker" target="_blank" title="Icon Picker package">Icon Picker package</a> - (have more than one icon for each document type)</li>
+<li><a href="http://our.umbraco.org/projects/backoffice-extensions/doctypemixins" target="_blank" title="DocTypeMixins package">DocTypeMixins package</a></li>
+</ul>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Kim Andersen"><img src="//gravatar.com/avatar/a5459066a5b2efc6328d3908e6624cac.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/a5459066a5b2efc6328d3908e6624cac.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Kim Andersen</h1>
+        <p>Kim is on Twitter as <a href="//twitter.com/kim_andersen" title="Kim Andersen on Twitter" rel="author">@kim_andersen</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li class="selected"><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

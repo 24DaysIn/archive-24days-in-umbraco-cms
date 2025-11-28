@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Make the Friendliest Umbraco Backoffice</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Friendly Backoffice</h1>
+      <p class="byline"> by Janae Cram, <span class="pubdate">posted on <time datetime="2016-12-13">Dec 13, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Why do we call Umbraco the “Friendliest CMS”? I’m sure you have your own reasons for it, but I thought I’d start by sharing a couple of mine.</p>
+<p class="intro">The friendships that I’ve built over the years are the first thing that come to mind. Whether it’s co-workers at old jobs or my current one, people I’ve met at conferences, or drawn out twitter conversations, I have relationships - genuine relationships - with other Umbracians. I’m sure (I hope) that many of you can say the same.</p>
+<p>There’s also a sense of helpfulness and sincerity from the people I don’t know - slack responses to questions, chatter on the forums, and of course the ever prominent #h5yr to make me feel good about my successes. And when I’m struggling with something and throw out a desperate tweet, having a patch file sent to me when it’s late in another time zone warms my heart because it says something special - whether or not someone knows me, they care about my struggles.</p>
+<p>Friendship and helpfulness, as a start, are things we <em>know</em> but they’re also so intangible, aren’t they? How do you take relationships and feelings and share them in the back office, to someone you’ve possibly never met? How do you make them feel comfortable and welcome, like they’re having a conversation with you, and like you are there to help them even when you’re not likely accessing their copy of Umbraco when they are? I'm (very) fortunate to work with an awesome team at <a href="http://www.offroadcode.com" target="_blank" title="Check out our super awesome team!">Offroadcode</a> that takes time to put together friendly editor experiences and have also graciously allowed me to use a current dev site to share some of our tips and tricks:</p>
+<h2>The Built-In “Basics”</h2>
+<p>All right, let’s begin with what Umbraco already has. No packages, no custom code, nothing. Just you, a fresh install, and a login, ready to make someone’s life more pleasant. You know how to make a DocType (If you don’t, <a href="https://our.umbraco.org/documentation/tutorials/creating-basic-site/document-types">start here</a>!), but how do you take it up a notch?</p>
+<h3>1. Start with the (DocType and Property) Name</h3>
+<p>We tend to name our DocTypes (and by extension their properties) in “Developerese”. Sometimes, that matches “My Language”. Sometimes, it’s something like “pageNode”. For a content editor, what <em>is</em> a node? A lot I’ve asked don’t understand. And what’s the difference between a node and a page? They’re technically both the same, but we tend to use different terminology depending on what our code does. Our editors don’t care about the code; they just want to easily add new content.</p>
+<p>Your page name matters. It’s the first thing they see when they’re attempting to create a new page, and likely the prominent thing they’re looking for. Your property names matter, too - especially if you’re using some of the built in ones such as umbracoNaviHide. No one - except us - knows what that is.</p>
+<p>Giving your DocTypes and properties names that are readable to another non-developer human being is step one. And hey, if pageNode make more sense to you in your code, that’s A-OK. You can have your page/property name and your alias be two different things with a little bit of hands-on auditing (just click the little lock button by the alias and change it to your heart’s content). Personally, that confuses me like crazy, so I like to make them match.</p>
+<h3>2. Icons, Icons, Icons</h3>
+<p>I work in an Agile environment, which means lots of constant updates, lots of deadlines, and a fast-paced coding workplace that keeps me on my toes. That also means, sometimes there isn’t a lot of time, and the little things tend to go first. Don’t let icons be one of those things. It’s really easy to say “I don’t have time futzing with finding one that fits this page, I’m going to let it be a folder”.</p>
+<p><em>Don’t. </em></p>
+<p>Take the time. Think of that icon as a precious little gift that you’re passing to your editors, and long-term, to yourself. Because in six months, a year, two, when you come back to that site to make an edit related to a specific DocType and you’re looking for it in the content tree, a mass of folders isn’t going to help you pick it out in the possibly thousands of nodes any more than it helps them.</p>
+<p>Luckily, in a world of “so much to do, so little time”, there are resources to help (Don’t worry, still just “raw Umbraco” here), such as this <a href="http://nicbell.github.io/ucreate/icons.html">built-in icon list</a> by nicbell on GitHub. It’s a bookmarked resource I use all the time for both browsing and searching, and I hope it speeds things up for you, too.</p>
+<p><em>Pro Tip: Using colors on your icons separates sections of the website and helps really reinforce clarity. It’s okay if it feels like a rainbow. If your editors know “I always change _____ in the orange section”, that’s friendly! And hey, rainbows are friendly, too ;)</em></p>
+<h3>3. Description All the Things!</h3>
+<p>Ah, descriptions. My favorite thing and even more time-consuming than icons. There’s a lot I can say about descriptions, primarily about reasons people have for not writing them, but the one I’m going to mention on the list I’ve heard is this: “It doesn’t need a description because the DocType/property name says enough”.</p>
+<p><em>Bzzzzt. Wrong!</em></p>
+<p>Okay, maybe in some cases it <em>is</em> enough. But there are a lot of things you can say in your descriptions that help. Almost all websites have SEO fields, so let’s use that as an example. Your editor might, if they’ve been doing this for a while, know what a Page Title, Meta Description, and Meta Keywords are for, but if they’re new, they’re probably Googling (All the Things!). Telling them that the Page Title is used in the tab, what size a Meta Description should be and how it should be written, and about how many SEO-standard recommended keywords is a great start. It helps them, even if they could have figured it out themselves. And, if you’re helpful… that’s right, you’re friendly :)</p>
+<p><img style="width: 787px; height: 420px;" src="/archive/media/2016/seodescriptiontext.jpeg?width=787&amp;height=420" alt="Shows an example of a page title, meta description, and meta keywords field with their descriptions filled in" rel="1427" data-id="1427"></p>
+<p><em>Pro Tip: See the friendly smiley face I just used? Don’t be afraid of using emoticons and cheerful text in your descriptions. I like to tell editors things like this on a media picker: “Upload a REALLY REALLY big image! It’s okay, don’t worry, we’ll resize and crop it for you :)” It’s friendly, and it tells them the sizes they need.</em></p>
+<h3>4. Open Up and Lock Down</h3>
+<p>This one is really quick. Structure and boundaries help keep things clear. If we could do everything, we would, and therefore, we’d probably break everything! When you’re setting up DocTypes, it’s a great idea to lock down where pages can be made in the tree structure. If a page should (by the code) only display in one section of the site, only let your editors make it in that section.</p>
+<p>Also, if a page should only exist once, such as search results, open it up, make it, and then turn it back off so they can’t make another.</p>
+<h2>Beyond the Basics</h2>
+<p>All right, now that we’ve gotten those out of the way, there are a few final tips (and package recommendations) I have for making your site really friendly.</p>
+<h3>1. Custom Property Editors</h3>
+<p>If I had all the time in the world, I would make custom property editors for almost every property in the back office, except where I used other people’s property editors. Even a small custom textbox can go a long way to giving your editors a cohesive experience. For me, realism dictates that I often don’t have time or the budget to do them, so I make them when I can and save them for future projects. In the meantime, these are some of my most-used property editor installs on any given site:</p>
+<ul>
+<li><a href="https://our.umbraco.org/projects/backoffice-extensions/link-picker/">Link Picker</a>: Rather than having a content picker, a media picker and a fall-back to an outside link as separate fields, the link picker gives you the ability to select any of these. This is especially useful for when your users might wish to link to a PDF document, another page, or a resource off-site.</li>
+<li><a href="https://our.umbraco.org/projects/backoffice-extensions/nested-content/">Nested Content</a>: There are so many sites I’ve worked on where a user could upload a list of images with a description and there were 20 fields on the site with properties such as image1, image1Text, image1Link, image2, image2Text, image2Link. That’s only one example. Nested content is a great way to add lists of content inside a page without it being unwieldy and unusable.</li>
+<li><a href="https://our.umbraco.org/projects/backoffice-extensions/nupickers/">nuPickers</a>: nuPickers is fantastic for so many reasons (as it has so many different pickers!), but I have two particular reasons I love it. First, the relations picker. It’s easy to set up, and lets you select related content (as an example, a product with related products that aren’t always in the same category) and have those then be selected on the other products without forcing your editor to go to each one and select the same related items. Second is the ability to have macro labels for checkbox lists. I recently added a custom one to a project and displaying an image, the page name, and the short description of the page really helps show the user exactly what content they’re selecting on a huge site. It’s so much more useful than a checklist of names.</li>
+<li><a href="https://our.umbraco.org/projects/website-utilities/faq-listing/">FAQ Listing</a>: A package I helped write at Offroadcode, I use this whenever I have an FAQ on the site. It gets rid of the need to have nested nodes. I could have used Nested Content, but I wanted my own customizations for it ;)</li>
+<li><a href="https://our.umbraco.org/projects/website-utilities/content-picker-with-preview/">Content Picker with Preview</a>: Another custom editor I helped write for Offroadcode, this is similar to nuPickers except that it works with the content picker rather than a checkbox/radio list, so you only see the content items you’ve selected rather than the entire list of items. It’s customizable to allow you to set what fields you want to display in your preview, which again helps editors know what they’re looking at with more than just a page name.</li>
+</ul>
+<p>If you want to get started writing your own, definitely check out Maria's helpful tutorial was published on <a href="http://24days.in/umbraco-cms/2016/custom-property-editor-tutorial/" target="_blank" title="Writing Custom Property Editor for Newbies">Day 5</a>!</p>
+<h3>2. uEditorNotes</h3>
+<p>Sometimes, content requires more of a description than what you put on it in the field. Sometimes, you want to describe a whole section of the website to give your editors some more information on it. uEditorNotes is a fantastic package for this, especially when you have a Settings tab on the home page, a Settings node, and a Settings section in Umbraco… having your editors remember which settings they’re editing is a bit much. It’s also great for flagging content with important reminders as to why you might need your users to fill in a mandatory field.</p>
+<p><img style="width: 899px; height: 518px;" src="/archive/media/2016/ueditornotes.jpeg?width=899&amp;height=518" alt="A screenshot of uEditorNotes on one of Offroadcode's current in-dev sites." rel="1428" data-id="1428"></p>
+<h3>3. Custom List Views</h3>
+<p>Before I talk about custom list views, I want to say I don’t actually use list views often. I love them, and I wish I could love them even more, but I find that they can be frustrating for editors that need to use a content picker or multinode treepicker in the section of the website that the list view is in, since the content won’t display in them and they have to search to find it. So… I <em>only</em> use list views on parts of the site I know won’t need to be picked with other content.</p>
+<p>However, if you are using a list view, customizing them is a great way to give your users an enhanced experience with a small amount of code. How to do it is a whole article in itself (like the one Mads wrote for <a href="http://24days.in/umbraco-cms/2016/custom-list-view-layouts/" target="_blank" title="Enhance the editor experience with custom list view layouts">Day 6</a>!), but I recently learned it at my last <a href="https://umbraco.com/products-and-support/training/extending-the-umbraco-backoffice/">Umbraco training on extending the back office</a>, and it was a lot simpler than I expected - almost all HTML and CSS! Take a play with making one if you get a chance.</p>
+<h3>4. Custom Dashboards</h3>
+<p>The last tip I can give is that some sites, especially large sites, is that <a href="https://our.umbraco.org/documentation/extending/dashboards/">creating a custom dashboard</a> (If we’re using the “Settings” example from my uEditorNotes point, perhaps something with cards and directions to each of their settings?) is a great way to add that final bit of flare. Whether it’s just some links to specific sections of the content with information and a bit of CSS to jazz it up or giving a whole new section with <a href="https://our.umbraco.org/projects/backoffice-extensions/analytics/">Google Analytics</a> so they don’t have to leave the website to get that data, building a custom dashboard is what I consider to be the “final bit of friendliness” that can really make your user feel at home on their site :)</p>
+<h2>Bring it All Together</h2>
+<p>As you can see, there are a multitude of ways that you can add friendliness to your backoffice. With an unending amount of budget, time, and perseverance, you could probably even do all of them! That’s definitely my eventual goal ;)</p>
+<p>I really believe the best way to relay to our clients, customers, and often the content editors we never even meet when working on a project, that Umbraco is the friendliest CMS is to give them the friendliest back office possible, starting with the basics, and adding as much on as we can from there.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Janae Cram"><img src="//gravatar.com/avatar/6b3a72763245101db78a6b0781c7a68e.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/6b3a72763245101db78a6b0781c7a68e.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Janae Cram</h1>
+        <p>Janae is on Twitter as <a href="//twitter.com/naepalm" title="Janae Cram on Twitter" rel="author">@naepalm</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

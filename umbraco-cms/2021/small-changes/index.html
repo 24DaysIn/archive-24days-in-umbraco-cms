@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>How small changes can make a world of difference</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Small Changes</h1>
+      <p class="byline"> by Patrick Mooij, <span class="pubdate">posted on <time datetime="2021-12-08">Dec 8, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Today I would like to take you on a tour. A tour through some functionalities that you probably hadn't even thought about in Umbraco. Some small changes in the backoffice that probably seemed commonplace, but that haven't been there all that time. When you look at the updates, you'll probably look at the big changes, changes like "Tabs returning!" and "Performance increased by some magical code that I have no idea about". And those changes are indeed very important, but equally important are the smaller changes that can also have a big impact on the way that you use Umbraco.</p>
+<p class="intro"> </p>
+<h2>What sort of changes are we talking about?</h2>
+<p>These small changes could be in anything that you are using. It can range from something in the documentation to something in the core code of Umbraco. You probably won't notice them as quickly as you would see them as commonplace, something that just makes sense to you. Now, let's take a look at some of those changes.</p>
+<h3>The backoffice</h3>
+<p>The backoffice is something that you will spend a lot of time in if you are a developer or a content editor. So you'll want this experience to be great and easy. Especially for new clients, as they usually won't remember something small that helps, but they will surely remember any inconvenience that they experience in the backoffice.</p>
+<p><img style="width: 500px; height: 242.105px;" src="/archive/media/2021/example9812.png?width=500&amp;height=242.1052631578947" alt="" data-udi="umb://media/d36d1be64ba642c39cc52df1cd8b0fa6"></p>
+<p>If we for example look at <a href="https://github.com/umbraco/Umbraco-CMS/pull/9812">this change</a> where the location of the control label is moved to the top instead of the left side for infinite editing. This makes the interface feel a lot cleaner and also gives the user more space for their content.</p>
+<p>And this with only 10 lines changed. You can see the new lines in the code snippet below. I have to admit that I hadn't even realized that this has been added in 8.13. I thought that this has been part of Umbraco ever since the infinite editors had been added.</p>
+<pre><code class="language-less">&amp;--small .umb-property {
+    .control-header {
+        float: none;
+        width: 100%;
+    }
+
+    .controls {
+        margin-left: 0;
+    }
+}</code></pre>
+<p>Some of the small changes that can have a big impact are aligning parts of the backoffice with other parts of the backoffice. It removes duplicate code/markup and makes it easier for users to understand concepts across the backoffice. These changes are usually easy to make as you're basically using code/markup from another place on the website. Some examples of this are:</p>
+<p><a href="https://github.com/umbraco/Umbraco-CMS/pull/9193"><strong>Aligning the search bar for the media picker</strong></a></p>
+<p>In this PR, the search bar markup for the media picker has been replaced by the newest search bar markup using the <em>&lt;umb-search-filter&gt; </em>directive within Umbraco.</p>
+<p><img style="width: 500px; height: 242.1335379892556px;" src="/archive/media/2021/9193.png?width=500&amp;height=242.1335379892556" alt="" data-udi="umb://media/585d2be06f5a47a3a1504c35ae82f52e"></p>
+<p><a href="https://github.com/umbraco/Umbraco-CMS/pull/11352"><strong>Aligning the create/cancel buttons for each create side modal</strong></a></p>
+<p>This PR aligns all the create buttons within modals to the bottom of the modal and also adds cancel buttons for each of them. So now you are able to click on a cancel button when creating a dictionary item.</p>
+<p><img style="width: 500px; height: 146.08555286521388px;" src="/archive/media/2021/11352.png?width=500&amp;height=146.08555286521388" alt="" data-udi="umb://media/fb6f5c4a90b2463f89fd162fe304b35b"></p>
+<p><a href="https://github.com/umbraco/Umbraco-CMS/pull/8739"><strong>Creating a warning overlay for deleting a user from a group</strong></a></p>
+<p>This PR adds a small warning overlay whenever you delete a user from a group. Before this, it would immediately remove the user from the given group.</p>
+<p><strong><img style="width: 500px; height: 304.61811722912967px;" src="/archive/media/2021/8739.gif?width=500&amp;height=304.61811722912967" alt="" data-udi="umb://media/da7b3d1322214649a01c3db7800f3dbf"></strong></p>
+<p> </p>
+<p>And one other change or category of changes that I would like to talk about: Accessibility. These small changes can have a huge impact on the experience of users, especially users with a screen reader. These can be small changes like making sure that the <a href="https://github.com/umbraco/Umbraco-CMS/pull/10455">HTML is valid</a> or allowing screen readers <a href="https://github.com/umbraco/Umbraco-CMS/pull/10541">to better identify parts of the page</a>. My favorite changes here are anything to do with focusing on various elements. Autofocusing on elements when creating/updating items is just so handy and makes editing so much easier.</p>
+<p> </p>
+<h3>The source code</h3>
+<p>The backoffice isn't the only place where small changes can have big impacts. As developers, we write a lot of code, so including some methods in the source code that can help our programming can have a big impact on us. But what sort of changes could we be looking for then?</p>
+<p>One of the easier changes is to create an extension method for a certain piece of code. An example is <a href="https://github.com/umbraco/Umbraco-CMS/pull/10589">this piece of code</a> created by Callum. Instead of having to remember a difficult syntax to register code, he opted to create an extension for it with a friendly and easy-to-remember function name. Extension methods can provide programmers with a friendly and easy way to program functionalities.</p>
+<pre><code class="language-csharp">//Before
+builder.WithCollectionBuilder&lt;MapDefinitionCollectionBuilder&gt;().Add&lt;MyMapDefinition&gt;();
+
+//After
+builder.MapDefinitions().Add&lt;MyMapDefinition&gt;();</code></pre>
+<p>But there are a lot of other ways to contribute to the source code as well. Anything that makes code easier to write is a win in my books. A good example is <a href="https://github.com/umbraco/Umbraco-CMS/pull/10810">this PR</a> with the following change:</p>
+<p><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/fa9044f19ed1422f8c4331e1ab5a565a"><img style="width: 500px; height: 172.66591676040497px;" src="/archive/media/2021/10810.png?width=500&amp;height=172.66591676040497" alt="" data-udi="umb://media/9129ecaca53f404e95c9e7a4a6fd0ce2"></p>
+<p>This change is very small. But because of this change, it is much easier to debug your code as it'll show more relevant information to you right away. And maybe there are other places in the source code where this would be very handy. By just adding the attribute to the class, you're potentially making debugging a lot easier for a lot of people. A small change can really make a world of difference.</p>
+<p> </p>
+<h3>Documentation</h3>
+<p>And then we also have documentation. You might think that this is not that important, but don't we all have that moment where we are like "I wish I had documentation about how this works"? There is also the possibility that there is an error in the documentation, something that can easily make working with Umbraco a lot more difficult.</p>
+<p>Let's start with the "I wish I had documentation about how this works" documentation. I think there are a lot of developers that do not enjoy writing documentation, but writing it for Umbraco will help so many people around the world. Your documentation could be the reason that they enjoy Umbraco and start using it a lot more. And writing documentation doesn't have to take a lot of time. You could improve a bit on the current documentation. Maybe add some nice examples for people to play with and get their head around the functionality. Because small changes also matter for the documentation.</p>
+<p>And speaking of small changes. Fixing errors in the documentation is also very important. We don't want someone to spend a whole day following the documentation only to figure out that there was an error somewhere in the middle. Fixing just a line of code in a code snippet can have a huge impact on how people perceive Umbraco.</p>
+<p> </p>
+<h2>Getting motivated?</h2>
+<p>I hope that I've been able to get you motivated so far and I hope that I've gotten you interested in contributing. Luckily, there are a lot of resources that'll help you get started.</p>
+<p>If you want to contribute to the backoffice or the source code, then <a href="https://github.com/umbraco/Umbraco-CMS/blob/v9/contrib/.github/CONTRIBUTING.md">this guide</a> will be able to help you get started. There is also <a href="https://www.youtube.com/watch?v=IoFTTn8Pnfs" data-anchor="?v=IoFTTn8Pnfs">this amazing video</a> by Paul Seal &amp; Sebastiaan Janssen highlighting every part of contributing to the backoffice. H5YR to them!</p>
+<p>Contributing to the documentation is a bit easier to get started with as each page is done as a markdown file within the Github repository. There are however some special things that you need to know about like how to work with different versions, but if you are editing an existing page then you won't have to keep that in mind. Umbraco has also done an amazing job explaining how to get started with <a href="https://our.umbraco.com/documentation/Contribute/">this guide.</a></p>
+<p> </p>
+<p>Last, of all don't be scared to try and contribute. Contributing small changes doesn't only make the Umbraco project better, but it also allows you to get experience with the project. Don't expect to be able to learn all of the inner logic of Umbraco, because I don't think anyone really has that logic. Being able to say "I see why this is happening" or "Not quite sure why this is happening, but I can quickly jump in the Umbraco source code and find out why" are very valuable skills to have when developing applications in Umbraco. </p>
+<p>While I am not in charge of the Umbraco source code in any way, I am available if you have any questions or just want to talk about Umbraco-related stuff. You can reach me on my <a href="https://twitter.com/PatrickMooi9">Twitter</a>. Always great to learn new people in the world of Umbraco. And I want to give a big H5YR to everyone making contributions to the Umbraco world.</p>
+<p>Now... Let's go out and make Umbraco even better by a single small change at the time.</p>
+<p>Happy coding!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/github/" title="See all articles tagged with GitHub">GitHub</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Patrick de Mooij"><img src="//gravatar.com/avatar/dc3e5a5ea4d67f4fcd51df504c3fdfb2.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/dc3e5a5ea4d67f4fcd51df504c3fdfb2.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Patrick de Mooij</h1>
+        <p>Patrick is on Twitter as <a href="//twitter.com/PatrickMooi9" title="Patrick de Mooij on Twitter" rel="author">@PatrickMooi9</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Your first pull request</title>
+<meta name="description" content="A walkthrough of the steps to fix an issue in Umbraco. Fork, branch, commit, pull!">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Your first pull request</h1>
+      <p class="byline"> by Sebastiaan Janssen, <span class="pubdate">posted on <time datetime="2014-12-04">Dec 4, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">So <a href="https://twitter.com/andybutland">Andy</a> took all of us on <a href="/umbraco-cms/2014/traveller-guide/">a tour through the Umbraco codebase</a>, but how would you proceed from that to actually sending a pull request to the core? Let me show you. There's a summary at the bottom of this post, so scroll down if you don't like reading all those pesky words.</p>
+<h3>Pick</h3>
+<p class="intro">For this example I wanted to get a quick win and went to the issue tracker and found all of the issues that were marked as "<a href="http://issues.umbraco.org/issues/U4?q=project%3A+%7BU4%7D+Difficulty%3A+%7BVery+Easy%7D+%23Easy+%23Unresolved+Priority%3A+Normal+%23Major+%23Show-stopper+State%3A+-%7BIn+Progress%7D+sort+by%3A+votes+">(very) easy</a>" and found an excellent issue about some <a href="http://issues.umbraco.org/issue/U4-5834">confusion around changing your password</a>. I know how to fix that! It's "just" words!</p>
+<p>If you're also thinking about helping out, it would be good to scroll through the (very) easy issues and see if there's something you think you can do. Most people who contribute want to see their favourite issue fixed though, which is awesome, feel free to pick any issue you want! The world is your oister etc., etc.</p>
+<p>If you do pick an issue that's a new feature or requires quite a large change to the code, it would be good if you discussed your intentions on <a href="https://groups.google.com/forum/?utm_medium=email&amp;utm_source=footer#!forum/umbraco-dev">the dev mailinglist</a> first, just to make sure you're not wasting your precious time on things that the Umbraco core team wants to fix in a completely different way than you're thinking of right now. Most of the time a little message goes a long way and people will chip in with fantastic ideas that you might not even have thought about in the first place. Free inspiration, what more could you wish for?!</p>
+<h3>Fork</h3>
+<p>Once you've decided on an issue you want to tackle, the first thing you'll want to do is fork the <a href="https://github.com/umbraco/Umbraco-CMS">Umbraco core on GitHub</a>.</p>
+<p style="text-align: center;"><img src="/archive/media/2014/2014_12_02_210431.png" width="430" height="105"></p>
+<p>Hitting the Fork button will create a copy of all of the Umbraco source code into your GitHub account. As an added bonus: If Umbraco ever disappears, you now have a copy of all of the code so you don't have to fear you'll ever lose any of that CMS goodness.</p>
+<h3>Branch</h3>
+<p>Tip: After forking, create a new branch with the issue number you're fixing.</p>
+<p style="text-align: center;"><img src="/archive/media/2014/2014_12_03_081336.png" width="444" height="275" alt="2014-12-03_081336"></p>
+<h3>Clone</h3>
+<p><img src="/archive/media/2014/2014_12_02_210734.png" width="193" height="174" alt="2014-12-02_210734" style="float: right; padding-left: 5px; padding-bottom: 5px;">Now you can clone the source to your local machine, GitHub makes this easy for you and you can click the appropriate buttons here, there's options for whatever you like doing.</p>
+<p>Bonus tip: if you're fixing something simple like a spelling mistake then you can just dig into the file structure online, find the file you want to edit and click the pencil icon to edit directly from your browser, no cloning required.</p>
+<p>Let's assume you've chosen to clone the repository to your local machine. You can now switch to the branch you created so that all of the work on this issue is done in its own branch. When you at a later point want to work on a different issue you can make another branch for that and isolate the work on that issue in the separate branch.</p>
+<p style="text-align: center;"><img src="/archive/media/2014/2014_12_03_082128.png" width="443" height="225" alt="2014-12-03_082128"></p>
+<h3>Build</h3>
+<p>The first time you do this, you should try to build the code. The very easiest way to make sure you have all the required dependencies set up is to go into the build folder and run build.bat.</p>
+<p>This batch file is quite amazing: It will set up all of the stuff you'll need to build Umbraco, from <em>node.js</em> to <em>grunt</em> to <em>bower</em>. It will even ask you to do an install of <em>git,</em> if you happen to not have it on your machine already.</p>
+<p>The build should finish without errors after that and if it does, you can be certain that then you can also perform a build successfully in Visual Studio, should you need to alter code. So: run build.bat and the VS build will certainly succeed after that.</p>
+<h3>Fix</h3>
+<p>We're almost there now. Your build is succeeding and you can confidently start making changes, verify the build still succeeds and start committing code to your fork!</p>
+<p>So in this case, you might want to change the text displayed on the "change password" dashboard. You happen to know the text is in:</p>
+<pre>src\Umbraco.Web.UI.Client\src\views\dashboard\ChangePassword.html</pre>
+<p>You can make your changes there and commit them to your fork using your favorite Git client.</p>
+<p style="text-align: center;"><img src="/archive/media/2014/2014_12_02_212415_496x305.jpg" width="496" height="305" alt="2014-12-02_212415"></p>
+<h3>Pull request</h3>
+<p>After committing and pushing the change you can then go back to your fork on GitHub and you should see the ability to create a pull request for the fix you just made.</p>
+<p style="text-align: center;"><img src="/archive/media/2014/2014_12_02_213738_499x53.jpg" width="499" height="53" alt="2014-12-02_213738"></p>
+<p>After clicking the shiny green button you see the changes you made and you can hit the green button again to tell the core team what you did and why. Make sure to refer to an issue on the issue tracker so that the issue can eventually be marked as fixed.</p>
+<p style="text-align: center;"><img src="/archive/media/2014/2014_12_02_214002_497x310.jpg" width="497" height="310" alt="2014-12-02_214002"></p>
+<h3>Converse</h3>
+<p>It is then up to the Umbraco core team to evaluate your fix. They might encourage you to change some things before the pull request can be accepted into the core of Umbraco, so make sure to follow <a href="http://our.umbraco.org/contribute">the guidelines as detailed</a> on the contribution pages.</p>
+<p>Not to worry though, this is the best phase! Opening a pull request is starting a conversation about the thing that you would love to be fixed and the core team loves to engage in these conversations.</p>
+<p>If all is well then your pull request will be accepted and your commit will forever be part of the Umbraco core code. So when I accepted <a href="https://twitter.com/therealbatjan">Jan</a>'s pull request, this is what happened: </p>
+<p style="text-align: center;"><img src="/archive/media/2014/1yeq8.gif" width="360" height="202" alt="1yeq8"></p>
+<p><span><span>And having a pull request accepted feels a little bit like this, </span><strong>each time</strong><span>! </span>Some contributors get very addicted after this happens for the first time, so be warned.. ;)</span></p>
+<h3>Summary</h3>
+<ol>
+<li>Find an itch to scratch (an issue you want fixed)</li>
+<li>Fork the Umbraco repository on GitHub</li>
+<li>Run build.bat to make sure all the dependencies you need are there</li>
+<li>Implement your changes</li>
+<li>Commit your changes and push them back to your fork on GitHub</li>
+<li>Create a pull request on GitHub by clicking the shiny green button</li>
+<li>Pray (or if you're not religious just have a bit of patience until the core team can evaluate your changes)</li>
+<li>Optionally: <strong>win the Pull Request of the year award</strong> at next year's CodeGarden like <a href="https://twitter.com/andybutland">Andy Butland</a> below!</li>
+</ol>
+<p style="text-align: center;"><img src="/archive/media/2014/2014_12_02_215155_498x335.jpg" width="498" height="335" alt="2014-12-02_215155"></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/community/" title="See all articles tagged with Community">Community</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/contribution/" title="See all articles tagged with Contribution">Contribution</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/git/" title="See all articles tagged with Git">Git</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/github/" title="See all articles tagged with GitHub">GitHub</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/source/" title="See all articles tagged with Source">Source</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Sebastiaan Janssen"><img src="//gravatar.com/avatar/aca60d34370bea605a948095e06c6f7f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/aca60d34370bea605a948095e06c6f7f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Sebastiaan Janssen</h1>
+        <p>Sebastiaan is on Twitter as <a href="//twitter.com/cultiv" title="Sebastiaan Janssen on Twitter" rel="author">@cultiv</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li class="selected"><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>How DRY should you be?</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">How DRY should you be?</h1>
+      <p class="byline"> by Rachel Breeze, <span class="pubdate">posted on <time datetime="2018-12-03">Dec 3, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><strong>What is DRY code?</strong></p>
+<p class="intro">Before we explore the trade-offs between coding options, I want to define for the purposes of the article what DRY is and why developers should apply it.</p>
+<p>The DRY principle (or Don’t Repeat Yourself) was first documented by Andy Hunt in “The Pragmatic programmer” and states that every piece of knowledge must have a single, unambiguous, authoritative representation within a system.</p>
+<p>Applying this principle we create methods and call them, this code reuse makes development and maintenance of software easier.  Rather than copy and pasting code we want to reuse, creating a method reduces the maintenance burden.  By creating one single point of truth, it means that instead of fixing bugs and changing the code in a number of locations, we fix them in one.</p>
+<p>Dry code has a number of advantages:</p>
+<ol>
+<li>It is easy to maintain – rather than having multiple lines of code that do the same thing, having a single routine for that functionality means bug fixing is in one place</li>
+<li>It is easy to read – abstracted routines with small signatures can be easier to read than long repeating lines of code.</li>
+<li>Code in a routine is easier to reuse.</li>
+<li>Less unit tests – unit tests only have to be written for the one routine, not to test identical code.</li>
+<li>Less lines of code.</li>
+</ol>
+<p>When you combine the above, DRY code saves developers time.</p>
+<p>The DRY principle is sometimes violated in the following situations:</p>
+<ol>
+<li>If code analysis indicates there is duplicate code, a developer may decide the effort of refactoring a working code base costs more in terms of development effort and testing than leaving duplicates within the base.</li>
+<li>Whilst two routines may look identical, it is known that at some point in the future they will diverge.</li>
+<li>Passing too many variables into a routine can make the routine harder to read and introduces a burden on developers for understanding the context of the variables.</li>
+</ol>
+<p><strong>Libraries</strong></p>
+<p>Libraries are an extension of the DRY methodology. They allow code to be reused across projects, and developers to concentrate on tasks key to the project they are working on. </p>
+<p>Umbraco is a great example of this by using Umbraco to content manage the website and apps, developers can focus on how the pages and apps are built.  Developers no longer need to build the use interface and database interactions that would be required for administrators to manage their website and applications. </p>
+<p>Using recognised libraries in a project is excellent:</p>
+<ol>
+<li>They are tested by the software teams developing them.</li>
+<li>Development teams which use them round the world become testers for the libraries, ironing out issues faster.</li>
+<li>Documentation for recognised libraries tends to be high, code samples are generally easy to find, and meetups and communities such as <a rel="noopener" href="https://our.umbraco.com/" target="_blank" title="our.umbraco.com">https://our.umbraco.com/</a> exist.</li>
+<li>Potential new hires recognise the libraries.</li>
+</ol>
+<p><strong>In-House Libraries</strong></p>
+<p>In-house libraries allow developers to collect together knowledge and share it across the team.  They prevent repetition of tasks and tend to build on commercially available and open source platforms.</p>
+<p>There are generally two approaches to building core libraries</p>
+<ol>
+<li>A technical architect has reviewed the requirements of a number of projects, found the duplicated functionality and designed an architecture around it.</li>
+<li>Where a developer wants to reuse functionality from one project in another, and writes a library to do this.</li>
+</ol>
+<p>In either case in-house libraries should always reside in their own source control repository allowing bug fixes and new requirements to be implemented independently of existing projects.</p>
+<p>Creation of in-house libraries introduces technical debt for the in-house development team: </p>
+<ol>
+<li>They must be tested, maintained and documented.</li>
+<li>On boarding of new team members must include introduction to the new libraries – if team members don’t know about them they are not going to use them.</li>
+<li>New developers must appreciate the quirks the libraries have due to the iterations they have been through and the implementations they have been used in.</li>
+<li>Addition and modification of new features must be controlled. When developing functionality it is important to remember that if a feature is only being used in one project, or it requires a lot of dependencies, it will be available in all projects that reference that library.  Likewise deleting a feature or amending its signature will impact all projects referencing that code.</li>
+</ol>
+<p>A great way to manage features is to build the libraries into packages and host them on a NuGet server.  This means projects can reference known versions of the in-house libraries allowing a managed roll-out of changes to older projects.   If methods are to become obsoleted, and removed, mark older routines with the obsolete attribute; this allows programs to compile, and makes the developer aware of code changes at compile time. </p>
+<p>It is important that the roll-out of bug fixes is managed, as testing the impact of the changes will need to be reviewed on a case by case basis.</p>
+<p><strong>Libraries and Tech Debt – A History Lesson</strong></p>
+<p><img style="width: 500px; height: 155.46875px;" src="/archive/media/2018/dilbert.gif?width=500&amp;height=155.46875" alt="Dilbert cartoon: Maintaining a legacy system, Dilbert is asked to maintain a hand cranked computer system" data-udi="umb://media/76ed7ad59b7246cba483c8dacd9292ae"></p>
+<p>In-house libraries are born from a point in time, and many years ago I worked on an information management system that pushed data to a number of websites.  It started life as a VB6 project, the data it used was stored in XML format in a SQL Server database and accessed via ODBC.</p>
+<p>For data access a wrapper was written that dealt with such things as SQL injection attacks.  The XML was transformed into objects that could then be manipulated on the website.  And a web class based architecture was written which allowed front end developers to white label websites easily.</p>
+<p>Then VB.NET was released.  VB.NET obsoleted web classes and replaced them with web forms.  Rather than rewrite the website to work with VB.NET.  A new layer was introduced which mimicked web classes.  The data layer was rewritten to use ADO.NET.</p>
+<p>Over time the rest of the components were replaced with VB.NET equivalents – but the in-house web class architecture stayed. </p>
+<p>Around the late 2000s it became hard to recruit VB.NET developers and the decision was made to migrate to C#,  This involved writing wrappers for the libraries and integrating into C# apps.  The faux “web class” architecture remained so new functionality like entity frameworks and MVC was never exposed at the website end.  Resulting in developers never working with the latest functionality.</p>
+<p>New developers and contractors that joined the team would therefore need to be trained up in older methods rather than using the more recent functionality. </p>
+<p>The lesson learned was that core libraries save time and the white labeling of websites was quick.  Developers could move between projects easily with minimal learning time.  After the initial teething troubles the systems were robust. The trade-off was that developers had no space to learn or evolve.</p>
+<p><strong>No Libraries</strong></p>
+<p><strong><img style="width: 302px; height: 202px;" src="/archive/media/2018/carvanhouse.jpg?width=302&amp;height=202&amp;mode=max" alt="" data-udi="umb://media/0bca611c977a48dd83004618181f3b17"></strong></p>
+<p>When no libraries exist, the downside is that code including bugs, is copied from one project to another.   One the upside developers are free to pick the libraries of their choice, meaning they can use the latest tools. </p>
+<p>The impact of no libraries is:</p>
+<ol>
+<li>Knowledge is not easily reused.</li>
+<li>Testers can no longer assume that because something was implemented in one project one way it will be implement the same in the new one, so testing effort increases.</li>
+<li>Potential duplication of bugs across projects.</li>
+<li>Unit testing effort is increased. </li>
+<li>Support effort can increase.</li>
+</ol>
+<p>Risks around no libraries can be managed to some extent by knowledge sharing.</p>
+<p>The impact of developers being allowed to choose their own libraries is:</p>
+<ol>
+<li>The required levels of knowledge increases as colleagues also need to learn to use the latest tools, as well as maintain projects using older tools.</li>
+<li>Context switching becomes harder.</li>
+<li>Recruitment becomes harder, when the range of tools becomes longer, the recruitment skill list becomes longer.</li>
+</ol>
+<p>Risks around different tools can be managed to some extent with code reviews.</p>
+<p>With no in-house libraries the cost of creating similar apps never reduces.</p>
+<p><strong>Summary</strong></p>
+<p>Allowing developers to choose their own libraries fulfills the agile manifesto as each team picks the tools required for the project.  However mandating a set of libraries makes it easier for developers to know what to expect when they move between projects.  This is at the risk of stifling innovation and of creating “cookie cutter” developers.</p>
+<p>Whether or not in-house libraries are used, development teams need to communicate and share knowledge of the implementations.  However when in-house libraries do not exist and there is no agreement on the tools to use on the various projects, more knowledge needs to be shared each time.</p>
+<p>Finally when creating libraries a plan must be made for their reuse across projects, their maintenance and their eventual retirement.</p>
+<p><em><strong>Finding Duplicate Code</strong></em></p>
+<p><em>There are a number of tools available that can help find duplicate code such as Resharper, SonarQube and the tools built into Visual Studio (dependant on version). These will enable the developer to reduce code duplication within a project.</em></p>
+<ul>
+<li><em>Visual Studio 2017 Enterprise edition comes with a component for finding duplicates more information on installing the component is found here <a href="https://blog.craigtp.co.uk/Post/2017/09/28/Analyze_Solution_For_Code_Clones_missing_in_Visual_Studio_2017">https://blog.craigtp.co.uk/Post/2017/09/28/Analyze_Solution_For_Code_Clones_missing_in_Visual_Studio_2017</a> earlier versions of Visual Studio come with Code Clone Detection <a href="https://msdn.microsoft.com/en-us/library/hh205279.aspx">https://msdn.microsoft.com/en-us/library/hh205279.aspx</a></em></li>
+<li><em>Resharper - </em><em>https://www.jetbrains.com/help/resharper/dupFinder.html</em></li>
+<li><em>Team City - </em><em>https://confluence.jetbrains.com/pages/viewpage.action?pageId=113084077</em></li>
+<li><em>SonarQube - https://blog.sonarsource.com/manage-duplicated-code-with-sonar </em></li>
+</ul>
+<p><em>For more information on marking code as obsolete see <a href="https://docs.microsoft.com/en-us/dotnet/api/system.obsoleteattribute.message?view=netframework-4.7.2">https://docs.microsoft.com/en-us/dotnet/api/system.obsoleteattribute.message?view=netframework-4.7.2</a></em></p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/devops/" title="See all articles tagged with Devops">Devops</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Rachel Breeze"><img src="//gravatar.com/avatar/5b2cce26cb9a4ece3969fc5fa3149fc8.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/5b2cce26cb9a4ece3969fc5fa3149fc8.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Rachel Breeze</h1>
+        <p>Rachel is on Twitter as <a href="//twitter.com/BreezeRachel" title="Rachel Breeze on Twitter" rel="author">@BreezeRachel</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

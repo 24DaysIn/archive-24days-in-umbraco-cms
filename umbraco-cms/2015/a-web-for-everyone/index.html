@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>A web for everyone - By Jorgen Verweij (Perplex)</title>
+<meta name="description" content="Accessibility is a concern for every webdeveloper. In this article we give some hints on how we do it at Perplex Internetmarketing.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">'A web for everyone'</h1>
+      <p class="byline"> by Jeffrey Schoemaker &amp; Jorgen Verweij, <span class="pubdate">posted on <time datetime="2015-12-21">Dec 21, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">The term "accessibility" tends to conjure up the image of that one blind visitor, or worse: it gets completely ignored. Often because the topic is not getting enough attention or just because this group of users doesn't fall within the targeted audience. The truth however, is far removed from this. You don't do it for that lone, blind visitor. It's not about those couple of edge cases, it's about everyone! At <a href="https://www.perplex.nl/umbraco-cms/" target="_blank">Perplex</a> we have been asked to make websites completely accessible multiple times this year. In this article we want to showcase the must-haves for each site and show you that this is a valuable endeavor for your website as well! </p>
+<p class="intro"><a href="https://www.perplex.nl/umbraco-cms/" target="_blank"><img src="/archive/media/2015/accessibility_intro_780x460.jpg" width="780" height="460" alt="Accessibility Intro"></a></p>
+<h2>Everyone is different!</h2>
+<p>The accessibility of a site depends on whether a visitor, despite limited by a handicap, can still access all information on any given page. Part of this means that a user should be able to every page, as well as "see" all parts on these pages without hitting any roadblocks. For users with poor vision, such as the elderly, it is important to have a high enough contrast ratio as well as the ability to easily zoom in by making the pages scalable. For a blind user however, what matters most is a correct construction of the HTML. This way their screen reader, which they use to "see" the page, can correctly interpret the page. A hearing impaired visitor however, will stumble with video or audio fragments without any subtitles as well as important information hidden within an audio track (such as a voice over for example). At the same time, a user who is physically impaired can have problems navigating with a mouse and or keyboard. As such, they will need a different method of navigating your site.</p>
+<p>To help these users, the W3C developed guidelines, called the Web Content Accessibility Guidelines 2.0 (WCAG 2.0).</p>
+<p>
+        <iframe src="https://www.youtube.com/embed/WL1GMBbz9OM" allowfullscreen="" frameborder="0" height="434" width="772"></iframe>
+      </p>
+<h2>WCAG 2.0 guidelines primer</h2>
+<p>These guidelines are divided into four principles. All of which contain success criteria. These criteria are further divided into three "levels" of accessibility (A, AA and AAA). Each of which require an increasing amount of effort to implement. The four principle are:</p>
+<ul>
+<li><strong>Perceivable</strong> Information and user interface components must be presentable to users in ways they can perceive.</li>
+<li><strong>Operable </strong>User interface components and navigation must be operable.</li>
+<li><strong>Understandable </strong>Information and the operation of user interface must be understandable.</li>
+<li><strong>Robust </strong>Content must be robust enough that it can be interpreted reliably by a wide variety of user agents, including assistive technologies.</li>
+</ul>
+<p><a href="http://www.w3.org/TR/WCAG20/" target="_blank">The complete Web Content Accessibility Guidelines (WCAG) 2.0</a></p>
+<h2>Great, so now what?</h2>
+<p>More and more countries are seeing an increase in the importance of online services. Due to this, an increasing number of countries in Europe as well as the United States, Austrialia and Canada have now included them into their laws.</p>
+<p>Especially America is seeing an upward trend to sue inaccessible websites and use the courts <a href="http://www.accessiq.org/news/news/2015/11/legal-action-against-the-nba-over-website-accessibility" target="_blank">to demand</a> specific part of the website altered to remove these roadblocks. In most scenarios, these cases are won by the prosecution. This is because they all concern the discrimination of people with a handicap or the chronically ill.</p>
+<p>Government sites in countries such as the Netherlands, UK and Germany are required, by law, to at least implement to lower levels of the WCAG 2.0 guidelines (A and AA). And in England, this applies to not just <a href="https://www.gov.uk/service-manual/user-centred-design/accessibility.h" target="_blank">government sites</a>, but also commercial websites.</p>
+<h2>Accessibility and real life</h2>
+<p>At first glance, it looks like a humongous task. Due to the maze of laws, rules and guidelines it can be difficult to find the right way. However, with some simple additions and alterations every website can be made a lot more accessible (which is at least a step in the right direction). We have noted several of these easy to implement guidelines down below. You're off to a great start just by implementing these simple pointers. Some of which your are no doubt already doing anyway (even if it's just to help your SEO) and some of them are very easy to add.</p>
+<h3>Add proper alt text to images</h3>
+<p>By adding (proper) alt texts to your images you make them accessible to for users that need to use a screen or Braille reader. Since they cannot see the images and "read" them instead. Images with no alt text can easily be supplied with one (alt=""). Often times, the logo at the top of the page is used to navigate to the homepage of your site. Let visitors know by mentioning this in your alt text. For example:</p>
+<p class="code">[img src="company-logo.png" alt="Company Name - Return to Homepage"]</p>
+<p><a href="http://www.w3.org/TR/WCAG20-TECHS/H37.html" target="_blank">More about H37: Using alt attributes on img elements</a></p>
+<h3>Make use of (sub)headers</h3>
+<p>With proper use of your headings (h1-h6) you help a non-visual user understand the layout of your page. Screen readers use these to help easily navigate between different parts of the page. It is important that you don't skip any levels, keep the sections logical and clear and make sure that their titles adequately describe the section.</p>
+<p><a href="http://www.w3.org/TR/WCAG20-TECHS/G141.html" target="_blank">More about G141: Organizing a page using headings</a></p>
+<h3>For every :hover, add a :focus</h3>
+<p>Provide visible indication of focus, especially for keyboard users. In CSS, use :hover to make the page come alive, responding to user's mouse movements. For people who aren't using a mouse this provide the same functionality using :focus.</p>
+<p><a href="http://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-focus-visible.html" target="_blank">More about Success Criterion 2.4.7 - Focus Visible</a></p>
+<p><img src="/archive/media/2015/leaverou_contrast_ratio_772x292.jpg" width="772" height="292" alt="Leaverou Contrast Ratio"></p>
+<h3>Use a color contrast checker</h3>
+<p>For both the elderly and visually impaired visitors the contrast between the back- and foreground is very important. This also applies to users who are colorblind. Without enough contrast, they can't read your page. That awesome blue button with white text that seems perfectly readable? Often it doesn't have a high contrast ration.</p>
+<p>With <a href="http://leaverou.github.io/contrast-ratio/" target="_blank">this</a> online tool you can check the contrast-ratio between the background-color and your text color. This tool gives you a value between the 1 and 21. The visual presentation of text and images of text should have a contrast ratio of at least 5:1.</p>
+<p><a href="http://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-contrast.html" target="_blank">More about Success Criterion 1.4.3 - Contrast (Minimum)</a></p>
+<h3>Do not use color as you only indication of meaning</h3>
+<p>When helping a user making choices or filling in a form, don't rely on just colour. An error message highlighted in red will not be noticed by a colour-blind user. The same applies for instructions based on colour such as "press the green button".</p>
+<p><a href="http://www.w3.org/TR/UNDERSTANDING-WCAG20/visual-audio-contrast-contrast.html" target="_blank">More about Success Criterion 1.4.1 - Use of Color</a></p>
+<h3>Add Basic Landmarks</h3>
+<p>With the help of ARIA (Accessible Rich Internet Applications), it is possible to make interactive web-applications that still uphold the guidelines. Because these applications often do not consist of default web-elements (such as headings or a consistent navigation), you can use ARIA to help give meaning to these element. A simple first step is adding landmark roles. Add an HTML attribute for one of the eight landmark roles and users will be able to jump between sections on the page with a single keystroke.</p>
+<p><a href="http://downloads.perplex.eu/accessibility/accessibility2/" target="_blank">Example page about basic ARIA landmarks</a></p>
+<p><a href="ARIA11:%20Using%20ARIA%20landmarks%20to%20identify%20regions%20of%20a%20page" target="_blank">More about ARIA11: Using ARIA landmarks to identify regions of a page</a></p>
+<h3>Skip navigation links</h3>
+<p>The idea is simple: provide one or multiple links at the top of the page which jumps the user down to an anchor or target on your page. You can let a user jump directly to the start of your content or your search form. By only showing these lines with :focus, users can use their keyboard to easily navigate by skipping repeating parts.</p>
+<p><a href="http://downloads.perplex.eu/accessibility/accessibility3/" target="_blank">Example page about skip navigation links</a></p>
+<p><a href="http://www.w3.org/TR/UNDERSTANDING-WCAG20/navigation-mechanisms-skip.html" target="_blank">More about Success Criterion 2.4.1 - Bypass Blocks</a></p>
+<h3>Fix your forms</h3>
+<p>Often, filling in a form is tremendous hassle for visitors with limitations. With correct coding, and a couple of little tricks, you can aid these visitors a lot:</p>
+<ul>
+<li>Make sure all fields in the form have a label attached to them. You do this with the id attribute on the label and the name of the input element. This is because software used to read websites out loud uses the label to describe an input element (and not the placeholder).</li>
+<li>Information that is vital to correctly fill in a field, such as the format on a date field, needs to be placed in the fields corresponding label. This information will be read as soon as the user tries to enter data in the field.</li>
+<li>Use a fieldset element to contain lists of checkboxes and radio buttons. This way, you can use the legend element as the title for the list. Screen readers will combine the legend element with the labels. For example, when the legend contains "Do you wish to sign up for our newsletter?" and the labels for the radio buttons are "yes" and "no", the screen reader will say "Do you wish to sign up for our newsletter? Yes" or "Do you wish to sign up for our newsletter? no" depending on the selected radio button.</li>
+<li>Error messages need to be clear. Don't just indicate the field was not filled correctly, but help the user to correct it. You can do this by telling them what went wrong. For example "The supplied e-mail address does not contain a valid extension(.com/.nl)" is more descriptive than a simple "this field is required". You should also try to make sure you don't use just colour to signal a field has not been filled in properly. A colour-blind visitor for example, will not notice the red marking on your textboxes.</li>
+</ul>
+<p><a href="http://downloads.perplex.eu/accessibility/accessibility3/" target="_blank">Example page about accessible forms</a></p>
+<h2>Test, test and test</h2>
+<p>As you can see, implementing most of these points is relatively simple. But don't forget to test your application. There are tools available to help you but testing is still a laborious task requiring a lot of manual work.</p>
+<h3>Use an online tool to test your website</h3>
+<p>Wave (<a href="http://wave.webaim.org" target="_blank">http://wave.webaim.org</a>) is an online tool to evaluate web accessibility by use of a visual representation of the accessibility issues found within the page. Errors such as missing labels in a form, or missing alt text on an image show up. This tool is also allows you to check if your headers are used correctly and logically as well as giving insight on whether or not your contrast ration is acceptable.</p>
+<h3>Tabs accessible by keyboard arrows, tab and enter</h3>
+<p>One of the easiest things to test is trying how easy, or difficult, it is to navigate your website using just the keyboard. Can you reach every link on the page? Can you fill in that form? Can you jump through the site using nothing but the tab- and enter key?</p>
+<h3>Test pages on mobile devices</h3>
+<p>Thanks to the presence of text-to-speech and other software (such as Apple's VoiceOver (try it on your iPhone or iPad Settings =&gt; General =&gt; Accessibility =&gt; VoiceOver) or Google's Talk Back) on mobile devices it is easy to test your site. There is a growing number of users, <a href="https://vimeo.com/111873645" target="_blank">including those with disabilities</a>, that are accessing the web with their phones, tablets and other mobile devices. Test your site using several of these devices with the software aids enabled. Check if you can reach all items on your page and listen to check what might be wrong. Perhaps you have an alt text on an image that is exactly the same as the title below said image. The software would then make it sound like it was repeating itself.</p>
+<h3>Test with the -actual- target audience</h3>
+<p>While implementing is not that hard and the tools mentioned above can help certainly aid you in testing, there is just no replacement for the real deal. It is vital to test your site with a diverse group of users. At <a href="https://www.perplex.nl/umbraco-cms/" target="_blank">Perplex</a> we make a concerted effort to regularly invite people, including the elderly and disabled, for usability tests. Only when you see the user using your site, will you notice just what is hampering them in their attempts to use your site.</p>
+<h2>Easy as pie, right?</h2>
+<p>This was but the tip of the iceberg. With all this information in mind, when you take a second look at your own website, don't you think you could make this world just a tiny bit better? For everyone?</p>
+<p>
+        <iframe src="https://www.youtube.com/embed/8Ik_LHmZx8Y" allowfullscreen="" frameborder="0" height="434" width="772"></iframe>
+      </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/ios/" title="See all articles tagged with iOS">iOS</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/seo/" title="See all articles tagged with SEO">SEO</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jeffrey Schoemaker"><img src="//gravatar.com/avatar/1203bed9606c8148bf95d89e6bff1c16.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/1203bed9606c8148bf95d89e6bff1c16.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jeffrey Schoemaker</h1>
+        <p>Jeffrey is on Twitter as <a href="//twitter.com/jschoemaker1984" title="Jeffrey Schoemaker on Twitter" rel="author">@jschoemaker1984</a></p>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="Jorgen Verweij"><img src="//gravatar.com/avatar/47f993a25253164c23227cf08de5111e.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/47f993a25253164c23227cf08de5111e.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jorgen Verweij</h1>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li class="selected"><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

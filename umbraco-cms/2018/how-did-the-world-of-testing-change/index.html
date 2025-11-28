@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>How did the world of testing change?</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">How did the world of testing change?</h1>
+      <p class="byline"> by Ramona Ark, <span class="pubdate">posted on <time datetime="2018-12-11">Dec 11, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span>Let’s start off with a short introduction. My name is Ramona de Wit-van Ark and at this moment I work for <a rel="noopener" href="https://www.ah.nl/" target="_blank" title="www.ah.nl">Albert Heijn IT Online</a> as a Test Lead for our Mobile-apps teams and Logistics teams. </span><span style="font-weight: 400;">Since I have close to 15 years of experience with testing, you would think that I have a proper understanding of what is changed in the world of testing.</span></p>
+<h2><strong><span>Let’s go back in time!</span></strong></h2>
+<p class="intro"><span>Well, let’s go back to my first assignment as a junior tester. I was 21 years old, a real rookie, I had just finished two studies in Information Engineering and 3D Production, and had one month of training in <strong>TMap &amp; ISTQB</strong>. I was hired by a company named Elegant. Back then everybody worked with the<strong> waterfall</strong> method, so you could probably guess how that played out.</span></p>
+<p><span>An idea, impact analyses, functional design, technical design, building, testing and then GO, Release!</span></p>
+<p><span>Before any testing was done, a <strong>test plan</strong> had to be created first, explaining what your strategy and approach would be, what kind of test techniques you will use and how long it will take to do your complete test run, including regression testing.<strong> </strong></span></p>
+<p><strong><span>Test scripts</span></strong><span> were based on the functional and technical designs and you worked from test analysis to logical test cases to physical test cases. Then, of course, you would do your preparations, verify if the test environment was ready for testing and you would create your own test data. </span><span>The reason the tester, rather than a developer, was responsible for the creation of test data was that I had been told at that time and I quote: <strong>"You can't trust a developer...". </strong></span><span><br></span></p>
+<p> </p>
+<p><span>When all your preparation work as a tester was done, you were literally waiting for the de</span>velopers to finish their work. <img style="width: 317px; height: 285px;" src="/archive/media/2018/waterfall-testing.jpg?width=317&amp;height=285&amp;mode=max" alt="" data-udi="umb://media/556bc0c8897a424b9f738e0f89891b5a">This is what the waterfall method essentially entailed. As a tester, you were all the way at the end. All this created a lot of pressure. You prayed and prayed, that the developers would be on time, in order for you to do your job properly. And most often, everything got delayed, which by the way already started with getting the functional design approved. The tester should be more flexible and pragmatic and was expected to narrow down a month’s worth of work into one week. Most testing would have to be done manually, and of course, a "go" or "no-go" would have to be given by the tester. It was expected that mistakes would not happen, and if they did the tester was blamed for this. This would result in the good old blame-game: <strong>“You didn’t test this properly.”</strong></p>
+<p><span>All I could say to this was: “Ouch...”</span></p>
+<p><span>Of course, the release wasn’t bug-free, which no one thought of when planning the project. The tester had to give her <strong>test report </strong>back to the developers and project manager, and everyone was unhappy and stressed because the <strong>deadline wasn’t met </strong>and the project manager had to give the bad news that his team didn’t perform as expected. And all everybody could say to the tester is: <strong>“please stop finding bugs, </strong>it’s not funny anymore, we need to release”.</span></p>
+<p><span>These were the old days. However, I must add a small note to this story; at that time, I was already too stubborn and curious to follow this process and I’ve learned a great deal at Elegant. I was very spoiled as a rookie and had three mentors: Evelien Jelinek (Business consultant), Stephen Cannan (Database architect &amp; developed the SQL standard) &amp; Marc Gofferjé (Director/Program manager), which I can still after all these years ask for help or mentoring, and are still a leading example for me.</span></p>
+<h2><strong><span>Let’s go back to the present!</span></strong></h2>
+<p><span>Now let’s go back to the present! As mentioned in my small introduction, today I’m a Test Lead at AH IT Online and working in an <strong>Agile </strong>environment. We work in sprints of 2 weeks and we strive to deliver at the end of every sprint a releasable product and that’s a challenge! </span></p>
+<p><span>The first thing we need to have or create as a scrum team is trust, <strong>trust in each other</strong> and trust in the quality of our product. Therefore we need to <strong>discuss quality &amp; test</strong> strategy and -approach as a team and capture this in the Definition of Ready and Definition of Done. Because we have to deliver every 2 weeks, we need to know what the quality of our product is at any time of the day and for that, we need to have <strong>insights &amp; metrics</strong>. </span><span>In order to make sure the idea or user story is something that’s well thought of and will add value for the customer, we need to look at the big picture and <strong>ask all the questions</strong> that no one dares to ask or think of.</span></p>
+<p><img src="/archive/media/2018/test-pyramid.png?width=336&amp;height=185&amp;mode=max" alt="" align="left" data-udi="umb://media/c736efb63a8b40f9a32a33a2d794b161"></p>
+<p>When we start our sprint, we start with the sprint planning. Another very important aspect is highlighted, namely:<strong> test automation</strong>, because we don’t really have a lot of time to do long manually regression tests, checking and validating if everything works as previously designed and implemented. To implement test automation correctly we try to implement this according to the test automation pyramid. However, a mistake which is often made is that we think that if we automate everything, it will be some “holy solution” to all! Testers are not necessary anymore and we don’t have to manually test anything anymore. Well… I hate to burst your bubble, but all you're doing with test automation is checking if everything works as you expected it to work. And <strong>checking is not testing</strong>, at least not in the present day we live in. When considering test automation, always focus primarily on risk and value - by focusing on these two points, your automatic test should always remain highly relevant. That’s just a small tip! ;) In order to implement test automation, the tester will need to pair with developers and try to make the whole team aware that testing is a team effort, that should no more result in finger pointing because we are all responsible for the quality of our product. </p>
+<p><span><img style="width: 500px; height: 342.80936454849495px;" src="/archive/media/2018/this_is_not_exploratory_testing.png?width=500&amp;height=342.80936454849495" alt="" data-udi="umb://media/7626a5b5946941cf9bf06e8959371ad2">After test automation, we explore if the new feature is really working and nothing is broken, this is known as <strong>exploratory testing </strong>and is essentially a <strong>bug hunt</strong>! And no, this is not just clicking random things. You need to have a goal, questions, a mission, and again, don’t forget pairing or even ‘mobbing’. Don’t underestimate the need for manual testing. </span><span>In order to become a better tester, I suggest to every tester to follow the training<strong> <a rel="noopener" href="http://www.satisfice.com" target="_blank" title="Rapid Software Testing">Rapid Software Testing</a> </strong>training, you will learn a trick or two! The thing that is the most important to have as a tester is a correct <strong>mindset</strong>! I’ve had many testers who just didn’t fit our profile and with this everything collapsed. Sad but true. The tester nowadays needs to have a <strong>big bag of soft skills</strong>! We need to give <strong>feedback </strong>during the whole process, starting at the inception of an idea and refine and actually never stop with giving feedback, not even when the product is already live. </span><span>We need to convince and <strong>coach</strong> the scrum team that testing is a team effort. We talk to the product owner and stakeholders and give advice and constant feedback if necessary based on our metrics, feedback, and insights we've received from the end users. </span></p>
+<p><span>If we go back to the past, we wouldn’t be talking about a tester, but it would be a mixture of an analyst, developer, tester, consultant and coach. Where one tester is more analytical and the other is more technical. So, in the present day, as you can imagine, it's pretty difficult to find a tester with all these qualities and <strong>fit the profile.</strong> However, not to brag, I must say that we have a great test team and I’m proud of all the testers we have and that they are part of my team!</span><span> </span></p>
+<h2><strong><span>Let’s go back to the future!</span></strong></h2>
+<p><span>And finally, let’s look to the future. What will happen in the future… let me think. Especially with machine learning and artificial intelligence, you can’t help but wonder if testers or even anyone in the IT is still necessary? Will robots or machines be creating software and hardware at that point? </span><span>And what will be our role in this as a tester if so? Well, to be honest, I believe that the tester will always have a necessary role in the world even in the future. If only to avoid that we don’t end up in a ‘terminator’ world or in ‘the matrix’. </span><span>But, will the role be exactly the same as it is now, I highly doubt it. It will depend on the way of working in the future, but also the products which will come our way. All I can hope for is that when the time comes that we have to change and help each other finding our new role and we will adjust and change together as a team. </span></p>
+<h2>My conclusion..</h2>
+<p><span>So, what actually changed in the world of testers?</span></p>
+<p><span><img style="width: 500px; height: 378.7638668779715px;" src="/archive/media/2018/artikel.png?width=500&amp;height=378.7638668779715" alt="" data-udi="umb://media/6d54416499cb4e4095a319b043f3ea2f"></span></p>
+<p><span>One of the things that didn’t change and will never change is that we are very flexible and pragmatic and that we feel very responsible for the quality of our product! </span>However, a lot has changed though... but if somehow you are still stuck in the past, please buy a DeLorean and at least come back to the present… ;)</p>
+<p><img style="width: 500px; height: 375px;" src="/archive/media/2018/img-20170909-wa0000.jpg?width=500&amp;height=375" alt="" data-udi="umb://media/7b4e66af0b5f4402a1aa69ca61335b99"></p>
+    </div><footer></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Ramona de Ark"><img src="//gravatar.com/avatar/112421ebc595d4607478eb9c04aac28a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/112421ebc595d4607478eb9c04aac28a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Ramona de Ark</h1>
+        <p>Ramona is on Twitter as <a href="//twitter.com/RamonadeWit" title="Ramona de Ark on Twitter" rel="author">@RamonadeWit</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

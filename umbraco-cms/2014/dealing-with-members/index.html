@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Dealing With Members Using The MemberService &amp; MembershipHelper</title>
+<meta name="description" content="A look at the MemberShipService and the MembershipHelper and what's possible with them">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Dealing With Members Using The MemberService &amp; MembershipHelper</h1>
+      <p class="byline"> by Lee Messenger, <span class="pubdate">posted on <time datetime="2014-12-05">Dec 5, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I'm an Umbraco fan, and I've been pretty vocal about that for years. However, since I started developing with it many years ago. My biggest annoyance was dealing with Members and how inefficient it was querying members that had lots of properties.</p>
+<p class="intro">Lucky for us as part of the continuing Umbraco development cycle, the introduction of a number of new Services was added and one of these new services is the <a href="http://our.umbraco.org/documentation/Reference/Management-v6/Services/MemberService"><strong>MemberService</strong></a>. Take this and throw in the <a href="http://our.umbraco.org/documentation/Reference/Querying/MemberShipHelper/"><strong>MembershipHelper</strong></a> and we can now create large scale member driven sites, without having to worry as much about performance.</p>
+<h2>MemberService</h2>
+<p>You can use the MemberService for all CRUD (<em>Although for creating new members via a registration form I'd use the MembershipHelper as shown below</em>) but you have to remember it does hit the database for queries.</p>
+<p>You can query for multiple members or just for a single member and it returns an <strong>IMember</strong> from the queries unlike the MembershipHelper below.</p>
+<p>There does seem to be some caching for the queries, and you have a few helpful built in methods such as GetMembersByPropertyValue() which also has a number of overloads to deal with dates and match type (Exact, starts with etc.).</p>
+<p>In <a href="https://github.com/leen3o/Dialogue">Dialogue</a> we use this service to query for multiple members, and also for updating and deleting members.</p>
+<p><strong>To access the MemberService you do it like so</strong></p>
+<pre class="language-markup"><code>ApplicationContext.Current.Services.MemberService</code></pre>
+<p>Some examples of use below that are taken from Dialogue, they should give you an idea of how you could use the service within your own application.</p>
+<p><strong>Query for members via a property value (Date Comparison)</strong></p>
+<pre class="language-markup"><code>var date = DateTime.UtcNow.AddMinutes(-AppConstants.TimeSpanInMinutesToShowMembers);
+var members = ApplicationContext.Current.Services.MemberService.GetMembersByPropertyValue(AppConstants.PropMemberLastActiveDate, date, ValuePropertyMatchType.GreaterThan)
+                .Where(x =&gt; x.IsApproved &amp;&amp; !x.IsLockedOut);</code></pre>
+<p><strong>Query for members via a property value (String - Starts with)</strong></p>
+<pre class="language-markup"><code>var members = ApplicationContext.Current.Services.MemberService.GetMembersByPropertyValue("PropMemberSlug", "some-string"), StringPropertyMatchType.StartsWith);</code></pre>
+<p><strong>Query for members via a property value (String - Exact Match)</strong></p>
+<pre class="language-markup"><code>var members = ApplicationContext.Current.Services.MemberService.GetMembersByPropertyValue("PropMemberSlug", "some-string")</code></pre>
+<p><strong><strong>Update a property on the member</strong></strong></p>
+<pre class="language-markup"><code>var member = ApplicationContext.Current.Services.MemberService.GetById(memberId);
+member.Properties["PropMemberWebsite"].Value = "Add Me";
+ApplicationContext.Current.Services.MemberService.Save(member);</code></pre>
+<h2>MembershipHelper</h2>
+<p>Now I have to admit, this threw me a little when I started to use this. I assumed as it was using the cache that I'd be able to query for multiple members in a really efficient and quick way, but it only allows you to get members in a singular manner (GetByEmail, GetById etc...).</p>
+<p>One thing you have to bear in mind is that when you use these methods you get an <strong>IPublishedContent</strong> back and not an <strong>IMember</strong> like you do with the MemberService above. You can then use the IPublishedContent to get the member property values just like you would for a normal content node (<em>GetPropertyValue&lt;string&gt;("MyProperty") etc.</em>).</p>
+<p>To get the MembershipHelper you can do the following</p>
+<pre class="language-markup"><code>var memHelper = new MembershipHelper(UmbracoContext.Current);</code></pre>
+<p>In Dialogue we use this helper class to get members individually along with their property values (<em>As it's super quick</em>), and also use it to register new members as it allows you to use the 'MembershipCreateStatus' so you can get back the status of the registration without having to write much of your own logic.</p>
+<pre class="language-markup"><code>public enum MembershipCreateStatus
+{
+    Success,
+    InvalidUserName,
+    InvalidPassword,
+    InvalidQuestion,
+    InvalidAnswer,
+    InvalidEmail,
+    DuplicateUserName,
+    DuplicateEmail,
+    UserRejected,
+    InvalidProviderUserKey,
+    DuplicateProviderUserKey,
+    ProviderError,
+}</code></pre>
+<p><strong>Registering a new Member</strong></p>
+<p>Below is the code on how we use the MembershipHelper to register a new member. We firstly create a RegisterModel and populate it with the data from our registration form.  This is a really simple model, containing Username, Password and email (<em>And a few other things which are not important for this example</em>)</p>
+<pre class="language-markup"><code>var userToSave = memHelper.CreateRegistrationModel("MemberTypeAlias");
+userToSave.Username = viewModel.UserName;
+userToSave.Name = viewModel.Username;
+userToSave.Email = viewModel.Email;
+userToSave.Password = viewModel.Password;
+userToSave.UsernameIsEmail = false;</code></pre>
+<p>Once the RegisterModel is created, we pass in a new MembershipCreateStatus along with the RegisterModel to a method in the MembershipHelper called 'RegisterMember' - this populates the MembershipCreateStatus and returns this with the status of the create.</p>
+<pre class="language-markup"><code>MembershipCreateStatus createStatus;
+memHelper.RegisterMember(userToSave, out createStatus, false);</code></pre>
+<p>Now we have this, we can choose how to proceed. We can check if the creation of the new member was successful or not</p>
+<pre class="language-markup"><code>if (createStatus != MembershipCreateStatus.Success)
+{
+    // We could display the exact status of the issue
+}
+else
+{
+    // All fine - Continue
+}</code></pre>
+<p><strong>Getting a member and some properties</strong></p>
+<p>Below is an example showing the fastest why to get a member and their associated properties.</p>
+<pre class="language-markup"><code>var member = memHelper.GetById(id);
+var id = member.Id;
+var username = member.Name;
+var isApproved = member.GetPropertyValue("umbracoMemberApproved");
+var isLockedOut = member.GetPropertyValue("umbracoMemberLockedOut");</code></pre>
+<p>If you would like to see more examples of using both the MemberService or the MembershipHelper then have a look at the Dialogue MemberService on GitHub </p>
+<p><a href="https://github.com/leen3o/Dialogue/blob/master/Src/Dialogue.Logic/Services/MemberService.cs" title="https://github.com/leen3o/Dialogue/blob/master/Src/Dialogue.Logic/Services/MemberService.cs">https://github.com/leen3o/Dialogue/blob/master/Src/Dialogue.Logic/Services/MemberService.cs</a></p>
+<p>Or just want to learn about Umbraco in general have a look at <a href="http://www.aptitude.co.uk/videos/">some of the videos</a> we have on our <a href="http://www.aptitude.co.uk/what-we-do/website-design/">Aptitude</a> site.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/members/" title="See all articles tagged with Members">Members</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Lee Messenger"><img src="//gravatar.com/avatar/48766b64e9807f2e06bb589cdcc56144.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/48766b64e9807f2e06bb589cdcc56144.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Lee Messenger</h1>
+        <p>Lee is on Twitter as <a href="//twitter.com/YodasMyDad" title="Lee Messenger on Twitter" rel="author">@YodasMyDad</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li class="selected"><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

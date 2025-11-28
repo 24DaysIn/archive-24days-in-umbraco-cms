@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Extending the Umbraco Back-office</title>
+<meta name="description" content="Learn how to tap into the Back-office rendering and make your own customizations.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">How to extend the back-office...</h1>
+      <p class="byline"> by Lee Kelleher, <span class="pubdate">posted on <time datetime="2012-12-08">Dec 8, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>... without touching the Umbraco core!</h2>
+<p>As the winter nights draw close and the days grow shorter, Umbracians around the world ponder the age old question... how can I customise the Umbraco back-office? <em>(Well maybe not, but it is a nice lead-in.)</em></p>
+<p class="intro">From a small tweak, to a major UI overhaul, with a little .NET code, it is possible to extend the back-office without modifying the Umbraco core source-code!</p>
+<h2>Show me, show me</h2>
+<p>All of the editor pages within the back-office, <em>(e.g. the ones in the main right panel area)</em>, expose two events (<span class="code">Init</span> and <span class="code">Load</span>) that can be hooked into. We'll focus on the <span class="code">Init</span> one for now, here's what it looks like:</p>
+<pre class="language-csharp"><code>umbraco.presentation.masterpages.umbracoPage.Init += new MasterPageLoadHandler(umbracoPage_Init);</code></pre>
+<p>The best place to hook into such an event is by creating a .NET class, (either in your ~/<span class="code">App_Code</span> folder, or in a separate assembly), that inherits from the <span class="code">ApplicationStartupHandler</span> (in versions prior to Umbraco 4.8 you can use <span class="code">ApplicationBase</span>):</p>
+<pre class="language-csharp"><code>public class MyPlugin : umbraco.businesslogic.ApplicationStartupHandler
+{
+	public MyPlugin()
+	{
+		umbracoPage.Init += new MasterPageLoadHandler(umbracoPage_Init);
+	}
+}</code></pre>
+<blockquote>
+<p><em><span style="text-decoration: underline;"><strong>Tip:</strong></span> If you are using Visual Studio, you can use <span class="code">TAB+TAB</span> auto-complete to generate the following stub <span class="code">EventHandler</span> method.</em></p>
+</blockquote>
+<p>Once you have hooked into the editor page's event, you can then associate a method (e.g. the <span class="code">EventHandler</span>) to access the page itself.</p>
+<pre class="language-csharp"><code>protected void umbracoPage_Init(object sender, EventArgs e)
+{
+	// the fun starts here
+}</code></pre>
+<p>The method's first parameter, although marked as an <span class="code">object</span> is actually the instance of the <span class="code">umbracoPage</span>. You will need to cast accordingly:</p>
+<pre class="language-csharp"><code>var page = sender as umbracoPage;</code></pre>
+<p>Okay, so now you have access to the editor page object... <strong>now what?</strong></p>
+<h2>Snow me, snow me</h2>
+<p>Since the festive season is nearly upon us, why not sprinkle a little Umbraco-themed winter snow on your content editors? ;-)</p>
+<p>Using a jQuery plugin called <a href="https://github.com/loktar00/JQuery-Snowfall">Snowfall</a>, we can inject the JavaScript into the <span class="code">editContent.aspx</span> page (via the built-in ClientDependency framework).</p>
+<p>Let's walk through the code to show you how; see inline comments for guidance:</p>
+<pre class="language-csharp"><code>protected void umbracoPage_Init(object sender, EventArgs e)
+{
+	// make sure the page is an umbracoPage; otherwise exit
+	var page = sender as umbracoPage;
+	if (page == null)
+		return;
+
+	// check that the path is allowed
+	var path = page.Page.Request.Path.ToLower();
+	if (!path.Contains("editcontent.aspx"))
+		return;
+
+	// attempt to find/create the ClientDependency loader for the page
+	bool created;
+	var loader = UmbracoClientDependencyLoader.TryCreate(page, out created);
+	if (loader != null)
+	{
+		// set the custom path for your plugin
+		loader.AddPath("SnowfallJs", IOHelper.ResolveUrl("~/scripts/snowfall/"));
+
+		// load the JavaScript resources
+		loader.RegisterDependency(998, "snowfall-loader.js", "SnowfallJs", ClientDependencyType.Javascript);
+		loader.RegisterDependency(999, "snowfall.min.jquery.js", "SnowfallJs", ClientDependencyType.Javascript);
+	}
+}</code></pre>
+<p>Giving the desired result...</p>
+<figure>
+  <a href="/archive/media/2012/umbraco_snowfall.png">
+    <img src="/archive/media/2012/umbraco_snowfall.png" width="1440" alt="Orange snowfall in the Umbraco back-office">
+  </a>
+  <figcaption>Orange snowfall in the Umbraco back-office</figcaption>
+</figure>
+<p>The source-code is available to download here: <a href="/archive/media/2012/umbraco_snowfall.zip"><span class="code">umbraco-snowfall.zip</span></a></p>
+<p>...and with that, I leave you with the tender words of <a href="http://www.youtube.com/watch?v=ZeyHl1tQeaQ">Shakin' Stevens</a>:</p>
+<blockquote>
+<p>Snow is falling, all around me. Children playing, having fun.<br>It's the season, for love and understanding.<br><strong>Merry Christmas everyone!</strong></p>
+</blockquote>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Lee Kelleher"><img src="//gravatar.com/avatar/ad04c192cc8336d9a329cd2ae4c359bb.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/ad04c192cc8336d9a329cd2ae4c359bb.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Lee Kelleher</h1>
+        <p>Lee is on Twitter as <a href="//twitter.com/leekelleher" title="Lee Kelleher on Twitter" rel="author">@leekelleher</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li class="selected"><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Optimising Umbraco for speed</title>
+<meta name="description" content="Pete Duncanson shares some insights into some of the tweaks you can do to speed up your Umbraco site so it renders quick and reduces the load on the server. Covering Macro Caching and Automated Image Optimisation.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Optimising Umbraco for speed</h1>
+      <p class="byline"> by Pete Duncanson, <span class="pubdate">posted on <time datetime="2012-12-12">Dec 12, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Howdo. Thanks for stopping by. I thought I'd do a bit about two quick tricks you can do to make an Umbraco site go super fast: Macro caching and image compression. Nothing new but optimisation keeps cropping up when I talk with you guys at the various events.</p>
+<p class="intro">Before we start ask yourself if the site even needs any optimisation. I'm a big fan of only doing work if required. If it's a small site with a few macros then it simply might not be worth doing anything. Remember the <a href="http://en.wikipedia.org/wiki/Pareto_principle">80/20 rule</a> and you should be fine.</p>
+<h2>Macro Caching</h2>
+<p>First up macro caching. Every time you render a page you cause the macros you've added to that page to run and generate out the HTML we send down the wire. The "thinking time" or more correctly CPU cycles the server needs to do that can be a bottle neck, why spend time working out the menu navigation links each and every page load? It does not change all that often right? So why not work it out once and then save the result and reuse that on repeat request. That's what macro caching does and it's built into Umbraco, you just have to switch it on. We tend to overlook this bit while developing though as we have kick ass machines and we are the only one hitting it.</p>
+<p><strong>Warning:</strong> Switching on macro caching while you are still developing is not a wise move. At best it can simply slow you down, at worst it can lead to some serious head scratching/violence like so:</p>
+<p>
+        <iframe width="400" height="300" src="http://www.youtube.com/embed/xZLCoYrmZwk?fs=1&amp;feature=oembed" frameborder="0" allowfullscreen=""></iframe>
+      </p>
+<p><span>while you try to work out why your changes are not appearing on the site. Stay sane, only add it to a staging/live production sites.</span></p>
+<p>Check your macro render speeds. You can get a whole heap of debug information out of Umbraco by switching on the "Debug and Trace mode" by adding <span class="code">?umbDebugShowTrace=true</span> to the end of your URL, or install the Chrome <a href="https://chrome.google.com/webstore/detail/umbraco-developer-extensi/dboeojcoblcjkefclodcbhmiicdndbpl">Umbraco Developer Extension</a> which is really really handy (careful this will only work as long as you have not <a href="http://our.umbraco.org/forum/core/general/8333-Debug-on-or-off">disabled debugging on the site</a>, by default this is switched on so you know).</p>
+<p><strong>Protip:</strong> In your sitewide CSS add this rule to make it easier to read the trace output no matter what your background colour is:</p>
+<pre class="language-css"><code>#__asptrace {
+  background-color:white;
+}</code></pre>
+      <p class="snippet-caption">CSS trick to ensure your trace statements are easily readable regardless of your site's design</p>
+<p>I've got a whole raft of tips on tidying up trace output but that will have to wait for another day/post, remind me :)</p>
+<p>Now at the bottom of the page you should have a huge ugly table of debug output including some lines about Macro render times. There should be a total time up to that point (the 3rd column) and time for that action (the 4th column). Keep an eye out for any macros that are slow (slow to me is anything over 1/10th of a second), we will hit these ones first. </p>
+<p>The idea is to hit the slowest macros first, switch on caching for that one, refresh to see the effect and then do the next slowest. The slowest macros should be the ones that are doing the most "work" or are coded really badly...either way caching will help (but try to fix any slow running code first).</p>
+<p>Be careful what you cache, it can be really tempting to go through all the macros and set them all to cache. You don't want to cache search result pages for instance (been there, done that). <span>Also, if a macro is rendering in 1/100th of a second it's not really a snail now is it? Leave it be unless you are super keen or bored with having a life outside of work. An exception to that is if the site only has a fraction of the data in it (let's say it's just got a bit of dummy content in it) then you might not be seeing "true" render times that the live site might experience. Another good reason to only really setup macro caching on a live/staging site.</span></p>
+<p><span>So to get to macro settings you need to go to the <strong>Developer &gt; Macros</strong> and select your slow macro. If you can't see the Developer section then you don't have access (if you're a client, stop trying to mess with the site, you'll break something!).</span></p>
+<figure>
+  <a href="/archive/media/2012/mezer_12_11_13_47_18.png">
+    <img src="/archive/media/2012/mezer_12_11_13_47_18.png" width="1040" alt="Macro caching settings, important bits highlighted">
+  </a>
+  <figcaption>Macro caching settings, important bits highlighted</figcaption>
+</figure>
+<p><span>The important setting is "Cache Period", by default this is set to zero which means don't cache. The number here is the number of seconds you want to cache the output for. Simply change this to a valid number (try 10 seconds for now), leave the other settings as is ("Cache by page" checked and "Cache Personalized" unchecked), save the macro settings and that's it. The macro will now cache itself the next time it runs and won't refresh itself until the number of seconds you added have passed. Reload your page and you should see next to no difference because it still has to generate the output the first time, reload again and now the output will be pulled from cache super fast!</span></p>
+<p><span>How long to cache for? Depends really. Any caching can make a huge difference. You can go the route of micro caching for just a few seconds, or if the content really does not change that much, you can bump the time up some more. Even quiet sites can benefit; headers, navigation etc. will be re-used during a user's visit. They might be the only visitor that day but each page they visit after the first one will have cached content so will appear faster.</span></p>
+<p><span>Caching makes the site faster and reduces load on the servers (especially important on a busy site). We are trading memory space for CPU cycles here so make sure your site has enough memory to cope, IIS will handle the memory for you but to make the most of caching you should have enough memory to store all the different output in. The cache will expire if the site is not hit for 15 minutes (as IIS shuts down the app pool to save resources) or if the app pool recycles for some reason. You can get around this by polling the site every 10 minutes or similar from another server/service but ask yourself if that's really all that important/required before doing it defacto.</span></p>
+<h2>Compress your images</h2>
+<p>Another nice simple mod you can do is to compress your images. This is easy enough to do when building the site but harder when you hand the site over to clients who start uploading HUGE jpg files from their digital cameras or that they have found somewhere in an uncompressed state. All that hard work ruined by those pesky clients.</p>
+<p><a href="http://www.percipientstudios.com/imagegen/overview.aspx">ImageGen</a> to the rescue as ever. This awesome image resizing script ships with Umbraco so you can use it on any build. The freebie version is up to the job too (however, if you've ever used ImageGen and not bought at least one Pro licence, you really ought to think about it on the next project, Doug deserves it). You don't have to use it just to resize images though, you can also use it to compress them.</p>
+<p>ImageGen resizes images based on the values you pass in on the query string and out of the box does a great job of compressing images too, but you can tweak this a little more if you want. There is a little known setting called "Compression" which can be used with jpg images.</p>
+<p><span>This is the amount of compression as a percentage that you would like to apply to the image. The default is a rather high 90%. You can pass through a lower value however and make some really good savings on file size for very little loss of quality. The range of 72-80% seems to work for me, depends on the type of images your client mainly use. </span></p>
+<pre class="language-markup"><code>(original, 611K)
+http://offroadcode.com/media/14930/original.jpg 
+
+(90% compression by default, 156K)
+http://offroadcode.com/umbraco/ImageGen.ashx?image=/media/14930/original.jpg 
+
+(75% compression, 140K)
+http://offroadcode.com/umbraco/ImageGen.ashx?image=/media/14930/original.jpg&amp;compression=75 </code></pre>
+      <p class="snippet-caption">Various URLs, can you spot the difference in quality?</p>
+<p>By default always use ImageGen to render out any images that the client can change, it will help save a lot of bandwidth. Tweaking it via the compression option can save some more for an extra gold star. </p>
+<p>Hope that gives you something think about and some pointers on where you could make some saves. There are plenty of other tips but these two are Umbraco specific which is what these posts are all about. Hope you enjoyed it, if so feel free to buy me a beer next time we meet.</p>
+<p>Festive greetings to you all, my extended Umbraco family :)</p>
+<p>Pete</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/caching/" title="See all articles tagged with Caching">Caching</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Pete Duncanson"><img src="//gravatar.com/avatar/c8b22400d20cd6f0550596f9906f9c4a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c8b22400d20cd6f0550596f9906f9c4a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Pete Duncanson</h1>
+        <p>Pete is on Twitter as <a href="//twitter.com/peteduncanson" title="Pete Duncanson on Twitter" rel="author">@peteduncanson</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li class="selected"><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

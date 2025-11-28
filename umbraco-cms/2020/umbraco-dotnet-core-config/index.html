@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Demystifying config in Umbraco .NET Core</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco dotnet core config</h1>
+      <p class="byline"> by Emma Garland, <span class="pubdate">posted on <time datetime="2020-12-18">Dec 18, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">The Unicore project started in 2020 with the aim to migrate Umbraco from <a rel="noopener" href="https://dotnet.microsoft.com/learn/dotnet/what-is-dotnet-framework" target="_blank" title="Microsoft .NET Framework">.NET Framework</a> to <a rel="noopener" href="https://dotnet.microsoft.com/learn/aspnet/what-is-aspnet-core" target="_blank" title="Microsoft .NET Core">.NET Core</a>. Bjarke Berg leads the Unicore project and stewards the recently refreshed <a rel="noopener" href="https://umbraco.com/blog/the-community-teams-applications-20202021/" target="_blank" title="Unicore team">community team</a>. We’ve had some great contributions from within the team and from the wider Umbraco community already.</p>
+<p class="intro">Cut to December 2020 and we have an <a rel="noopener" href="https://umbraco.com/blog/net-core-alpha-release/" target="_blank" title="Unicore .NET Core Alpha release blog">Alpha Umbraco release</a> running on .NET Core. This opens Umbraco up to a range of exciting options, as well as encouraging community involvement from .NET Core developers who may be new to Umbraco. It also gives those Umbraco developers who are more well-versed in .NET Framework the chance to learn .NET Core in a familiar, supportive place.</p>
+<p>If your world has been Umbraco and .NET Framework for so long, the idea of having to learn .NET Core might be intimidating. How long will it take to adjust? Will you need to relearn everything you know about developing Umbraco?</p>
+<p>We are here to demystify this in advance.</p>
+<p> </p>
+<p><img style="width: 500px; height: 375px;" src="/archive/media/2020/ines-pimentel-opkark20taw-unsplash.jpg?width=500&amp;height=375" alt="Lego Unicorn" data-udi="umb://media/6bcf96c112a14577887166d10e17f1e6"></p>
+<p> </p>
+<h2>Unicore aims</h2>
+<p>We want to help the Umbraco developer on their journey to become as confident developing Umbraco on .NET Core as they are on .NET Framework (hopefully even more!).</p>
+<p>We aim to:</p>
+<ul>
+<li>Enable .NET Framework developers to adjust to developing in .NET Core</li>
+<li>Utilise the best of .NET Core for Umbraco</li>
+<li>Encourage new community contributions</li>
+<li>Ensure Umbraco package developers can make changes for their packages to run on .NET Core</li>
+</ul>
+<p>There are many existing integrations using Umbraco, and whilst we aren’t able to avoid breaking changes entirely, we’ve kept them in mind at every turn.</p>
+<h3>How?</h3>
+<p>We are in contact with the other <a rel="noopener" href="https://umbraco.com/blog/call-for-volunteers-join-the-umbraco-community-teams" target="_blank" title="Umbraco community teams">Umbraco community teams</a> to ensure a smoother transition during the upgrade.</p>
+<p><span class="TextRun  BCX0 SCXW30519531" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW30519531">From the start of the Unicore project </span></span><span class="TextRun  BCX0 SCXW30519531" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW30519531">a </span></span><span class="TextRun  BCX0 SCXW30519531" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW30519531">large</span></span><span class="TextRun  BCX0 SCXW30519531" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW30519531">-scale</span></span><span class="TextRun  BCX0 SCXW30519531" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW30519531"> </span></span><span class="TextRun  BCX0 SCXW30519531" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW30519531">refactoring</span></span><span class="TextRun  BCX0 SCXW30519531" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW30519531"><span> </span>of Umbraco</span></span><span class="TextRun  BCX0 SCXW30519531" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW30519531"> was </span></span><span class="TextRun  BCX0 SCXW30519531" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW30519531">out of scope</span></span><span class="TextRun  BCX0 SCXW30519531" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW30519531">, as was a rewrite of the back-office AngularJS code</span></span>. By keeping the changes to <a href="https://our.umbraco.com/documentation/reference/routing/webapi/">Umbraco Web API</a> and the database as minimal as possible we reduce the need for integrations to change.</p>
+<h3>Utilising core strengths</h3>
+<p>Although we’re trying to minimise breaking changes, there are some areas where we want to utilise the strengths of .NET Core.</p>
+<p>It is worth noting that Microsoft have named the next major version of .NET Core after 3.1 <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/core/dotnet-five" target="_blank" title="Microsoft announce .NET 5">.NET 5</a>, but for the purpose of this article I'll still be referring to it as .NET Core. </p>
+<p>For historical reasons Umbraco has implemented things its own way in a few areas within the codebase. Now we have alternatives available in .NET Core itself. Rather than porting the existing Umbraco code in these areas, we're adopting the standard .NET Core approach. It also allows us to offload responsibility for some lower-level concerns to the underlying platform.  </p>
+<p>We're also keeping an eye on the future, when new .NET Core developers come to the Umbraco ecosystem to contribute to its development. Standard .NET Core approaches will be more familiar, lowering the slope of the on-ramp to understanding the Umbraco code base.</p>
+<p>Some examples of these standard .NET Core approaches are:</p>
+<ul>
+<li>Migrating background tasks using <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/hosted-services?view=aspnetcore-3.1&amp;tabs=visual-studio" target="_blank" title="Microsoft hosted services" data-anchor="?view=aspnetcore-3.1&amp;tabs=visual-studio">hosted services</a> (Andy Butland has <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/pull/9324" target="_blank" title="GitHub thread about hosted services">started work on this</a>)</li>
+<li>Adhering to the <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection?view=aspnetcore-3.1" target="_blank" title="Microsoft Dependency Injection" data-anchor="?view=aspnetcore-3.1">Microsoft Dependency Injection</a> (MSDI) abstractions, <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/issues/8653" target="_blank" title="GitHub MSDI issue">an active GitHub discussion</a></li>
+<li>.NET Core <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-3.1" target="_blank" title=".NET Core configuration" data-anchor="?view=aspnetcore-3.1">configuration</a>, discussed on a <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/issues/8651" target="_blank" title="GitHub configuration thread">GitHub thread</a> and on <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/pull/7813" target="_blank" title="GitHub configuration pull request">this</a> GitHub task</li>
+</ul>
+<p>This article focuses on the changes we’re making to Umbraco <strong>configuration</strong>.</p>
+<p>You might not often need to edit Umbraco config files, relying instead on the default Umbraco installation with an updated connection string to your database. That is totally fine, and in the future .NET Core Umbraco build, if you rarely need to update config you’ll have a similar experience. However, if you’re a package developer, or tend to build solutions with extensive integrations, then you’ll want to hear how config is changing. Or maybe you’re just curious? Come along for the ride and find out!</p>
+<h2>Umbraco on .NET Framework</h2>
+<p>Before moving forward, it is good to look back. So, before we get into the specifics of how configuration is changing for .NET Core, we’ll look at Umbraco as it is right now, and talk about what is happening under the hood.</p>
+<p>When you run any Umbraco site version 8 or below, it is powered by <a rel="noopener" href="https://dotnet.microsoft.com/learn/dotnet/what-is-dotnet-framework" target="_blank" title="Microsoft .NET Framework">Microsoft .NET Framework</a>, the original implementation of .NET now on its <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/framework/whats-new/" target="_blank" title="Microsoft .NET Framework version 4.8">last release version</a>. For background into how .NET Framework runs and compiles, you can delve into more detail <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/framework/get-started/overview" target="_blank" title="Microsoft .NET Framework overview">in the Microsoft docs</a>.</p>
+<p>Umbraco currently runs on .NET Framework. But what framework is the web application built in? Enter ASP.NET Framework.</p>
+<h3>ASP.NET Framework</h3>
+<p>Until the Unicore project, the Umbraco web application always ran on ASP.NET Framework. <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/overview" target="_blank" title="ASP.NET">ASP.NET</a> is Microsoft’s .NET Framework technology for creating web apps, and it shares the core functionality of .NET. ASP.NET comes in three main flavours: </p>
+<ul style="font-weight: 400;">
+<li data-leveltext="-" data-font="Arial, Arial_MSFontService, sans-serif" data-listid="2" aria-setsize="-1" data-aria-posinset="1" data-aria-level="1"><span data-contrast="none">Web Forms</span></li>
+<li data-leveltext="-" data-font="Arial, Arial_MSFontService, sans-serif" data-listid="2" aria-setsize="-1" data-aria-posinset="2" data-aria-level="1"><span data-contrast="none">Web Pages</span></li>
+<li data-leveltext="-" data-font="Arial, Arial_MSFontService, sans-serif" data-listid="2" aria-setsize="-1" data-aria-posinset="3" data-aria-level="1"><span data-contrast="none">MVC</span></li>
+</ul>
+<p><span data-contrast="none">There is also </span><a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/web-api/" target="_blank" title="Microsoft ASP.NET Web API"><span data-contrast="none">Web API</span></a><span data-contrast="none">, which is a separate area of ASP.NET.</span><span data-contrast="none"> </span><span data-contrast="none">Umbraco</span><span data-contrast="none"> </span><span data-contrast="none">8 </span><span data-contrast="none">currently</span><span data-contrast="none"> </span><span data-contrast="none">use</span><span data-contrast="none">s</span><span data-contrast="none"> </span><span data-contrast="none">a combination </span><span data-contrast="none">of </span><a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/mvc/" target="_blank" title="Microsoft ASP.NET MVC"><span data-contrast="none">MVC</span></a><span data-contrast="none"> </span><span data-contrast="none">and</span><span data-contrast="none"> the</span><span data-contrast="none"> ASP.NET </span><span data-contrast="none">Web API</span><span data-contrast="none"> framework</span><span data-contrast="none">.</span><span data-ccp-props="{&quot;201341983&quot;:0,&quot;335559740&quot;:276}"> </span></p>
+<h3>Config in .NET Framework Umbraco</h3>
+<p>As an ASP.NET Framework application, Umbraco 8 uses <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/framework/configure-apps/" target="_blank" title="ASP.NET Framework configuration files">configuration files</a> to store settings. Config files are editable XML files that contain elements. Within these element structures you can edit attributes to control various <a rel="noopener" href="https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/b5ysx397(v=vs.100)" target="_blank" title="ASP.NET Framework">configuration settings</a> within your application.</p>
+<p>You don’t have to compile your application whenever a setting needs to change. At runtime, ASP.NET uses the information provided by the config files.</p>
+<p>There are three types of configuration files in .NET Framework apps, in hierarchy order:</p>
+<ul>
+<li>Machine</li>
+<li>Application</li>
+<li>Security</li>
+</ul>
+<p>We’re interested in the <strong>application </strong>config file, which contains settings specific to the application. As an ASP.NET Framework hosted web app, Umbraco uses an application-specific <a rel="noopener" href="https://docs.microsoft.com/en-us/previous-versions/dotnet/netframework-4.0/b5ysx397(v=vs.100)" target="_blank" title="NET Framework web.config file">web.config</a> file.</p>
+<h3>Web.config</h3>
+<p>The Umbraco web.config controls settings such as:</p>
+<ul>
+<li>Length of time until users in the back-office are logged out</li>
+<li>Location of the Umbraco database using a connection string</li>
+<li>Version and <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/framework/deployment/how-the-runtime-locates-assemblies" target="_blank" title="Microsoft doc on how runtime locates assemblies">location of assemblies</a> Umbraco uses at runtime</li>
+</ul>
+<pre><code class="language-markup">    &lt;connectionStrings&gt;
+        &lt;remove name="umbracoDbDSN" /&gt;
+        &lt;add name="umbracoDbDSN" connectionString="" providerName="" /&gt;
+    &lt;/connectionStrings&gt;</code></pre>
+      <p class="snippet-caption">Umbraco web.config file</p>
+<p>The release of Umbraco 8 updated several XML configuration files to be configurable through code (<span class="code">Trees.config</span> and <span class="code">Dashboards.config</span>, for example). The following config files remain in the Umbraco 8 <em>/config</em> folder:<span data-ccp-props="{&quot;201341983&quot;:0,&quot;335559740&quot;:276}"></span></p>
+<ul>
+<li data-leveltext="" data-font="Symbol" data-listid="19" aria-setsize="-1" data-aria-posinset="1" data-aria-level="1"><span data-contrast="none">tinyMceConfig.config</span><span data-ccp-props="{&quot;134233279&quot;:true,&quot;201341983&quot;:0,&quot;335559740&quot;:276}"> </span></li>
+<li data-leveltext="" data-font="Symbol" data-listid="19" aria-setsize="-1" data-aria-posinset="2" data-aria-level="1"><span data-contrast="none">umbracoSettings.config</span><span data-ccp-props="{&quot;134233279&quot;:true,&quot;201341983&quot;:0,&quot;335559740&quot;:276}"> </span></li>
+<li data-leveltext="" data-font="Symbol" data-listid="19" aria-setsize="-1" data-aria-posinset="3" data-aria-level="1"><span data-contrast="none">clientdependency.config</span></li>
+<li data-leveltext="" data-font="Symbol" data-listid="19" aria-setsize="-1" data-aria-posinset="3" data-aria-level="1"><span data-contrast="none">healthchecks.config</span></li>
+<li data-leveltext="" data-font="Symbol" data-listid="19" aria-setsize="-1" data-aria-posinset="3" data-aria-level="1"><span data-contrast="none">imageprocessor:</span>
+<ul>
+<li data-leveltext="" data-font="Symbol" data-listid="19" aria-setsize="-1" data-aria-posinset="3" data-aria-level="1"><span data-contrast="none">cache.config</span></li>
+<li data-leveltext="" data-font="Symbol" data-listid="19" aria-setsize="-1" data-aria-posinset="3" data-aria-level="1"><span data-contrast="none">security.config</span></li>
+<li data-leveltext="" data-font="Symbol" data-listid="19" aria-setsize="-1" data-aria-posinset="3" data-aria-level="1"><span data-contrast="none">processing.config</span></li>
+</ul>
+</li>
+</ul>
+<p>This doesn’t include any other config files you may reference via installation of a third-party package, such as <a rel="noopener" href="https://our.umbraco.com/packages/developer-tools/usync/" target="_blank" title="Umbraco uSync package">uSync</a>. The Umbraco <span class="code">web.config</span> references several of these configuration files via the <span class="code">configSource</span> attribute:</p>
+<pre><code class="language-markup">    &lt;umbracoConfiguration&gt;
+        &lt;settings configSource="config\umbracoSettings.config" /&gt;
+        &lt;HealthChecks configSource="config\HealthChecks.config" /&gt;
+    &lt;/umbracoConfiguration&gt;
+    &lt;clientDependency configSource="config\ClientDependency.config" /&gt;</code></pre>
+      <p class="snippet-caption">Example of Umbraco web.config referencing other config files</p>
+<h3>Accessing config values in Umbraco 8</h3>
+<p>Umbraco 8 <a rel="noopener" href="https://our.umbraco.com/documentation/reference/config/" target="_blank" title="Umbraco config documentation">accesses configuration</a> values in several ways. If you’re building a standard Umbraco website with no customisation required, you can usually let Umbraco handle the access of config values with no custom code required.</p>
+<p>However, when building a custom Umbraco 8 application, you might want access to a particular config value, perhaps for a package you’re building. In this instance, you would use the Umbraco 8 <a rel="noopener" href="https://our.umbraco.com/documentation/implementation/composing/" target="_blank" title="Umbraco composition documentation">composition</a> technique to add the config to the <span class="code">composition.Configs</span> property:</p>
+<pre><code class="language-csharp">composition.Configs.Add&lt;IModelsBuilderConfig&gt;(() =&gt; new ModelsBuilderConfig());</code></pre>
+      <p class="snippet-caption">Adding the config you need to composition.Configs (ModelsBuilder example)</p>
+<p><span data-contrast="none">Behind the scenes, Umbraco 8 </span><span data-contrast="none">binds the </span><span data-contrast="none">config class to the </span><span data-contrast="none">Configs</span><span data-contrast="none"> property. </span><span data-contrast="none">Now</span><span data-contrast="none"> you can access the config </span><span data-contrast="none">in two ways</span><span data-contrast="none">:</span><span data-ccp-props="{&quot;201341983&quot;:0,&quot;335559740&quot;:276}"> </span></p>
+<p>1. Injecting the interface of the config class you need, e.g. <span class="code">IGlobalSettings</span></p>
+<pre><code class="language-csharp">internal BackOfficeServerVariables(
+	UrlHelper urlHelper, 
+	IRuntimeState runtimeState, 
+	UmbracoFeatures features, 
+	IGlobalSettings globalSettings)</code></pre>
+      <p class="snippet-caption">Injecting IGlobalSettings into an Umbraco 8 class</p>
+<p>2. By directly calling the <span class="code">Configs </span>object on the static class, e.g. the static property <span class="code">Configs.Global()</span><em>:<br><br></em></p>
+<pre><code class="language-csharp">if (Current.Configs.Global().UseHttps)</code></pre>
+      <p class="snippet-caption">Using the static Current class to access the global config</p>
+<p>For various reasons (including testability), the ideal is always to inject the config dependency rather than to access the static object. This style of injecting the config will be more matched to the .NET Core approach that Umbraco will take in future.</p>
+<p>You can find an example of how Kevin Jump's <a rel="noopener" href="https://our.umbraco.com/packages/developer-tools/usync/" target="_blank" title="Umbraco uSync package">uSync</a> package currently uses this config <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/dependency-injection" target="_blank" title="Microsoft ASP.NET Core Dependency Injection docs">Dependency Injection</a> (DI) approach in <a rel="noopener" href="https://github.com/KevinJump/uSync8/blob/v8/8.7-main/uSync8.HistoryView/HistoryComponent.cs" target="_blank" title="uSync HistoryComponent GitHub example">HistoryComponent.cs</a>:</p>
+<pre><code class="language-csharp">public HistoryComponent(SyncFileService syncFileService,
+            IUmbracoContextFactory umbracoContextFactory,
+            IGlobalSettings globalSettings)
+        {
+            this.umbracoContextFactory = umbracoContextFactory;
+
+            this.syncFileService = syncFileService;
+            historyFolder = Path.Combine(globalSettings.LocalTempPath, "usync", "history");
+
+            uSyncService.ImportComplete += USyncService_ImportComplete;
+        }</code></pre>
+      <p class="snippet-caption">uSync HistoryComponent.cs example by Kevin Jump on GitHub</p>
+<p>This approach will likely make switching the package to .NET Core easier. We’ll dive into injectable config later, but essentially, if a package uses <span class="code">Current.Configs.Global</span> (relying on the static <span class="code">Current</span> class), the approach will need to change to remove the use of <span class="code">Current</span> and switch to the injected config object instead.</p>
+<p><span data-contrast="none">Package developers can do this now in readiness for the .NET Core migration – remove the use of </span><span data-contrast="none">Current</span><span data-contrast="none"> in their packages. You can review a similar </span><a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/pull/7496" target="_blank" title="GitHub Umbraco pull request replacing Current"><span data-contrast="none">pull request</span></a><span data-contrast="none"> where Benjamin Carleski removed </span><span data-contrast="none">many </span><span data-contrast="none">references to </span><span class="code">Current.Services</span><span data-contrast="none">, replacing </span><span data-contrast="none">them </span><span data-contrast="none">with injected services.</span><span data-ccp-props="{&quot;201341983&quot;:0,&quot;335559740&quot;:276}"> </span></p>
+<p>We've covered how to access config in .NET Framework Umbraco 8 during external development. However, if you’re working within the Umbraco 8 source code itself, you’ll see that the code accesses the config using either of the above two methods (<strong>dependency injection</strong> and <span class="code">Current.Configs()</span>), along with three more ways:</p>
+<p>3. Accessing an instance of the config type via Umbraco’s custom <span class="code">GetInstance()</span> method (often used in the unit tests):</p>
+<pre><code class="language-csharp">var umbracoSettings = Factory.GetInstance&lt;IUmbracoSettingsSection&gt;();
+var globalSettings = Factory.GetInstance&lt;IGlobalSettings&gt;();</code></pre>
+      <p class="snippet-caption">Getting the config instance from the Umbraco factory</p>
+<p>4. Using the default .NET Framework <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/system.configuration.configurationmanager?view=netframework-4.7.2" target="_blank" title=".NET Framework ConfigurationManager" data-anchor="?view=netframework-4.7.2">ConfigurationManager</a><span>:</span></p>
+<pre><code class="language-csharp">var configuredTypeName = ConfigurationManager.AppSettings[Constants.AppSettings.RegisterType];</code></pre>
+      <p class="snippet-caption">Using the ConfigurationManager to access a required app setting</p>
+<p>5. Using the default .NET Framework <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/system.web.configuration.webconfigurationmanager?view=netframework-4.7.2" target="_blank" title=".NET Framework WebConfigurationManager" data-anchor="?view=netframework-4.7.2">WebConfigurationManager</a>:</p>
+<pre><code class="language-csharp">var config = WebConfigurationManager.OpenWebConfiguration(appPath);</code></pre>
+      <p class="snippet-caption">Getting the config instance from the Umbraco factory</p>
+<p>As you can tell, there are a few different implementations to currently access Umbraco configuration. </p>
+<p>We’ve recapped how we work with config within Umbraco as an ASP.NET Framework web application today. Next, we will share how in we’re going to be moving away from the existing XML config files. You’ll learn how we’re utilising some powerful features of .NET Core to optimise the Umbraco configuration. But first, some background.</p>
+<h2>.NET Core</h2>
+<p><a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/core/introduction" target="_blank" title=".NET Core Introduction">.NET Core</a> is an open source, cross-platform implementation of .NET that was released in <a rel="noopener" href="https://devblogs.microsoft.com/dotnet/announcing-net-core-1-0/" target="_blank" title="Microsoft .NET Core announcement">June 2016</a>. NET Core is an entire redesign of .NET Framework to make it leaner, more modular, more performant, faster and more testable. Being cross-platform means .NET Core can run websites, services, and apps on Linux, MacOS and Windows alike, whereas .NET Framework only allows you to run on Windows.</p>
+<p>The web framework side of things has also changed since .NET Framework and ASP.NET Framework. On top of .NET Core is the web app framework <strong>ASP.NET Core</strong>.</p>
+<h3>ASP.NET Core</h3>
+<p><a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/introduction-to-aspnet-core" target="_blank" title="Microsoft ASP.NET Core intoduction">ASP.NET Core</a> is a redesign of ASP.NET 4.x, built on top of the .NET Core runtime. <a href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/owin?view=aspnetcore-3.1"></a><span data-contrast="none">It builds on top of the ideas introduced by </span><a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/owin" target="_blank" title="Microsoft OWIN fundamentals"><span data-contrast="none">OWIN</span></a><span data-contrast="none">, </span><span data-contrast="none">the </span><span data-contrast="none">Open Web</span><span data-contrast="none"> </span><span data-contrast="none">Interface for .NET</span><span data-contrast="none">. </span><span data-ccp-props="{&quot;201341983&quot;:0,&quot;335559740&quot;:276}"> </span></p>
+<p><span data-contrast="none">ASP</span><span data-contrast="none">.NET Core is </span><span data-contrast="none">open source and</span><span data-contrast="none">, like .NET Core,</span><span data-contrast="none"> </span><span data-contrast="none">has </span><span data-contrast="none">also </span><span data-contrast="none">been </span><span data-contrast="none">re-</span><span data-contrast="none">architected to be </span><span data-contrast="none">cross-platform, more testable, </span><span data-contrast="none">leaner, and modular</span><span data-contrast="none">.</span><span data-contrast="none"> This simplification makes it a</span><span data-contrast="none"> </span><span data-contrast="none">cleaner, more united</span><span data-contrast="none"> </span><span data-contrast="none">journey to </span><span data-contrast="none">build</span><span data-contrast="none"> </span><span data-contrast="none">web UI and web APIs</span><span data-contrast="none">. </span><span data-ccp-props="{&quot;201341983&quot;:0,&quot;335559740&quot;:276}"> </span></p>
+<p>Another change is that in ASP.NET Framework, Core MVC (<a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/mvc/overview" target="_blank" title="Microsoft MVC">Model-View-Controller</a>) and WebAPI were separate, but now they are merged into the new ASP.NET MVC. This unification helps us build web apps and APIs using the same approach.</p>
+<p>As well as Microsoft's <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/" target="_blank" title="ASP.NET Core Fundamentals">ASP.NET Core Fundamentals</a>, for a concise read on the subject try <a rel="noopener" href="https://www.syncfusion.com/ebooks/asp-net-core-3-1-succinctly" target="_blank" title="ASP.NET Core Succinctly eBook">ASP.NET Core Succinctly</a> by Unicore’s very own Simone Chiaretta and his co-writer, Ugo Lattanzi. It’s a free eBook so you can dive straight in.</p>
+<p>.NET Core and ASP.NET Core come with a myriad of improvements, letting us build apps using patterns that make extensibility and testing much easier. There are a variety of changes to the project structure in ASP.NET Core, and we’re tackling these on the Unicore project for the Umbraco migration.</p>
+<p>This article is focused on <strong>config</strong>, though. So how has config changed in .NET Core, and what does that mean for Umbraco?</p>
+<h2>Config in .NET Core Umbraco</h2>
+<p>There are some overriding changes needed for config in .NET Core. One of the main changes is moving from the .NET Framework config to the .NET Core <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/" target="_blank" title=".NET Core Configuration Providers">configuration providers</a> approach.</p>
+<h3>Configuration provider approach</h3>
+<p>In .NET Core Umbraco we can utilise powerful config dependency injection features. Umbraco now uses <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/" target="_blank" title=".NET Core Configuration Providers">configuration providers</a> to read configuration data using a set of available configuration sources. These key value pairs can come from a whole list of places but we’re going to focus on:</p>
+<ul>
+<li>Settings files (e.g. <span class="code">appsettings.json</span>)</li>
+<li>Environment variables</li>
+<li>Azure Key Vault and Azure App Configuration</li>
+</ul>
+<h3>HostBuilder</h3>
+<p>When you create a new ASP.NET Core web application, it will add a default <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.hosting.ihostbuilder" target="_blank" title=".NET Core HostBuilder">HostBuilder</a> to the <span class="code">Program.cs</span>:</p>
+<pre><code class="language-csharp">public static IHostBuilder CreateHostBuilder(string[] args) =&gt;
+            Host.CreateDefaultBuilder(args)
+                .ConfigureLogging(x =&gt;
+                {
+                    x.ClearProviders();
+                })
+                .ConfigureWebHostDefaults(webBuilder =&gt; { webBuilder.UseStartup&lt;Startup&gt;(); })
+                .UseUmbraco();</code></pre>
+      <p class="snippet-caption">HostBuilder in Program.cs in Umbraco on .NET Core</p>
+<p>This HostBuilder lets us build and configure the whole Umbraco application. If you’d like to zoom in on this, the <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/host/generic-host" target="_blank" title=".NET Core GenericHost docs">Generic Host</a> docs are a good start, but for this article we’ll focus on the parts important for loading the Umbraco configuration settings.</p>
+<h3 aria-level="5"><span data-contrast="none">CreateDefaultBuilder</span></h3>
+<p><span data-contrast="none">The </span><span class="code"><a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.hosting.host.createdefaultbuilder" target="_blank" title=".NET Core CreateDefaultBuilder docs">CreateDefaultBuilder()</a></span><span data-contrast="none"> method </span><span data-contrast="none">within </span><span class="code" data-contrast="none">CreateHostBuilder() </span><span data-contrast="none">follows a set of default instructions, loading various configurations in a predefined order. The later loaded configuration providers override the earlier loaded ones. Umbraco loads the configuration provider in the default .NET Core order:</span></p>
+<ol>
+<li>Load the default host configuration, <span class="code">IConfiguration</span> (includes all "<span class="code">DOTNET_</span>" prefixed environment variables)</li>
+<li>Load <span class="code">appsettings.json </span>using the JSON configuration provider</li>
+<li>Load <span class="code">appsettings.{Environment}.json</span>, which overrides <span class="code">appsettings.json</span> configuration</li>
+<li>Load <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets" target="_blank" title=".NET Core app secrets">App secrets</a> (when the app is running in Development)</li>
+<li>Load environment variables</li>
+<li>Load c<span class="TextRun SCXW15040575 BCX0" data-contrast="none"><span class="NormalTextRun CommentStart SCXW15040575 BCX0">ommand-line arguments</span></span><span class="TextRun SCXW15040575 BCX0" data-contrast="none"><span class="NormalTextRun SCXW15040575 BCX0">, such as<span> </span></span></span><span class="TextRun SCXW15040575 BCX0" data-contrast="none"><span class="NormalTextRun SCXW15040575 BCX0">if you ran<span> </span></span></span><span class="TextRun SCXW15040575 BCX0" data-contrast="none"><span class="NormalTextRun SCXW15040575 BCX0">Umbraco</span></span><span class="TextRun SCXW15040575 BCX0" data-contrast="none"><span class="NormalTextRun SCXW15040575 BCX0"><span> </span>using </span></span>the <span class="code">dotnet run</span> command</li>
+</ol>
+<h3>ConfigureWebHostDefaults</h3>
+<p>The <span class="code"><a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.hosting.generichostbuilderextensions.configurewebhostdefaults" target="_blank" title=".NET Core ConfigureWebHostDefaults">ConfigureWebHostDefaults()</a></span> method on the Host Builder hosts Umbraco as a web app using the default .NET Core settings, telling Umbraco what web server to use and how to configure everything needed to run by:</p>
+<ul>
+<li>Loading the assets from <span class="code">wwwroot</span> in <span class="code">Umbraco.Web.UI.NetCore</span> project</li>
+<li>Enabling both cross-platform <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/servers/kestrel" target="_blank" title=".NET Core Kestrel">Kestrel</a> and Internet Information Services (IIS) as the web server</li>
+<li>Configuring Umbraco using the default configuration providers, reading from the <span class="code">ASPNETCORE_ENVIRONMENT</span> variable</li>
+<li>Specifying the <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/startup" target="_blank" title=".NET Core Startup class">startup class</a> to use when the app's host is built via <span class="code">UseStartup&lt;TStartup&gt;</span></li>
+</ul>
+<pre><code class="language-csharp">.ConfigureWebHostDefaults(webBuilder =&gt; { webBuilder.UseStartup&lt;Startup&gt;(); })</code></pre>
+      <p class="snippet-caption">ConfigureWebHostDefaults() method on the Host Builder in Umbraco .NET Core</p>
+<p>There are a few areas here that are new in .NET Core Umbraco, so now we’ll cover the key changes. Firstly, where is the <span class="code">web.config</span>?</p>
+<h3>Web.config is now appsettings.json</h3>
+<p>Umbraco will come installed with a default <span class="code"><a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/" target="_blank" title=".NET Core configuration" class="Hyperlink  BCX0 SCXW126324646"><span class="TextRun Underlined  BCX0 SCXW126324646" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW126324646" data-ccp-charstyle="Hyperlink">appsettings.json</span></span></a></span><em>. </em>This will replace the various .NET Framework configs.</p>
+<p>Although you can read XML files using a .NET Core configuration provider, we were keen to use <span class="code">appsettings.json</span> file loaded by the <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.configuration.json.jsonconfigurationprovider" target="_blank" title=".NET Core JSONConfigurationProvider">JsonConfigurationProvider</a> to match the standard .NET Core implementation. Also, the hostbuilder knows to load the <span class="code">appsettings.json</span> file by default.</p>
+<p>It is worth knowing that although we have a set of values in <span class="code">appsettings.json</span>, behind the scenes in Umbraco core there are a set of matching default values in <span class="code">GlobalSettings.cs</span>. However, you can override these values via the Umbraco <span class="code">appsettings.json</span> file.</p>
+<p>We only include one default <span class="code">appsettings.json</span> file in Umbraco but you can override it with settings that are customised for your environments.</p>
+<h3>Environmental Variables</h3>
+<p>You will often need to override app configuration for specific environments. To update an ASP.NET Framework Umbraco config for a live deployment, you likely use some form of XML config transform. <span class="TextRun  BCX0 SCXW10412219" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW10412219"><span> </span></span></span><span class="TextRun  BCX0 SCXW10412219" data-contrast="none"><span class="NormalTextRun CommentStart  BCX0 SCXW10412219">In<span> </span></span></span><span class="TextRun  BCX0 SCXW10412219" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW10412219">ASP</span></span><span class="TextRun  BCX0 SCXW10412219" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW10412219">.NET Core,<span> </span></span><span class="NormalTextRun ContextualSpellingAndGrammarErrorV2  BCX0 SCXW10412219">this</span><span class="NormalTextRun  BCX0 SCXW10412219"><span> </span>changes.</span></span><span class="TextRun  BCX0 SCXW10412219" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW10412219"> </span></span>  </p>
+<p>ASP.NET Core uses the following <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/environments" target="_blank" title=".NET Core Environment Variables">environment variables</a> to configure the Umbraco app based on the runtime:</p>
+<ul>
+<li><a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/?view=aspnetcore-5.0#default-host-configuration" target="_blank" title=".NET Core default host configuration" data-anchor="?view=aspnetcore-5.0#default-host-configuration">DOTNET_ENVIRONMENT</a></li>
+<li>ASPNETCORE_ENVIRONMENT</li>
+</ul>
+<p>The environment names are usually Development, Staging or Production (although they can be set to anything). If you’re curious, look in the <span class="code">Umbraco.Web.UI.NetCore</span> project properties for <span class="code">launchSettings.json</span>. It sets the <span class="code">ASPNETCORE_ENVIRONMENT</span> to <em>“Development”</em>:</p>
+<pre><code class="language-json">{
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:9000",
+      "sslPort": 44331
+    }
+  },
+  "profiles": {
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "Umbraco.Web.UI.NetCore": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:44354;http://localhost:9000"
+    }
+  }
+}
+</code></pre>
+      <p class="snippet-caption">Example launchsettings.json</p>
+<p>Just like you would use <em>web.config</em> transforms in .NET Framework, you can override the default <span class="code">appsettings.json</span> values with your own environment-specific configuration. The application configuration files follow the pattern:</p>
+<p><span class="code"><em>appsettings.<strong>{Environment}</strong>.json</em></span></p>
+<p>For example, configuration of production can be set in <span class="code">appsettings.Production.json</span> and will override the default <span class="code">appsettings.json</span> (such as when deploying Umbraco to Azure). However, sensitive production variables like secrets should not be stored in source code. Instead, these can be stored in Environment variables on the production server, such as in Azure Portal application settings or in Azure Key Vault, for example.</p>
+<h3>Azure Key Vault and Azure App Configuration</h3>
+<p>If you use Azure, then you might have heard of <a rel="noopener" href="https://docs.microsoft.com/en-us/azure/azure-app-configuration/quickstart-aspnet-core-app?tabs=core3x" target="_blank" title="Microsoft Azure App Configuration" data-anchor="?tabs=core3x">Azure App Configuration</a>. Using the <a rel="noopener" href="https://www.nuget.org/packages/Azure.Identity" target="_blank" title="Azure Identity">Azure.Identity</a> package, you can separate your configuration from code. This enables the storage and management of application settings centrally by using <a rel="noopener" href="https://docs.microsoft.com/en-us/azure/azure-app-configuration/use-key-vault-references-dotnet-core?tabs=cmd%2Ccore2x" target="_blank" title="Microsoft Azure Key Vault references" data-anchor="?tabs=cmd%2Ccore2x">Azure Key Vault</a> and Azure App Configuration. This setup is possible by adding another configuration provider to the host builder, following a clean and <span class="TextRun SCXW250879556 BCX0" data-contrast="none"><span class="NormalTextRun CommentStart SCXW250879556 BCX0">standardi</span></span><span class="TextRun SCXW250879556 BCX0" data-contrast="none"><span class="NormalTextRun SCXW250879556 BCX0">s</span></span><span class="TextRun SCXW250879556 BCX0" data-contrast="none"><span class="NormalTextRun SCXW250879556 BCX0">ed<span> </span></span></span>pattern.</p>
+<h3>Options pattern</h3>
+<p><span class="TextRun  BCX0 SCXW240223680" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW240223680">Now we've covered how Umbraco utilises the .NET Core configuration provider approach to read configuration data, we'll now move onto another .NET Core pattern that lets us access this config - the<span> </span></span></span><strong><span class="TextRun  BCX0 SCXW240223680" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW240223680">options pattern</span></span></strong><span class="TextRun  BCX0 SCXW240223680" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW240223680">.</span></span></p>
+<p>The <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/options" target="_blank" title=".NET Core Options Pattern">options</a> pattern is a clean way to access groups of config settings via the Microsoft recommended <span class="code">IOptions&lt;&gt;</span> approach. This helps ensure a separation of concerns, keeping related config settings together instead of having one huge config for many different purposes.</p>
+<p>If you’re new to the options pattern, <a rel="noopener" href="https://andrewlock.net/how-to-use-the-ioptions-pattern-for-configuration-in-asp-net-core-rc2/" target="_blank" title="Andrew Lock Options Pattern article">Andrew Lock’s article</a> was written for an older .NET Core (ASP.NET Core RC2), but is still a good starting point. As Lock explains, you start off with a <strong>strongly typed</strong> class that represents your config object. In Umbraco, for example, we now have a class called <span class="code">GlobalSettings.cs</span>, with properties that match the section in the <span class="code">appsettings.json</span> file:</p>
+<pre><code class="language-json">"Global": {
+        "DefaultUILanguage": "en-us",
+        "HideTopLevelNodeFromPath": true,
+        "UmbracoPath": "~/umbraco",
+        "TimeOutInMinutes": 20,
+        "UseHttps": false
+}</code></pre>
+      <p class="snippet-caption">Global section of the Umbraco .NET Core appsettings.json file</p>
+<pre><code class="language-csharp">public int TimeOutInMinutes { get; set; } = 20;
+
+public string DefaultUILanguage { get; set; } = "en-US";
+
+public bool HideTopLevelNodeFromPath { get; set; } = false;
+
+public bool UseHttps { get; set; } = false;
+
+public int VersionCheckPeriod { get; set; } = 7;
+
+public string UmbracoPath { get; set; } = "~/umbraco";</code></pre>
+      <p class="snippet-caption">Matching part of the GlobalSettings.cs file</p>
+<p>You can also inject specialised config classes, such as <span class="code">SecuritySettings.cs</span>, which has default values that can be overridden in <span class="code">appsettings.json</span>:</p>
+<pre><code class="language-csharp">﻿namespace Umbraco.Core.Configuration.Models
+{
+    public class SecuritySettings
+    {
+        public bool KeepUserLoggedIn { get; set; } = false;
+
+        public bool HideDisabledUsersInBackOffice { get; set; } = false;
+
+        public bool AllowPasswordReset { get; set; } = true;
+
+        public string AuthCookieName { get; set; } = "UMB_UCONTEXT";
+
+        public string AuthCookieDomain { get; set; }
+
+        public bool UsernameIsEmail { get; set; } = true;
+
+        public UserPasswordConfigurationSettings UserPassword { get; set; }
+
+        public MemberPasswordConfigurationSettings MemberPassword { get; set; }
+    }
+}
+</code></pre>
+      <p class="snippet-caption">SecuritySettings.cs class in Umbraco .NET Core currently</p>
+<p>Note how the Security section in <span class="code">appsettings.json</span> matches the properties in the strongly-typed <span class="code">SecuritySettings.cs</span> class:</p>
+<pre><code class="language-json">{
+    "Security": {
+        "KeepUserLoggedIn": false,
+        "UsernameIsEmail": true,
+        "HideDisabledUsersInBackoffice": false,
+        "UserPassword": {
+          "RequiredLength": 10,
+          "RequireNonLetterOrDigit": false,
+          "RequireDigit": false,
+          "RequireLowercase": false,
+          "RequireUppercase": false,
+          "MaxFailedAccessAttemptsBeforeLockout": 5
+        },
+        "MemberPassword": {
+          "RequiredLength": 10,
+          "RequireNonLetterOrDigit": false,
+          "RequireDigit": false,
+          "RequireLowercase": false,
+          "RequireUppercase": false,
+          "MaxFailedAccessAttemptsBeforeLockout": 5
+        }
+    }
+}
+</code></pre>
+      <p class="snippet-caption">Security appsettings.json in Umbraco .NET Core currently</p>
+<p>How does Umbraco use this strongly typed config class? From a high level, the class is bound inside the <span class="code">ConfigureServices()</span> method in the <span class="code">Startup.cs</span> that is specified in the host builder.</p>
+<h3>Setting up the config class</h3>
+<p>The .NET Core Umbraco <span class="code">Startup.cs</span> class is split into several areas. In a less complex solution, you could directly bind the config within the <span class="code">ConfigureServices</span> method. However, we have split things up into logical parts due to the number of things that Umbraco needs to run. </p>
+<p>First, the Startup class extends the default builder via the <span class="code">.AddUmbraco()</span> method. This method adds the extension methods that the builder will needs to load various components:</p>
+<pre><code class="language-csharp">// This method gets called by the runtime. Use this method to add services to the container.
+// For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
+
+public void ConfigureServices(IServiceCollection services)
+{
+	var umbracoBuilder = services.AddUmbraco(_env, _config);
+            umbracoBuilder
+                .WithAllBackOfficeComponents()
+                .WithAllWebsiteComponents()
+                .Build();
+
+}</code></pre>
+      <p class="snippet-caption">ConfigureServices method in the Umbraco .NET Core Startup.cs file</p>
+<p>The builder calls these methods as they need loading. When the <span class="code">WithAllBackOfficeComponents()</span> method is called on the builder within the <span class="code">ConfigureServices()</span> method, it returns a builder decorated with methods including <span class="code">WithConfiguration()</span>:</p>
+<pre><code class="language-csharp">public static IUmbracoBuilder WithConfiguration(this IUmbracoBuilder builder)
+            =&gt; builder.AddWith(nameof(WithConfiguration), () =&gt; builder.Services.AddUmbracoConfiguration(builder.Config));
+</code></pre>
+      <p class="snippet-caption">WithConfiguration method in Umbraco .NET Core UmbracoBuilderExtensions.cs</p>
+<p>This in turn calls <span class="code">AddUmbracoConfiguration()</span> to register an instance of the strongly-typed config classes for <span class="code">&lt;TOptions&gt;</span> to bind against:</p>
+<pre><code class="language-csharp">...
+// Register configuration sections.
+services.Configure&lt;GlobalSettings&gt;(configuration.GetSection(Constants.Configuration.ConfigGlobal));
+...</code></pre>
+      <p class="snippet-caption">Register configuration sections example in Umbraco .NET Core</p>
+<p>To bind the config values, we use the <span class="code">configuration.GetSection()</span> method from <span class="code">Microsoft.Extensions.Configuration.IConfiguration</span> and everything is bound and ready for us to use.</p>
+<h3>Injecting the config class</h3>
+<p>Now we can access config values via our controllers and other consuming classes using the <span class="code">IOptions&lt;TOptions&gt;</span> approach. We inject the options type into the constructor, and dependency injection assigns the values to our property, such as in this <span class="code">DefaultCultureAccessor</span> example:</p>
+<pre><code class="language-csharp">public class DefaultCultureAccessor : IDefaultCultureAccessor
+    {
+        private readonly ILocalizationService _localizationService;
+        private readonly IOptions&lt;GlobalSettings&gt; _options;
+        private readonly RuntimeLevel _runtimeLevel;
+
+        /// &lt;summary&gt;
+        /// Initializes a new instance of the &lt;see cref="DefaultCultureAccessor"/&gt; class.
+        /// &lt;/summary&gt;
+        public DefaultCultureAccessor(
+		ILocalizationService localizationService, 
+		IRuntimeState runtimeState, 
+		IOptions&lt;GlobalSettings&gt; options)
+        {
+            _localizationService = localizationService;
+            _options = options;
+            _runtimeLevel = runtimeState.Level;
+        }
+...
+}</code></pre>
+      <p class="snippet-caption">Example Dependency Injection of config using IOptions</p>
+<p>Using <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.options.ioptions-1" target="_blank" title=".NET Core IOptions">IOptions</a>, the config won’t need to be referenced directly again during the application lifetime, until it starts up and begins this process again. However, there are times when we want to retrieve the config value on every request, rather than when the app starts. For this scenario, <span class="TextRun SCXW118934742 BCX0" data-contrast="none"><span class="NormalTextRun CommentStart SCXW118934742 BCX0">we would use<span> </span></span></span><a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.options.ioptionssnapshot-1" target="_blank" title=".NET Core IOptionsSnapshot" class="Hyperlink SCXW118934742 BCX0"><span class="TextRun Underlined SCXW118934742 BCX0" data-contrast="none"><span class="NormalTextRun SCXW118934742 BCX0" data-ccp-charstyle="Hyperlink">IOptionsSnapshot</span></span></a><span class="TextRun SCXW118934742 BCX0" data-contrast="none"><span class="NormalTextRun SCXW118934742 BCX0">, such as<span> </span></span></span><span class="TextRun SCXW118934742 BCX0" data-contrast="none"><span class="NormalTextRun SCXW118934742 BCX0">when retrieving cookie<span> </span></span></span><span class="TextRun SCXW118934742 BCX0" data-contrast="none"><span class="NormalTextRun SCXW118934742 BCX0">options</span></span><span class="TextRun SCXW118934742 BCX0" data-contrast="none"><span class="NormalTextRun SCXW118934742 BCX0"><span> </span>in preview mode</span></span><span class="TextRun SCXW118934742 BCX0" data-contrast="none"><span class="NormalTextRun SCXW118934742 BCX0">:</span></span><a href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.options.ioptionssnapshot-1"></a> </p>
+<pre><code class="language-csharp">var cookieOptions = context.RequestServices.GetRequiredService&lt;IOptionsSnapshot&lt;CookieAuthenticationOptions&gt;&gt;()
+	.Get(Constants.Security.BackOfficeAuthenticationType);</code></pre>
+      <p class="snippet-caption">Example use of IOptionsSnapshot in Umbraco .NET Core</p>
+<p><span data-contrast="none">Another scenario is when we</span><span data-contrast="none"> </span><span data-contrast="none">want to be notified that a config value has changed</span><span data-contrast="none">, or if the class is a singleton but we require the config value to be updateable</span><span data-contrast="none">. In this case, we would use </span><a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.extensions.options.ioptionsmonitor-1" target="_blank" title=".NET Core IOptionsMonitor"><span data-contrast="none">IOptions</span><span data-contrast="none">M</span><span data-contrast="none">onitor</span></a><span data-contrast="none">. An example of this is for </span><span data-contrast="none">health</span><span data-contrast="none"> </span><span data-contrast="none">checks</span><span data-contrast="none"> such as </span><span class="code" data-contrast="none">MacroErrorsCheck.cs</span><span data-contrast="none">:</span><span data-ccp-props="{&quot;201341983&quot;:0,&quot;335559740&quot;:276}"> </span></p>
+<pre><code class="language-csharp">public class MacroErrorsCheck : AbstractSettingsCheck
+    {
+        private readonly ILocalizedTextService _textService;
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly IOptionsMonitor&lt;ContentSettings&gt; _contentSettings;
+
+        public MacroErrorsCheck(ILocalizedTextService textService, ILoggerFactory loggerFactory,
+            IOptionsMonitor&lt;ContentSettings&gt; contentSettings)
+            : base(textService, loggerFactory)
+        {
+            _textService = textService;
+            _loggerFactory = loggerFactory;
+            _contentSettings = contentSettings;
+        }
+...
+}</code></pre>
+      <p class="snippet-caption">Example use of IOptionsMonitor in Umbraco .NET Core</p>
+<div><span></span></div>
+<div><span>The main takeaway from all this is that because we're using <span class="code">IOptions&lt;T&gt;</span> in Umbraco .NET Core now, future implementations of Umbraco and packages will be able to follow this config DI approach. </span><span>So a future package that needs the global settings will be able to add a custom class file and inject <span class="code">IOptions&lt;GlobalSettings&gt;</span>. Nice, right?</span></div>
+<h3>Serilog config</h3>
+<p>It is worth mentioning that the config for our chosen logging framework, <a rel="noopener" href="https://github.com/serilog/serilog-settings-configuration" target="_blank" title="Serilog config">Serilog</a>, is read by default from the Serilog section of the <span class="code">appsettings.json</span>, meaning no additional <span class="code">IOptions&lt;T&gt;</span> binding is required:</p>
+<pre><code class="language-json">"Serilog": {
+    "MinimumLevel": {
+      "Default": "Information",
+      "Override": {
+        "Microsoft": "Warning",
+        "Microsoft.Hosting.Lifetime": "Information",
+        "System": "Warning"
+      }
+    }
+}</code></pre>
+      <p class="snippet-caption">Serilog config section in Umbraco .NET Core</p>
+<h2>Summary</h2>
+<p>We hope this article helped you understand how config is changing, and how a new .NET Core Umbraco project will work behind the scenes in future.</p>
+<p>You've learned about the changes to configuration within the .NET Core Umbraco solution. We’ve also shared the changes to the configuration approach that will be needed for package developers and those building Umbraco solutions that utilise custom configuration.</p>
+<p>You might not currently need to extend the config in your own projects, but knowing what has changed and how things work behind the scenes in .NET Core Umbraco can give you confidence for future. And of course, changes to Umbraco implementations will be backed up with comprehensive documentation nearer release.</p>
+<p>Once you get used to Umbraco’s updated .NET Core configuration approach, hopefully it will start to feel intuitive…and you might even want to mirror the config class injection approach on your .NET Framework projects using your own DI container.</p>
+<h3>Get Involved!</h3>
+<p>The Unicore team helped put this article together, so big thanks for their contributions, especially Bjarke Berg, Andy Butland and Simone Chiaretta.</p>
+<p>As ever, if you have any questions at all, or you’d like to get involved in migrating Umbraco to .NET Core, please contact the Unicore team in your preferred way:</p>
+<ul>
+<li>Look for the Umbraco GitHub tasks labelled with <span class="code">project/net-core</span> and <span class="code">community/up-for-grabs</span> – here’s a handy pre-filtered <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/issues?q=is%3Aopen+label%3Acommunity%2Fup-for-grabs+label%3Aproject%2Fnet-core" target="_blank" title="Umbraco Up-for-grabs .NET Core GitHub tasks" data-anchor="?q=is%3Aopen+label%3Acommunity%2Fup-for-grabs+label%3Aproject%2Fnet-core">GitHub link</a> to help find them!</li>
+<li>Following the <a rel="noopener" href="https://twitter.com/search?q=%23projectunicore&amp;src=typed_query" target="_blank" title="Twitter #projectunicore tags" data-anchor="?q=%23projectunicore&amp;src=typed_query">#projectunicore</a> Twitter hashtag</li>
+<li>Reach out to the Unicore team at <a href="mailto:unicore@umbraco.com" title="Umbraco Unicore email">unicore@umbraco.com</a></li>
+<li>Contact Bjarke Berg or other team members on <a rel="noopener" href="https://twitter.com/BjarkeBerg" target="_blank" title="Bjarke Berg Twitter profile">Twitter</a></li>
+</ul>
+<p>Also, please let us know if you’d like us to consider another .NET Core demystification topic. We’ve got several chunky areas that would be good candidates for articles, so we’d like to hear your feedback.</p>
+<p><span class="TextRun  BCX0 SCXW187178884" data-contrast="none"><span class="NormalTextRun  BCX0 SCXW187178884">Thanks for reading, now you can go and have fun with Umbraco on <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/tree/netcore/netcore" target="_blank" title=".NET Core">.NET Core</a>!</span></span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/net-5/" title="See all articles tagged with .NET 5">.NET 5</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/net-core/" title="See all articles tagged with .NET Core">.NET Core</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Emma Garland"><img src="//gravatar.com/avatar/d86012bb27ff74b1287f548040ce14be.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/d86012bb27ff74b1287f548040ce14be.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Emma Garland</h1>
+        <p>Emma is on Twitter as <a href="//twitter.com/emmagarland" title="Emma Garland on Twitter" rel="author">@emmagarland</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

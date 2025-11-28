@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Create a Responsive and Hybrid Navigation in Umbraco 7</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Responsive Hybrid Navigation</h1>
+      <p class="byline"> by Rémy Beumier, <span class="pubdate">posted on <time datetime="2019-12-15">Dec 15, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">In this post, I want to help Umbracians with a recurring topic that is not always simple to handle: The Navigation. We will work with Umbraco 7 as I'm not familiar enough with the 8th version yet.</p>
+<p class="intro">This tutorial will start with a quick view on the Bootstrap 3 Navigation we will use. It will continue with the building of an automated navigation based on Home sub-pages. The third part will cover a manual navigation relying on selected pages. And we will eventually see what could still be improved from there.</p>
+<p> </p>
+<h2>The Navigation</h2>
+<p>First, let's create the backbone of the Navigation.</p>
+<p>To emphasize the Umbraco side, we will not spend a lot of time on the backbone of the navigation. That's why I opted for the Bootstrap navigation. It is widely used, responsive and compatible with most browsers.</p>
+<p>Why did I choose the 3rd version of Bootstrap and not the 4th? I wanted to have a navigation fully working in IE9 and IE10 (Internet Explorer); which is not possible in the latest version of Bootstrap.</p>
+<p>If you are not familiar with Bootstrap 3, don't hesitate to read the documentation on <a href="https://getbootstrap.com/docs/3.3/getting-started/">How to get started</a> and on <a href="https://getbootstrap.com/docs/3.3/components/#navbar">the Navigation component</a>.</p>
+<p> </p>
+<p>Here is the base code I will use for the navigation:</p>
+<pre><code class="language-markup">&lt;nav class="navbar navbar-default" role="navigation"&gt;
+    &lt;div class="container"&gt;
+
+        &lt;div class="navbar-header"&gt;
+            &lt;button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"&gt;
+                &lt;span class="icon-bar"&gt;&lt;/span&gt;&lt;span class="icon-bar"&gt;&lt;/span&gt;&lt;span class="icon-bar"&gt;&lt;/span&gt;
+            &lt;/button&gt;
+
+            &lt;a class="navbar-brand" href="/"&gt;Site Name&lt;/a&gt;
+        &lt;/div&gt;
+
+        &lt;div class="collapse navbar-collapse"&gt;
+            &lt;ul class="nav navbar-nav navbar-right"&gt;
+                &lt;li&gt;&lt;a href="#"&gt;Link&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href="#"&gt;Link&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href="#"&gt;Link&lt;/a&gt;&lt;/li&gt;
+                &lt;!-- More links will be created, it's just an example. --&gt;
+            &lt;/ul&gt;
+        &lt;/div&gt;
+
+    &lt;/div&gt;
+&lt;/nav&gt;
+</code></pre>
+<p>This will give us a responsive navigation with the name of the site on the left and links on the right.</p>
+<p><img style="width: 500px; height: 95px;" src="/archive/media/2019/bootstrap_3_navigation.png?width=500&amp;height=95" alt="Boostrap 3 navigation" data-udi="umb://media/622e06f3c909468883fcd2a94f037740"></p>
+<p>Since this is working we will now start to work on the Umbraco side of the navigation.</p>
+<p> </p>
+<h2>The Document Type</h2>
+<p>You can set the navigation in your homepage document type or anywhere else. Since I usually work with a 'Navigation' node which is a child of a 'Configuration' node, that's what I'll do in this tutorial. </p>
+<p>Here are the properties we need to create:</p>
+<ul>
+<li>A first <span class="code">TrueFalse</span> to opt for automated navigation or not</li>
+<li>A <span class="code">MultiUrlPicker</span> for the manual navigation links</li>
+<li>A second <span class="code">TrueFalse</span> to opt for the display of sub-pages or not</li>
+</ul>
+<p><img style="width: 100%; height: auto;" src="/archive/media/2019/navigation_doctype.png" alt="Navigation document type" data-udi="umb://media/43bda472388944e8b6d8d43cd645534e"></p>
+<p> </p>
+<h2>Create the Navigation</h2>
+<p>Here is what your content tree could look like.</p>
+<p><em>Note: Don't forget to set the Permissions before trying to create your Navigation.</em></p>
+<p><img style="width: 439px; height: 363px;" src="/archive/media/2019/navigation_tree.png?width=439&amp;height=363" alt="Navigation tree" data-udi="umb://media/2343bb9fe6634702b7439355fb47c99b"></p>
+<p>And here is what the Navigation content could look like.</p>
+<p><img style="width: 500px; height: 243.6548223350254px;" src="/archive/media/2019/navigation_content.png?width=500&amp;height=243.6548223350254" alt="Navigation content" data-udi="umb://media/9c8887b83b374710a9d511cd0c0f751a"></p>
+<p> </p>
+<h2>Code the Navigation</h2>
+<p>Let's dive into the coding of this Navigation: first the header of the navigation followed by the collapsible part; this part divided into an automated version and a manual one.</p>
+<p> </p>
+<h3>Navigation Header</h3>
+<p>We will first take back our HTML code and add the name of the root to use it in the navigation. We'll achieve that with the <span class="code">AncestorOrSelf()</span> method.</p>
+<p>We also want to create a variable pointing to our navigation settings that will be useful in the next steps.</p>
+<p><em>Note: You can replace the Brand Name with a logo.</em></p>
+<pre><code class="language-csharp">@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@using Umbraco.Web.Models
+
+@{
+    var navigation = Umbraco.TypedContentSingleAtXPath("//navigationSettings");
+}
+
+&lt;nav class="navbar navbar-default" role="navigation"&gt;
+    &lt;div class="container"&gt;
+        &lt;div class="navbar-header"&gt;
+            &lt;button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"&gt;
+                &lt;span class="icon-bar"&gt;&lt;/span&gt;&lt;span class="icon-bar"&gt;&lt;/span&gt;&lt;span class="icon-bar"&gt;&lt;/span&gt;
+            &lt;/button&gt;
+            &lt;a class="navbar-brand" href="/"&gt;
+                @(Model.Content.AncestorOrSelf(1).Name)
+            &lt;/a&gt;
+        &lt;/div&gt;
+
+        &lt;div class="collapse navbar-collapse"&gt;
+            &lt;ul class="nav navbar-nav navbar-right"&gt;
+                &lt;li&gt;&lt;a href="#"&gt;Link&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href="#"&gt;Link&lt;/a&gt;&lt;/li&gt;
+                &lt;li&gt;&lt;a href="#"&gt;Link&lt;/a&gt;&lt;/li&gt;
+            &lt;/ul&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/nav&gt;</code></pre>
+<p> </p>
+<h3>Automated navigation links</h3>
+<p>To collect the links in an automated way, we will first check the automated navigation option is selected and list children of the root filtering on their Document Type to be sure to list the right elements. Finally, if the option to display sub-pages is on, list grand children of the Root. Again, filtering on the Document Type.</p>
+<pre><code class="language-csharp">&lt;div class="collapse navbar-collapse"&gt;
+    &lt;ul class="nav navbar-nav navbar-right"&gt;
+        @{
+            @* automated navigation *@
+            // check the navigation is automated
+            if (navigation.GetPropertyValue&lt;bool&gt;("automatedNavigation"))
+            {
+                // list children of the root
+                var homeChildren = Model.Content.AncestorOrSelf(1).Children.Where(x =&gt; x.DocumentTypeAlias == "yourPageTypeAlias" || x.DocumentTypeAlias == "anotherPageTypeAlias");
+                bool showSubpages = navigation.GetPropertyValue&lt;bool&gt;("displaySubPages");
+                // make sure the root has children
+                if (homeChildren.Any())
+                {
+                    foreach (var page in homeChildren)
+                    {
+                        @* manages subpage of a link *@
+                        var pageChildren = page.Children.Where(x =&gt; x.DocumentTypeAlias == "yourPageTypeAlias" || x.DocumentTypeAlias == "anotherPageTypeAlias");
+                        // check root has grand children and the navigation has to show sub pages
+                        if (pageChildren.Any() &amp;&amp; showSubpages)
+                        {
+                            &lt;li class="dropdown"&gt;
+                                &lt;a href="@page.Url" role="button" aria-haspopup="true" aria-expanded="false"&gt;@page.Name &lt;span class="caret"&gt;&lt;/span&gt;&lt;/a&gt;
+                                &lt;ul class="dropdown-menu"&gt;
+                                    @foreach (var subpage in pageChildren)
+                                    {
+                                        &lt;li&gt;&lt;a href="@subpage.Url"&gt;@subpage.Name&lt;/a&gt;&lt;/li&gt;
+                                    }
+                                &lt;/ul&gt;
+                            &lt;/li&gt;
+                        }
+                        else
+                        {
+                            &lt;li&gt;&lt;a href="@page.Url"&gt;@page.Name&lt;/a&gt;&lt;/li&gt;
+                        }
+                    }
+                }
+            }
+            @* / automated navigation *@
+        }
+    &lt;/ul&gt;
+&lt;/div&gt;</code></pre>
+<h3>Manual navigation links</h3>
+<p>To collect the links added manually, we will first check the automated navigation option isn't selected and list the links. Finally, if the option to display sub-pages is on, list children of the links filtering on their Document Type.</p>
+<pre><code class="language-csharp">&lt;div class="collapse navbar-collapse"&gt;
+    &lt;ul class="nav navbar-nav navbar-right"&gt;
+        @{
+            @* manual navigation *@
+            // check the navigation isn't automated
+            else
+            {
+                // take the list of links
+                var mainLinks = navigation.GetPropertyValue&lt;IEnumerable&lt;Link&gt;&gt;("mainNavigation");
+                bool showSubpages = navigation.GetPropertyValue&lt;bool&gt;("displaySubPages");
+                // make sure there are links
+                if (mainLinks.Any())
+                {
+                    foreach (var link in mainLinks)
+                    {
+                        var linkId = Umbraco.GetIdForUdi(link.Udi);
+                        if (linkId &gt; 0)
+                        {
+                            @* manages subpage of a link *@
+                            var linkChildren = ((IEnumerable&lt;dynamic&gt;)Umbraco.Content(linkId).Children).Where(x =&gt; x.DocumentTypeAlias == "yourPageTypeAlias" || x.DocumentTypeAlias == "anotherPageTypeAlias");
+                            // check links have children and the navigation has to show sub pages
+                            if (linkChildren.Any() &amp;&amp; showSubpages)
+                            {
+                                &lt;li class="dropdown"&gt;
+                                    &lt;a href="@link.Url" target="@link.Target" role="button" aria-haspopup="true" aria-expanded="false"&gt;@link.Name &lt;span class="caret"&gt;&lt;/span&gt;&lt;/a&gt;
+                                    &lt;ul class="dropdown-menu"&gt;
+                                        @foreach (var sublink in linkChildren)
+                                        {
+                                            &lt;li&gt;&lt;a href="@sublink.Url"&gt;@sublink.Name&lt;/a&gt;&lt;/li&gt;
+                                        }
+                                    &lt;/ul&gt;
+                                &lt;/li&gt;
+                            }
+                            else
+                            {
+                                &lt;li&gt;&lt;a href="@link.Url" target="@link.Target"&gt;@link.Name&lt;/a&gt;&lt;/li&gt;
+                            }
+                        }
+                        else
+                        {
+                            &lt;li&gt;&lt;a href="@link.Url" target="@link.Target"&gt;@link.Name&lt;/a&gt;&lt;/li&gt;
+                        }
+                    }
+                }
+            }
+            @* / manual navigation *@
+        }
+    &lt;/ul&gt;
+&lt;/div&gt;</code></pre>
+<h3>Full navigation code</h3>
+<p>Here is the full code if you need it.</p>
+<pre><code class="language-csharp">@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@using Umbraco.Web.Models
+
+@{
+    var navigation = Umbraco.TypedContentSingleAtXPath("//navigationSettings");
+}
+
+&lt;nav class="navbar navbar-default" role="navigation"&gt;
+    &lt;div class="container"&gt;
+        &lt;div class="navbar-header"&gt;
+            &lt;button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse"&gt;
+                &lt;span class="icon-bar"&gt;&lt;/span&gt;&lt;span class="icon-bar"&gt;&lt;/span&gt;&lt;span class="icon-bar"&gt;&lt;/span&gt;
+            &lt;/button&gt;
+            &lt;a class="navbar-brand" href="/"&gt;
+                @(Model.Content.AncestorOrSelf(1).Name)
+            &lt;/a&gt;
+        &lt;/div&gt;
+
+        &lt;div class="collapse navbar-collapse"&gt;
+            &lt;ul class="nav navbar-nav navbar-right"&gt;
+                @{
+                    @* automated navigation *@
+                    if (navigation.GetPropertyValue&lt;bool&gt;("automatedNavigation"))
+                    {
+                        var homeChildren = Model.Content.AncestorOrSelf(1).Children.Where(x =&gt; x.DocumentTypeAlias == "yourPageTypeAlias" || x.DocumentTypeAlias == "anotherPageTypeAlias");
+                        bool showSubpages = navigation.GetPropertyValue&lt;bool&gt;("displaySubPages");
+                        if (homeChildren.Any())
+                        {
+                            foreach (var page in homeChildren)
+                            {
+                                @* manages subpage of a link *@
+                                var pageChildren = page.Children.Where(x =&gt; x.DocumentTypeAlias == "yourPageTypeAlias" || x.DocumentTypeAlias == "anotherPageTypeAlias");
+                                if (pageChildren.Any() &amp;&amp; showSubpages)
+                                {
+                                    &lt;li class="dropdown"&gt;
+                                        &lt;a href="@page.Url" role="button" aria-haspopup="true" aria-expanded="false"&gt;@page.Name &lt;span class="caret"&gt;&lt;/span&gt;&lt;/a&gt;
+                                        &lt;ul class="dropdown-menu"&gt;
+                                            @foreach (var subpage in pageChildren)
+                                            {
+                                                &lt;li&gt;&lt;a href="@subpage.Url"&gt;@subpage.Name&lt;/a&gt;&lt;/li&gt;
+                                            }
+                                        &lt;/ul&gt;
+                                    &lt;/li&gt;
+                                }
+                                else
+                                {
+                                    &lt;li&gt;&lt;a href="@page.Url"&gt;@page.Name&lt;/a&gt;&lt;/li&gt;
+                                }
+                            }
+                        }
+                    }
+                    @* / automated navigation *@
+
+                    @* manual navigation *@
+                    else
+                    {
+                        var mainLinks = navigation.GetPropertyValue&lt;IEnumerable&lt;Link&gt;&gt;("mainNavigation");
+                        bool showSubpages = navigation.GetPropertyValue&lt;bool&gt;("displaySubPages");
+                        if (mainLinks.Any())
+                        {
+                            foreach (var link in mainLinks)
+                            {
+                                var linkId = Umbraco.GetIdForUdi(link.Udi);
+                                if (linkId &gt; 0)
+                                {
+                                    @* manages subpage of a link *@
+                                    var linkChildren = ((IEnumerable&lt;dynamic&gt;)Umbraco.Content(linkId).Children).Where(x =&gt; x.DocumentTypeAlias == "yourPageTypeAlias" || x.DocumentTypeAlias == "anotherPageTypeAlias");
+                                    if (linkChildren.Any() &amp;&amp; showSubpages)
+                                    {
+                                        &lt;li class="dropdown"&gt;
+                                            &lt;a href="@link.Url" target="@link.Target" role="button" aria-haspopup="true" aria-expanded="false"&gt;@link.Name &lt;span class="caret"&gt;&lt;/span&gt;&lt;/a&gt;
+                                            &lt;ul class="dropdown-menu"&gt;
+                                                @foreach (var sublink in linkChildren)
+                                                {
+                                                    &lt;li&gt;&lt;a href="@sublink.Url"&gt;@sublink.Name&lt;/a&gt;&lt;/li&gt;
+                                                }
+                                            &lt;/ul&gt;
+                                        &lt;/li&gt;
+                                    }
+                                    else
+                                    {
+                                        &lt;li&gt;&lt;a href="@link.Url" target="@link.Target"&gt;@link.Name&lt;/a&gt;&lt;/li&gt;
+                                    }
+                                }
+                                else
+                                {
+                                    &lt;li&gt;&lt;a href="@link.Url" target="@link.Target"&gt;@link.Name&lt;/a&gt;&lt;/li&gt;
+                                }
+                            }
+                        }
+                    }
+                    @* / manual navigation *@
+                }
+            &lt;/ul&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/nav&gt;</code></pre>
+<p><em>Note: Don't forget to add this code in your Master template.</em></p>
+<p>In my example, here is how the navigation looks like after all this preparation work.</p>
+<p><img style="width: 500px; height: 86.76893576222436px;" src="/archive/media/2019/navigation.png?width=500&amp;height=86.76893576222436" alt="Navigation" data-udi="umb://media/386d75cb569845cc928025aa0cd94df8"></p>
+<h2><br>Modify the CSS</h2>
+<p>I prefer the sub navigation to open on hover than on click, that's why there isn't <span class="code">data-toggle="dropdown"</span> in my HTML. In order to make the sub navigation work that way, we need to add some additional CSS to overwrite Bootstrap one. Here it is:</p>
+<pre><code class="language-css">/* handles dropdown menu on small screen to be shown correctly */
+@media only screen and (max-width: 767px) {
+    .dropdown-menu {
+        display: block;
+        position: relative;
+        float: none;
+        border: none;
+        webkit-box-shadow: none;
+        box-shadow: none;
+    }
+}
+
+/* handles dropdown on hover */
+@media only screen and (min-width: 768px) {
+    .dropdown:hover .dropdown-menu {
+        display: block;
+    }
+}</code></pre>
+<p> </p>
+<h2>Improve the Navigation</h2>
+<p>There is always room for improvements. For example there could be a third level (and more) in the navigation, or a Call-to-Action link, or styling choices in the Document Type.</p>
+<p>Also working with Umbraco V8 instead of V7. My knowledge is limited for the brand new version but it could make the code even shorter.</p>
+<p>Feel free to point out any flaws in my code you might find and suggest ideas for improvements.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/responsive/" title="See all articles tagged with Responsive">Responsive</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Rémy Beumier"><img src="//gravatar.com/avatar/fd0112978973522eeeaf01e28aa5f1af.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/fd0112978973522eeeaf01e28aa5f1af.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Rémy Beumier</h1>
+        <p>Rémy is on Twitter as <a href="//twitter.com/beumsk" title="Rémy Beumier on Twitter" rel="author">@beumsk</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraccess: A story of Accessibility, Targeted Testing and Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraccess</h1>
+      <p class="byline"> by Florian Beijers, <span class="pubdate">posted on <time datetime="2019-12-22">Dec 22, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span>Today, on this rainy, cold Netherlands saturday afternoon the idea came to me. I hope you will enjoy what's ahead, and maybe even learn a thing or two.</span></p>
+<h2>Umbroken</h2>
+<p class="intro">I got involved with Umbraco because, as a blind web developer, I was applying to jobs in my area after being let go from my job at the time. I applied to a place that was using Umbraco CMS, something I'd never heard of until then.</p>
+<p>Job interviews going as they do, I'd hear more by the end of that week and when I got home, I started researching just what this Umbraco thing was.</p>
+<p>Fast forward a bit, and I got involved in a now somewhat (in)famous<span> </span><a href="https://github.com/umbraco/Umbraco-CMS/issues/5277#issuecomment-504046081">discussion on github</a><span> </span>regarding a slew of accessibility issues that were uncovered by an audit that had been done a few months before.</p>
+<p>Doing more research, I encountered a Dutch article written by someone at<span> </span><a rel="nofollow" href="https://www.perplex.nl/blog/2017/umbraco-toegankelijk-voor-iedereen/">Perplex Digital</a>, which is where I currently work. You may have heard of them<span> </span>😉</p>
+<p>That article gave me the impression that at least this company cared a lot about their accessibility, which made me apply for a position there. It was when they wanted me to do a quick trial project to test my skills as it were, when I saw just how broken some of the things were, and to some degree still are.</p>
+<p>At the time the content tree and settings tree, pretty much any tree, were pretty much completely unusable with a keyboard, let alone a keyboard and a screen reader.</p>
+<p>A lot of buttons were only denoting their function using an icon (gear icon for settings etc). Icons aren't read by screen readers unless you add a textual alternative of some kind, so these buttons were read as " button" or a link labeled "Umbraco".</p>
+<p>Modal dialogs appeared, but at the very bottom of the DOM, which means screen reader users often didn't even know anything had happened.</p>
+<p>Context menus appeared if you hovered your mouse over the thing in question. Screen reader users do not use a mouse. To get a better idea on just what needed to be focused on first, I went through the basic website tutorial. The rather brutal results of that particular endeavor can be found in<span> </span><a href="https://gist.github.com/zersiax/b6ab5b37cf52c8d1a6a371bf2250a872">this gist containing my notes</a>.</p>
+<h2>Umbarrassment no longer</h2>
+<p>Back when I first started this project, I had moments where I was seriously not sure if I'd be able to get enough people interested to make a dent in the literally hundreds of accessibility issues that littered the Umbraco backoffice. With Christmas coming up, though, I'm glad to say we've not only made a dent, but actually made some very good progress.</p>
+<p>Some experiences are still awkward and unwieldy, we definitely aren't there yet. However, the recent 8.2, 8.3 and 8.4 updates have addressed a large amount of showstoppers that make me, as a fully blind developer, able to be somewhat productive on an 8.4 build of Umbraco.</p>
+<p>Context menus have a button now that doesn't require a mouse. So do arrows to expand and collapse levels in the tree. A lot of apocalypse buttons, buttons with only an icon to denote it's function, have proper labeling now, so I know if I'm editing, or deleting that document type I just spent 10 minutes on. A big, huge h5yr to all of the people who helped me make that happen.</p>
+<h2>Obligatory final takeaways</h2>
+<p>This article would be incomplete without a few takeaways, some lessons that came out of this endeavor that is even now still going on. I think the biggest ones are the following:</p>
+<h3>Accessibility is tough if you have to retrofit it into an application that didn't account for it ever being a thing</h3>
+<p>The Umbraco treeview is about as far away from a proper HTML treeview as you can get, and to make it as accessible as it is now took far more work and effort than it needed to if HTML specifications were followed from the get go. According to those HTML specs, a tree view should look more like<span> </span><a rel="nofollow" href="http://www.oaa-accessibility.org/examplep/treeview1/">this example of a treeview from the Open Ajax Alliance</a>. Needless to say, that is not what happened in the Umbraco backoffice.<span> </span>😊</p>
+<p>This is not an admonishment, this is a lesson. Native HTML can do a lot more than people realize, and to ignore all the work people put into making that spec is simply inviting a bunch of extra work onto yourself when it finally turns out you weren't smarter than the folks who made the spec a thing that browser vendors and assistive tech vendors alike adhere to. The browser gives you an incredible amount of preprogrammed standard behavior that users have come to expect to be there.</p>
+<p>To roll your own is often a lot of extra work for very little gain and will very likely inconvenience at least one of your target actors, even if the design looks super sexy. Madness lies that way, beware!<span> </span>😊</p>
+<h3>You aren't your target audience</h3>
+<p>A question that kept coming up in my initial research, when I was first putting Umbraco through it's paces, went something like this: " Just ....how was this missed?"</p>
+<p>The answer is really very simple; we test for ourselves, not for our audience. Only our audience can test for our audience.</p>
+<p>Blind people don't just tab through a website ad nauseam, we have a bunch of different ways to navigate a website that are much more efficient if the infrastructure for those methods is there. Proper heading structure, proper use of semantic HTML roles and proper labeling of buttons and links helps us do that immensely.</p>
+<p>Flipping that statement on it's head, not all keyboard users are blind.<span> </span><a rel="nofollow" href="https://en.wikipedia.org/wiki/Repetitive_strain_injury">People with repetitive strain injury (RSI)</a>, people who have trouble making the fine movements for mouse use due to a physical impairment of some kind, the list goes on. Where skip links are often somewhat redundant for screen reader users, they help these other keyboard users immensely.</p>
+<p>Screen reader users tend not to use a mouse, so clicking an element and having the screen reader announce the correct response does not mean your element is accessible. Some partially sighted people might use a screen reader to reduce eye strain, but that is just yet another target group.</p>
+<p>Blindfolding yourself does not emulate a blind person's experience, because you don't know how to use a screen reader and even if you know the manual back to front, it won't tell you how people actually use this tech in the wild.</p>
+<p>All these examples really mean to illustrate that if you want to test your website or web application for a variety of needs, you will have to bite the bullet and have people with those actual needs test your application. If you do this, it will have to have the same gravity as any other UX activity.</p>
+<p>Do you pay your beta testers? Pay these folks as well then. Do you get feedback from people with a disability of some variety? Don't play the numbers game and put it down with the same importance you would any other feedback. Yes, the target group is smaller, and also you're telling that smaller target audience they're not worthy of using your website if you mark this feedback low priority.</p>
+<p>Finally ...remember why you are building whatever it is you're building. You wanted to help humans solve a problem. All the money you make and all the fame you gain don't change that fundamental fact.</p>
+<p>Internationalization allows people speaking a foreign language to use your website. Security allows people to feel safe using your application. Accessibility improves the experience for all your users and makes your application future-proof. Umbraco is on the right path, will you follow in it's footsteps as your new year's resolution?</p>
+<p>Happy holidays, everyone<span> </span>😊</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/accessibility/" title="See all articles tagged with Accessibility">Accessibility</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Florian Beijers"><img src="//gravatar.com/avatar/1c0e122624dfd79527e5d9a02a27f71b.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/1c0e122624dfd79527e5d9a02a27f71b.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Florian Beijers</h1>
+        <p>Florian is on Twitter as <a href="//twitter.com/zersiax" title="Florian Beijers on Twitter" rel="author">@zersiax</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

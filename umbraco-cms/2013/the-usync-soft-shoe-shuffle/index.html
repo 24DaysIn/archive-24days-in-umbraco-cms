@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>The uSync Soft Shoe Shuffle</title>
+<meta name="description" content="Using uSync and uSync Content Edition to perform magic tricks on the Doctypes">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">The uSync Soft Shoe Shuffle</h1>
+      <p class="byline"> by Marc Goodson, <span class="pubdate">posted on <time datetime="2013-12-16">Dec 16, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">So I've been using uSync, the popular 'Umbraco database to disc' serialization tool created by Kevin Jump of <a href="http://jumoo.co.uk/">Jumoo</a> for about a year now; just really to put Umbraco doctype changes into git, so that I can work with other devs without a shared database, and to ease moving something I'm working on between my desktop and my laptop.</p>
+<p class="intro">But everyone's doing that now, that's old hat, so what is this <strong>uSync Soft Shoe Shuffle</strong> that I've somehow volunteered to demonstrate for 24 days in Umbraco ? I hear you say...</p>
+<p>Well it's akin to the tablecloth trick, you know whipping the tablecloth off of the table, and having most; ok ideally all of the plates and cups left on the table: smugly unharmed.</p>
+<p>
+        <iframe width="560" height="315" src="http://www.youtube.com/embed/nTDud03nzCg" frameborder="0" allowfullscreen=""></iframe>
+      </p>
+<p>Let me try and achieve the same result as these kids but with uSync and Umbraco.</p>
+<h3>What do I mean ?</h3>
+<p>Well imagine you have a set of document types that a site has been running on for while and you suddenly realise there's some obvious commonality between them, and it would all be much neater if the doctypes inherited from a common parent doctype that defined the shared properties in one place.</p>
+<p>We've all been there, maybe the client changed their mind after the point of sign off or something, it can happen; but the problem now is you can't easily change those doctypes with the site so full of content, without losing or mucking that content up. Or at least that's the vague premise for this experiment.</p>
+<p>(Someone will comment below to say there is a package that just does this, so use whatever that is, but right now I'm just interested to see if this might work)</p>
+<h2>The experiment</h2>
+<p><span>So let me show you an example of a </span><span>manoeuvre</span><span>, that all the cool kids are calling '<strong>The uSync Soft Shoe Shuffle</strong>':</span><span style="font-size: 0.7em; color: blue;"><br></span></p>
+<p>I'm experimenting here on Umbraco 6 with one of the Umbraco 7 starter kits we backported for an Umbraco 6/7 demo a few weeks back.<br><br></p>
+<figure>
+  <a href="/archive/media/2013/demosite.png">
+    <img src="/archive/media/2013/demosite.png" width="879" alt="DemoSite">
+  </a>
+</figure>
+<ol>
+<li>
+<p>Install <a href="http://our.umbraco.org/projects/developer-tools/usync">uSync</a></p>
+</li>
+<li>
+<p>Install <a href="http://our.umbraco.org/projects/developer-tools/usynccontentedition">uSync Content Edition</a></p>
+<figure>
+  <a href="/archive/media/2013/installedpackages.jpg">
+    <img src="/archive/media/2013/installedpackages.jpg" width="281" alt="InstalledPackages">
+  </a>
+</figure>
+</li>
+<li>
+<p>uSync and uSync Content edition have configuration files in /config, that can be a little bit confusing at first, (and also after a while).</p>
+<p>To begin with we're going to set uSync to read="true", write="false", attach="true" and versions="false", this is generally how you would normally work with uSync.</p>
+<figure>
+  <a href="/archive/media/2013/usyncsettings.jpg">
+    <img src="/archive/media/2013/usyncsettings.jpg" width="1101" alt="uSyncSettings">
+  </a>
+</figure>
+<p>Any changes in the uSync files on disk will be 'read' into Umbraco, and uSync will attach itself to Umbraco events for when doctypes etc. change, and serialise those changes to disk.</p>
+<p>Similarly for uSync Content edition we will have import="true" and events="true", quite why Mr Jump didn't call those settings the same thing between editions, I don't know...</p>
+<figure>
+  <a href="/archive/media/2013/usynccontentsettings.jpg">
+    <img src="/archive/media/2013/usynccontentsettings.jpg" width="568" alt="uSyncContentSettings">
+  </a>
+</figure>
+</li>
+<li>
+<p>On first install uSync and uSync Content edition will run through your Umbraco installation and serialize existing doctypes etc and content to your /usync folder on disk, have a look, they are there, open them up and see what they contain, can you guess what I'm going to do ?</p>
+<figure>
+  <a href="/archive/media/2013/usyncfiles.jpg">
+    <img src="/archive/media/2013/usyncfiles.jpg" width="833" alt="uSyncFiles">
+  </a>
+</figure>
+<p>In the example site, there are 'Text Pages' and 'News Items' and these both have a common rich text editor property called 'bodyText'.</p>
+<figure>
+  <a href="/archive/media/2013/bodytextproperty.png">
+    <img src="/archive/media/2013/bodytextproperty.png" width="1248" alt="BodyTextProperty">
+  </a>
+</figure>
+<p>I'm going to add a 'Content' doctype between 'Master' and 'News Item' and Master and 'Text Page', and move the bodyText Property to be defined only on the new Content doctype, without breaking any cups, glasses or plates.</p>
+</li>
+</ol>
+<h2>Let the shuffle begin.</h2>
+<ol start="5">
+<li>
+<p>First create the new Content, doctype, I'm giving it an alias of umbContent, remember that.</p>
+<figure>
+  <a href="/archive/media/2013/addcontentdoctype.jpg">
+    <img src="/archive/media/2013/addcontentdoctype.jpg" width="448" alt="AddContentDocType">
+  </a>
+</figure>
+<p>then add the bodyText property</p>
+<figure>
+  <a href="/archive/media/2013/addbodytext.jpg">
+    <img src="/archive/media/2013/addbodytext.jpg" width="666" alt="AddBodyText">
+  </a>
+</figure>
+</li>
+<li>
+<p>Because uSync is running in attach mode you can see it has generated the Content folder under master, and the corresponding def.config file contains the serialised details of the new doctype on disk.</p>
+<figure>
+  <a href="/archive/media/2013/content_def_file_created.jpg">
+    <img src="/archive/media/2013/content_def_file_created.jpg" width="838" alt="ContentDefCreated">
+  </a>
+</figure>
+<figure>
+  <a href="/archive/media/2013/content_def_file_xml.jpg">
+    <img src="/archive/media/2013/content_def_file_xml.jpg" width="725" alt="ContentDefXml">
+  </a>
+</figure>
+</li>
+<li>
+<p>We're now going to hack the uSync files directly on disk, so we're going to 'turn off' uSync and uSync Content edition - set read &amp; attach to false, set import &amp; events to false - break the web.config and reload the Umbraco site. (very important you do this)</p>
+</li>
+<li>
+<p>Go into the uSync folder on disc, copy the umbTextPage and umbNewsItem folders into the new umbContent folder.</p>
+<figure>
+  <a href="/archive/media/2013/moveumbdoctypes.jpg">
+    <img src="/archive/media/2013/moveumbdoctypes.jpg" width="806" alt="MoveUmbDocTypes">
+  </a>
+</figure>
+</li>
+<li>
+<p>Now that uSync is safely turned off, delete all of the content on the site, yes ALL OF THE CONTENT. Delete it, that's what I said, do it now!</p>
+<figure>
+  <a href="/archive/media/2013/delete_the_content.jpg">
+    <img src="/archive/media/2013/delete_the_content.jpg" width="427" alt="DeleteContent">
+  </a>
+</figure>
+</li>
+<li>
+<p>Next delete the umbNewsItem and umbTextPage doctype, I know it's madness.</p>
+<figure>
+  <a href="/archive/media/2013/delete_the_doctypes.jpg">
+    <img src="/archive/media/2013/delete_the_doctypes.jpg" width="261" alt="DeleeDocTypes">
+  </a>
+</figure>
+</li>
+<li>
+<p>You should now be getting a bit of a sick feeling in your stomach.</p>
+</li>
+</ol>
+<h2>Waving the magic wand</h2>
+<ol start="12">
+<li>
+<p>On disk open the corresponding def.config files for umbTextFile and umbNewsItem, find the bodyText property definition and delete it,</p>
+<figure>
+  <a href="/archive/media/2013/delete_content_property.jpg">
+    <img src="/archive/media/2013/delete_content_property.jpg" width="757" alt="DeleteContentProperty">
+  </a>
+</figure>
+<p>locate the 'Master' property in the xml definition and change it from umbMaster to umbContent. This will make these doctypes inherit from the new umbContent doctype, and that is where they will pick up their bodyText property from.</p>
+<figure>
+  <a href="/archive/media/2013/change_master.jpg">
+    <img src="/archive/media/2013/change_master.jpg" width="575" alt="ChangeMaster">
+  </a>
+</figure>
+</li>
+<li>
+<p>Now we need to turn on uSync (but NOT uSync Content edition) so in the uSync settings only set read="true", and break the web.config, refresh the site.</p>
+</li>
+<li>
+<p>Say the magic words: 'Reload the nodes', et voila: uSync should have recreated the umbTextPage and umbNewsItem doctypes, nested underneath the umbContent doctype, and things like structure 'shouldn't have been forgotten'</p>
+<figure>
+  <a href="/archive/media/2013/doctypesundercontent.jpg">
+    <img src="/archive/media/2013/doctypesundercontent.jpg" width="228" alt="DocTypesUnderContent">
+  </a>
+</figure>
+</li>
+<li>
+<p>Now we're nearly ready to pull the tablecloth, (I mean turn back on uSync Content edition), but first we don't want uSync Content edition to know it has had content before, and so we need to delete it's two mapping xml files which it uses to keep track of local id's between umbraco installs, and are stored in /app_data/temp:</p>
+<figure>
+  <a href="/archive/media/2013/deletingmappingfiles.jpg">
+    <img src="/archive/media/2013/deletingmappingfiles.jpg" width="624" alt="DeleteMappingFiles">
+  </a>
+</figure>
+</li>
+</ol>
+<h2>Yanking the tablecloth</h2>
+<ol start="16">
+<li>
+<p>We are ready, deep breath, count to 3, in the uSync Content edition config file set import="true" and break the web.config one last time, reload the content nodes, and <span>Ta-dah!</span> The content is back. </p>
+<figure>
+  <a href="/archive/media/2013/contents_back.jpg">
+    <img src="/archive/media/2013/contents_back.jpg" width="1320" alt="ContentsBack">
+  </a>
+</figure>
+<p>This works because uSync Content edition serializes content to disk based on doctype alias, and property name alias, in the example above, we haven't changed the doctype alias or the alias of the property name, we've just changed where they are defined and uSync Content edition doesn't really care about that.</p>
+<figure>
+  <a href="/archive/media/2013/highlight_content_file_serialization.png">
+    <img src="/archive/media/2013/highlight_content_file_serialization.png" width="988" alt="HighlightContentDefChanges">
+  </a>
+</figure>
+</li>
+</ol>
+<h2>Conclusion</h2>
+<p>So is this useful ? probably not, I was just wondering if it would work, and it sort of does, but I'm not recommending you try this on a live site, plates and hearts will get broken; but hopefully I've managed to give you a bit of an insight into the way that uSync and uSync Content edition work together.</p>
+<p>Right well that about wraps it up for the <strong>uSync Soft Shoe Shuffle</strong>, the cool kids are all here now and they're drinking eggnog and beckoning me to join them, so I'll wish you all a Merry Christmas and leave you with the sounds of the excellent Joe Loss and his Orchestra, and their version of the Soft Shoe Shuffle:</p>
+<p>take it away Joe...</p>
+<p>
+        <iframe width="420" height="315" src="http://www.youtube.com/embed/0r0MwuGdtYs" frameborder="0" allowfullscreen=""></iframe>
+      </p>
+<h2>Credits</h2>
+<p>Thanks to Kevin Jump for uSync.</p>
+<p>This was a:</p>
+<figure>
+  <a href="/archive/media/2013/tooorangeyproduction.png">
+    <img src="/archive/media/2013/tooorangeyproduction.png" width="1000" alt="tooorangeyproductions">
+  </a>
+</figure>
+<p> </p>
+<figure>
+  <a href="/archive/media/2013/moriyamalogo.png">
+    <img src="/archive/media/2013/moriyamalogo.png" width="612" alt="MoriyamaLogo">
+  </a>
+</figure>
+<div style="clear: both;"> </div>
+<figure>
+  <a href="/archive/media/2013/no_doc_types_harmed.png">
+    <img src="/archive/media/2013/no_doc_types_harmed.png" width="800" alt="NoDocTypesHarmed">
+  </a>
+</figure></div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Marc Goodson"><img src="//gravatar.com/avatar/1da605eb2601035122149d0bc1edb5ea.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/1da605eb2601035122149d0bc1edb5ea.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Marc Goodson</h1>
+        <p>Marc is on Twitter as <a href="//twitter.com/marcemarc" title="Marc Goodson on Twitter" rel="author">@marcemarc</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li class="selected"><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

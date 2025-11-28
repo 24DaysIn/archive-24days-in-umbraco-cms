@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco Forms and Newsletter Studio for integrated marketing processes</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco Forms and Newsletter Studio</h1>
+      <p class="byline"> by Marc Stöcker, <span class="pubdate">posted on <time datetime="2016-12-01">Dec 1, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">In Germany for instance that could easily get you a legal notice with attached costs of a few hundred Euros <span>–</span> at least. But it's also good practice to let your recipients approve their email prior to sending them newsletters. If you are considering your business to be a respectable one, this is just a matter of course.</p>
+<p class="intro"> </p>
+<h2>Newsletter management and sending without SaaS</h2>
+<p>If you aren't using any SaaS like Mailchimp or CampaignMonitor to manage your newsletter for any reason, <a href="https://www.newsletterstudio.org" target="_blank">Newsletter Studio by Enkel Media Stockholm AB</a> is the most integrated, easy and affordable solution you can get without reinventing the wheel yourself. <a href="https://www.newsletterstudio.org" target="_blank">Have a look at the features here. </a></p>
+<p>While the mail generation and bulk sending capabilities of Newsletter Studio are quite sophisticated, the subscription management itself isn't as much. Basically you just use a small macro to render a simple subscription form requesting the user's email to the page. While that macro is customizable, in the end it still adds any syntactically valid email address right to the mailing list. Definitely not something you want to do.</p>
+<p>But there are not only legal reasons to it. If you use <a href="https://umbraco.com/products-and-support/forms/" target="_blank">Umbraco Forms</a> in your website as well, you probably know about the workflow feature it provides. If you haven't had a look at the product recently,<a href="https://umbraco.com/products-and-support/forms/" target="_blank"> you could do so now</a>.</p>
+<p>In short, with Umbraco Forms, if someone submits a form, you can execute a range of workflow steps to process and handle things. Hate email? Just post form submissions to a Slack or Teams channel instead. Want to trigger an onboarding workflow for new signups? Go ahead! Very powerful and easy to extend. If you ask me, the killer feature of Umbraco Forms isn't the (great) forms editor but the workflows. Essentially if you have data entry on the page, hook it up to Umbraco Forms -- and tie the workflows together to get your business and marketing processes in order.</p>
+<p> </p>
+<h2>Join forces for less friction!</h2>
+<p>So let's tie Umbraco Forms and Newsletter Studio together -- so the editing experience and the marketing process are streamlined and the "CMS friction" is getting reduced. Plus, legal is happy as well!</p>
+<p>Because, you know:</p>
+<p><a href="https://twitter.com/esn303/status/794511833285689349"><img src="/archive/media/2016/cwasr-nxgaahqxw.jpg?width=500&amp;height=375" alt="" rel="1303" data-id="1303"></a></p>
+<p> </p>
+<h2>First Step: Adding newsletter consent to Umbraco Forms</h2>
+<p>If your law requires your subscribers to express their will in receiving a newsletter explicitly, the best option is to use a mandatory checkbox. While the built-in checkbox works for that, it doesn't allow for too much text and doesn't provide a way to add i.e. a link to your privacy policy.</p>
+<p>If you like your content editors to be able to be free and creative, it is essentially that they can create and insert signup forms everywhere it suits. At least if your users are professional content creatives and digital marketers. This flexibility is crucial to them as they can build a better website by moving things around if the data shows lack of interest or whatever. A simple custom Umbraco Forms field type is all it takes to acomplish that flexibility: </p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+using Umbraco.Forms.Core;
+using Umbraco.Forms.Core.Attributes;
+using Umbraco.Forms.Core.Enums;
+using Umbraco.Forms.Data.Storage;
+
+namespace FormsExt
+{
+    public class Consent : FieldType
+    {
+        [Setting("Text", prevalues = "", description = "Enter consent text(s) here.", view = "textarea")]
+        public string Text { get; set; }
+
+        [Setting("Add privacy policy", prevalues = "", description = "Adds a default privacy statement.", view = "checkbox")]
+        public string PrivacyStatement { get; set; }
+
+        public Consent()
+        {
+            this.Id = new Guid("57696a35-f1e6-4fab-af4a-ad7f7ad2c235");
+            this.Name = "Consent";
+            this.Description = "Shows privacy conditions and requests consent.";
+            this.Icon = "icon-legal";
+            this.DataType = FieldDataType.Bit;
+            this.SortOrder = 10;
+        }
+
+        // - custom value
+        public override IEnumerable&lt;object&gt; ProcessSubmittedValue(Field field, IEnumerable&lt;object&gt; postedValues, HttpContextBase context)
+        {
+            List&lt;object&gt; returnValue = new List&lt;object&gt;();
+            if (postedValues.ToList().Count &gt; 0)
+            {
+                returnValue.Add("true");
+            }
+            else
+            {
+                returnValue.Add("false");
+            }
+            return returnValue;
+
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">/App_Code/FormsExt/Consent.cs</p>
+<pre><code class="language-markup">﻿&lt;div class="fieldset-consent"&gt;
+    &lt;textarea class="inline-editor inline-textarea" style="width:80%;"
+              select-on-focus
+              umb-forms-auto-size
+              ng-model="field.settings.Text"
+              placeholder=""&gt;&lt;/textarea&gt;
+
+    &lt;div ng-if="field.settings.PrivacyStatement" class="inline-editor"&gt;
+        &lt;b&gt;✅ Privacy statemention added automatically&lt;/b&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+      <p class="snippet-caption">/App_Plugins/UmbracoForms/Backoffice/Common/FieldTypes/Consent.html</p>
+<pre><code class="language-javascript">@model Umbraco.Forms.Mvc.Models.FieldViewModel
+@{
+    var settings = Model.AdditionalSettings;
+    bool hasPrivacyStatement = settings.ContainsKey("PrivacyStatement");
+}
+&lt;div class="forms-consent"&gt;
+    &lt;div class="row forms-consent-primary"&gt;
+        &lt;div class="col-xs-1 forms-consent-checkbox"&gt;
+            &lt;input type="checkbox" name="@Model.Name" id="@Model.Id" style="width:auto;margin-right:10px;"
+                   @if (Model.Mandatory) { &lt;text&gt; data-val="true" data-val-requiredcb="@Model.RequiredErrorMessage" &lt;/text&gt;    }
+                   @if (Model.ContainsValue(true) || Model.ContainsValue("true") || Model.ContainsValue("on")) { &lt;text&gt; checked="checked" &lt;/text&gt;    } /&gt;
+        &lt;/div&gt;
+        &lt;div class="col-xs-11 forms-consent-text"&gt;
+            &lt;label for="@Model.Name" style="text-transform:none;white-space: pre-line;"&gt;&lt;p class="forms-consent-text"&gt;@settings["Text"]&lt;/p&gt;&lt;/label&gt;
+
+            @if (hasPrivacyStatement)
+            {
+                &lt;label for="@Model.Name" style="text-transform:none;" class="forms-consent-privacystatement"&gt;
+                    &lt;p&gt;
+                        Your data will not be passed on to third parties. Please see our
+                        &lt;a href="/de/datenschutz" target="_blank"&gt;privacy policy&lt;/a&gt;
+                        for further details.
+                    &lt;/p&gt;
+                &lt;/label&gt;
+            }
+
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+&lt;/div&gt;
+</code></pre>
+      <p class="snippet-caption">/Views/Partials/Forms/Fieldtypes/FieldType.Consent.cshtml</p>
+<p style="margin: 0in; font-family: Calibri; font-size: 11.0pt;"> </p>
+<p>Now you can add a newsletter consent section to your form in Umbraco Forms:</p>
+<p><img src="/archive/media/2016/now-you-can-add-a-newsletter-consent-section-to-your-form-in-umbraco-forms.png?width=500&amp;height=328.6493288590604" alt="" rel="1309" data-id="1309"></p>
+<p> </p>
+<h2>Send new subscribers an opt-in email</h2>
+<p>Next up: We're sending some fancy approval mail. Why that? Because in this day and age a nice looking email converts better. As until now our new subscribers haven't approved their email, we are not allowed to reach out to them (depending on your juristiction). Better convert them or the marketing department is going to kill us!</p>
+<p>Without re-inventing the wheel or plugging in and wiring up one of the available Razor email engines, your best bet is the built-in capabilities of Umbraco Forms. Without any further configuration you can easily prepare emails with XSLT and send the result out. While XSLT isn't the most loved templating (well, tranformation) of all time, it get's the job done.</p>
+<p>First, we need to prepare the XSLT template for our HTML email and upload it to the media section in Umbraco. No, really. To the media section. <span>??</span> I suggest you create a dedicated folder for the email templates there:</p>
+<p><img src="/archive/media/2016/xslt-media-section.png?width=500&amp;height=302.69246949936894" alt="" rel="1311" data-id="1311"></p>
+<p>If you could use a premade template that you only need to adapt to your branding and laws, why not take the one we use at <a href="http://mindrevolution.com" target="_blank" title="mindrevolution">mindrevolution</a>?</p>
+<p><a href="https://gist.github.com/esn303/28511169bdf4dde65033a228aca084ca" target="_blank" title="GitHub Gist: A template for email opt-in mails (XSLT) for Umbraco Forms">Get it from GitHub</a> or see below. You're welcome.</p>
+<pre><code class="language-markup">﻿&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;xsl:stylesheet version="1.0"
+xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+xmlns:msxsl="urn:schemas-microsoft-com:xslt"
+xmlns:user="urn:my-scripts"
+xmlns:umbraco.library="urn:umbraco.library"
+exclude-result-prefixes="xsl msxsl user umbraco.library"&gt;
+
+  &lt;xsl:output method="html" media-type="text/html" doctype-public="-//W3C//DTD XHTML 1.0 Strict//EN"
+  doctype-system="DTD/xhtml1-strict.dtd"
+  cdata-section-elements="script style"
+  indent="yes"
+  encoding="utf-8"/&gt;
+
+  &lt;xsl:param name="records" /&gt;
+
+  &lt;xsl:template match="/"&gt;
+
+    &lt;xsl:variable name="email"&gt;
+      &lt;xsl:value-of select="$records//fields/*[caption='E-Mail']//value"/&gt;
+    &lt;/xsl:variable&gt;
+    &lt;xsl:variable name="optinkey"&gt;
+      &lt;xsl:value-of select="$records//uniqueId"/&gt;
+    &lt;/xsl:variable&gt;
+    &lt;xsl:variable name="optinlink"&gt;
+      http://localhost:54449/de/fnc/newsletter-optin?key=&lt;xsl:value-of select="$optinkey"/&gt;
+    &lt;/xsl:variable&gt;
+
+    &lt;body style="font-family: Segoe UI, Frutiger, Frutiger Linotype, Dejavu Sans, Helvetica Neue, Arial, sans-serif; font-size: 16px; line-height: 20px;"&gt;
+
+      &lt;table width="80%" style="max-width:80%;max-width:500px;font-family: Segoe UI, Frutiger, Frutiger Linotype, Dejavu Sans, Helvetica Neue, Arial, sans-serif;"&gt;
+        &lt;tr&gt;
+          &lt;td align="center"&gt;
+
+            &lt;p style="font-size:120px;"&gt;
+              &lt;a href="{$optinlink}" style="text-decoration:none;color:#e2e2e2;"&gt;👍&lt;/a&gt;
+            &lt;/p&gt;
+
+            &lt;h3&gt;Please activate your email address.&lt;/h3&gt;
+            &lt;p&gt;
+              Thanks you for signing up to our newsletter. Please activate your subscription with a simple click:
+            &lt;/p&gt;
+
+            &lt;table width="80%" style="max-width:80%;font-family: Segoe UI, Frutiger, Frutiger Linotype, Dejavu Sans, Helvetica Neue, Arial, sans-serif;"&gt;
+              &lt;tr&gt;
+                &lt;td&gt;
+                  &lt;table border="0" align="center" cellpadding="0" cellspacing="0" style="margin:0 auto;"&gt;
+                    &lt;tr&gt;
+                      &lt;td align="center"&gt;
+                        &lt;table border="0" cellpadding="0" cellspacing="0" style="margin:0 auto;"&gt;
+                          &lt;tr&gt;
+                            &lt;td align="center" bgcolor="#ffcc00" style="min-width:180px; -moz-border-radius: 3px; -webkit-border-radius: 3px; border-radius: 3px; font-family: Segoe UI, Frutiger, Frutiger Linotype, Dejavu Sans, Helvetica Neue, Arial, sans-serif;color:#ffffff;"&gt;
+                              &lt;a class="msoAltFont" href="{$optinlink}" style="padding: 9px 12px; mso-padding-alt: 9px 12px; min-width:180px; display: block;text-decoration: none;border:0; text-align: center; text-transform:uppercase; font-weight: 600;font-size: 16px; color: #ffffff; background: #ffcc00; border: 1px solid #ffcc00;-moz-border-radius: 3px; -webkit-border-radius: 3px; border-radius: 3px; mso-line-height-rule: exactly; line-height:18px;"&gt;
+                                activate &lt;xsl:value-of select="$email"/&gt;
+                              &lt;/a&gt;
+                            &lt;/td&gt;
+                          &lt;/tr&gt;
+                        &lt;/table&gt;
+                      &lt;/td&gt;
+                    &lt;/tr&gt;
+                  &lt;/table&gt;
+                &lt;/td&gt;
+              &lt;/tr&gt;
+            &lt;/table&gt;
+
+            &lt;p style="color:#333;font-size:10px;"&gt;
+              By confirming your e-mail address, you agree that mindrevolution GmbH will send you regular information on the subject area of B2B marketing and your company by e-mail. You may revoke your consent at any time to mindrevolution GmbH via the contact details below or click on the unsubscribe link in the sent messages.
+            &lt;/p&gt;
+
+
+            &lt;p style="color:#333;font-size:10px;"&gt;
+              &lt;br/&gt;&lt;br/&gt;
+              &lt;img src="http://mindrevolution.com/static/mindrevolution-square-signet.png" width="60" style="width:60px"/&gt;
+              &lt;br/&gt;&lt;br/&gt;
+              
+              mindrevolution GmbH&lt;br/&gt;Theodor-Heuss-Straße 23&lt;br/&gt;70174 Stuttgart&lt;br/&gt;Germany
+              &lt;br/&gt;&lt;br/&gt;86 - 90 Paul Street&lt;br/&gt;London EC2A 4NE&lt;br/&gt;United Kingdom
+              &lt;br/&gt;&lt;br/&gt;
+              &lt;a href="http://www.mindrevolution.com"&gt;www.mindrevolution.com&lt;/a&gt;&lt;br/&gt;
+              Phone +49 711 3401740 / +44 20 03331340&lt;br/&gt;
+              &lt;a href="mailto:stuttgart@mindrevolution.com"&gt;stuttgart@mindrevolution.com&lt;/a&gt;&lt;br/&gt;
+              &lt;a href="mailto:london@mindrevolution.com"&gt;london@mindrevolution.com&lt;/a&gt;&lt;br/&gt;
+              &lt;a href="https://twitter.com/mindrevolution"&gt;@mindrevolution&lt;/a&gt;
+              &lt;br/&gt;&lt;br/&gt;
+              &lt;a href="http://www.mindrevolution.com/de/impressum"&gt;IMPRESSUM&lt;/a&gt;&lt;br/&gt;
+            &lt;/p&gt;
+
+
+
+          &lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/table&gt;
+     
+    &lt;/body&gt;
+
+  &lt;/xsl:template&gt;
+
+
+
+&lt;/xsl:stylesheet&gt;
+</code></pre>
+<p style="margin: 0in; font-family: Calibri; font-size: 11.0pt;">?</p>
+<p>After adding this to the media library, switch to Forms again and add . And click <em>"Add workflow"</em> in the sidebar of your <em>"On Submit"</em> workflow in Umbraco Forms and choose the <em>"Send XSLT transformed email"</em>:</p>
+<p><img src="/archive/media/2016/onsubmit.png?width=500&amp;height=234.1772151898734" alt="" rel="1313" data-id="1313"></p>
+<p><img src="/archive/media/2016/onsubmit-details.png?width=500&amp;height=419.9766355140187" alt="" rel="1314" data-id="1314"></p>
+<p> </p>
+<p>Whenever you submit this form from your website you should receive an opt-in mail:</p>
+<p><img src="/archive/media/2016/activationemailsample.png?width=500&amp;height=463.78830083565464" alt="" rel="1315" data-id="1315"></p>
+<p><strong>Good job!</strong> What the XSLT does is to generate a link with the form submission's record GUID as the approval token. So essentially we're just sending some email, nothing more. That's why we need to continue with the next step:</p>
+<p> </p>
+<h2>Receiving the click and approving the recipient's email address</h2>
+<p>Write some surface controller, API or just use a template to catch the click of the user. Generally, true Umbraco pages often make sense, as they are within the URL structure and thus have context (which country, language, product section, etc.) you maybe need to present the users with a professional landing page telling them everything went fine and you are looking forward to sending your upcoming newsletters to them. As always, use the tool you find suits your project. To keep this sample project contained, I opted for some code in a template. Here's the code:</p>
+<pre><code class="language-javascript">﻿@using Umbraco.Forms.Core;
+@using Umbraco.Forms.Data.Storage;
+@using Umbraco.Forms.Web.Services;
+
+@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+    Layout = "Base.cshtml";
+
+    string optinKey = Request["key"];
+}
+
+@if (!string.IsNullOrWhiteSpace(optinKey))
+{
+    try
+    {
+        Guid recordGuid = new Guid(optinKey);
+        if (recordGuid != null)
+        {
+            RecordStorage recordStorage = new RecordStorage();
+            FormStorage formStorage = new FormStorage();
+
+            Record record = recordStorage.GetRecordByUniqueId(recordGuid);
+
+            // - approve this record, so that form workflows kick in!
+            Umbraco.Forms.Core.Form form = formStorage.GetForm(record.Form);
+            RecordService.Instance.Approve(record, form);
+
+            &lt;h1&gt;Success!&lt;/h1&gt;
+        }
+        else
+        {
+            &lt;h1&gt;Unknown token/guid/id/key&lt;/h1&gt;
+            &lt;h3&gt;@optinKey&lt;/h3&gt;
+        }
+
+    }
+    catch (Exception ex)
+    {
+        &lt;h1&gt;Oh noes!&lt;/h1&gt;
+        &lt;h3&gt;@ex.Message&lt;/h3&gt;
+    }
+}</code></pre>
+      <p class="snippet-caption">Example Template (in /Views/). Use whatever approach makes you more productive.</p>
+<p style="margin: 0in; font-family: Calibri; font-size: 11.0pt;"> </p>
+<p>What does this do? Simple: If there exists a form submission with the given GUID, the submission gets approved. Nothing else. We're just approving the record. For that to be possible to need to enable that with your form's settings. Unfortunately it's labeled <em>"Moderation"</em> now, which doesn't make it too obvious:</p>
+<p><img src="/archive/media/2016/enablepostmoderation.png?width=500&amp;height=396.3200934579439" alt="" rel="1318" data-id="1318"></p>
+<p> </p>
+<p>Activating this feature enables the other workflow pipeline <em>"On Approve"</em>. All actions you set up for this seperate workflow only get executed as soon as the record is approved. In our case: As soon as the user clicks on the activation link. Now we just need to add this user's email address to the designated mailing list in Newsletter Studio. Easy!</p>
+<p> </p>
+<h2>Build an Umbraco Forms workflow for Newsletter Studio</h2>
+<p>Instead of hardcoding anything, we stay true to our pretty modularized approach and don't just add the recipient's emails when they hit the activation page. Instead we use a custom Umbraco Forms workflow that allows to add recipients to Newsletter Studio mailing lists. This way we are flexible and can re-use this workflow within our marketing automation and processes. If, for instance, site members (already customers) request a demo of our newest software version, we can add their email (from the client's records) to the drip campaign we have set up. Nice!</p>
+<p>Writing your own workflow for Umbraco Forms is very straightforward and while the Newsletter Studio API is "compact" at best, it only takes a few minutes to wire everything up:</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+
+using Umbraco.Forms.Core;
+using Umbraco.Forms.Core.Attributes;
+using Umbraco.Forms.Core.Enums;
+
+using NewsletterStudio;
+
+namespace FormsExt.NewsletterStudio
+{
+    public class Subscribe : WorkflowType
+    {
+        [Setting("Mailing List Id", prevalues = "", description = "Numeric mailing list id (i.e. '2')", view = "textstring")]
+        public string MailingListId { get; set; }
+
+        [Setting("E-Mail Field Name", prevalues = "", description = "The name of the field containing the e-mail address (i.e. 'E-Mail')", view = "textstring")]
+        public string EmailFieldName { get; set; }
+
+        public Subscribe()
+        {
+            // - GUID, name et al setup
+            this.Id = new Guid("57c9b164-c255-4724-a384-29fb6de73d0c");
+            this.Name = "Subscribe to Newsletter Studio mailing list";
+            this.Description = "Adds an E-Mail to a mailing list within Newsletter Studio";
+            this.Icon = "icon-inbox";
+        }
+
+        public override WorkflowExecutionStatus Execute(Record record, RecordEventArgs e)
+        {
+            try
+            {
+                // - get the email value and subscribe
+                string email = record.GetRecordField(EmailFieldName).ValuesAsString();
+
+                if (Api.IsValidEmail(email))
+                {
+                    Api.Subscribe(email, int.Parse(this.MailingListId));
+                }
+
+                // - all good
+                return WorkflowExecutionStatus.Completed;
+            }
+            catch (Exception ex)
+            {
+                // - that didn't work out: log it and bubble up failed execution
+                Umbraco.Core.Logging.LogHelper.WarnWithException(this.GetType(), string.Format("Unable to subscribe e-mail (EmailFieldName: '{1}', MailingListId: '{2}'): {0}", ex.Message, EmailFieldName, MailingListId), ex);
+                return WorkflowExecutionStatus.Failed;
+            }
+        }
+
+        public override List&lt;Exception&gt; ValidateSettings()
+        {
+            List&lt;Exception&gt; exceptions = new List&lt;Exception&gt;();
+
+            int listid = -1;
+            int.TryParse(this.MailingListId, out listid);
+            if (listid == -1)
+            {
+                exceptions.Add(new Exception("Mailing list id is expected to be numeric (int)"));
+            }
+
+            return exceptions;
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">/App_Code/FormsExt/NewsletterStudio.Subscribe.cs</p>
+<p>Now you can add the new workflow <em>"Subscribe to Newsletter Studio mailing list"</em> within the Umbraco Forms interface to the <em>"On Approval"</em> queue:</p>
+<p> </p>
+<p><img src="/archive/media/2016/onapprove.png?width=500&amp;height=144.8663853727145" alt="" rel="1321" data-id="1321"></p>
+<p><img src="/archive/media/2016/onapprove-details.png?width=282.07810320781033&amp;height=500" alt="" rel="1322" data-id="1322"></p>
+<p>Enter the mailing list's id and the name of the forms field that contains the email address and save everything. Next time someone clicks the activation like and approved his or her email, you'll find them amongst the mailing list's recipients:</p>
+<p> </p>
+<p><img src="/archive/media/2016/newslettersubscriberslist.png?width=500&amp;height=146.71985815602835" alt="" rel="1323" data-id="1323"></p>
+<p>If your law requires you to keep a record of the date and time the user clicked the activation link, this is identical to the <em>"Subscribed"</em> column in Newsletter Studio with this solution as the recipients get added only upon their approval click.</p>
+<p> </p>
+<h2>Wrapping things up</h2>
+<p>To setup our opt-in newsletter approval, we did:</p>
+<ol>
+<li>Installed Umbraco Forms and Newsletter Studio</li>
+<li>Created a legal consent field type for Umbraco Forms to use in our signup forms</li>
+<li>Used the "On Submit" workflow to send an activation email (XSLT transformed for the looks)</li>
+<li>Approved the submitted form record upon receiving the click on the activation link</li>
+<li>Created a custom Umbraco Forms workflow to add the email to the designated mailing list "On Approve"</li>
+</ol>
+<h2>Where to go from here</h2>
+<p>You could and many more actions to each of the workflows and create members, add users to special newsletters based on their interests and much much more. If you are interested in expanding even further on the topic, I would recommend to also install <a href="http://pipelinecrm.co.uk/" target="_blank">"Pipeline CRM" by GrowCreate</a>. It is very extensible and can be combined with Umbraco Forms as well -- again by utilizing custom workflows and datatypes. In fact there is premade code provided for <a href="https://github.com/theotron/Using-Pipeline-CRM/wiki/7.1-Umbraco-Forms-integration" target="_blank" title="Umbraco Forms integration - Pipeline CRM">creating an opportunity</a></p>
+<p><strong>Now go out there and build your own tailor made marketing automation -- and let me know: <a href="https://twitter.com/esn303">@esn303</a></strong><br>?</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Marc Stöcker"><img src="//gravatar.com/avatar/c70e1e8cac49ccb1833d33abe29c79db.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c70e1e8cac49ccb1833d33abe29c79db.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Marc Stöcker</h1>
+        <p>Marc is on Twitter as <a href="//twitter.com/esn303" title="Marc Stöcker on Twitter" rel="author">@esn303</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li class="selected"><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

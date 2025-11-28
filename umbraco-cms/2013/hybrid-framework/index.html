@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Hybrid Framework</title>
+<meta name="description" content="The Hybrid Framwork is a complete Umbraco Visual Studio solution which can be used as a basis to develop new MVC websites on.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+	
+
+
+</head>
+<body>
+
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Hybrid Framework</h1>
+      <p class="byline"> by Jeroen Breuer, <span class="pubdate">posted on <time datetime="2013-12-15">Dec 15, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">The Hybrid Framework is a complete Umbraco Visual Studio solution which can be used as a basis to develop new MVC websites on.</p>
+<p class="intro">I am Jeroen and I work as a developer at <a href="http://www.haveanicedayonline.nl/" target="_blank">Have A Nice Day Online</a>. Last year I showed the <a href="/umbraco-cms/2012/damp-gallery/" target="_blank">DAMP Gallery</a> during the 24 Days In Umbraco Christmas Calendar. It was a complete website that showed how to use DAMP in MVC. That was a year ago and the way I'm using DAMP these days in MVC has changed. I'm using a special version of DAMP that can work together with <a href="http://our.umbraco.org/projects/website-utilities/eksponent-cropup" target="_blank">CropUp</a>. By adding a few extension methods it has become even easier to create a gallery. These changes are part of the <a href="http://our.umbraco.org/projects/developer-tools/hybrid-framework" target="_blank">Hybrid Framework</a>. It's an open source Umbraco Visual Studio solution which can be used as a basis to develop new websites on. It also has a best practises example project which can be used the same way as the DAMP Gallery. The Hybrid Framework has the following features:</p>
+<p>- MVC Framework<br>- Uses route hijacking, but not mandatory<br>- <a href="http://issues.umbraco.org/issue/U4-2342" target="_blank">Everything is a surface controller</a><br>- <a href="http://our.umbraco.org/Documentation/Reference/Templating/Mvc/custom-controllers#Changethedefaultcontroller" target="_blank">Also has a default controller</a><br>- <a href="https://github.com/jbreuer/Hybrid-Framework-Best-Practices/blob/master/development/Umbraco.Extensions/Utilities/ExtensionMethods.cs" target="_blank">A lot of useful extension methods</a><br>- Preinstalled packages<br>- Configured settings<br>- Cache and bundling + minification</p>
+<p>The following example (which is also part of the Hybrid Framework Best Practises) shows how easy it is to write a responsive image gallery. </p>
+<pre class="language-javascript"><code>@using Umbraco.Web;
+@using Umbraco.Extensions.Utilities;
+@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+    Layout = "Master.cshtml";
+    //for slimmage to adjust quality based on pixel ratio, quality querystring must be present
+    var gallery = Model.Content.GetCroppedImages("gallery", 400, null, quality:90, cropAlias:"gallery", slimmage:true);
+}
+
+&lt;h1&gt;@(Model.Content.GetPropertyValue&lt;string&gt;("title"))&lt;/h1&gt;
+@(Model.Content.GetPropertyValue&lt;HtmlString&gt;("bodyText"))
+
+@*Gallery*@
+@if (gallery.Any())
+{
+    &lt;div class="gallery"&gt;
+        &lt;ul&gt;
+            @foreach (var photo in gallery)
+            {
+                &lt;li&gt;
+                    &lt;a href="@photo.Url" data-track="@photo.TrackLabel"&gt;
+                        &lt;img class="gallery-image" src="@photo.Crop" alt="@photo.Alt" /&gt;
+                    &lt;/a&gt;
+                &lt;/li&gt;
+            }
+        &lt;/ul&gt;
+    &lt;/div&gt;
+}</code></pre>
+<p>It's called the Hybrid Framework because it uses route hijacking (which means logic can be done in a controller before it passes a model to the view), but you don't have to do that. For example on a news overview page you can fetch the news items (child nodes) in the controller, but on a news details page you only need to show a few properies so that doesn't need a controller. The following code shows the new overview:</p>
+<pre class="language-javascript"><code>@using Umbraco.Extensions.Models;
+@using Umbraco.Extensions.Utilities;
+@using Umbraco.Web
+@inherits Umbraco.Web.Mvc.UmbracoViewPage&lt;NewsOverviewModel&gt;
+@{
+    Layout = "Master.cshtml";
+}
+
+&lt;h1&gt;@(Model.Content.GetPropertyValue&lt;string&gt;("title"))&lt;/h1&gt;
+@(Model.Content.GetPropertyValue&lt;HtmlString&gt;("bodyText"))
+
+&lt;section class="news"&gt;
+    @*News items overview*@
+    @foreach (var n in Model.NewsItems)
+    {
+        &lt;article class="newsitem"&gt;
+            &lt;a href="@n.Url"&gt;
+                @n.Title&lt;br /&gt;
+                @n.Date.ToString("F")&lt;br /&gt;
+                &lt;img src="@n.Image.Crop" alt="@n.Image.Alt" /&gt;
+            &lt;/a&gt;
+        &lt;/article&gt;
+    }
+&lt;/section&gt;
+@*Pager*@
+@if (Model.Pager.Pages.Count() &gt; 1)
+{
+    &lt;div class="pagination"&gt;
+
+	    &lt;ul&gt;
+            @if (Model.Pager.IsFirstPage)
+            {
+                &lt;li&gt;&lt;a class="disabled"&gt;&amp;lt;&lt;/a&gt;&lt;/li&gt;
+            }
+            else
+            {
+                &lt;li&gt;&lt;a href="?page=@(Model.Pager.CurrentPage - 1)"&gt;&amp;lt;&lt;/a&gt;&lt;/li&gt;
+            }
+
+            @foreach (var number in Model.Pager.Pages)
+            {
+                var distanceFromCurrent = number - Model.Pager.CurrentPage;
+
+                if (number == Model.Pager.CurrentPage)
+                {
+                    &lt;li&gt;&lt;a class="active"&gt;@number&lt;/a&gt;&lt;/li&gt;
+                }
+
+                else if ((distanceFromCurrent &gt; -10) &amp;&amp; (distanceFromCurrent &lt; 10))
+                {
+                    &lt;li&gt;&lt;a href="?page=@number"&gt;@number&lt;/a&gt;&lt;/li&gt;
+                }
+            }
+
+            @if (Model.Pager.IsLastPage)
+            {
+	            &lt;li&gt;&lt;a class="disabled"&gt;&amp;gt;&lt;/a&gt;&lt;/li&gt;
+            }
+            else
+            {
+                &lt;li&gt;&lt;a href="?page=@(Model.Pager.CurrentPage + 1)"&gt;&amp;gt;&lt;/a&gt;&lt;/li&gt;
+            }
+
+	    &lt;/ul&gt;
+
+    &lt;/div&gt;
+}</code></pre>
+<p>As you can see it's possible to use Model.NewsItems and Model.Pager, but also Model.Content.GetPropertyValue&lt;string&gt;("title"). That's because the NewsOverviewModel inherits from a base model which in turn inherits from the RenderModel again, which is the default model that Umbraco uses everywhere. The following code shows how the model is created in the controller:</p>
+<pre class="language-csharp"><code>using DevTrends.MvcDonutCaching;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.UI;
+using Umbraco.Extensions.Controllers.Base;
+using Umbraco.Extensions.Models;
+using Umbraco.Extensions.Models.Custom;
+using Umbraco.Extensions.Utilities;
+using Umbraco.Web;
+using Umbraco.Web.Models;
+
+namespace Umbraco.Extensions.Controllers
+{
+    public class NewsOverviewController : BaseSurfaceController
+    {
+        [DonutOutputCache(Duration = 86400, Location = OutputCacheLocation.Server, VaryByCustom = "url;device")]
+        public ActionResult NewsOverview()
+        {
+            var model = GetModel&lt;NewsOverviewModel&gt;();
+
+            var newsItems = GetNewsItems();
+            var pager = Umbraco.GetPager(2, newsItems.Count());
+
+            //Only put the paged items in the list.
+            model.NewsItems = newsItems.Skip((pager.CurrentPage - 1) * pager.ItemsPerPage).Take(pager.ItemsPerPage);
+            model.Pager = pager;
+
+            return CurrentTemplate(model);
+        }
+
+        public IEnumerable&lt;NewsItem&gt; GetNewsItems()
+        {
+            return
+            (
+                from n in CurrentPage.Children
+                orderby n.GetPropertyValue&lt;DateTime&gt;("currentDate") descending
+                select new NewsItem()
+                {
+                    Title = n.GetPropertyValue&lt;string&gt;("title"),
+                    Url = n.Url(),
+                    Image = n.GetCroppedImage("image", 300, 300),
+                    Date = n.GetPropertyValue&lt;DateTime&gt;("currentDate")
+                }
+            );
+        }
+    }
+}
+</code></pre>
+<p>As you can see all logic is done in the controller and the view has almost no logic. For the news items it's just a simple foreach.</p>
+<p>The news details page doesn't need this kind of logic so it doesn't have a controller. The following code is everything which is needed for the news details:</p>
+<pre class="language-javascript"><code>@using Umbraco.Web;
+@using Umbraco.Extensions.Models.Custom;
+@using Umbraco.Extensions.Utilities;
+@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+    Layout = "Master.cshtml";
+    var image = Model.Content.GetCroppedImage("image", 300, 300, quality:70);
+}
+
+&lt;h1&gt;@(Model.Content.GetPropertyValue&lt;string&gt;("title"))&lt;/h1&gt;
+&lt;p&gt;@(Model.Content.GetPropertyValue&lt;DateTime&gt;("currentDate").ToString("F"))&lt;/p&gt;
+&lt;p&gt;@(Model.Content.GetPropertyValue&lt;HtmlString&gt;("bodyText"))&lt;/p&gt;
+&lt;p&gt;
+    &lt;a href="@image.Url" target="_blank" data-track="@image.TrackLabel"&gt;
+        &lt;img src="@image.Crop" alt="@image.Alt" /&gt;
+    &lt;/a&gt;
+&lt;/p&gt;</code></pre>
+<p>Both news overview and news details inherit from the same master. Here are some parts of that master. </p>
+<pre class="language-javascript"><code>@inherits Umbraco.Web.Mvc.UmbracoViewPage&lt;BaseModel&gt;
+
+@*Menu*@
+&lt;nav&gt;
+    &lt;ul&gt;
+    @foreach(var m in Model.MenuItems)
+    {
+        &lt;li class="@m.ActiveClass"&gt;&lt;a href="@m.Url"&gt;@m.Title&lt;/a&gt;&lt;/li&gt;
+    }
+    &lt;/ul&gt;
+&lt;/nav&gt;</code></pre>
+<p>Even though the news details page doesn't have its own model or controller we can still pass a BaseModel to the master because of the default controller:</p>
+<pre class="language-csharp"><code>using DevTrends.MvcDonutCaching;
+using System;
+using System.Web.Mvc;
+using System.Web.UI;
+using Umbraco.Extensions.Controllers.Base;
+using Umbraco.Extensions.Models;
+using Umbraco.Web.Models;
+
+namespace Umbraco.Extensions.Controllers
+{
+    public class DefaultController : BaseSurfaceController
+    {
+        /// &lt;summary&gt;
+        /// If the route hijacking doesn't find a controller this default controller will be used.
+        /// That way a each page will always go through a controller and we can always have a BaseModel for the masterpage.
+        /// &lt;/summary&gt;
+        /// &lt;param name="model"&gt;&lt;/param&gt;
+        /// &lt;returns&gt;&lt;/returns&gt;
+        [DonutOutputCache(Duration = 86400, Location = OutputCacheLocation.Server, VaryByCustom = "url;device")]
+        public override ActionResult Index(RenderModel model)
+        {
+            var baseModel = GetModel&lt;BaseModel&gt;();
+            return CurrentTemplate(baseModel);
+        }
+    }
+}
+</code></pre>
+<p>If we don't route hijack to our own controller this controller will be hit. That means that the news details page will go through this controller which creates the BaseModel that can be used in the master view. Because the BaseModel inherits from the RenderModel the news details view also just works. All the controllers inherit from the BaseSurfaceController which makes sure that a single controller can be used for both route hijacking and surface controllers. Here are some parts of the controller:</p>
+<pre class="language-csharp"><code>/// &lt;summary&gt;
+/// Return the base model which needs to be used everywhere.
+/// &lt;/summary&gt;
+/// &lt;typeparam name="T"&gt;&lt;/typeparam&gt;
+/// &lt;param name="content"&gt;&lt;/param&gt;
+/// &lt;returns&gt;&lt;/returns&gt;
+protected T GetModel&lt;T&gt;()
+    where T : BaseModel, new()
+{
+    var model = new T();
+    model.MenuItems = GetMenuItems();
+
+    return model;
+}
+
+private IEnumerable&lt;MenuItem&gt; GetMenuItems()
+{
+    return
+    (
+        from n in CurrentPage.TopPage().Children
+        where n.HasProperty("menuTitle")
+        &amp;&amp; !n.GetPropertyValue&lt;bool&gt;("hideInMenu")
+        select new MenuItem()
+        {
+            Id = n.Id,
+            Title = n.GetPropertyValue&lt;string&gt;("menuTitle"),
+            Url = n.Url(),
+            ActiveClass = CurrentPage.Path.Contains(n.Id.ToString()) ? "active" : null
+        }
+    );
+}</code></pre>
+<p>So even all the logic which we need on the masterpage like a menu is done in a controller. This creates a perfect separation of HTML and logic. All the code above is a lot to explain, but it's the basic principle of the Hybrid framework.</p>
+<p>If you look at the controllers in the code above you can see that the ActionResult methods all have the DonutOutputCache attribute. This means that the entire controller and view are cached, but parts of the view can be uncached. You can read more about it here: <a href="https://github.com/moonpyk/mvcdonutcaching" target="_blank">https://github.com/moonpyk/mvcdonutcaching</a>. It makes all the pages extremly fast and because the default controller also has donut cache it means every page get's cached. There is an example on the <a href="https://github.com/jbreuer/Hybrid-Framework-Best-Practices/blob/master/development/Umbraco.Site/Views/Contact.cshtml" target="_blank">contact page</a>. You can read about how to use it outside of the Hybrid Framework <a href="http://our.umbraco.org/projects/developer-tools/hybrid-framework/hybrid-framework/45020-Implementing-Donut-Caching-and-MVC-part-in-existing-solution" target="_blank">here</a>.</p>
+<p>The hybrid framework contains even more things, but this blog post is getting long enough already. Below you can see the uHangout talk about the Hybrid Framework and I also did a talk at the <a href="http://www.youtube.com/watch?v=BxOx-9jWF7A&amp;t=17m56s" target="_blank">Umbraco UK Festival 2013</a>.</p>
+<p>
+        <iframe width="560" height="315" src="http://www.youtube.com/embed/rubA5k5cnxE" frameborder="0" allowfullscreen=""></iframe>
+      </p>
+<p>You can download the source code here: <a href="https://github.com/jbreuer/Hybrid-Framework-Best-Practices" target="_blank">https://github.com/jbreuer/Hybrid-Framework-Best-Practices</a></p>
+<p>And this last video shows how you can install the Hybrid Framework: </p>
+<p>
+	<!-- <iframe src="http://www.screenr.com/embed/TM4H" width="560" height="341" frameborder="0"></iframe> -->
+	<div class="notification note">
+		😢 This video file is sadly no longer available.
+	</div>
+	
+</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jeroen Breuer"><img src="//gravatar.com/avatar/093beed29b447cc589b5c1abeb4ff309.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/093beed29b447cc589b5c1abeb4ff309.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jeroen Breuer</h1>
+        <p>Jeroen is on Twitter as <a href="//twitter.com/j_breuer" title="Jeroen Breuer on Twitter" rel="author">@j_breuer</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li class="selected"><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Web Components with Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Web Components</h1>
+      <p class="byline"> by Matt Shull, <span class="pubdate">posted on <time datetime="2016-12-17">Dec 17, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Do you remember the first time you Googled how to create an HTML page?  Do you recall the moment of copying and pasting a &lt;p&gt; or an &lt;a&gt; from w3schools.org, pasting it into notepad, saving it as .html, and pulling it up in your favorite browser?  That moment of seeing, for the first time, your digital creation coming to life!  Sure, it was just "Hello world!" text, but YOU created that text and put it on the web for everyone to see.  Today it seems nonsensical to publish something on the web without some CSS style and a little Javascript sparkle.  Wouldn't it be great to reclaim that sense of wonder in our code and have the experience of grabbing some HTML elements to create stylish, interactive pages quickly?  With the rise of a couple of new W3C specs this type of magical workflow is possible.</p>
+<p class="intro">Web Components are a collection of web standards that allow developers to create reusable custom elements that are easily shareable and have styles/behaviors built into them using the basic building blocks of the web: HTML, CSS, and JavaScript.  No framework needed!  The specifications that make up web components are <a href="http://w3c.github.io/webcomponents/spec/custom/" target="_blank" title="Custom Elements W3C Specification">Custom Elements</a>, <a href="http://w3c.github.io/webcomponents/spec/shadow/" target="_blank" title="Shadow DOM W3C Specification">Shadow DOM</a>, <a href="https://html.spec.whatwg.org/multipage/scripting.html#the-template-element" target="_blank" title="Template W3C Spec">Templates</a>, and <a href="http://w3c.github.io/webcomponents/spec/imports/" target="_blank" title="HTML Imports W3C Specification">HTML Imports</a>.  Each spec is impressive on it's own, but with their powers combined they create a powerful web standard (<a href="https://youtu.be/ogMBLRHJYXU?t=6s" target="_blank" title="Captain Planet Theme Song...in case you didn't get the joke.">kind of like captain planet</a>) that has the potential to change how we develop on the web.  While all four specs are useful, the only two specifications really needed to create our first magical custom element are Custom Elements and Shadow DOM.  This post will dive into how to create a web component, how to use web component in the back office and frontend of a web application, and at the end I'll give some continued reading to show you who is using web components in production.</p>
+<h2>Browser Compatibility</h2>
+<p>I want to get this out of the way because most developers, myself included, won't focus on the rest of the content unless they know about browser compatibility.  While the v1 specs for Custom Elements and Shadow DOM are fairly new they are agreed upon by most developers at the time of this post being written.  <a href="http://caniuse.com/#search=custom%20elements%20v1" target="_blank" title="Browser compatibility details for Custom Elements">Custom Elements has an ok adoption</a> right now. It's supported by Chrome, desktop and mobile, and in Opera.  It's currently in Safari Technology Preview, in development for Firefox, and being considered by Microsoft Edge.  <a href="http://caniuse.com/#search=shadow%20dom%20v1" target="_blank" title="Browser compatibility details for Shadow DOM">Shadow DOM has a slightly better adoption</a>.  It's supported by Chrome, desktop and mobile, Opera, and Safari, desktop and mobile, as of version 10.  It's currently in development for Firefox and under consideration by Microsoft Edge.</p>
+<p>The good news is that there are a few polyfills (<a href="https://rawgit.com/webcomponents/custom-elements/master/custom-elements.min.js" target="_blank" title="Link to custom elements polyfill">custom elements</a>, <a href="https://rawgit.com/webcomponents/shadydom/master/shadydom.min.js" target="_blank" title="Shady DOM polyfill">ShadyDOM</a>, <a href="https://rawgit.com/webcomponents/shadycss/master/shadycss.min.js" target="_blank" title="ShadyCSS polyfill link">ShadyCSS</a>) that have been created to fill in the gaps for browsers that do not natively support Custom Elements and/or Shadow DOM.  There are a couple of very small quirks with the polyfills and while it took a day or two for me to understand what those were by talking to talented people on twitter, whom I'll link below, it's not so difficult to work with the couple of quirks I found.  I'll be detailing those quirks in the post to help others on the web who want to use the polyfills to begin creating web components.</p>
+<p>I'd like to note that the code I'm showing below is using ES2015 and for the best results with browser compatibility I suggest using Babel to transpile the code to ES5 either through <a href="https://babeljs.io/docs/setup/" target="_blank" title="Babel setup options">your workflow process using something like Gulp</a> or by using <a href="https://babeljs.io/repl/#?babili=false&amp;evaluate=true&amp;lineWrap=false&amp;presets=es2015%2Creact%2Cstage-2&amp;code=(function()%20%7B%0A'use%20strict'%3B%0A%0Aconst%20supportsCustomElementsV1%20%3D%20'customElements'%20in%20window%3B%0Aconst%20supportsShadowDOMV1%20%3D%20!!HTMLElement.prototype.attachShadow%3B%0A%0Avar%20makeTemplate%20%3D%20function%20(strings%2C%20...substs)%20%7B%0A%20%20%20%20let%20html%20%3D%20''%3B%0A%20%20%20%20for%20(let%20i%20%3D%200%3B%20i%20%3C%20substs.length%3B%20i%2B%2B)%20%7B%0A%20%20%20%20%20%20%20%20html%20%2B%3D%20strings%5Bi%5D%3B%0A%20%20%20%20%20%20%20%20html%20%2B%3D%20substs%5Bi%5D%3B%0A%20%20%20%20%7D%0A%20%20%20%20html%20%2B%3D%20strings%5Bstrings.length%20-%201%5D%3B%0A%20%20%20%20let%20template%20%3D%20document.createElement('template')%3B%0A%20%20%20%20template.innerHTML%20%3D%20html%3B%0A%20%20%20%20return%20template%3B%0A%7D%0A%0Aclass%20arisHeader%20extends%20HTMLElement%20%7B%0A%20%20static%20get%20is()%20%7B%20return%20'aris-header'%3B%20%7D%0A%0A%20%20static%20get%20template()%20%7B%0A%20%20%20%20if%20(!this._template)%20%7B%0A%20%20%20%20%20%20this._template%20%3D%20makeTemplate%60%0A%20%20%20%20%20%20%20%20%3Cstyle%3E%0A%09%09%09%09%3Ahost%20%7B%20%0A%09%09%09%09%09display%3A%20block%3B%0A%09%09%09%09%09position%3A%20relative%3B%0A%09%09%09%09%7D%0A%09%09%09%09section%20%7B%0A%09%09%09%09%09background-color%3A%23b82216%3B%0A%09%09%09%09%09background-size%3Acover%3B%0A%09%09%09%09%09padding%3A25px%2015px%3B%0A%09%09%09%09%7D%0A%09%09%09%09.caret-right%20%7B%0A%09%09%09%09%09width%3A%200%3B%0A%09%09%09%09%09height%3A%200%3B%0A%09%09%09%09%09display%3A%20none%3B%0A%09%09%09%09%09vertical-align%3A%20middle%3B%0A%09%09%09%09%09border-style%3A%20solid%3B%0A%09%09%09%09%09border-width%3A%205px%200%205px%205px%3B%0A%09%09%09%09%09border-color%3A%20transparent%20transparent%20transparent%20rgba(255%2C%20255%2C%20255%2C%200.7)%3B%0A%09%09%09%09%09margin%3A%200px%205px%3B%0A%09%09%09%09%09position%3A%20relative%3B%0A%09%09%09%09%09top%3A%20-7px%3B%0A%09%09%09%09%7D%0A%09%09%09%09.caret-visible%20%7B%0A%09%09%09%09%09display%3Ainline-block%3B%0A%09%09%09%09%7D%0A%09%09%09%09%23arisHeader%20%3A%3Aslotted(h1)%20%20%7B%0A%09%09%09%09%09color%3Awhite%3B%0A%09%09%09%09%09margin%3A0%3B%0A%09%09%09%09%09font-family%3A%20'Dosis'%2C%20sans-serif%3B%0A%09%09%09%09%09font-weight%3A%20200%3B%0A%09%09%09%09%09font-size%3A%2048px%3B%0A%09%09%09%09%09display%3A%20inline-block%3B%0A%09%09%09%09%7D%0A%09%09%09%09%23arisHeader%20%3A%3Aslotted(h2)%20%20%7B%0A%09%09%09%09%09color%3Awhite%3B%0A%09%09%09%09%09margin%3A0%3B%0A%09%09%09%09%09font-family%3A%20'Dosis'%2C%20sans-serif%3B%0A%09%09%09%09%09font-weight%3A%20200%3B%0A%09%09%09%09%09font-size%3A%2030px%3B%0A%09%09%09%09%09display%3A%20inline-block%3B%0A%09%09%09%09%7D%0A%09%09%09%3C%2Fstyle%3E%0A%09%09%09%3Csection%20id%3D%22arisHeader%22%3E%0A%09%09%09%09%3Cslot%20name%3D%22h1%22%3E%3C%2Fslot%3E%0A%09%09%09%09%3Cspan%20class%3D%22caret-right%22%3E%3C%2Fspan%3E%0A%09%09%09%09%3Cslot%20name%3D%22h2%22%3E%3C%2Fslot%3E%0A%09%09%09%3C%2Fsection%3E%0A%20%20%20%20%20%20%60%3B%0A%20%20%20%20%7D%0A%20%20%20%20return%20this._template%3B%0A%20%20%7D%0A%0A%20%20constructor()%20%7B%0A%20%20%20%20super()%3B%0A%20%20%7D%0A%0A%20%20connectedCallback()%20%7B%0A%20%20%20%20const%20shadowRoot%20%3D%20this.attachShadow(%7Bmode%3A%20'open'%7D)%3B%0A%20%20%20%20shadowRoot.appendChild(document.importNode(arisHeader.template.content%2C%20true))%3B%0A%0A%20%20%20%20%2F%2F%20Shim%20styles%2C%20CSS%20custom%20props%2C%20etc.%20if%20native%20Shadow%20DOM%20isn't%20available.%0A%20%20%20%20if%20(!supportsShadowDOMV1)%20%7B%0A%20%20%20%20%20%20ShadyCSS.applyStyle(this)%3B%0A%20%20%20%20%7D%0A%0A%20%20%20%20if%20(this.innerHTML.indexOf(%22h2%22)%20!%3D%20-1)%20%7B%0A%20%20%20%20%20%20shadowRoot.querySelector('.caret-right').classList.add(%22caret-visible%22)%3B%0A%20%20%20%20%7D%0A%20%20%7D%0A%7D%0A%0AShadyCSS.prepareTemplate(arisHeader.template%2C%20arisHeader.is)%3B%0Awindow.customElements.define(arisHeader.is%2C%20arisHeader)%3B%0A%0A%7D)()%3B" target="_blank" title="Babel Online Transpiler">the online transpiler</a>.</p>
+<h2>Custom Elements</h2>
+<p>To show the power of web components we'll be creating a special input element that has certain styles and behaviors built in.  The first thing we need to create a web component is having our own uniquely named custom element.  Using JavaScript we can register an HTML element to the DOM so it can be easily manipulated with CSS and JavaScript.  Because it's registered in the DOM and recognized as an HTML Element, our custom element can work with any frontend framework (like jQuery, AngularJS, React, etc.) or, even better, with no framework at all!</p>
+<p>We'll start by using an ES2015 class to register the new element &lt;aris-input&gt;:</p>
+<pre><code class="language-javascript">class arisInput extends HTMLElement {
+  	constructor() {
+		// Always call super() first
+		super();
+
+		//This code is called when the element is created
+		//Useful for adding event listeners
+	}
+
+	connectedCallback() {
+		//This code is called when each time the element is put into the DOM.
+		//Useful for grabbing data from the server through fetch
+	}
+
+	disconnectedCallback() {
+		//This code is called when each time the element is removed from the DOM.
+		//Useful for cleaning up your code
+	}
+
+	attributeChangedCallback(name, oldValue, newValue) {
+		//This code is called when an attribute of the element is added,
+		//removed, updated, or replaced.
+	}
+}
+
+window.customElements.define('aris-input', arisInput);</code></pre>
+<p>Now that we have a basic element we can begin giving it super powers.  An essential part of HTML elements are it's attributes.  We can create attributes for our custom element by using a getter and a setter.  Let's give our &lt;aris-input&gt; element a disabled attribute (it is an input after all) and a placeholder attribute:</p>
+<pre><code class="language-javascript">class arisInput extends HTMLElement {
+	static get observedAttributes() {
+    	return ['disabled', 'placeholder'];
+  	}
+
+	// A getter/setter for a disabled property.
+  	get disabled() {
+    	return this.hasAttribute('disabled');
+  	}
+  	set disabled(val) {
+		if (val) {
+      		this.setAttribute('disabled', '');
+    	} 
+    	else {
+      		this.removeAttribute('disabled');
+    	}
+  	}
+
+  	// A getter/setter for a placeholder property.
+  	static get placeholder() {
+    	return this.hasAttribute('placeholder');
+  	}
+  	set placeholder(val) {
+		if (val) {
+      		this.setAttribute('placeholder', '');
+    	} 
+    	else {
+      		this.removeAttribute('placeholder');
+    	}
+  	}
+
+  	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+	}
+
+	attributeChangedCallback(name, oldValue, newValue) {
+	}
+}
+
+window.customElements.define('aris-input', arisInput);</code></pre>
+<p>We want to make sure that when our element has a disabled attribute that we update the tabindex and aria-disabled attribute on the element so that keyboard and screen readers can behave appropriately:</p>
+<pre><code class="language-javascript">class arisInput extends HTMLElement {
+	static get observedAttributes() {
+    	return ['disabled', 'placeholder'];
+  	}
+
+	// A getter/setter for a disabled property.
+  	get disabled() {
+    	return this.hasAttribute('disabled');
+  	}
+  	set disabled(val) {
+		if (val) {
+      		this.setAttribute('disabled', '');
+    	} 
+    	else {
+      		this.removeAttribute('disabled');
+    	}
+  	}
+
+  	// A getter/setter for a placeholder property.
+  	static get placeholder() {
+    	return this.hasAttribute('placeholder');
+  	}
+  	set placeholder(val) {
+		  if (val) {
+      		this.setAttribute('placeholder', '');
+      } 
+    	else {
+      		this.removeAttribute('placeholder');
+    	}
+  	}
+
+    constructor() {
+  		  super();
+
+        this.addEventListener('click', e =&gt; {
+              if (this.disabled) {
+                return;
+              }
+        });
+
+        this.addEventListener('touchstart', e =&gt; {
+              if (this.disabled) {
+                return;
+              }
+        });
+  	}
+
+  	connectedCallback() {
+  	}
+
+  	attributeChangedCallback(name, oldValue, newValue) {
+        if (this.hasAttribute("disabled")) {
+            this.setAttribute('tabindex', '-1');
+            this.setAttribute('aria-disabled', 'true');
+        } 
+        else {
+            this.setAttribute('tabindex', '0');
+            this.setAttribute('aria-disabled', 'false');
+        }
+  	}
+}
+
+window.customElements.define('aris-input', arisInput);</code></pre>
+<h2>Shadow DOM</h2>
+<p>We have an HTML element called &lt;aris-input&gt; and we can add a placeholder and disabled attribute, but we don't have any basic content or styles baked into the element.  Whether you realize it or not, spec HTML elements have styles baked inside.  A &lt;p&gt; has padding on the top and bottom by default.  A &lt;ul&gt; has padding left by default.  We are essentially telling the browser what the basic properties of our custom element by using Shadow DOM.</p>
+<p>Shadow DOM allows for isolated DOM meaning the DOM inside our web component won't be accessible via document.querySelector().  This allows for scoped CSS.  Scoped CSS only applies to the DOM inside the web component.  So if one web component has a class of "btn" in it, and another web component has a class of "btn", the two classes won't be competing.  They only apply to the Shadow DOM of their respective web components.</p>
+<p>In order to work with the polyfill, for browser support, we'll be going to use a function called makeTemplate.  This function should go before our code for the web components so that the components can call it.</p>
+<pre><code class="language-javascript">var makeTemplate = function (strings, ...substs) {
+    let html = '';
+    for (let i = 0; i &lt; substs.length; i++) {
+        html += strings[i];
+        html += substs[i];
+    }
+    html += strings[strings.length - 1];
+    let template = document.createElement('template');
+    template.innerHTML = html;
+    return template;
+}</code></pre>
+<p>Now let's set a static getter in our web component that will make the template for us, which will include all of the HTML and CSS we want to put in the Shadow DOM.</p>
+<pre><code class="language-javascript">class arisInput extends HTMLElement {
+    static get template() {
+      if (!this._template) {
+        this._template = makeTemplate`
+          &lt;!-- inject-style src="./processing/aris-input/aris-input.css" --&gt;
+          &lt;div id="arisInput" class="group"&gt;
+            &lt;slot&gt;&lt;/slot&gt;
+            &lt;span class="highlight"&gt;&lt;/span&gt;
+            &lt;span class="bar"&gt;&lt;/span&gt;
+            &lt;label&gt;&lt;/label&gt;
+          &lt;/div&gt;
+        `;
+      }
+      return this._template;
+    } 
+
+	  static get observedAttributes() {
+    	return ['disabled', 'placeholder'];
+  	}
+
+	  // A getter/setter for a disabled property.
+  	get disabled() {
+    	return this.hasAttribute('disabled');
+  	}
+  	set disabled(val) {
+		if (val) {
+      		this.setAttribute('disabled', '');
+    	} 
+    	else {
+      		this.removeAttribute('disabled');
+    	}
+  	}
+
+  	// A getter/setter for a placeholder property.
+  	static get placeholder() {
+    	return this.hasAttribute('placeholder');
+  	}
+  	set placeholder(val) {
+		  if (val) {
+      		this.setAttribute('placeholder', '');
+      } 
+    	else {
+      		this.removeAttribute('placeholder');
+    	}
+  	}
+
+  	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+	}
+
+	attributeChangedCallback(name, oldValue, newValue) {
+      if (this.hasAttribute("disabled")) {
+          this.setAttribute('tabindex', '-1');
+          this.setAttribute('aria-disabled', 'true');
+      } 
+      else {
+          this.setAttribute('tabindex', '0');
+          this.setAttribute('aria-disabled', 'false');
+      }
+	}
+}
+
+window.customElements.define('aris-input', arisInput);</code></pre>
+<p>You may notice the element &lt;slot&gt; inside of our template.  This element will take all the HTML inside of &lt;aris-input&gt; in your .html file and insert it into the Shadow DOM.  We'll use this later to determine what type of input we want our &lt;aris-input&gt; element to display.  Next let's create the Shadow DOM in our connectedCallback() and add a little more magic:</p>
+<pre><code class="language-javascript">class arisInput extends HTMLElement {
+    static get template() {
+      if (!this._template) {
+        this._template = makeTemplate`
+          &lt;!-- inject-style src="./processing/aris-input/aris-input.css" --&gt;
+          &lt;div id="arisInput" class="group"&gt;
+            &lt;slot&gt;&lt;/slot&gt;
+            &lt;span class="highlight"&gt;&lt;/span&gt;
+            &lt;span class="bar"&gt;&lt;/span&gt;
+            &lt;label&gt;&lt;/label&gt;
+          &lt;/div&gt;
+        `;
+      }
+      return this._template;
+    } 
+
+	  static get observedAttributes() {
+    	return ['disabled', 'placeholder'];
+  	}
+
+	  // A getter/setter for a disabled property.
+  	get disabled() {
+    	return this.hasAttribute('disabled');
+  	}
+  	set disabled(val) {
+		if (val) {
+      		this.setAttribute('disabled', '');
+    	} 
+    	else {
+      		this.removeAttribute('disabled');
+    	}
+  	}
+
+  	// A getter/setter for a placeholder property.
+  	static get placeholder() {
+    	return this.hasAttribute('placeholder');
+  	}
+  	set placeholder(val) {
+		  if (val) {
+      		this.setAttribute('placeholder', '');
+      } 
+    	else {
+      		this.removeAttribute('placeholder');
+    	}
+  	}
+
+  	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+    let shadowRoot = this.attachShadow({mode: 'open'});
+    shadowRoot.appendChild(document.importNode(arisInput.template.content, true));
+    
+    // Shim styles, CSS custom props, etc. if native Shadow DOM isn't available.
+    if (!!HTMLElement.prototype.attachShadow) {
+      ShadyCSS.applyStyle(this);
+    }
+
+    let input = this.querySelector('input');
+    let label = shadowRoot.querySelector('label');
+    let rootThis = this;
+
+    input.addEventListener('keyup', function(event) {
+      rootThis.value = event.target.value;
+      if (event.target.validity.valid) {
+        input.classList.add("valid");
+        input.classList.remove("invalid");
+      } else {
+        input.classList.add("invalid");
+        input.classList.remove("valid");
+      }
+    }, false);
+
+    if (this.hasAttribute("placeholder")) {
+        label.innerHTML = this.getAttribute("placeholder");
+    }
+	}
+
+	attributeChangedCallback(name, oldValue, newValue) {
+      if (this.hasAttribute("disabled")) {
+          this.setAttribute('tabindex', '-1');
+          this.setAttribute('aria-disabled', 'true');
+      } 
+      else {
+          this.setAttribute('tabindex', '0');
+          this.setAttribute('aria-disabled', 'false');
+      }
+	}
+}
+
+window.customElements.define('aris-input', arisInput);</code></pre>
+<p>attachShadow creates the Shadow DOM for the element and appendChild() clones the template by calling arisInput.template.content.  After that we check to see if Shadow DOM v1 is supported by the browser natively and if it isn't we use the ShadyCSS polyfill to apply the styles in our web component.  Last we have some JavaScript to help us know if the content in the input is valid or invalid so we can give the user some feedback using CSS and we take the text inside the "placeholder" attribute and insert it into the &lt;label&gt; of the Shadow DOM.</p>
+<p>Finally, let's add ShadyCSS.prepareTemplate() right before we call customElements.define() so that our CSS is scoped properly:</p>
+<pre><code class="language-javascript">class arisInput extends HTMLElement {
+    static get template() {
+      if (!this._template) {
+        this._template = makeTemplate`
+          &lt;!-- inject-style src="./processing/aris-input/aris-input.css" --&gt;
+          &lt;div id="arisInput" class="group"&gt;
+            &lt;slot&gt;&lt;/slot&gt;
+            &lt;span class="highlight"&gt;&lt;/span&gt;
+            &lt;span class="bar"&gt;&lt;/span&gt;
+            &lt;label&gt;&lt;/label&gt;
+          &lt;/div&gt;
+        `;
+      }
+      return this._template;
+    } 
+
+	  static get observedAttributes() {
+    	return ['disabled', 'placeholder'];
+  	}
+
+	  // A getter/setter for a disabled property.
+  	get disabled() {
+    	return this.hasAttribute('disabled');
+  	}
+  	set disabled(val) {
+		if (val) {
+      		this.setAttribute('disabled', '');
+    	} 
+    	else {
+      		this.removeAttribute('disabled');
+    	}
+  	}
+
+  	// A getter/setter for a placeholder property.
+  	static get placeholder() {
+    	return this.hasAttribute('placeholder');
+  	}
+  	set placeholder(val) {
+		  if (val) {
+      		this.setAttribute('placeholder', '');
+      } 
+    	else {
+      		this.removeAttribute('placeholder');
+    	}
+  	}
+
+  	constructor() {
+		super();
+	}
+
+	connectedCallback() {
+    let shadowRoot = this.attachShadow({mode: 'open'});
+    shadowRoot.appendChild(document.importNode(arisInput.template.content, true));
+    
+    // Shim styles, CSS custom props, etc. if native Shadow DOM isn't available.
+    if (!!HTMLElement.prototype.attachShadow) {
+      ShadyCSS.applyStyle(this);
+    }
+
+    let input = this.querySelector('input');
+    let label = shadowRoot.querySelector('label');
+    let rootThis = this;
+
+    input.addEventListener('keyup', function(event) {
+      rootThis.value = event.target.value;
+      if (event.target.validity.valid) {
+        input.classList.add("valid");
+        input.classList.remove("invalid");
+      } else {
+        input.classList.add("invalid");
+        input.classList.remove("valid");
+      }
+    }, false);
+
+    if (this.hasAttribute("placeholder")) {
+        label.innerHTML = this.getAttribute("placeholder");
+    }
+	}
+
+	attributeChangedCallback(name, oldValue, newValue) {
+      if (this.hasAttribute("disabled")) {
+          this.setAttribute('tabindex', '-1');
+          this.setAttribute('aria-disabled', 'true');
+      } 
+      else {
+          this.setAttribute('tabindex', '0');
+          this.setAttribute('aria-disabled', 'false');
+      }
+	}
+}
+
+ShadyCSS.prepareTemplate(arisInput.template, 'aris-input');
+window.customElements.define('aris-input', arisInput);</code></pre>
+<p>There we have a functional web component!  </p>
+<h2>Web Components in Production</h2>
+<p>You can preview this web component, and another web component I created, &lt;aris-header&gt;, <a href="https://aristotle-labs.github.io/web-components-v1/dist/" target="_blank" title="Link to Github preview">on Github</a>.  <a href="https://github.com/aristotle-labs/web-components-v1" target="_blank" title="Link to Github repo for the code.">In the Github repo</a> you can find all the code used to create the preview.  You can use the custom elements you create in the back-office and on the frontend of projects simply by including the JavaScript file with the code for your custom element.  We are currently testing the use of web components in custom list views for our back-office and on the frontend of our projects.  Initial results look very promising.</p>
+<p>Currently websites like Github, EA Games, Google, and other companies have started using small components in their websites.  It's easy to dip your toes into the world of web components since it's simply HTML, CSS, and JavaScript and they work with any framework you might be currently using!  In researching further you might discover that there are frameworks to help you create web components.  In my opinion this seems counterproductive to what web components are supposed to bring to the table.</p>
+<p>There's a great community of developers involved in web components online.  To learn more about web components you could follow <a href="https://twitter.com/ebidel" target="_blank" title="Eric Bidelman's twitter link.">Eric Bidelman from Google</a> who has great articles on <a href="https://developers.google.com/web/fundamentals/getting-started/primers/customelements?hl=en" target="_blank" title="Blog post about custom elements.">custom elements</a> and <a href="https://developers.google.com/web/fundamentals/getting-started/primers/shadowdom" target="_blank" title="Blog post about shadow dom.">Shadow DOM</a>.  I'd also suggest checking out and following <a href="http://webcomponents.org/" target="_blank" title="Web components .org link">webcomponents.org</a>, where you can see up to date browser support charts, blog about all 4 web component specs, and discover web components that others have created.</p>
+<p>The future of web development is very bright!  Being able to quickly share web components with others using Github is a great way to quickly bootstrap a project.  What are your thoughts?  Do you like the idea of shareable bite sized components?  <a href="https://www.twitter.com/themattshull" target="_blank" title="Matt's twitter link"></a></p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/github/" title="See all articles tagged with GitHub">GitHub</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Matt Shull"><img src="//gravatar.com/avatar/c71eab5a0dcc5ecf962ca1bc975debd3.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c71eab5a0dcc5ecf962ca1bc975debd3.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Matt Shull</h1>
+        <p>Matt is on Twitter as <a href="//twitter.com/TheMattShull" title="Matt Shull on Twitter" rel="author">@TheMattShull</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

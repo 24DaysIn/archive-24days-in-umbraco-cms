@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Bulk-Assigning Media Items</title>
+<meta name="description" content="How to get around the obstacle of assigning loads of images to their corresponding products in Umbraco, without having to manually set a picker on every product node">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Bulk-Assigning Media Items</h1>
+      <p class="byline"> by Sebastian Dammark, <span class="pubdate">posted on <time datetime="2012-12-15">Dec 15, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Setting the scenario:</p>
+<p class="intro">You've got a new client who has a major product catalog (~1500 products) and they've sent it to you in CSV, looking something like this.</p>
+<pre class="language-markup"><code>prodid;prodname;proddesc;prodnumber
+01;Giant Hat;This hat only fits dwarfs;GH001V023;
+02;Red Hat;This hat only fits redheads;GH002V458;</code></pre>
+      <p class="snippet-caption">The product catalog data in CSV format</p>
+<p>The data itself we import with <a href="http://our.umbraco.org/projects/developer-tools/cmsimport" target="_blank" title="Chack out the CMSImport package by Richard Soeteman">CMS Import</a>, no problems there.</p>
+<p>Along with all this data we've also received a truckload of images, all named like this: <span class="code">gh001v023.png</span>, <span class="code">gh002v458.png</span> etc. You can see the filename matches the productnumber.</p>
+<h2>The problem</h2>
+<p>So usually we would have a Media Picker on the Product node to select the image for it, but that's not an option with 1500 products in the catalog... </p>
+<p>So instead of selecting images on all 1500 products, we just need to match up the <strong>productnumber</strong> with the <strong>urlName</strong> of the media.</p>
+<p>When bulk uploading images to the media section they all get a <span class="code">@urlName</span> according to the filename, without the extension. Pretty darn useful. But the full path to the image will contain a number that we cannot predict or lookup, e.g.: <span class="code">/media/1234/gh002v458.png</span>. What to do?</p>
+<h2>We need a little magic</h2>
+<p>Fortunately, <a href="http://ucomponents.codeplex.com" target="_blank" title="Check out uComponents on Codeplex">uComponents</a> has an XSLT extension called <span class="code">GetMediaByUrlName()</span> - so this exactly the kind of magic we need.</p>
+<p>The Media XML for an image looks like this:</p>
+<pre class="language-markup"><code>&lt;Image id="4736" level="2" nodeName="GH001V023" urlName="gh001v023" nodeTypeAlias="Image"&gt;
+	&lt;umbracoFile&gt;/media/1234/gh001v023.png&lt;/umbracoFile&gt;
+	&lt;umbracoWidth&gt;1200&lt;/umbracoWidth&gt;
+	&lt;umbracoHeight&gt;1200&lt;/umbracoHeight&gt;
+	&lt;umbracoBytes&gt;1643882&lt;/umbracoBytes&gt;
+	&lt;umbracoExtension&gt;png&lt;/umbracoExtension&gt;
+&lt;/Image&gt;</code></pre>
+      <p class="snippet-caption">The Media XML - note that @urlName matches the filename </p>
+<p>And here we have the relevant XSLT:</p>
+<pre class="language-markup"><code>&lt;xsl:template match="Product"&gt;
+	&lt;!-- Lets check if productNumber contains any data,
+		otherwise we give at a default value.
+		Remember to have an image called 'default' --&gt;
+	&lt;xsl:variable name="mediaUrlName"&gt;
+		&lt;xsl:choose&gt;
+			&lt;xsl:when test="productNumber[normalize-space()]"&gt;
+				&lt;xsl:value-of select="translate(productNumber, $uppercase, $lowercase)" /&gt;
+			&lt;/xsl:when&gt;
+			&lt;xsl:otherwise&gt;
+				&lt;xsl:value-of select="'default'" /&gt;
+			&lt;/xsl:otherwise&gt;
+		&lt;/xsl:choose&gt;
+	&lt;/xsl:variable&gt;
+
+	&lt;!-- Here we use the GetMediaByUrlName from uComponents
+		to get the Image selected in the productNumber property.
+		And in case it returns multiple items,
+		we just select the first [1] --&gt;
+	&lt;xsl:variable name="media"
+		select="umedia:GetMediaByUrlName($mediaUrlName)[1]" /&gt;
+
+	&lt;li&gt;
+		&lt;xsl:apply-templates select="productTitle[normalize-space()]" /&gt;
+
+	&lt;!-- If the media variable has any content, we apply a template to it,
+		and we pass a crop mode to the CropUp extension --&gt;
+		&lt;xsl:apply-templates select="$media[normalize-space()]" mode="media"&gt;
+			&lt;xsl:with-param name="crop" select="'150x170M'" /&gt;
+		&lt;/xsl:apply-templates&gt;
+	&lt;/li&gt;
+&lt;/xsl:template&gt;</code></pre>
+      <p class="snippet-caption">Example of getting a product's image from its product number</p>
+<p>I was very happy to not have to instruct someone to pick every single product's image, but yet still be able to use the Media section instead of a flat folder of images. </p>
+<p><a href="/archive/media/2012/code.xsl">You can download the complete XSLT here</a></p>
+<p>Merry Christmas everyone!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/media/" title="See all articles tagged with Media">Media</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Sebastian Dammark"><img src="//gravatar.com/avatar/dd7b564eefad07f84d86336f9fae51db.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/dd7b564eefad07f84d86336f9fae51db.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Sebastian Dammark</h1>
+        <p>Sebastian is on Twitter as <a href="//twitter.com/dammark" title="Sebastian Dammark on Twitter" rel="author">@dammark</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li class="selected"><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

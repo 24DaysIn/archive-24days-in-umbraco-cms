@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>The power of card modes</title>
+<meta name="description" content="Describes an approach to set up repeated content card styling in a testable, flexible, maintainable way. Setup and selectors can get slightly complex and approach only gives full yield IE9+, but hooray for style guides and team communication benefits. Merry Christmas.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">The power of (Christmas) card modes</h1>
+      <p class="byline"> by Liv Madsen, <span class="pubdate">posted on <time datetime="2014-12-24">Dec 24, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><em>- or how to take the load off your templates with smarter CSS.</em></p>
+<p class="intro">I get the distinct honour of closing this year's calendar, so following tradition I'll share a little something with you that lifts my spirits these days. It's an approach that my team and I have been using lately to meet a high need for flexibility in layouts from designers and editors alike - while keeping the backend clean and not sacrificing visual testing and documentation.</p>
+<p>It's not strictly tied to Umbraco, but rather something that impacts how we structure and communicate about the frontend.</p>
+<p>This post is not highly technical, so if you're just mildly interested in CSS and know the basics of pre-processors, I hope you will find this useful too.</p>
+<h3>What's the matter?</h3>
+<p>I guess I can best open this with an example.</p>
+<p>Say we need to display some different content bits, or cards, in a content panel that appears across a site. The editors can choose a varying number of cards to be displayed in the panel. The chosen cards can represent different content types, for instance an editorial article, a product, an image gallery or an event, so each type needs to be presented with a set of information that fits the content type<span>.</span></p>
+<p>On our side, we want to make sure that the layout of the panel adapts in a controlled way to the varying number of cards, so we can keep a visual hierarchy between the chosen cards, no matter if there are three or 20. </p>
+<p>Consider the following fairly simple setup with seven card slots.</p>
+<figure>
+  <a href="/archive/media/2014/grid_7_numbers.png">
+    <img src="/archive/media/2014/grid_7_numbers.png" alt="Grid 7 Numbers Figure" width="730">
+  </a>
+</figure>
+<p>On small screens we want to stack the cards. We want the first card to have a lot of visual weight, but for all the following we want to save space. When there is more screen space, we can increase the visual weight of the cards a bit.</p>
+<p>When there are only three cards, we can afford a little more space, but we want to still keep some hierarchy. The slots in the panel could then line up something like this:</p>
+<figure>
+  <a href="/archive/media/2014/grid_3_numbers.png">
+    <img src="/archive/media/2014/grid_3_numbers.png" alt="Grid 3 Numbers Figure" width="677">
+  </a>
+</figure>
+<p>So far, so good. But notice how some of the cards would have to take on a slightly different layout across the breakpoints.</p>
+<p>And now remember that each of these positions can be taken up by completely different content types, each with their specific styling needs. A product card needs a price, an event needs to show date, time and location, an article card might need a publication date, etc.</p>
+<p>As the card types and the card slot counts grow, applying the styling for each type directly on the panel element can quickly become a testing and maintenance nightmare.<br>Just to run perceptual difference tests, we would have to not only set up the different layouts based on amount of cards, but also examples of each content type in each slot across the different panel layouts.</p>
+<p>Ugh. Not exactly a dream task.</p>
+<p>So what we need is a way to show all the different presentation modes of each content type in an isolated manor for our tests. And then to apply those presentation modes to the cards based on where they sit in any given panel layout - without tightly coupling the styling to that panel (so we can reuse the cards in panels with different layouts).</p>
+<p>We would also prefer to keep the markup for each card type the same no matter the placement and panel. That simplifies the template setup - and by keeping<span> a</span><span>ll knowledge of the panel layout and each card </span>presentation<span> entirely in CSS</span> we are free to switch betweens the modes depending on the flow of the panel layout across breakpoints.</p>
+<h3>Who you gonna call? Card modes</h3>
+<p>For overview, these are terms I'm using:</p>
+<p><strong>panels</strong> - are full width containers for a set of cards.</p>
+<p><strong>card slots</strong> - are the direct container of individual cards in e.g. a panel. This is where we know the properties of the presentation, so card slots provide the needed layout context for assigning presentation modes to the card types we can expect to see in the card slot.</p>
+<p><strong>cards</strong> - are the individual self-contained chunks of content to be displayed. The raw card has only the most basic styling and has no knowledge of presentational context.</p>
+<p><strong>card types</strong> - are variations of cards with the specific markup needed to best represent a content type (product teaser card, article teaser card, event card, etc.). If you can describe a unique set of properties or content to be displayed, it's a card type.</p>
+<p><strong>card modes</strong> - are additional stylings of the card types to meet whatever restrictions apply to a specific slot in a panel, e.g. "has to be fixed ratio, 3x2", "is suited for big areas", "is suited for small areas". Each card type is styled in multiple modes as needed. The modes are kept entirely in SCSS (or what else you prefer) as mixins, with a uniform naming structure like MODE_product-card-A, MODE_product-card-B, MODE_article-card-A etc. To ensure that the card mode styles are consistent and testable, we keep the card modes mostly breakpoint agnostic and let the panels handle any adjustments to the surrounding layout.</p>
+<p>Sometimes we may also need to vary the colours of a card in order to match a specific type of panel. We do that by splitting out the colours, in the same manner as the layout, in</p>
+<p><strong>card themes</strong> - a presentational set holding all colour styling. THEME_card-type-red, THEME_card-type-black, THEME_card-type-yellow which can then also be applied to panels or card slots.</p>
+<p>But let's stick to the layout today.</p>
+<h3>Mmm... grouping things</h3>
+<p>We start by identifying the needed <em>modes</em>. To keep it simple, in our little example from earlier, they can be grouped like so:</p>
+<figure>
+  <a href="/archive/media/2014/grid_7_modes.png">
+    <img src="/archive/media/2014/grid_7_modes.png" alt="Grid 7 Modes Figure" width="730">
+  </a>
+</figure>
+<p>Mode A has the most weight and the most room. In this mode we can show all the information available on a given card type. We give Mode A a fixed aspect ratio to make it easy to combine cards across different grid configurations.</p>
+<p>Mode B is also fixed ratio, but has less weight and typically less room, so we want to display a little less information on cards in this mode.</p>
+<p>Mode C shows the least possible information needed to communicate the meaning of a card. For grid flexibility in this example we also keep C at fixed ratio.</p>
+<p>Great, now we have a little more to go by.</p>
+<h3>Quick! To the style guide!</h3>
+<p>In fact, we have enough information to set up these modes in our style guide for card types in question.</p>
+<p>We will expect to see card types Product and Article in this panel, so we set up the three modes for those two cards types, arranging the needed styling in uniformly named MODE mixins like so: </p>
+<pre class="language-css"><code>@mixin MODE_article-card—A {
+     // all the A MODE styling for the ARTICLE card type goes here
+     .article-card {
+          ...
+     }
+     .article-card__publiction-date {
+          ...
+     }
+     ...
+}
+
+.card-slot—A {
+     // allow direct application by a card-slot modifier - used in the style guide
+     @include MODE_article-card—A;
+}
+
+
+@mixin MODE_product-card—A {
+     // all the A MODE styling for PRODUCT card type goes here
+     .product-card {
+          ...
+     }
+     .product-card__price {
+          ...
+     }
+     ...
+}
+
+.card-slot—A {
+     // allow direct application by a card-slot modifier - used in the style guide
+     @include MODE_product-card—A;
+}</code></pre>
+<p>I also like to include a raw version of each card type in my style guide to make it clear what markup and content is available. </p>
+<p>And since the markup is the same for all cards of the same type, I can simply include the same partial in my style guide as needed.</p>
+<figure>
+  <a href="/archive/media/2014/styleguide.png">
+    <img src="/archive/media/2014/styleguide.png" alt="Styleguide Figure" width="753">
+  </a>
+</figure>
+<p>becomes:</p>
+<figure>
+  <a href="/archive/media/2014/card_types.png">
+    <img src="/archive/media/2014/card_types.png" alt="Card Types Figure" width="501">
+  </a>
+</figure>
+<p>Awesome! </p>
+<p>This is totally something that we can run our visual tests on. We also have a place to point team members to, when they need to know what presentation styles we have in place for the different card types, which makes it way easy to evaluate when a new mode or a new card type is needed.</p>
+<p>As an added bonus, we now have a language for the layout. We can talk about card type X in mode Y. Simple names, but they're very useful in our team communication.</p>
+<blockquote>
+<p><span>Tip: Any style guide framework will do just fine. These examples are set up in TDCSS.js - if you're not already working with style guides, check that out for a dead simple starting point at </span><a href="http://jakobloekke.github.io/tdcss.js/">http://jakobloekke.github.io/tdcss.js/</a><span>.</span></p>
+</blockquote>
+<p> </p>
+<h3>Into the panel</h3>
+<p>With this in place, we can go ahead and apply the modes to panels in different configurations. To keep it all in the CSS, we can turn to structural pseudo-classes to apply the modes depending on our current card count. These days support is pretty solid (<a href="http://caniuse.com/#search=nth">http://caniuse.com/#search=nth</a>), however IE8 is left out (on the mqs as well, of course), so you will need to apply some fallback for that.</p>
+<blockquote>
+<p>Tip: If you're not familiar with this set of selectors, swing by <a href="http://css-tricks.com/how-nth-child-works/">http://css-tricks.com/how-nth-child-works/</a> - don't be scared by the notice of browser support, the article is a few years old. Also, try this great tool from Lea Verou to get a better feel for them: <a href="http://lea.verou.me/demos/nth.html">http://lea.verou.me/demos/nth.html</a></p>
+</blockquote>
+<p> </p>
+<p>Our smallest break point is fairly simple:</p>
+<pre class="language-css"><code>@include mq(small) {
+
+  // ---------------------
+  // card slot layout / card mode assignments
+
+  // first card slot always
+  .panel__card-slot:first-child {
+    @include MODE_article-card--A;
+    @include MODE_product-card--A;
+  }
+
+  // second card slot when it is also among the three last
+  // i.e. when there are up to four card slots in panel
+  .panel__card-slot:nth-child(2):nth-last-child(-n+3) {
+    @include MODE_article-card--B;
+    @include MODE_product-card--B;
+  }
+
+  // the second card slot when there are more than four cards in panel
+  // and all following slots always
+  .panel__card-slot:nth-child(2):not(:nth-last-child(-n+3)),
+  .panel__card-slot:nth-child(n+3) {
+    @include MODE_article-card--C;
+    @include MODE_product-card--C;
+  }
+
+}</code></pre>
+<p><span>Note: <span>structural p</span>seudo-classes are fun, but honestly they are not the most easily scannable thing in the universe, so as they get more complex your colleagues might appreciate a comment with your intentions, especially if they are subject to change.</span> </p>
+<p>Also, I would advise you to group the mode applications when possible and sensible, since you are effectively repeating all the rules for the modes in each context where you apply it. No more than had you applied the styles directly, of course, but it might be easier to lose track of when it's this simple to do. If a lot of panels are using the same modes, you might even want to consider injecting some placeholders to group further. YMMV.</p>
+<p>In this manner work your way through the breakpoints.</p>
+<pre class="language-css"><code>@include mq(medium) {
+ 
+  // styles applying to all card slots on this breakpoint
+  .panel__card-slot {
+    float: left;
+     ...
+  }
+
+  // first card always
+  .panel__card-slot:first-child {
+    width: 100%;
+    @include MODE_article-card--A;
+    @include MODE_product-card--A;
+  }
+
+  // following four card slots
+  .panel__card-slot + .panel__card-slot:nth-child(-n+5) {
+    width: 50%;
+    @include MODE_article-card--B;
+    @include MODE_product-card--B;
+  }
+
+  // All card slots above 5
+  // and last slot always when count is even
+  .panel__card-slot:nth-child(n+6),
+  .panel__card-slot:last-child:nth-child(even) {
+    width: 50%;
+    @include MODE_article-card--C;
+    @include MODE_product-card--C;
+  }
+
+  // when the last card slot is even, take up whole row
+  .panel__card-slot:last-child:nth-child(even) {
+    width: 100%;
+  }
+}</code></pre>
+<p>And so our example from earlier takes shape:</p>
+<figure>
+  <a href="/archive/media/2014/panel_overview.png">
+    <img src="/archive/media/2014/panel_overview.png" alt="Panel Overview Figure" width="900">
+  </a>
+</figure>
+<p> </p>
+<p>You can now go through the panel layouts for even more card slots and subsequently add more card types as/if needed. The groundwork you did by adding the card modes directly to the style guide helps you to ensure that they are all in the right shape, so you can focus on the flow of the card slots at this point.</p>
+<p>And there you have it.</p>
+<p>Biggest benefit from this approach for me, the frontender, is that each mode remains visible, and therefore testable, without setting up a working example of each panel/card configuration.</p>
+<p>Biggest benefit for my backender is that all the presentational handling is left to CSS, so the markup doesn't have to duplicate any complex information about grid, breakpoints or card presentation across them.</p>
+<p>For my designing colleagues this provides a great overview and a concrete framework with set restraints to work from.</p>
+<p>And to the whole team it gives a system and a language to ease the communication about the structure and the styling as the site grows and changes.</p>
+<p>I hope you can find some of this as useful as I have. And if you have an interesting approach that has helped you tackle this is a different way, do share. In the spirit of Christmas and all.</p>
+<p>Happy holidays!</p>
+<blockquote>
+<p>tl;dr: An approach to set up repeated content chunk styling in a testable, flexible, maintainable way. Setup and selectors can get slightly complex and approach only gives full yield IE9+, but hooray for style guides, and team communication benefits.<br>Merry Christmas.</p>
+</blockquote>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/responsive/" title="See all articles tagged with Responsive">Responsive</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Liv Madsen"><img src="//gravatar.com/avatar/0846f0ce86d58fdf279355cdbb9b7f21.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/0846f0ce86d58fdf279355cdbb9b7f21.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Liv Madsen</h1>
+        <p>Liv is on Twitter as <a href="//twitter.com/livmadsen" title="Liv Madsen on Twitter" rel="author">@livmadsen</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li class="selected"><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

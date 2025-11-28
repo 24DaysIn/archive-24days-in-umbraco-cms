@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Building multilingual websites in Umbraco </title>
+<meta name="description" content="A walkthrough of the setup for building 1-1 multilingual websites in Umbraco">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">1-1 Multilingual Websites in Umbraco</h1>
+      <p class="byline"> by Mads Jørgensen, <span class="pubdate">posted on <time datetime="2012-12-03">Dec 3, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Classic challenge in Umbraco: You have a 1-1 multilingual website, but Umbraco isn't quite made for handling that. This is how we, at <a href="http://www.illumi.dk" title="ILLUMI A/S">ILLUMI</a>, normally handle that. Usually there's quite a bit of custom stuff to handle, as they're not quite 1-1 anyways, but that I won't cover in this article.</p>
+<h2>What are 1-1 multilingual websites?</h2>
+<p class="intro">Quite simply, it's when you have the exact same pages in every language. A CMS like Sitecore would handle it with the ability to version any given item in several languages by clicking a flag in the backend, and then use culturecodes to fetch the right language.</p>
+<h2>How to handle it in Umbraco's backoffice</h2>
+<p>First off, we're giving the user several tabs in any document template representing the different languages. Then what we do, is to postfix all our fields with the culture code when creating them in the document type. See screenshot for my example.</p>
+<figure>
+  <a href="/archive/media/2012/doctype.jpg">
+    <img src="/archive/media/2012/doctype.jpg" width="1280" alt="Properties setup for multiple languages">
+  </a>
+  <figcaption>Properties setup for multiple languages</figcaption>
+</figure>
+<p>When postfixing, we have the opportunity to fetch them from our macros (I'll be doing it in XSLT).</p>
+<p>If every page doesn't have all languages, you could make a boolean field, that "activates" the language edition. This will typically help you in your navigation macros, so the pages unavailable in the current language actually won't show in navigation.</p>
+<h2>Detecting current language from XSLT</h2>
+<p>So, for some odd reason there's no extension method for fetching the current culture in default Umbraco (I know there are packages around doing that). But there's a very simple hack you could do, and I quite like it.<br>You simply create a dictionary item, I call it <strong>currentCulture</strong>, and then fill your field postfix texts in each language (<strong>da</strong> and <strong>en</strong>).</p>
+<h2>Helper XSLTs</h2>
+<p>I really like to make and use default helper XSLTs (thanks a bunch @greystate for the inspiration). This is basically a seperate XSLT file I include in pages where needed, containing some templates and some variables I use sitewise. In this case I use this: <a href="https://github.com/madjor5/24ways/blob/master/XSLT/_MultiLingualHelper.xslt" title="MultiLingualHelper">_MultiLingualHelper.xslt</a>. The methods I'll be storing in this file are:<br>- Language detection (variable named <span class="code">$lang</span>)<br>- Complete postfix for fields (<span class="code">$lang_postfix</span>)<br>- Fallback language<br>- Some default settings to generate some content.</p>
+<h2>Fetching the right version of the field</h2>
+<p>Now for fetching the right version of a field, I'll use some XPath.</p>
+<pre class="language-markup"><code>&lt;xsl:value-of select="*[name() = concat('header', $lang_postfix)]" /&gt;</code></pre>
+      <p class="snippet-caption">Getting the language-specific version of a property</p>
+<p>Explained shortly, the concat part adds <strong>_da</strong> or <strong>_en</strong> to the fieldname, and we then fetch the field that has that name. Easy peasy. See <a href="https://github.com/madjor5/24ways/blob/master/XSLT/NavigationExample.xslt#L24" target="_blank" title="Navigation Example">NavigationExample.xslt</a> in line 24 for further inspiration.</p>
+<h2>Setting up hostnames</h2>
+<p>Now for the system to detect which language/culture the user wants, we use sub-domains, e.g.: <strong>www</strong>.domain.com and <strong>da</strong>.domain.com. Simply use native umbraco features to set up <em>hostheaders</em> per domain.</p>
+<p>Is the sub-domain or extension domain necessary? Yeah, I do believe it is, since you have to be very careful not to make duplicate content, as Google won't like that. Of course there is the opportunity to do it all without domain changes, but I like the clear and obvious solution it provides.</p>
+<h2>Navigation</h2>
+<p>Navigations in a multilingual setup is basically not that different from default navigation snippets. The main difference is in this line:</p>
+<pre class="language-markup"><code>&lt;xsl:apply-templates
+	select="$currentPage/
+		ancestor-or-self::Frontpage/
+		*[*[name() = concat('activateLanguage', $lang_postfix)] = 1]"
+	mode="page"
+/&gt;</code></pre>
+      <p class="snippet-caption">Selecting activated pages for a language in Navigations </p>
+<p>It's from <a href="https://github.com/madjor5/24ways/blob/master/XSLT/NavigationExample.xslt#L16" target="_blank" title="Navigation Example">NavigationExample.xslt</a> line 16. What it basically does, is use XPath to fetch only pages that are activated through the checkbox.</p>
+<h2>Changing language</h2>
+<p>This is one of the more difficult things. What we need to consider is, if the actual page I'm viewing is available in another wanted language, link to the same page, but with the other language's domain. Otherwise link to the other language's frontpage.</p>
+<p>See <a href="https://github.com/madjor5/24ways/blob/master/XSLT/_MultiLingualHelper.xslt#L37-L62" target="_blank" title="_Multilingualhelper">_MultiLingualHelper.xslt</a> for templates doing this.</p>
+<p>That's how I do 1-1 multilingual websites in Umbraco. I believe there could be more to it, if you have loads of special features. I recommend looking into differencing date- and currencyformats per language as well, but it won't be covered here.</p>
+<p>Any questions, ideas and comments, please contact me via my twitter handle @madjor5. If you want to see what else I'm up to, take a look at <a href="http://www.illumi.dk" target="_blank">illumi.dk</a> for further information.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/dictionary/" title="See all articles tagged with Dictionary">Dictionary</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/translation/" title="See all articles tagged with Translation">Translation</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/xslt/" title="See all articles tagged with XSLT">XSLT</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Mads Jørgensen"><img src="//gravatar.com/avatar/514964c80e575193a27feec4a0c7ca00.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/514964c80e575193a27feec4a0c7ca00.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Mads Jørgensen</h1>
+        <p>Mads is on Twitter as <a href="//twitter.com/madjor5" title="Mads Jørgensen on Twitter" rel="author">@madjor5</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li class="selected"><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

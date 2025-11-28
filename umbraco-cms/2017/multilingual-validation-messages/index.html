@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Multilingual Validation Messages</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Multilingual Validation Messages</h1>
+      <p class="byline"> by Daniël Knippers, <span class="pubdate">posted on <time datetime="2017-12-14">Dec 14, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Introduction</h2>
+<p>Before we get to the core of this article, let's do a quick introduction to model validation in ASP.NET MVC to make sure we are all on the same page. Model validation is generally implemented using validation attributes such as Required or StringLength. These attributes are applied to model properties, enforcing specific validation requirements.</p>
+<p class="intro"><img style="width: 305px; height: 386px;" src="/archive/media/2017/contact-us.png?width=305&amp;height=386" alt="" data-udi="umb://media/76a841cc05bf4b31b64331de5f84dbf6"></p>
+<p>For example, decorating a model property with the Required attribute will make sure the model is only considered valid if the model property has a non-empty value. In code, the validity of a model can be checked using ModelState.IsValid, which will trigger all applied validation attributes. Throughout this article, we will be using a very simple contact form for illustration purposes. It contains only three fields; Name, Email address, and Message. The form is displayed on the right.</p>
+<p>The model, decorated with some common attributes, is shown below. Note that it is possible to list multiple attributes in a comma separated list enclosed in a single pair of square brackets. It is more common - and probably more readable - to put each attribute on its own line. However, I thought this was a neat little syntax trick that not everyone might be familiar with, and it saves some precious vertical space so I decided to use it here by grouping some validation attributes together. </p>
+<pre><code class="language-csharp">public class ContactForm
+{
+    [DisplayName("Name")]
+    [Required(ErrorMessage = "Please provide your name"), StringLength(50)]
+    public string Name { get; set; }
+
+    [DisplayName("Email address")]
+    [Required, StringLength(50)]
+    [EmailAddress(ErrorMessage = "Invalid email address")]
+    public string EmailAddress { get; set; }
+
+    [DisplayName("Message")]
+    [Required, StringLength(1000, ErrorMessage = "Use at most 1000 characters")]
+    public string Message { get; set; }
+}</code></pre>
+<p>The error messages that will be shown to the user when validation fails are passed in as parameters to the validation attributes. When no custom error message is provided, a default message will be shown instead. Any parameter of an attribute (such as the ErrorMessage parameter) has to be a <em>constant</em> expression. That is, it must be an expression whose value is known at compile time. This requirement is an important limitation that makes it harder to use attributes in a multilingual environment. We will get back to this limitation and how to work around it in a bit.</p>
+<p>Apart from validation attributes each property is also decorated with a DisplayName attribute which will be used as the "human friendly" name of the property in various situations.</p>
+<p>We render this model as a form on the front end, using a standard Razor template. The nameof operator (introduced with C# 6) is used here for strongly typed access to the controller's submit action, rather than having to provide it as a hard coded string. The result of this code is the contact form that was shown earlier. Notice that @Html.LabelFor uses the DisplayName attribute value ("Email address") when provided, rather than the property name ("EmailAddress").</p>
+<pre><code class="language-csharp">@model ContactForm
+@using (Html.BeginUmbracoForm&lt;ContactFormController&gt;(nameof(ContactFormController.Submit), FormMethod.Post))
+{
+    @Html.AntiForgeryToken()
+
+    &lt;div class="form-group"&gt;
+        @Html.LabelFor(m =&gt; m.Name)
+        @Html.TextBoxFor(m =&gt; m.Name, new { @class = "form-control" })
+        @Html.ValidationMessageFor(m =&gt; m.Name)
+    &lt;/div&gt;
+
+    &lt;div class="form-group"&gt;
+        @Html.LabelFor(m =&gt; m.EmailAddress)
+        @Html.TextBoxFor(m =&gt; m.EmailAddress, new { @class = "form-control" })
+        @Html.ValidationMessageFor(m =&gt; m.EmailAddress)
+    &lt;/div&gt;
+
+    &lt;div class="form-group"&gt;
+        @Html.LabelFor(m =&gt; m.Message)
+        @Html.TextAreaFor(m =&gt; m.Message, new { @class = "form-control", rows = 4 })
+        @Html.ValidationMessageFor(m =&gt; m.Message)
+    &lt;/div&gt;
+
+    &lt;button type="submit" class="btn btn-primary"&gt;Submit&lt;/button&gt;
+}</code></pre>
+<p> When the user submits the form the data will be posted to the Submit action of the Surface Controller we referenced in our view, which looks like this:</p>
+<pre><code class="language-csharp">[HttpPost, ValidateAntiForgeryToken]
+public ActionResult Submit(ContactForm form)
+{
+    if (!ModelState.IsValid)
+    {
+        return CurrentUmbracoPage();
+    }
+
+    // Process form
+
+    return RedirectToUmbracoPage(CurrentPage.FirstChild&lt;Thanks&gt;() ?? CurrentPage);
+}</code></pre>
+<p>If an invalid model is submitted, we simply return the user to the currently rendered Umbraco page to correct the validation errors. If the model passed validation, we can proceed with processing the form and show the user a Thank You page.</p>
+<h3>Validation Error Messages</h3>
+<p><img style="width: 295px; height: 450px;" src="/archive/media/2017/contact-form-errors.png?width=295&amp;height=450" alt="" data-udi="umb://media/714acb1c038a49d2a0b8e7799e5dd04c"></p>
+<p>When a user has submitted an invalid form, validation error messages will be shown that describe why a field is invalid. By default, this validation happens only on the server (when triggered by ModelState.IsValid as shown in the code above), meaning the user has to first submit the form to the server before any validation happens after which the user can correct any validation errors. With our small form this is not a huge problem (though undesirable), but in bigger forms it is definitely a much better user experience if validation messages appear immediately when a user just finished filling out a field with invalid data, rather than having to wait until after form submission. This is where client side validation comes in. </p>
+<h3>Client Side Validation</h3>
+<p>To validate a model immediately on the client, you can use jQuery Unobtrusive Validation. It plays well with the validation attributes described above, and will perform the same validation on the client automatically, displaying the same error messages when validation fails. It uses JavaScript and is executed in the client's browser, saving some round trips to the server as each field is validated on the client's machine immediately. Not only does this reduce the workload on the server, it also provides a much better user experience with immediate feedback to the user. Talk about a win-win scenario! The only small downside is that client side validation is not enabled by default, but it is very straightforward to do so -- if you can remember these steps or document them somewhere.</p>
+<ol>
+<li>Get the NuGet package:
+<pre>Install-Package Microsoft.jQuery.Unobtrusive.Validation</pre>
+</li>
+<li>At <strong>web.config &gt; appSettings</strong>, add these entries:
+<pre>&lt;add key="ClientValidationEnabled" value="true" /&gt;<br>&lt;add key="UnobtrusiveJavaScriptEnabled" value="true" /&gt;
+</pre>
+</li>
+<li>Include <strong>jquery.validate.js</strong> and <strong>jquery.validate.unobtrusive.js</strong> after jQuery itself.</li>
+</ol>
+<h2>Limitations of Validation Attributes</h2>
+<p>While this seems to work perfectly fine, validation attributes have one severe limitation that I mentioned a little earlier already; its arguments have be to <em>constant expressions</em>. This is true for all attributes in C#, not just validation attributes. This means we cannot use the model described above when we want to use this contact form in a multilingual site, as we want to be able to translate the display names and validation error messages. Having to provide constant values will not work in that case. </p>
+<h3>Resource Files </h3>
+<p>The standard way to circumvent the <em>constants</em>-limitation of attributes is to create resource files, and pass in the Resource Type and Resource Name to the validation attribute, which will then look up the value for the given key in the given resource. A resource file is essentially a key-value store where you can store whichever content you desire. This can be used to store validation messages too. The Resource Type and Resource Name are constants, so they are allowed as parameters. You can create different versions of the same resource for different cultures, which makes resource files a convenient solution for multilingual situations. However, while this works for fixed translations, this still does not achieve what we want: configuring validation error messages and display names in Umbraco. To the best of my knowledge, it is not possible to edit resource files on the fly <em>at runtime</em>, otherwise we could hook into a Publish event to update the necessary resource files with content from Umbraco and effectively achieve our goal that way.</p>
+<h3>Making it "work" with Umbraco</h3>
+<p>At <a rel="noopener noreferrer" href="https://www.perplex.nl" target="_blank" title="Perplex">Perplex</a>, another approach that we generally preferred is to make everything configurable in Umbraco, and work around the limitations of attributes by rendering display names and error messages ourselves on the front end. Validation attributes were still applied to the model to enable both server and client side validation, we would simply replace the display names and error messages that were rendered client side with custom values from Umbraco. This meant we usually ended up with Razor views containing constructs like this:  </p>
+<pre><code class="language-csharp">@Html.LabelFor(m =&gt; m.Name, Model.Labels.Name)
+@Html.TextBoxFor(m =&gt; m.Name, new
+{
+    data_val_required = Model.ErrorMessages.Required,
+    data_val_length = Model.ErrorMessages.StringLength,
+    data_val_length_max = 50
+})
+@Html.ValidationMessageFor(m =&gt; m.Name)</code></pre>
+<p>That is, we had to manually edit jQuery Unobtrusive Validation data attributes to make sure they display the error messages we want. Likewise, a second parameter was passed to @Html.LabelFor to explicitly set the label of a field, rather than relying on the DisplayName attribute. As a result of this, we had to manually keep the View in sync with the attributes applied to the model. If for whatever reason the StringLength attribute was removed from our model, we had to update the View as well since we were manually overriding the data_val_length* attributes of the text box. Keep in mind, this would only adjust client side validation error messages. Server side, the default error messages of the attributes would be used. So when a user would disable JavaScript, he would only see English validation error messages. Let's just say it was not pretty. Looking back at that, it was clear that while we made it "work", we did not actually make it <em>work. </em>Luckily, there is another - and much better - way.</p>
+<h2>Umbraco Validation Attributes </h2>
+<p>A way to actually make multilingual validation work nicely with configured values in Umbraco is to create our own validation attributes as replacements for the built-in validation attributes. While this sounds like an awful lot of work at first, it turns out to be fairly straight-forward, while granting us all the necessary flexibility in retrieving validation error messages. The only downside, as mentioned, is having to implement an alternative version of every validation attribute. However, keep in mind the custom implementations have to created only once after which they can be reused across all future projects as they are almost entirely generic. The only change you may need to make on a per-project basis is to change some default values that are tied to a specific project. </p>
+<h3>Document Type Alias + Property Alias <span>→</span> Error Message or Display Name</h3>
+<p>The concept of our custom attributes is simple; use a document type alias and a property alias (both compile time constant expressions) to lookup the error message or display name directly from Umbraco. In a way, we are using Umbraco as our "resource file".</p>
+<p>The core of all our custom validation attributes is the same, which is why we have consolidated that logic into an abstract base class (UmbValidationAttribute) that is used by all our custom attributes. Because of this, the overhead of adding a new validation attribute is minimal. The class looks like this:  </p>
+<pre><code class="language-csharp">public abstract class UmbValidationAttribute : ValidationAttribute, IClientValidatable
+{
+    protected string ErrorMessageDoctypeAlias { get; }
+    protected string ErrorMessagePropertyAlias { get; }
+    private UmbracoNodeSearcher Searcher { get; } = new UmbracoNodeSearcher();
+
+    public UmbValidationAttribute(string errorMessageDoctypeAlias, string errorMessagePropertyAlias)
+    {
+        ErrorMessageDoctypeAlias = errorMessageDoctypeAlias;
+        ErrorMessagePropertyAlias = errorMessagePropertyAlias;
+    }
+
+    // Validate + Generate error message (if invalid)
+    protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+        =&gt; IsValid(value)
+            ? ValidationResult.Success
+            : new ValidationResult(GetErrorMessage(validationContext), new[] { validationContext.MemberName });
+
+    // Get error message from IPublishedContent based on property alias
+    protected virtual string GetErrorMessage(string fieldName)
+        =&gt; Content
+            ?.GetPropertyValue&lt;string&gt;(ErrorMessagePropertyAlias)
+            ?.Replace("[#field#]", fieldName);
+
+    // Client Side error message based on ModelMetadata
+    protected virtual string GetErrorMessage(ModelMetadata metadata)
+        // .DisplayName can be null, fallback to .PropertyName
+        =&gt; GetErrorMessage(metadata.DisplayName ?? metadata.PropertyName);
+
+    // Server Side error message based on ValidationContext
+    protected virtual string GetErrorMessage(ValidationContext validationContext)
+        // .DisplayName is never null
+        =&gt; GetErrorMessage(validationContext.DisplayName);
+
+    // Get IPublishedContent based on doctype alias
+    // When alias is NULL -&gt; use current Umbraco page
+    protected IPublishedContent Content =&gt; ErrorMessageDoctypeAlias != null
+       ? Searcher.GetOne&lt;IPublishedContent&gt;(ErrorMessageDoctypeAlias)
+       : UmbracoContext.Current?.PublishedContentRequest?.PublishedContent;
+
+    // Generate rules for Client Side validation
+    public virtual IEnumerable&lt;ModelClientValidationRule&gt; GetClientValidationRules(
+        ModelMetadata metadata, ControllerContext context)
+    {
+        yield break;
+    }
+}</code></pre>
+<p>The first thing to note is this class inherits from the built-in class ValidationAttribute, which makes sure it plays well with all standard validation logic such as ModelState.IsValid. The only requirement for this to work is to override the IsValid method of the ValidationAttribute class, which both checks the validity of a field and provides an error message when the field is invalid. This is where we can perform our own logic to get the error message from Umbraco. As mentioned, our custom attribute is called with a document type alias and property alias, which will then be used to look up the associated property data in Umbraco and use it as the error message. When no document type alias is provided, we will simply use the current Umbraco page as the source.</p>
+<p>The validation itself is not handled in this base class, as each sub class would have different logic to perform. As such the IsValid(value) method itself is not defined here, but should be implemented in a sub class. However, the base class does provide the mechanism of retrieving contents of the error message from Umbraco, and replaces a special tag ([#field#]) with the display name of the field. This way, you can use the name of the field in your error message in Umbraco if so desired. Our class also implements the IClientValidatable interface so it will be picked up by jQuery Unobtrusive Validation for client side validation. We only have to implement the GetClientValidationRules method in order to comply with the interface's contract. The base class just yields an empty Enumerable here, but this method can be overridden in a sub class to provide client side validation rules, hence it is marked virtual. </p>
+<h3>Getting the IPublishedContent</h3>
+<p>We ended up using Examine to quickly retrieve the IPublishedContent of a given document type for the current language as this was performing better than XPath, but your mileage may vary. The implementation of the UmbracoNodeSearcher is not discussed in full here, as it is only one of many ways to get the IPublishedContent based on a document type alias and is not relevant for this article. In short, it uses a tiny index which indexes only the id and nodeTypeAlias for nodes with specific document types alongside the id of their closest Homepage (= the site / language they belong to). Retrieving the IPublishedContent becomes pretty much instant as the content tree does not have to be traversed like with XPath. The full implementation is available on <a rel="noopener noreferrer" href="https://github.com/PerplexDaniel/TwentyFourDays/" target="_blank" title="our GitHub page">our GitHub page</a>.</p>
+<p>If you would like to have some more control over the exact document type to use you may need to change the implementation to accept a relative XPath expression rather than only a document type alias. However, we found that the display names and error messages are configured either on the page that renders the form (which does not require any traversal, we simply return the IPublishedContent associated with the current request), or on a general "Settings" or "Administration" node, of which there is only one per site. As such, the document type alias alone was enough to uniquely identify the IPublishedContent in our case.</p>
+<h3>UmbRequiredAttribute</h3>
+<p>We will illustrate the most basic implementation of UmbValidationAttribute using UmbRequiredAttribute, which replaces the built-in Required attribute: </p>
+<pre><code class="language-csharp">public class UmbRequiredAttribute : UmbValidationAttribute
+{
+    // Used only for its implementation of IsValid (= less code for us to write)
+    private RequiredAttribute RequiredAttribute { get; } = new RequiredAttribute();
+
+    public UmbRequiredAttribute(
+        string errorMessageDoctypeAlias = Settings.ModelTypeAlias,
+        string errorMessagePropertyAlias = nameof(Settings.RequiredField)
+    ) : base(errorMessageDoctypeAlias, errorMessagePropertyAlias) {}
+
+    // Simply call the IsValid method of the built-in RequiredAttribute
+    public override bool IsValid(object value) =&gt; RequiredAttribute.IsValid(value);
+
+    public override IEnumerable&lt;ModelClientValidationRule&gt; GetClientValidationRules(
+        ModelMetadata metadata, ControllerContext context)
+    {
+        // Use the built-in ModelClientValidationRequiredRule, but supply our own error message
+        yield return new ModelClientValidationRequiredRule(GetErrorMessage(metadata));
+    }
+}</code></pre>
+<p>That's all. Most of the logic is handled by the base class, we only have to implement two things: (1) IsValid() to validate the field and (2) <span>GetClientValidationRules() to enable c</span>lient side validation. While we could implement the IsValid() method ourselves, we do not have to, as we can just call the built-in RequiredAttribute's IsValid() method instead. Why write something that already exists? The same is partially true for GetClientValidationRules(), where we can make use of the built-in ModelClientValidationRequiredRule class. We only have to pass in our custom error message, and we are done. Recall from earlier that GetErrorMessage was defined in our base class as well.</p>
+<h3>UmbDisplayName</h3>
+<p><span>We have shown the implementation of a custom ValidationAttribute, but we also need a custom DisplayName attribute in order to obtain the field labels from Umbraco. To that end, w</span>e created a UmbDisplayName attribute which is very similar to UmbValidationAttribute. It will use the exact same concept of taking in a document type alias + property alias to obtain a value from Umbraco. The main difference is it inherits from DisplayNameAttribute rather than ValidationAttribute, and as such implements the DisplayName method. The implementation is shown below.  </p>
+<pre><code class="language-csharp">public class UmbDisplayName : DisplayNameAttribute
+{
+    private string DoctypeAlias { get; }
+    private string PropertyAlias { get; }
+    private UmbracoNodeSearcher Searcher { get; } = new UmbracoNodeSearcher();
+
+    public UmbDisplayName(string doctypeAlias, string propertyAlias)
+    {
+        DoctypeAlias = doctypeAlias;
+        PropertyAlias = propertyAlias;
+    }
+
+    // When the current Umbraco page should be used, specify only the property alias
+    public UmbDisplayName(string propertyAlias) : this(null, propertyAlias) { }
+
+    // Obtain display name from Umbraco
+    public override string DisplayName
+        // DisplayName is not allowed to be null or empty so fallback to " " in that case
+        =&gt; Content?.GetPropertyValue&lt;string&gt;(PropertyAlias)?.WhenNullOrEmpty(" ");
+
+    // Get IPublishedContent based on Document Type alias
+    // When alias is NULL -&gt; use current Umbraco page
+    protected IPublishedContent Content =&gt; DoctypeAlias != null
+        ? Searcher.GetOne&lt;IPublishedContent&gt;(DoctypeAlias)
+        : UmbracoContext.Current?.PublishedContentRequest?.PublishedContent;
+}</code></pre>
+<h2>Usage </h2>
+<p>So we've shown a bunch of code, but how do we actually use this? We simply have to create some properties in Umbraco to store the validation messages and field labels and decorate our form model with our custom attributes, and that's it. We generally put our validation messages on a "Settings"-node or similar, as they can be reused for most forms on the site and are usually not specific to a form. The same is usually true for the field labels such as "Name" or "Email address", but occasionally it might be useful to put them on the page itself so users can customize labels for a specific form. </p>
+<p>For this demo we mix both styles; validation error messages are stored on our Settings node, while the display names are stored on the Contact page itself. In Umbraco, this looks like this: </p>
+<p><img style="width: 698px; height: 187px;" src="/archive/media/2017/umbraco-settings.png?width=698&amp;height=187" alt="" data-udi="umb://media/6033722e58f3469aa6ef51beff1dbf53"></p>
+<p>We then apply our custom validation attributes to our ContactForm as seen below. As you may have noticed before, the UmbRequired attribute defined default values for the document type alias and property alias - Settings.ModelTypeAlias and nameof(Settings.RequiredField), respectively - so we can just leave them empty here as those are the values we want to use. </p>
+<p>Note UmbDisplayName only specifies 1 argument, which will be interpreted as the property alias. When the document type alias is not provided, the currently rendered Umbraco page will be used as the IPublishedContent object from which the property data will be read.  </p>
+<pre><code class="language-csharp">public class ContactForm
+{
+    [UmbDisplayName(nameof(Contact.LabelName))]
+    [UmbRequired, UmbStringLength(50)]
+    public string Name { get; set; }
+
+    [UmbDisplayName(nameof(Contact.LabelEmailAddress))]
+    [UmbRequired, UmbEmailAddress, UmbStringLength(50)]
+    public string EmailAddress { get; set; }
+
+    [UmbDisplayName(nameof(Contact.LabelMessage))]
+    [UmbRequired, UmbStringLength(1000)]
+    public string Message { get; set; }
+}</code></pre>
+<p>Once again, we see the nameof operator in action. It's probably one of my favorite additions to C# 6, simple yet elegant. In this case, it is used instead of a hard-coded property alias like "labelName". Luckily, reading properties using GetPropertyValue is case-insensitive with respect to the property alias, which is why the nameof works here. Otherwise, it would fail considering nameof yields "LabelName" whereas the exact property alias is "labelName". I am aware of ModelsBuilder's DoctypeModel.GetModelPropertyType(m =&gt; m.SomeProperty).PropertyTypeAlias construct which yields the actual property alias, but that's not a constant so we cannot use it in conjunction with our attributes. However, nameof works perfectly fine here so there is no reason to consider alternatives. </p>
+<p>The beauty of adjusting the attributes is that the view and controller can be left completely unchanged, while in the model we only replace attributes with their Umb* counterparts. We render our Contact Form using the very same Partial View as if we would have used the built-in ValidationAttributes and DisplayNames. In the controller, ModelState.IsValid will automatically pickup the custom validation attributes and use its custom error messages. On the client, the new error messages are used by the unobtrusive validation as well without having to fiddle with the view in any way.</p>
+<h2>Advanced Custom Validation </h2>
+<p>Before we wrap this up, let's have a look at a more advanced custom validation attribute. It is a truly custom one that cannot use anything from a built-in validation attribute like the RequiredAttribute, but has to be implemented from scratch. For this article, we have created a super useful validation attribute - UmbUseWordAtLeastNTimes. This attribute takes 2 arguments; a string and an int. The first argument specifies a word that should be occurring at least as many times as the second argument mandates. For example, if I give it "Umbraco" and 3, the field will only validate if "Umbraco" occurs 3 or more times in the field. Like I said, a super useful attribute! Regardless of its usefulness, it suits this demo very well. We want to show how to create this attribute, which takes arguments from Umbraco (so the word itself and the number of occurrences is configurable), and validates on both client and server.</p>
+<p>We will start with the code for the attribute class itself:</p>
+<pre><code class="language-csharp">public class UmbUseWordAtLeastNTimesAttribute : UmbValidationAttribute
+{
+    private Func&lt;string&gt; GetWord { get; }
+    private Func&lt;int?&gt; GetN { get; }
+
+    public UmbUseWordAtLeastNTimesAttribute(
+        string wordPropertyAlias, string nPropertyAlias,
+        string wordDoctypeAlias = null, string nDoctypeAlias = null,
+        string errorMessagePropertyAlias = nameof(Settings.WordNotUsedNtimes),
+        string errorMessageDoctypeAlias = Settings.ModelTypeAlias
+    ) : base(errorMessageDoctypeAlias, errorMessagePropertyAlias)
+    {
+        GetWord = GetPropertyFn&lt;string&gt;(wordDoctypeAlias, wordPropertyAlias);
+        GetN = GetPropertyFn&lt;int?&gt;(nDoctypeAlias, nPropertyAlias);
+    }
+
+    // We replace some additional tags in the Umbraco content so the user can use the parameter values
+    // in the error message if so desired, thus we have to override the base method
+    protected override string GetErrorMessage(string fieldName) =&gt;
+        base.GetErrorMessage(fieldName)
+            ?.Replace("[#word#]", GetWord())
+            ?.Replace("[#times#]", GetN()?.ToString());
+
+    public override bool IsValid(object value)
+    {
+        (bool paramsOk, string word, int? n) = GetParams();
+        if (!paramsOk) return true;
+
+        string stringValue = value?.ToString() ?? "";
+        return Regex.Matches(stringValue, word).Count &gt;= n;
+    }
+
+    public override IEnumerable&lt;ModelClientValidationRule&gt; GetClientValidationRules(
+        ModelMetadata metadata, ControllerContext context)
+    {
+        (bool paramsOk, string word, int? n) = GetParams();
+        if(!paramsOk) yield break;
+
+        var rule = new ModelClientValidationRule
+        {
+            ValidationType = "usewordatleastntimes",
+            ErrorMessage = GetErrorMessage(metadata)
+        };
+
+        rule.ValidationParameters["word"] = word;
+        rule.ValidationParameters["n"] = n;
+
+        yield return rule;
+    }
+
+    private (bool paramsOk, string word, int? n) GetParams()
+    {
+        string word = GetWord();
+        int? n = GetN();
+        // Verify parameters are supplied and have valid values
+        bool paramsOk = !string.IsNullOrEmpty(word) &amp;&amp; n &gt; 0;
+        return (paramsOk, word, n);
+    }
+}</code></pre>
+<h3>Func&lt;T&gt; vs T</h3>
+<p>.NET only creates an instance once for every declared attribute (i.e., a new instance is not created on every request), so we have to make sure the property data is not read only in the constructor, but every time when our Contact page is requested. Without this, updates from Umbraco would never be reflected in our validation messages. This is why we have specified the Word and N parameters as Func&lt;string&gt; and Func&lt;int?&gt; respectively, rather than just string and int?. We use a nullable int here to handle the case where the IPublishedContent cannot be found, and thus the parameter value should be null rather than 0. With these Func properties, we make sure that whenever the value is accessed, it will be querying Umbraco again for the latest value. The implementation of GetPropertyFn is placed in the base class, and simply looks like this:</p>
+<pre><code class="language-csharp">protected Func&lt;T&gt; GetPropertyFn&lt;T&gt;(string doctypeAlias, string propertyAlias)
+    =&gt; () =&gt;
+    {
+        IPublishedContent ipc = doctypeAlias != null
+            ? Searcher.GetOne&lt;IPublishedContent&gt;(doctypeAlias)
+            : UmbracoContext.Current?.PublishedContentRequest?.PublishedContent;
+        if (ipc == null) return default(T);
+        return ipc.GetPropertyValue&lt;T&gt;(propertyAlias);
+    };</code></pre>
+<p>It does nothing more than yield a Func that will look up the property for the given doctype whenever it is executed. If the doctype alias was left blank, it will use the currently rendered Umbraco page to obtain the property value. Again, it is a Func to make sure we always get the current value from Umbraco, rather than the value it had when the attribute was instantiated. </p>
+<h3>Server Side Validation</h3>
+<p>As was discussed earlier, server side validation logic for all ValidationAttributes resides in the ValidationAttribute.IsValid method, which we thus have to override in this attribute. The GetParams() method will prepare the parameters of our attribute by invoking the two Func properties and will also verify their values make sense. That is, the word-parameter should not be null or empty while the n-parameter should be greater than 0 -- requiring either zero or a negative amount of occurrences of a word does not make sense. It also ensures the values could be found to begin with -- if the referenced IPublishedContent containing the parameters was unpublished or otherwise unavailable, paramsOk would be false. When the parameters are invalid we cannot check anything, so any value will be considered valid. Otherwise, we simply scan the input string for the specified word and check if it occurs at least n times. Using Regex.Matches was the quickest way here, possibly not the most efficient though.</p>
+<h3>Client Side Validation</h3>
+<p>To enable client side validation, IClientValidatable.<span>GetClientValidationRules is implemented as well. Note we yield break when the parameters are invalid, which will completely disable client side validation for the field. This is the same as implementing logic on the client side that would return true in this case, except this is more efficient as no client side logic has to be executed at all. If parameters are available, we prepare an instance of the ModelClientValidationRule with a unique name, our custom error message, and the parameters.</span> </p>
+<h3>JavaScript Validator Implementation</h3>
+<p>Implementing <span>GetClientValidationRules alone is not enough. It does not contain any logic, just data. The validation logic itself has to be provided as well, which can be done by adding a new validation adapter. The implementation of the adapter is shown below:</span></p>
+<pre><code class="language-javascript">(function useWordAtLeastNTimes() {
+    $.validator.unobtrusive.adapters.add("usewordatleastntimes", ["word", "n"], function(options) {
+        options.rules["usewordatleastntimes"] = options.params;
+        options.messages["usewordatleastntimes"] = options.message;
+    });
+
+    $.validator.addMethod("usewordatleastntimes", function(value, element, params) {
+        var n = parseInt(params.n, 10);
+        var word = params.word;
+        return isValid(value, word, n);
+    });
+
+    function isValid(value, word, n) {
+        if (value == null) return false;
+        var matches = value.match(new RegExp(word, "g"));
+        return matches == null ? false : matches.length &gt;= n;
+    }
+})();
+</code></pre>
+<p>As an aside, it is always good practice to wrap you JavaScript code in an immediately-invoked function expression (IIFE), preventing global namespace pollution. For instance, if the IIFE would not have been used here the defined isValid function would have been placed in the global namespace which is not necessary or even desirable at all. It could even cause conflicts with another isValid function that might already be declared globally, which is why it should be avoided when possible. The function expression is usually anonymous but can be named too, as is the case here.</p>
+<p>Looking at the implementation of isValid itself, it is pretty much the same as the C# version. This is not surprising, considering they should be checking for the same thing. We forego parameter validity checks here (e.g., checking for n &gt; 0) as this was already done on the server. If that check failed, the adapter would not have been instantiated in the first place. One thing to make sure is that the name of the adapter ("<span>usewordatleastntimes</span>" here) matches the name specified in C# (the property ModelClientValidationRule.<span>ValidationType</span>, just like the names of the parameters. </p>
+<p><img style="width: 292px; height: 399px;" src="/archive/media/2017/custom-validation.png?width=292&amp;height=399" alt="" data-udi="umb://media/fbbdb14335fc48bda78e4b0fbe2cd45d"></p>
+<h3>Activating the Adapter</h3>
+<p>To activate the new adapter, simply load the JavaScript file containing your adapter after jquery.validate.unobtrusive.js, and it will be picked up from there. When all goes well, the validation will work on both client and server with whatever parameters you specify in Umbraco. For the screenshot to the right, we configured that the word "Umbraco" had to occur at least 3 times, as you can tell. The error message shown here was generated on the client, and while update continuously while the user is typing. It will therefore automatically disappear when the user adds "Umbraco" 3 times, without going to the server.</p>
+<h3>Decorating the Model</h3>
+<p>The attribute is applied in the same way the other attributes are applied. We simply decorate any properties we want to validate using our attribute. In our ContactForm, we want to apply this check only to the Message field, so it will look like this: </p>
+<pre><code class="language-csharp">[UmbUseWordAtLeastNTimes(
+    nameof(Contact.WordToUseInMessage),
+    nameof(Contact.MinimumAmountOfTimesToUseWord)
+)]
+public string Message { get; set; }</code></pre>
+<p>We only provide the property aliases of the properties in Umbraco that provide the word to check for and the minimum amount of times it should occur. We omit the doctype alias for both, which means it will look at the currently rendered page. We also did not explicitly provide a doctype alias and property alias for the error message, as a default value was already set in the constructor of the attribute itself -- it will get the error message from the "Settings" doctype and property "WordNotUsedNTimes".</p>
+<h2>Performance</h2>
+<p>Just a small note on performance before we can conclude this article. The code snippets above do not contain any optimizations with respect to performance. While it was mentioned we use Examine to quickly look up a doctype in multi-site and/or multilingual configurations, this is still done for every single validation attribute and displayname attribute. Generally, the same IPublishedContent will be looked up multiple times for every field in the form, as each field will have a couple of attributes applied to it. It would be wasteful to lookup the very same IPublishedContent for each attribute, so it is advisable to put some form of caching in place to prevent these wasteful operations.</p>
+<p>We applied request-level caching, as looking up the IPublishedContent is extremely fast so we do not have to cache it for a long time. We just want to prevent having to look it up 10+ times for a single request when once would suffice. There are many different ways of caching, and we do not want to focus on that here. For details of our simple request-caching strategy, head over to <a rel="noopener noreferrer" href="https://github.com/PerplexDaniel/TwentyFourDays" target="_blank" title="The project's GitHub repository">the project's GitHub repository</a>, where it was implemented at the <a rel="noopener noreferrer" href="https://github.com/PerplexDaniel/TwentyFourDays/blob/master/TwentyFourDays/Code/Examine/UmbracoNodeSearcher.cs#L44" target="_blank" title="UmbracoNodeSearcher.GetOne">UmbracoNodeSearcher.GetOne</a> method, responsible for the retrieval of the IPublishedContent. </p>
+<h2>Conclusion</h2>
+<p>Using custom validation attributes and a single custom display name attribute, it is possible to obtain validation error messages and display names directly from Umbraco. These will then be automatically picked up by built-in validation logic that you likely already use, like ModelState.IsValid. This means it is no longer a pain to do multilingual validation in your websites, it will simply work on both client and server without having to apply all sorts of band-aids. </p>
+<p>While it requires a small investment of time up-front to create the necessary attributes, all future projects can benefit from this work. Even if your site is not multilingual, it makes sense to to grant editors the ability to customize error messages and display names without sacrificing code quality or maintainibility. Using custom attributes, you can provide editors with this flexibility while keeping your code clean and elegant.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/examine/" title="See all articles tagged with Examine">Examine</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/translation/" title="See all articles tagged with Translation">Translation</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Daniël Knippers"><img src="//gravatar.com/avatar/c5f62cf3935162e5d4622815708e9390.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c5f62cf3935162e5d4622815708e9390.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Daniël Knippers</h1>
+        <p>Daniël is on Twitter as <a href="//twitter.com/dknippers" title="Daniël Knippers on Twitter" rel="author">@dknippers</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

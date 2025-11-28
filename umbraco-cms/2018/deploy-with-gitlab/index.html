@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Deploy Umbraco projects with Gitlab CI/CD</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Deploy with Gitlab</h1>
+      <p class="byline"> by Alex Skrypnyk &amp; Søren Tidmand, <span class="pubdate">posted on <time datetime="2018-12-22">Dec 22, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">When looking for an alternative to Umbraco Cloud, we at UMAKERS decided to use Gitlab and their deployment services called GitLab CI/CD. And in this article, I would like to share with the Umbraco Community the way we build our projects in that scenario.</p>
+<p class="intro">The repository will contain the same as an Umbraco Cloud repository - this means that dll's and other nasty stuff that typically are not in your repositories will be included. We call these repositories "projectname.web". Whatever code you build - do it in a separate project. Just like Umbraco Cloud.</p>
+<p><strong>The goal</strong></p>
+<p>- support multiple developers <br>- local dev environments<br>- easy deploy to multiple environment targets (dev, staging, live)<br>- supporting different clients with the same cd using different transports (runner, ftp, custom docker)</p>
+<p><strong>Secondary goals</strong></p>
+<p>- tracking deploys<br>- total control of environment files<br>- redeploy</p>
+<p><strong>What is Gitlab CI/CD</strong></p>
+<p><span style="font-weight: 400;">First I want to explain how the GitLab CI/CD looks schematically. GitLab comes with a built-in Continuous Integration, Continuous Delivery, and Continuous Deployment.</span></p>
+<p><img src="/archive/media/2018/cicd_pipeline_infograph.png?width=500&amp;height=192.86871961102105" alt="GitLab Continuous Integration (GitLab CI/CD) scheme" data-udi="umb://media/ba41480844b44a738768c7a115e412ba"></p>
+<p>In a nutshell:</p>
+<p><strong>Continuous Delivery</strong> is having all of the infrastructure and verification in place that is needed in order to push updates to a production environment at any time.</p>
+<p><strong>Continuous Deployment</strong> is doing exactly this, pushing updates into production as soon as they become available. Both Continuous Delivery and Continuous Deployment rely on a third concept:</p>
+<p><strong>Continuous Integration</strong> is a software development practice in which all developers commit to the master branch every day, every commit is built automatically by an integration server and subjected to an automated battery of tests, and broken builds are fixed immediately.</p>
+<p>We only use the Continuous Deployment, because for simplicity we put custom logic to App_Code and skip the building part.</p>
+<p>Before we go into more details, in brief, the steps needed to have a working Continuous Deployment can be summed up to:</p>
+<p>1. Add .gitlab-ci.yml to the root directory of your repository<br>2. Configure a Runner</p>
+<p>With this setup, all your work will be deployed and pushed to the needed branch in your Git repository. Then the Runner will automatically start the pipeline which will appear under the project’s Pipelines page. You can see a list of all deploys and statuses at https://gitlab.com/{group}/{project}/pipelines, and will look like this:</p>
+<p><img style="width: 500px; height: 168.013468013468px;" src="/archive/media/2018/piplines_page.png?width=500&amp;height=168.013468013468" alt="pipelines and jobs at gitlab by Umakers.dk" data-udi="umb://media/63e52c1886694b31971b6b69e7c7d8c6"></p>
+<p>The benefits from using Gitlab for deployment are:</p>
+<p>- Easy to setup and deploy<br>- Possibility to rollback (to some extent)<br>- Possibility to have unlimited environments like dev and staging<br>- And traceability</p>
+<h3>Prerequisites</h3>
+<p>In order to automate deployment with Gitlab, first of all, you need a repo with branching strategy and some rules. In our workflow we use the following rules:</p>
+<p>- The repo contains the website files including all binaries<br>- You will need to have a web-live.config file which is basically a copy of the web.config file and used for running the deploy to live<br>- The web.config file should never be added to the repo (it’s your local config file)<br>- /Media and /App_Data folders are excluded from the repo (if needed files will have to be manually transferred via FTP)<br>- Use uSync for storing database changes to the disk</p>
+<h2>Step by step</h2>
+<h3>Repo with branching strategy</h3>
+<p>The branching strategy is quite simple and will allow you to keep a transparent overview and flow:</p>
+<p>1. You can have a development branch (called deploydev)<br>2. You could even have a staging branch (called deploystage)<br>3. You will need to have a specific branch for deploy to live (called deploylive)<br>4. Working branches are created from master and called feature-something or bugfix-something<br>5. If you have a development branch you can merge branches with features or bugfixes into the deploydev branch. When pushed to deploydev you can test in a non-local environment<br>6. When everything is ready for live, you merge the feature and/or bugfix branch(es) into deploylive and push to live<br>7. Last but not least you merge the feature and/or bugfix branch(es) to the master branch and pushYou have to have a web.config file for each environment.</p>
+<p>Locally when you just clone a project you need to copy some environment web-environment-name.config to web.config and update connection string to local if needed.</p>
+<h3>Add .gitignore to the repo</h3>
+<p>Example of a .gitignore file:</p>
+<p><span class="code">.git</span><br><span class="code">*.obj</span><br><span class="code">*.pdb</span><br><span class="code">*.user</span><br><span class="code">*.vspscc</span><br><span class="code">[Db]ebug*/</span><br><span class="code">obj/</span><br><span class="code">[Rr]elease*/</span><br><span class="code">_BuildOutput/*</span><br><span class="code">.vs/</span><br><span class="code">packages/*</span><br><span class="code">!packages/repositories.config</span><br><span class="code">App_Data/*</span><br><span class="code">!App_Data/packages</span><br><span class="code">App_Plugins/UmbracoForms/[Ii]nstalled</span><br><span class="code">/media/*</span><br><span class="code">/[wW]eb.config</span></p>
+<p><span style="font-weight: 400;">With this .gitignore file we exclude /Media, /App_Data (except /App_Data/packages), web.config and visual studio files from the repo</span></p>
+<h3>Add <strong>.gitlab-ci.yml</strong> to the root of the repo</h3>
+<p><span style="font-weight: 400;"><strong>.gitlab-ci.yml</strong> is a YAML file for the project configuration. It is placed in the root of your repository and contains definitions of how your project should be built.</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">If you want a quick introduction to GitLab CI, follow <a rel="noopener" href="https://docs.gitlab.com/ee/ci/quick_start/README.html" target="_blank">a quick start guide</a>.</span></p>
+<p><strong>Runner</strong> is a tool that runs the jobs described in .gitlab-ci.yml file and send the results back to Gitlab. On GitLab.com, Shared Runners are enabled by default, so you don’t need to set up anything to start using them with GitLab CI/CD.</p>
+<p><strong>Job</strong> is just a script defined in .gitlab-ci.yml.</p>
+<p><strong>Pipeline</strong> is a set of jobs :)</p>
+<p>Let’s create a simple .gitlab-ci.yml file that deploys to live each time you commit to the “deploylive” branch (you can just copy below script and save as .gitlab-ci.yml):</p>
+<p><span class="code">stages:<br>  - copy<br>deploy_job_ftp:<br>  stage: copy<br> <span class="code">tags:<br>    - docker, gce<br>  only:<br>    - deploylive<br>  script:<br>    - apt-get update -qq &amp;&amp; apt-get install -y -qq lftp<br>    - cp ./web-live.config ./web.config <br>    - lftp -c "set ftp:ssl-allow no; open -u $USERNAME,$PASSWORD $HOST; mirror -Rev ./ ./ --ignore-time --parallel=10 --exclude-glob .git* --exclude .git/ --exclude App_Data/ --exclude ^\media/$" <br>  environment:<br>    name: live<br>    url: https://umakers.dk/<br></span></span></p>
+<p><strong>What do all these lines do?</strong> <br>First - we use only one stage, let's call it "copy": <br><span class="code">stages: <br>- copy</span></p>
+<p>Our job called “deploy_job_ftp” belongs to the “copy” stage<br><span class="code">deploy_job_ftp:</span><br><span class="code">  stage: copy</span></p>
+<p>In this example, we use a shared docker image for checkout and ftp deploying:<br><span class="code">tags:</span><br><span class="code">- docker, gce</span></p>
+<p><span style="font-weight: 400;">“only” defines what branch Runner should use for getting the source</span><br><span class="code">only:<br>- deploylive</span></p>
+<p>script is the only required keyword a job needs. It’s a shell script which is executed by the Runner<br>script:<br><span class="code">- apt-get update -qq &amp;&amp; apt-get install -y -qq lftp</span></p>
+<p>Because we are not doing a build using Gitlab CI, we also don’t do any config file transforms. This is also the reason we don’t store our web.config in the repository. But we have environment specific web.config files in our repository eg. web-live.config. During the deploy, we rename this environment specific config file to web.config<br><span class="code">- cp ./web-live.config ./web.config</span></p>
+<p><span style="font-weight: 400;">After getting sources and renaming configs we need to push all files to the server that hosts our project. We do it via ftp with the lftp tool:</span><span style="font-weight: 400;"><br></span><span class="code" style="font-weight: 400;">- lftp -c "set ftp:ssl-allow no; open -u $USERNAME,$PASSWORD $HOST; mirror -Rev ./ ./public_html --ignore-time --parallel=10 --exclude-glob .git* --exclude .git/ --exclude App_Data/ --exclude ^\media/$"</span></p>
+<p>This command does the following: open ftp connection with $USERNAME,$PASSWORD $HOST credentials and mirror files to remote server. These credentials you have to define in Gitlab repo -&gt; CI/CD Settings -&gt; Variables section. As you can see in the screenshot below:</p>
+<p><img style="width: 500px; height: 315.0862068965517px;" src="/archive/media/2018/annotation-2018-11-09-161209.jpg?width=500&amp;height=315.0862068965517" alt="GitLab Continuous Integration (GitLab CI/CD) Variables section" data-udi="umb://media/23b4306933dc46f7b61a8dc732af18bb"></p>
+<p>Variables are applied to environments via the runner. They can be protected by only exposing them to protected branches or tags. You can use variables for passwords, secret keys, and/or whatever you want. This is a secure and recommended way of storing credentials and other sensitive data that shouldn’t be in the repo.</p>
+<p>In the lftp script, we exclude /app_data and /media folders from mirroring. <strong>It’s a very important part</strong> <strong>of the script because if we do not exclude these folders, it will remove the files and folders that are not in the repo</strong>. Be careful with lftp script, <a rel="noopener" href="https://lftp.yar.ru/lftp-man.html" target="_blank">read lftp official documentation</a>.</p>
+<p>This is pretty much all DevOps work for creating a Continuous Deployment for our Umbraco project that is hosted on a remote server. Next time, when you need to deploy into production, just push changes to “deploylive” branch and that’s it.</p>
+<p> </p>
+<h2>Bonus <span style="font-weight: 400;"></span><span style="font-weight: 400;"></span></h2>
+<p>If you need a dev environment basically you have to do 3 things:<br>1. Setup dev server with ftp access</p>
+<p>2. Add new section to yml file:</p>
+<p><span class="code"><span style="font-weight: 400;">stages:</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">  - copy</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">deploy_job_ftp:</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">  stage: copy</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">  tags:</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">    - docker, gce</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">  only:</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">    - deploydev</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">  script:</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">    - apt-get update -qq &amp;&amp; apt-get install -y -qq lftp</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">    - cp ./web-dev.config ./web.config </span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">    - lftp -c "set ftp:ssl-allow no; open -u $DEVFTP_USERNAME,$DEVFTP_PASSWORD $DEVFTP_HOST; mirror -Rev ./ ./ --ignore-time --parallel=10 --exclude-glob .git* --exclude .git/ --exclude App_Data/ --exclude ^\media/$" </span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">  environment:</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">    name: dev</span><span style="font-weight: 400;"><br></span><span style="font-weight: 400;">    url: https://dev.umakers.dk/</span></span><span style="font-weight: 400;"><br></span></p>
+<p><span style="font-weight: 400;">3. Set variables as we already know in Gitlab repo -&gt; CI/CD Settings -&gt; Variables section. You can see in the screenshot below:</span></p>
+<p><img style="width: 500px; height: 302.8700906344411px;" src="/archive/media/2018/devftp.jpg?width=500&amp;height=302.8700906344411" alt="setting development variables in gitlab ci" data-udi="umb://media/7a4b42ebae4c4cd39371aa487445e316"></p>
+<p><span style="font-weight: 400;">4. Add web-dev.config to the repo</span></p>
+<p><span style="font-weight: 400;">5. </span>Push changes to “deploydev” branch and that’s it. All changes will be pushed to dev environment.</p>
+<p>We use Gitlab CI in the easiest way. In this example, we use a shared docker image for checkout and ftp'ing. But you can install Gitlab runner (Windows service) on your own server and do builds, tests, and other stuff.</p>
+<p>Please note that all deploys in this setup are a one-way direction move, so if you choose to use the GitLab CI/CD on a project, all changes to project code via Umbraco backend on the live server WILL be overwritten when deploying. In other words, <strong>do not work on the live environment when using this setup</strong>.</p>
+<h2>Conclusion</h2>
+<p><span style="font-weight: 400;">The way to deploy is relatively simple and can be extended in many ways. Basically, you can maintain code locally and deploy changes to a live environment in one click. If changes are made to the database it will require additional handling of these changes through the popular <a rel="noopener" href="https://our.umbraco.com/packages/developer-tools/usync/" target="_blank">uSync</a> package (thanks to Kevin Jump). Please share your thoughts in the comments.</span></p>
+<p><span style="font-weight: 400;">Official GitLab CI/CD documentation - </span><a href="https://docs.gitlab.com/ee/ci/README.html"><span style="font-weight: 400;">https://docs.gitlab.com/ee/ci/README.html</span></a></p>
+<p><strong>Happy Christmas everyone!</strong></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/continuous-deployment/" title="See all articles tagged with Continuous deployment">Continuous deployment</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/devops/" title="See all articles tagged with Devops">Devops</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/git/" title="See all articles tagged with Git">Git</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/umbraco-cloud/" title="See all articles tagged with Umbraco Cloud">Umbraco Cloud</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Alex Skrypnyk"><img src="//gravatar.com/avatar/7187a7b5a79a7662ed99553161986f1b.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/7187a7b5a79a7662ed99553161986f1b.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Alex Skrypnyk</h1>
+        <p>Alex is on Twitter as <a href="//twitter.com/SkripnikAlex" title="Alex Skrypnyk on Twitter" rel="author">@SkripnikAlex</a></p>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="Søren Tidmand"><img src="//gravatar.com/avatar/68861ed2e774917d9e2f06dfa1252e02.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/68861ed2e774917d9e2f06dfa1252e02.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Søren Tidmand</h1>
+        <p>Søren is on Twitter as <a href="//twitter.com/tidmand" title="Søren Tidmand on Twitter" rel="author">@tidmand</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

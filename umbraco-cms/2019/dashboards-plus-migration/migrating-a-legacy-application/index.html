@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Migrating a legacy eCommerce application to Umbraco 8</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Migrating a legacy application</h1>
+      <p class="byline"> by Carl Sargunar, <span class="pubdate">posted on <time datetime="2019-12-23">Dec 23, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>A Little Background</h2>
+<p>In this discussion, presented mostly chronologically with a few side-quests thrown in, I hope to take you through the journey with my clients of choosing a platform to base their web business; not just power their eCommerce website, but as a platform and a marketing tool to build on for the foreseeable future. The requirements they had, some of their goals, some of their doubts and fears leading eventually to the conclusion which is ….</p>
+<p class="intro">… well you’ll just have to read it.</p>
+<p>[TL:DR - we chose Umbraco]</p>
+<h3>Setting the Scene</h3>
+<p>My clients have run a successful trade and retail bar and restaurant supply business for many decades, originally starting as a <a rel="noopener" href="https://www.barmans.co.uk/aboutus.asp" target="_blank">small local supplier in 1977</a>.  They launched their main website <a rel="noopener" href="http://www.drinkstuff.com?utm_source=umbraco&amp;utm_medium=web&amp;utm_campaign=24Days" target="_blank" title="Drinkstuff Website" data-anchor="?utm_source=umbraco&amp;utm_medium=web&amp;utm_campaign=24Days">Drinkstuff.com</a> in 1998 right in the middle of the dot-com bubble, enduring the bubble bursting and every hurdle that came since to the point where they are now a modestly sized <a rel="noopener" href="https://www.drinkstuff.com/aboutus.asp?utm_source=umbraco&amp;utm_medium=web&amp;utm_campaign=24Days" target="_blank" data-anchor="?utm_source=umbraco&amp;utm_medium=web&amp;utm_campaign=24Days">pan-european supplier to retail and trade</a>. </p>
+<p>Their software platform has had a less successful story (until relatively recently). Originally built by a series of third parties, each on top of the previous platform and growing “organically” but not in the most structured or sustainable way, whilst it serves the business well enough there were some pretty hefty limitations holding back their ambitions.</p>
+<p>The basic architecture of their business is roughly sketched out below through the medium of 90s clip-art (this is NOT an accurate representation of the architecture, purely for illustrative purposes)  : </p>
+<p><a data-udi="umb://media/5ec0f3ebadf547068ee29a7eb54a1096" href="/archive/media/2019/old-architecture.png" title="Old Architecture.png"><img style="width: 500px; height: 332.04259438528555px;" src="/archive/media/2019/old-architecture.png?width=500&amp;height=332.04259438528555" alt="" data-udi="umb://media/5ec0f3ebadf547068ee29a7eb54a1096"></a></p>
+<p>The software, and largely the business, is split into two parts plus the customer facing website, all managed with a fairly monolitic system, described below.</p>
+<p><strong>The Website</strong> - This is the main point of interaction with customers for browsing and placing orders. Originally built on Classic ASP, despite helping get the business growth to where it is today it’s definitely showing its age.</p>
+<p><strong>The Back Office Systems </strong>- Here everything is managed using a multitude of in-house and a few third party tools including :-</p>
+<ul>
+<li style="font-weight: 400;">A Retail <a rel="noopener" href="https://www.netsuite.com/portal/resource/articles/erp/what-is-erp.shtml" target="_blank">ERP</a> system for managing products, suppliers, customers, sales channels</li>
+<li style="font-weight: 400;">A basic in-house CRM system for customer management of our trade customers</li>
+<li style="font-weight: 400;">A Pricing system for managing our various channels, both in-house and third party</li>
+<li style="font-weight: 400;">A custom in-house CMS for managing the product catalogue pages on the website</li>
+<li style="font-weight: 400;">And a Wordpress blog</li>
+</ul>
+<p><strong>The Warehouse Systems</strong> - The heart of the business, where all stock is managed, moved, picked, packed, labels printed and dispatched, and where returns are handled, and a small amount of in-house production happens. Uses a combination of :</p>
+<ul>
+<li style="font-weight: 400;">PCs with barcode scanners at packing stations</li>
+<li style="font-weight: 400;">IPads for reporting and monitoring</li>
+<li style="font-weight: 400;">Handheld barcode scanners running a custom built Xamarin App running on both iOs and Android</li>
+<li style="font-weight: 400;">Thermal Label printers for courier postage labels</li>
+<li style="font-weight: 400;">Industrial Laser printers connected to windows apps for printing invoices</li>
+</ul>
+<p>The software written on a mix of technologies - some modern, some quite old. The documentation is sporadic at best and liberally distributed over a range of intranets, wikis and word docs on various network shares. Test coverage is … not quite where we would like it. Making any changes is not always an easy thing, automated testing is a challenge. Whole swathes of code refer to business functions which no longer exist, and with the exception of a few, most only understand how their specific business function should work - nobody had an overall. All of this to be done without losing any of the SEO we had built up on our old site - We had our work cut out.</p>
+<h2>The Plan</h2>
+<p>The business is growing too quickly to rely on old technologies, especially where the speed of change was massively hampered by it. So - we needed a new platform on which to move the business forward for the next few years, and hopefully decades. </p>
+<p>The business looked at several platforms over a period of several months, including : </p>
+<p><a rel="noopener" href="https://magento.com/products" target="_blank"><strong>Magento</strong> </a>: One of the biggest self hosted eCommerce platforms out there. Open source, built on php and with a large community and a large plugin support. It comes with a community edition as well as enterprise solutions, and a whole host of features including a fully featured CMS.</p>
+<p><a rel="noopener" href="https://www.shopify.co.uk/" target="_blank"><strong>Shopify</strong> </a>: A hosted platform, but one of the biggest  in the industry. Another theme-based, customisable platform with a built in CMS, but this time with a per transaction fee as well as a monthly fee.</p>
+<p><a rel="noopener" href="https://www.sitecore.com/" target="_blank"><strong>Sitecore</strong></a> : One of the biggest .net CMS systems with a built in marketing platform, personalization engine and a host of features.</p>
+<p><strong>A plain old MVC build</strong> : completely custom, do what you want to, any way you like. However we were aware just how big a bite it would be building our own CMS and eCommerce application. There's a natural resistance to reinventing the wheel.</p>
+<p><strong>Umbraco as a platform</strong> : The CMS platform that’s versatile enough to do everything well, but doesn’t get in the way of building what you want</p>
+<p>So Umbraco won - Woohoo! Here's why.</p>
+<p>Magento and Shopify would be a wholesale rebuild on a new hosting platform as well as the eCommerce platform. There would also be a lot of additional work required to either work with the existing warehouse management systems we had in place, or a lot of work to replace these with other systems, a whole other journey we would have to go through.</p>
+<p>And Sitecore …. Well nobody has time for that sort of license fees, plus the question of the warehouse still remains, albeit it’s less of a platform swap since Sitecore runs on .net, we could still connect the eCommerce and CMS from the Sitecore platform with the warehouse and back end systems.</p>
+<p>A custom build would have worked too, but a lot more work - and given one of the reasons for choosing a mature platform was the extensibility with 3rd party community and paid packages, as well as the long term support.</p>
+<h3>But which version of Umbraco?</h3>
+<p>At the time of making this decision, the stable platform was version 7, the new kid in town version 8? Version 7 has a lot going for it - mature codebase, battle tested and well documented. The question of support came up though - <a rel="noopener" href="https://umbraco.com/blog/umbraco-7-to-umbraco-8-a-developer-s-perspective/?_ga=2.38193952.2044108685.1575826393-936951320.1558602006" target="_blank" data-anchor="?_ga=2.38193952.2044108685.1575826393-936951320.1558602006">how long would v7 remain supported</a>? </p>
+<p>The  main concerns going with version 8: How stable was v8 as a platform for a production site? How long would v8 remain supported? The first point required some research, building a proof of concept site and many long discussions with the community, but on balance it was felt that it would probably be OK. We also had the actual build time for the project for any major issues to be ironed out. Umbraco being open source software, but there also being support contracts available if ultimately required helped with this.</p>
+<p>In terms of the lifespan of v8 this is a little unknown - how long before it would be replaced? Looking at the past, v6 didn’t have a huge lifespan, being initially released in Jan 2013 but quickly replaced by version 7 in <a rel="noopener" href="https://umbraco.com/blog/umbraco-7/" target="_blank">November 2013</a>. Version 7 however, lasted until v8 was released in <a rel="noopener" href="https://umbraco.com/blog/introducing-umbraco-8/" target="_blank">Feb 2019</a> - just over 5 years later. </p>
+<p>And the future?  The idea of ultimately moving to .net Core with <a rel="noopener" href="https://github.com/umbraco/rfcs/blob/master/cms/0001-project-unicore-intro.md" target="_blank">project Unicore</a> was also brought up as a positive, allowing greater hosting platform choices and support into the future. All good things as far as a platform choice is concerned. With v8 also being used extensively on cloud, as well as the community uptake and very active discussions, v8 was the right version for us to take.</p>
+<p>Now the work began ...</p>
+<h2>The Solution (so far)</h2>
+<p>Since we were launching a replacement for an existing eCommerce site, with an existing Category tree, existing products, brands all with an existing management system we had to plan how we would transition from a custom application into Umbraco. Some of these were brought into umbraco and some remained separate</p>
+<h3>Categories and Brands</h3>
+<p><img style="width: 500px; height: 228.7598944591029px;" src="/archive/media/2019/admin-category-manager.png?width=500&amp;height=228.7598944591029" alt="" data-udi="umb://media/b6c130fa727748f6b72a0f81e8014338"></p>
+<p><span style="font-weight: 400;">In the previous system categories were managed with hierarchies, and each maintained lists of products which were presented on the front end site. These were most simply imported into umbraco as we simply defined the document types and allowed them to be created in the right hierarchy. </span></p>
+<p><span style="font-weight: 400;">We need to keep a one-to-one link between the categories in Umbraco and the categories in the older system for one reason - products. The existing system, at current count, has over 28,000 individual products. These are already managed with a full back end which allows the creation of product variants, to set prices for the website, Amazon, Ebay, to manage the attributes etc.</span></p>
+<p>One of the great things we can do is build a <a rel="noopener" href="https://our.umbraco.com/documentation/Extending/Property-Editors/" target="_blank" title="Custom property editor">custom property editor</a>, and by building one which allowed us to query the categories table from the old system and store it as an ID in the new system, we were able to map the categories in Umbraco to their counterparts in the old system. Sprinkle on a bit of server side validation to ensure each category was unique and we had everything we needed to render categories.</p>
+<p><img style="width: 500px; height: 262.80120481927713px;" src="/archive/media/2019/admin-cat-picker.png?width=500&amp;height=262.80120481927713" alt="" data-udi="umb://media/f40fca214494405e968507f0a1db9583"></p>
+<p>On top of this, we used <a rel="noopener" href="https://our.umbraco.com/documentation/Reference/Routing/custom-controllers" target="_blank">Route Hijacking</a> to allow us to augment the category controllers and add additional properties to the base model (using the excellent <a rel="noopener" href="https://our.umbraco.com/documentation/reference/templating/modelsbuilder/" target="_blank">Models Builder</a>) - this allows us to include products in the Category model. So for example for the category pages, our view model looked like this :</p>
+<p><img style="width: 500px; height: 143.50453172205437px;" src="/archive/media/2019/category-model.png?width=500&amp;height=143.50453172205437" alt="" data-udi="umb://media/bbc7b379bb9e423788163abd4861ecb4"></p>
+<p>The Product class (green) came directly from the legacy database, and had no representation in Umbraco, the CategoryModel (Blue) was generated using modelsbuilder, and the CategoryViewModel (green), which inherited from CategoryModel extended it to include the Products in the category.</p>
+<p>In the categoryModel, we used the custom property AdminCategory to store the ID of the category on the old system, which was used to then look up the products in that category.</p>
+<p><strong>Customers</strong></p>
+<p>Our existing customer database was managed in a separate database, but we wanted to import these into the umbraco members, and hook it up with the authentication with a custom membership provider. Having a functioning membership library built into the platform let us just build on it and use it pretty well, and whilst we will have to make a few changes to allow us to use Umbraco members in the rest of our system, this is a price worth paying.</p>
+<p><strong>Blog</strong></p>
+<p>The existing blog was built in wordpress - this had to go. We needed the blog to be an integrated part of the website in the umbraco back end, and we wanted to import all the wordpress content. In the past, we would have used a product like the excellent CMSImport from Richard Soeteman but as it wasn’t yet ported to v8, we came up with our own solution. </p>
+<p>We wrote a surface controller to create blog posts, and a console application to read wordpress blog posts from a wordpress export and using these two in a fairly short amount of time were able to import all the wordpress articles into the Umbraco blog and retain all the lovely SEO goodness. Win!</p>
+<p><strong>Additional features</strong></p>
+<p>One of the key features of the existing system is information dashboards. These are built for each team to specifically have key information to help them do their jobs. The number of useful reports we can use across our business is vast, and a mechanism to quickly and easily put these together is fantastic. Some examples (not even close to the full list) of reports we currently generate are</p>
+<ul>
+<li style="font-weight: 400;">Number of products awaiting approval before being launched</li>
+<li style="font-weight: 400;">Number of orders from each of the sales channels, and broken down by delivery service</li>
+<li style="font-weight: 400;">Number of orders with issues raised by customers</li>
+<li style="font-weight: 400;">Lists of supplier purchase orders and due-in dates for stock management</li>
+<li style="font-weight: 400;">Gross Profit percentage per product</li>
+<li style="font-weight: 400;">Total numbers of breakages in the warehouse</li>
+<li style="font-weight: 400;">Average time to pick an order</li>
+<li style="font-weight: 400;">Total numebr of picks per warehouse user</li>
+</ul>
+<p>There were a vast number of these dashboards that were needed, and again Umbraco provides, with the ability to use custom dashboards into the back end. The article by <a rel="noopener" data-udi="umb://document/40a9d4da007e48b1bb30cc6f7f0b483e" href="/umbraco-cms/2019/dashboards-plus-migration/dashboards-and-sections/" target="_blank" title="Dashboards and Sections">poornima</a> as well as the documentation from Umbraco provides some really useful tips and examples on how to do this. </p>
+<h2>Conclusion points and Discussion</h2>
+<p>This journey has been painted like a fait accompli, but in reality it’s a work in progress, with the migration from a stand-alone custom application to well under way. Umbraco has allowed us to extend a completely stand-alone application with some awesome new features. The final solution for how the system works together looks a little like this.</p>
+<p><img style="width: 500px; height: 371.0382513661203px;" src="/archive/media/2019/umbraco-architecture.png?width=500&amp;height=371.0382513661203" alt="" data-udi="umb://media/341130ec26b145798abfe61cd8f87f71"></p>
+<p>Whilst this does look more complex, it’s actually separating the behemoth that we had before into the two key areas for the business - the Umbraco website and the back office and warehouse application - it’s all about separation of concerns.</p>
+<p>The Umbraco website is customer facing and handles all the ecommerce application aspects including</p>
+<ul>
+<li style="font-weight: 400;">Listing Products, categories, brands</li>
+<li style="font-weight: 400;">Basket and checkout functionality</li>
+<li style="font-weight: 400;">Customer registration, order history, account management</li>
+</ul>
+<p>The back end application is responsible for a lot of the back office operations including</p>
+<ul>
+<li style="font-weight: 400;">Inventory, product management</li>
+<li style="font-weight: 400;">Order fulfilment (warehouse dispatch operations)</li>
+<li style="font-weight: 400;">Stock management</li>
+<li style="font-weight: 400;">Supplier management and ordering</li>
+<li style="font-weight: 400;">Reporting</li>
+</ul>
+<p>There is obviously inter-application communication going on, since the Umbraco site doesn’t maintain knowledge of the product database, or stock information, just as the back end application has no knowledge of the blog, or any of the other front end content.</p>
+<p>Umbraco here has allowed us to do several things in our business - it’s kept the core back-end operations separate from the presentation and sales portion of the business. Each is catered to being the best it can be. We get to benefit from all the awesome CMS features of Umbraco to build an eCommerce application and slot it neatly into our business. </p>
+<p>And we get lots of bonuses, like Forms, URL tracking, media management - all out of the box, and we haven’t even talked about some of the cool things we can do with Content Applications. We plan to document this journey in a blog series as we complete more of this build, and sometime next year will launch this. Follow us on social media for more info on @drinkstuff</p>
+<p>One thing I am really hoping for is some discussion around what we’re doing, and I would love to compare what other people are doing when integrating applications into Umbraco, especially eCommerce. Please drop me a line with your thoughts - I genuinely appreciate them.</p>
+<p>Thanks to :</p>
+<ul>
+<li style="font-weight: 400;"><a rel="noopener" href="https://twitter.com/PoornimaNayar" target="_blank">Poornima</a> - for her assistance in writing this article, and for her excellent article on dashboards</li>
+<li style="font-weight: 400;">The excellent Umbraco 8 training courses which brought our team up to speed with the v8 changes - particularly <a rel="noopener" href="https://twitter.com/crumpled_jeavon" target="_blank">Jeavon</a> and <a rel="noopener" href="https://twitter.com/GabrielBrumea" target="_blank">Gabriel</a></li>
+<li style="font-weight: 400;">The umbraco community at large for all the excellent blog articles and discussions which helped us in more ways than we can count (and continue to rely on)</li>
+</ul>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/android/" title="See all articles tagged with Android">Android</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/app/" title="See all articles tagged with App">App</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/commerce/" title="See all articles tagged with Commerce">Commerce</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/continuous-deployment/" title="See all articles tagged with Continuous deployment">Continuous deployment</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/ios/" title="See all articles tagged with iOS">iOS</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/online-marketing/" title="See all articles tagged with Online marketing">Online marketing</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Carl Sargunar"><img src="//gravatar.com/avatar/0f9c4ad25d9efd4c209171ecdea71be6.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/0f9c4ad25d9efd4c209171ecdea71be6.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Carl Sargunar</h1>
+        <p>Carl is on Twitter as <a href="//twitter.com/carlcod_es" title="Carl Sargunar on Twitter" rel="author">@carlcod_es</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

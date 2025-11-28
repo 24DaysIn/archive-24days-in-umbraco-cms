@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Reading Time</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+	
+
+
+</head>
+<body>
+
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Reading Time</h1>
+      <p class="byline"> by Chriztian Steinmeier, <span class="pubdate">posted on <time datetime="2021-12-20">Dec 20, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+	<p class="teaser">We recently had a client request to add the ever so slightly popular "Reading time: {number} minutes" to the articles in the "blog" section of their site. This article is a rundown of thoughts on how to do this, and how we implemented it.</p>
+      <p>At the time we had a student developer at the office and I tasked him with the job of figuring out what was needed to accomplish something like this. It didn't take long for him to find a couple of lines of JavaScript that did the trick, basically something like this:</p>
+<pre><code class="language-javascript">function getReadingTimeInMinutes(article) {
+  const text = article.innerText
+  const wpm = 225
+  const words = text.split(/\s+/).length
+  const minutes = Math.ceil(words / wpm)
+  return minutes
+}</code></pre>
+      <p class="intro">A JavaScript function to calculate reading time for a DOM element</p>
+<p>On the surface level this looks like it's enough, right? I mean:</p>
+<ol>
+<li>It does the job</li>
+<li>It's progressively enhancing the article (if your browser doesn't do JavaScript, you're not losing any functionality - you're just not getting a heads-up on the time you'll need to spend reading)</li>
+</ol>
+<h2>There's always more</h2>
+<p>Having done this job for many years now, I know that when a client asks for something, there's usually a lot of hidden (but implied) extras compiled into that single remark of <em>"Oh, and it should show the reading time on the article".</em></p>
+<p>This was no different of course, as the blog section had a front page with a cards style layout, where the latest articles were featured, and I was already willing to bet my entire month's salary that they'd want the reading time displayed there as well, since that's the place where someone actually decides if they should click into and read the article.</p>
+<p><em>“Why is that a problem?”,</em> asked the student.</p>
+<p>I'll let you think about it too, for few seconds - then continue reading...</p>
+<h2>Not enough data</h2>
+<p>When we're rendering the teaser card for an article, we're only rendering a couple of properties (typically the title, a teaser and the author's name and/or photo) - not the full article. So our <span class="code">getReadingTimeInMinutes()</span> function would (at most) report back that this card could be read "in about a minute". Not what we wanted.</p>
+<p>So at this point we start bouncing ideas for how we could handle this scenario, all of which seem to be one of two approaches in disguise:</p>
+<ol>
+<li>Put the article's text inside a hidden <span class="code">&lt;div&gt;</span> so it can be read from the script?</li>
+<li>Do an Ajax request back to the server to get the article's content and calculate on that?</li>
+</ol>
+<p>While they are certainly both viable options, there's no way I'd OK stuffing the entire article text inside a hidden <span class="code">&lt;div&gt;</span>, just to get a "Reading time" number.<br>For both options it's worth mentioning that it's not even as simple as it sounds, because the articles themselves are built with a block builder, so the actual content is spread across several different blocks (aka tons of JSON) which, when rendered on the article page, are handled by each of their own partials. So not so straight-forward, actually.</p>
+<h2>The way that could possibly work</h2>
+<p>So of course we arrived at the realization that the simple (and very <em>Umbraco-y</em>) solution would be to have a <strong>Reading Time</strong> property on the document type that we could render anywhere needed. This would also make it available to everyone - not just browsers with JavaScript enabled. But how and when should this property be calculated then?</p>
+<p>Having the client fill it in was obviously an option - but it should be the last resort - a better way would be to have the property be read-only (i.e. a "Label" type) and then see if we could update it from code at some point?</p>
+<p>Turns out you can do exactly that, since Umbraco throws various events during a content item's lifecycle and if we hook into the <span class="code">ContentService.Saving</span> event, we have access to the article being saved, thus allowing us to update its data before saving.</p>
+<h2>But how?</h2>
+<p>The thing is - how <em>do</em> we actually do this? On the server we can't just use the JavaScript from earlier, and even if we rewrite it in C#, we're still missing a way to get the raw text of the article from all of its blobs of JSON... 🤔</p>
+<p>What we really want to use is the rendered article, because writing a secondary rendering (i.e. an API endpoint or similar) just to get the article's content means that every time we add a new block to use on an article, we'd need to remember to also write the alternate rendering, which is just asking for trouble.</p>
+<p>So we started digging, and lo and behold - there is a way to render a piece of content, that does so using the assigned template and layouts etc. — It's called <span class="code">RenderTemplate()</span> and it's available on the <span class="code">UmbracoHelper</span> (this was an Umbraco 7 site but I'd be surprised if the same possibility isn't still available in 8 &amp; 9).</p>
+<p>So this is what we ended up with:</p>
+<pre><code class="language-csharp">namespace TwentyFour {
+	public class Startup : ApplicationEventHandler {
+		protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext) {
+			ContentService.Saving += (sender, args) =&gt; {
+				var entities = args
+					.SavedEntities
+					.Where(x =&gt; x.ContentType.Alias == "ArticlePage")
+					.ToList();
+
+				if (entities.Any()) {
+					try {
+						UmbracoHelper umbracoHelper = new UmbracoHelper(UmbracoContext.Current);
+
+						foreach (var entity in entities) {
+							var renderedArticle = umbracoHelper.RenderTemplate(entity.Id);
+							var minutes = Helpers.GetReadingTimeFromRenderedArticle(renderedArticle);
+
+							entity.SetValue("readingTimeInMinutes", minutes);
+						}
+
+						sender.Save(entities, raiseEvents: false);
+
+					} catch (Exception ex) {
+						LogHelper.Error&lt;ContentService&gt;("Error while updating reading time", ex);
+					}
+				}
+
+			};
+		}
+	}
+}</code></pre>
+      <p class="snippet-caption">The event handler used to update the `readingTimeInMinutes` property on an article when it's saved</p>
+<p><br><br>The <span class="code">GetReadingTimeFromRenderedArticle()</span> looks something like this:</p>
+<pre><code class="language-csharp">public static int GetReadingTimeFromRenderedArticle(IHtmlString articleHtml) {
+	var text = ExtractText(articleHtml.ToString());
+
+	var wordsPerMinute = 222m;
+	var separators = new char[]{ ' ' };
+	var words = text.Split(separators, StringSplitOptions.RemoveEmptyEntries).Length;
+	var minutes = (int)Math.Ceiling(words / wordsPerMinute);
+
+	return minutes;
+}</code></pre>
+      <p class="snippet-caption">The C# version of the initial JavaScript function to calculate reading time for an article</p>
+<p>and this uses another custom helper - <span class="code">ExtractText</span> where the <span class="code">HtmlDocument</span> stuff is from the <span class="code">HtmlAgilityPack</span>:</p>
+<pre><code class="language-csharp">public static string ExtractText(string html) {
+	if (html == null) {
+		return "";
+	}
+
+	HtmlDocument doc = new HtmlDocument();
+	doc.LoadHtml(html);
+
+	var chunks = new List&lt;string&gt;();
+	var nodes = doc.DocumentNode.SelectNodes(".//main//*[not(self::style)]/text()");
+
+	foreach (var item in nodes) {
+		if (item.NodeType == HtmlNodeType.Text) {
+			if (item.InnerText.Trim() != "") {
+				chunks.Add(item.InnerText.Trim());
+			}
+		}
+	}
+	return String.Join(" ", chunks);
+}</code></pre>
+<p> So there you have it — we got a request for a feature; had an initial idea for it - found out it didn't solve all the necessary use-cases, and then revised it to handle the updated scenario(s).</p>
+<p>Please don't hesitate to throw any questions my way - or if you think we're "doing it wrong" and have alternate ways to do something similar.</p>
+<p>Thanks for reading and have a fantastic holiday!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Chriztian Steinmeier"><img src="//gravatar.com/avatar/286ea7abe73e582c6254956992406a0f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/286ea7abe73e582c6254956992406a0f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Chriztian Steinmeier</h1>
+        <p>Chriztian is on Twitter as <a href="//twitter.com/greystate" title="Chriztian Steinmeier on Twitter" rel="author">@greystate</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

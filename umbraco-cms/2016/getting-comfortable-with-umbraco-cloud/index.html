@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Getting comfortable with Umbraco Cloud</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Getting comfortable with Umbraco Cloud</h1>
+      <p class="byline"> by Arnold Visser, <span class="pubdate">posted on <time datetime="2016-12-09">Dec 9, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">This article will not explain all the features and functionality of the Umbraco Cloud platform, but will give you a read through some of the things that are good to know. For more information about Umbraco Cloud and what it can do for you read <a href="https://umbraco.com/cloud" target="_blank" title="Umbraco Cloud">the official page on the Umbraco website</a>. </p>
+<h2>Getting started with Umbraco Cloud</h2>
+<p class="intro">Getting started with Umbraco Cloud is very different than what you are used to when starting with an Umbraco setup. If you already opened your Visual Studio environment to do some steps while reading this article... just leave it alone for now... It will be fine... Really!</p>
+<p>Getting started actually starts with signing up on <a href="https://umbraco.com/cloud">https://umbraco.com/cloud</a>. There is no request for payment details here so you don't need the creditcard of your boss to get started, just enter your information and within minutes you will have a full Umbraco installation ready on the Umbraco Cloud platform.</p>
+<p><strong>Getting started: done!</strong></p>
+<p>A fully hosted Umbraco installation on the Umbraco Cloud in minutes?<br>Yep! Isn't that just wonderful? But for sure this isn't as full featured as when I run a normal Umbraco copy? Nope! Exactly the same thing as what you are used to. You can use the packages you like, your own crappy code and do just everything that you are already used to with Umbraco. </p>
+<p>But I want to access the <em>file system</em>! I want to see the <em>running processes</em>! I want to run <em>commandline</em> and <em>powershell</em>! <em>Yes you can!</em> Let's get into that in the <a href="#kudu" title="Kudu">KUDU part of this article.</a> And for those who are familiar with African animals... No, there is no deer-like animal involved.</p>
+<h2>Do's and don'ts</h2>
+<p>Some quick tips for working with Umbraco Cloud are easily found and while some might be knocking on an open door, it's always good to have some short tips in an article like this.</p>
+<h3>Do!</h3>
+<p><strong>Do #1 </strong>is about your favorite development tool, Visual Studio. You already had it started to get going, so lets take that to some good use!<br>This first <em>Do</em> is not something I will write out, but, very lazily, just a link to a blog post by Sebastiaan Janssen of Umbraco HQ: <a href="https://cultiv.nl/blog/visual-studio-and-umbraco-as-a-service/" target="_blank" title="Visual Studio and Umbraco Cloud">Visual Studio and Umbraco Cloud<br></a></p>
+<p>His article will help you get a recommended setup for working with Umbraco Cloud and Visual Studio and also will make sure you only place your output Umbraco project in Umbraco Cloud and keep your own source code in your source control.</p>
+<p><strong>Do #2</strong> is again a lazy <em>Do</em> for me to write out, The second do is to read the documentation that Umbraco wrote about Umbraco Cloud. There is plenty and it really helps you to get an understanding of what is there and what is possible. </p>
+<p><strong>Do #3</strong> is to <em>Do</em> it your way, your code, your style. You can work on Umbraco Cloud solutions the same as you currently work on your website, you don't have to follow the default Umbraco structure of views, stylesheets and scripts. An Umbraco Cloud implementation is the same Umbraco that you currently host yourself. </p>
+<p><strong>Do #4</strong> Place your media in Azure Blob storage instead of on the Umbraco Cloud environment itself. While you do have unlimited storage at the Umbraco Cloud platform, placing your media in a separate Azure Blob will prevent Umbraco Cloud to download all media locally when you restore content from an environment. There is a great provider build for this by James South, the great ImageProcessor guy. You can download it and read the documentation at <a href="https://our.umbraco.org/projects/collaboration/umbracofilesystemprovidersazure/" target="_blank" title="https://our.umbraco.org/projects/collaboration/umbracofilesystemprovidersazure/">https://our.umbraco.org/projects/collaboration/umbracofilesystemprovidersazure/</a></p>
+<p><strong>Do #5 </strong>Always create at least a development environment next to the live environment on Umbraco Cloud. This way when you push a deployment to Umbraco Cloud you can check everything on the development environment first; transfer the live content to the development environment so you have a 1:1 copy of how the site will work after you deploy the development version to live.</p>
+<h3>Don't!</h3>
+<p>Now with those simple Do's; lets move on to some Don'ts of Umbraco Cloud:</p>
+<p><strong>Don't #1</strong> Do not <em>NOT</em> step on-board the Umbraco Cloud train. Give it at least a try with a project. It will not only help your workflow, but will also help Umbraco get more data about the sites running and what issues the automated upgrading process can cause, which does result in a better Umbraco product for everyone. With Christmas coming up at the time of writing this article isn't that just a warm cozy feeling to help not only yourself but also others? </p>
+<p><strong>Don't #2</strong> Do not reinvent the wheel; stick to Umbraco best practices (read: <a href="https://our.umbraco.org/documentation/Reference/Common-Pitfalls/" target="_blank" title="https://our.umbraco.org/documentation/Reference/Common-Pitfalls/">https://our.umbraco.org/documentation/Reference/Common-Pitfalls/</a>). The closes you stay to how Umbraco is intended to be used (and this is <span style="text-decoration: underline;">not</span> limiting you, you can go CRAZY within those practices) the less issues shall arise. If you did not do so, <a href="https://umbraco.com/products/training" target="_blank" title="Umbraco Training">Umbraco Training</a> can help to get you in the right direction.</p>
+<p><strong>Don't #3</strong> Do not <em>blindly trust </em>the automatic patch release Umbraco Updates that are automatically rolled out to your live environment as well. So when an Umbraco release is imminent make sure you have time to test your sites. A nice feature would be to have this optional in Umbraco Cloud.</p>
+<h2>Deployments of code</h2>
+<p>By now you have read and understood the article Sebastian wrote about <a href="https://cultiv.nl/blog/visual-studio-and-umbraco-as-a-service/" target="_blank" title="Visual Studio and Umbraco Cloud">Visual Studio and Umbraco Cloud</a> so you have a proper Umbraco Cloud setup at your disposal.<br>If you did not, a quick summary of what that will give you:</p>
+<ul>
+<li>One source control repository with your own code.</li>
+<li>One GIT Umbraco Cloud source control repository with the output Umbraco project.</li>
+</ul>
+<p>With this setup your source code will not be hosted in the Umbraco Cloud, but only your output project will be in the Umbraco Cloud GIT Repository.<br>Your code is build and compiled into the output project and then pushed to Umbraco Cloud. Thus updating the site with your latest code changes.</p>
+<p>With this setup you do commit <span style="text-decoration: underline;">twice</span>. <em>Once</em> to commit your code in your own source control. And <em>another</em> commit to the Umbraco Cloud GIT repository is a commit to deploy of your website, something you probably did in the past by coping the files to the server.</p>
+<h3>Push your code to the next environment</h3>
+<p>Now you have your code on the Umbraco Cloud development environment and all is tested and working as it should, you are ready to get the code to your live website.<br>To make this happen, login to your Umbraco Cloud environment, open the project and click the "Deploy changes to live" button. Yep, that simple.</p>
+<p><img style="width: 500px; height: 140.90019569471625px;" src="/archive/media/2016/umbraco_cloud_deploychanges_live.png?width=500&amp;height=140.90019569471625" alt="Deploy your code changes to the live Umbraco Cloud environment" rel="1440" data-id="1440"></p>
+<p> </p>
+<h2>Deployments of content</h2>
+<p>With code deployed, you now want to get the content that uses the new code also on your live site.<br>Umbraco Cloud creates a local database when you work on the project on your machine, so your first have to transfer your content to the next environment: the development environment in Umbraco Cloud.</p>
+<p>You can mark the content you want to transfer via the context menu of the node, or via a new option, 'Deploy', on the save &amp; publish button.</p>
+<p><img style="width: 280px; height: 179px;" src="/archive/media/2016/umbraco_cloud_queuefordeploy.png?width=280&amp;height=179" alt="Umbraco Cloud Deploy Content" rel="1441" data-id="1441"></p>
+<p>This will put the node (and all the content on it) to the deployment cue, but will not really deploy anything yet. This way you can make a collection of content you want to transfer at once.</p>
+<blockquote><strong>note</strong> you should <em>first transfer your code</em> before you can transfer your content! Also the node should be first saved before Deploy will notice any changes.</blockquote>
+<p>After marking a node as ready to deploy you can deploy from there or from the "Your workspace" dashboard on the "Content" section.</p>
+<p><img style="width: 500px; height: 106.93215339233038px;" src="/archive/media/2016/umbraco_cloud_sendchanges.png?width=500&amp;height=106.93215339233038" alt="Umbraco Cloud content ready to send" rel="1443" data-id="1443"></p>
+<p>Transferring data between environments (development to live) works in exactly the same way. </p>
+<blockquote><strong>tip</strong> create a staging environment in Umbraco Cloud that sits between the Development and the Live environment. Your editors can edit content there and publish all the changes in one push to live.</blockquote>
+<p>Another great feature is that you can get content back to the previous environment with a simple action in the content contextmenu.<br>This makes it possible to work with the live data on your development or even local environment. You know how editors always be able to mess things up. This makes it easy to debug exactly what they put in as content or see how your new changes effect that content.</p>
+<p><img style="width: 500px; height: 230.50847457627117px;" src="/archive/media/2016/umbraco_cloud_restorecontent.png?width=500&amp;height=230.50847457627117" alt="Umbraco Cloud restore content" rel="1444" data-id="1444"></p>
+<p> </p>
+<h2>Using custom datatypes? Build yourself some Courier Resolvers!</h2>
+<p>Since Umbraco Cloud uses Courier (Umbraco Deploy) for transfers of your node data you should be aware that you might need to write Courier Resolvers. <br>Now I can image you did not use Courier before and even if you did like two years back, the results would probably still infuriate you right now. But bear with me... Umbraco Cloud is the best thing that could happen for Courier. Umbraco HQ themselves now see the issues that Courier could cause, on a large scale. And they can take a look themselves and debug to real world situation. Making Courier much, much better tool these days (I never say perfect ;)). At the time of writing Umbraco Cloud is running Courier version 3 that is not yet available as a stand alone download for non-Umbraco Cloud implementations.</p>
+<p>Umbraco Courier makes the connection between the data (nodes, document-types, etc) on environment 1 and can sync those met environment 2.<br>Because Umbraco, for now, uses NodeId's that are not unique per environment, syncing data is quite a challenge. Courier solves that, and a lot more. Courier is the tool that handles all the content (related) transfers in Umbraco Cloud.</p>
+<p>So what do Courier Resolvers do and why do you need them for Umbraco Cloud?<br>Image you have created a datatype, with data in a custom format that picks a nodeId. If you deploy your content changes between environments you want that NodeId to be targeted at the correct NodeId at the other environment. With Courier Dataresolvers you tell Courier what kind of data is stored and how it should be handled. It will match the selected Node of environment 1 to the same Node of environment 2 so the link is still correct.</p>
+<blockquote>Out of the box, Courier, can understand all standard data-types in umbraco. This means that Courier knows that a Content picker contains a ID, pointing at a document, which then becomes a dependency, and the ID gets translated into a Guid which can safely be deployed to another location. It also knows that a template might contain references to javascript files or internal links, using the [locallink:] syntax. Or a a lot of other cases where data have a special meaning.</blockquote>
+<p>While Courier itself is not open-source, you can read more about creating Courier resolvers at the official Courier Github respsitory at <a href="https://github.com/umbraco/Courier/">https://github.com/umbraco/Courier.<br></a>Some great examples of Courier Resolvers for much-used community build Umbraco Packages can be found at <a href="https://github.com/leekelleher/umbraco-courier-dataresolvers" target="_blank">https://github.com/leekelleher/umbraco-courier-dataresolvers</a></p>
+<p> </p>
+<h2>Get your baseline started!</h2>
+<p>Probably everyone working on various Umbraco projects works with some kind of staterkit with a set of standard document types, maybe some content already, a set of great packages you can't live without and some default views. Umbraco Cloud baselines is just that, and better.</p>
+<p><img src="/archive/media/2016/umbraco_cloud_create-baseline-project.png?width=500&amp;height=467.7419354838709" alt="Create a new Umbraco Cloud Project based on a baseline" rel="1458" data-id="1458"></p>
+<p>Why better? Umbraco Cloud Baselines keep a link between the baseline and the sites created with that baseline. If you update the baseline project, you can update all the sites using that baseline with a single action. Each project in Umbraco Cloud can be a baseline for another project so even baselines can have multiple environments.</p>
+<p><img style="width: 500px; height: 403.4620505992011px;" src="/archive/media/2016/umbraco_cloud_update-baseline-projects.png?width=500&amp;height=403.4620505992011" alt="Umbraco Cloud Update Baseline based Projects" rel="1459" data-id="1459"></p>
+<p>More information about baselines can be found in the <a href="https://our.umbraco.org/documentation/Umbraco-Cloud/Getting-Started/Baselines/" target="_blank" title="Umbraco Cloud Baseline Documentation">official documentation</a>.</p>
+<h2>Take control with KUDU</h2>
+<h3>Kudu as an animal</h3>
+<blockquote>The greater kudu (Tragelaphus strepsiceros) is a woodland antelope found throughout eastern and southern Africa. Despite occupying such widespread territory, they are sparsely populated in most areas, due to a declining habitat, deforestation and poaching. The greater kudu is one of two species commonly known as kudu, the other being the lesser kudu, T. imberbis.</blockquote>
+<p> <img style="width: 375px; height: 500px;" src="/archive/media/2016/tragelaphus_strepsiceros_-_-head.jpg?width=375&amp;height=500" alt="By © Hans Hillewaert, CC BY-SA 4.0, https://commons.wikimedia.org/w/index.php?curid=10436599" rel="1460" data-id="1460">By © Hans Hillewaert, CC BY-SA 4.0, <a href="https://commons.wikimedia.org/w/index.php?curid=10436599">https://commons.wikimedia.org/w/index.php?curid=10436599</a></p>
+<h3 id="kudu">KUDU as software</h3>
+<p>No, we are not talking about the Kudu above (the Kudu meat has a great taste actually, but that is for a different post on a different 24days...).<br>The KUDU that we will use is the Azure KUDU (<a href="https://github.com/projectkudu/kudu" target="_blank" title="https://github.com/projectkudu/kudu">https://github.com/projectkudu/kudu</a>). A web-tool that gives you access to various management features for your site.<br>This includes:</p>
+<ol>
+<li>Browsing and editting your files</li>
+<li>Using command-prompt</li>
+<li>Using powershell</li>
+<li>Watch running processes</li>
+<li>Get information about your environment</li>
+<li>Download logfiles</li>
+</ol>
+<p>You can reach KUDU for your environment using http://<em>projectname</em>.<strong>scm</strong>.s1.umbraco.io.</p>
+<p>As you can see in that feature list, you can run command-line from your Umbraco project. You can upload command line tools in your umbraco environment and access them just as you would be able on your own server. </p>
+<p><img style="width: 406.88575899843505px; height: 500px;" src="/archive/media/2016/umbraco_cloud_kudu.png?width=406.88575899843505&amp;height=500" alt="Umbraco Cloud KUDU" rel="1461" data-id="1461"></p>
+<p> </p>
+<p>A video of Microsfot explaining more about KUDU can be viewed at the following url: <a href="https://azure.microsoft.com/nl-nl/resources/videos/what-is-kudu-with-david-ebbo/" target="_blank" title="Microsoft Azure Kudu video">https://azure.microsoft.com/nl-nl/resources/videos/what-is-kudu-with-david-ebbo/</a></p>
+<h2>Getting Help</h2>
+<p>With your current hosting provider you probably have a SLA contract with uptime guarantee and a support contract. </p>
+<p>Keep in mind that the basic plan (25,- EUR/month) of Umbraco Cloud does not come with any support guarantee or <span>guaranteed</span> uptime. This is all based on 'best effort' chat support and forum support. If you do want to get full, gold level, support you will have to get the 400,- EUR/month plan. The advantage is that this plan also comes with unlimited environments and users, but is not a plan for 'everyone'. </p>
+<p>While using the chat support in Umbraco Cloud all replies have been within an hour a few hours the most (We did not have the professional support plan). This is adequate is most situations, but do consider if your customer is more demanding, then switch to the professional plan, or to a different kind of hosting. </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/courier/" title="See all articles tagged with Courier">Courier</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/dictionary/" title="See all articles tagged with Dictionary">Dictionary</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/umbraco-cloud/" title="See all articles tagged with Umbraco Cloud">Umbraco Cloud</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Arnold Visser"><img src="//gravatar.com/avatar/87231520ffbb599b9b54397f577be457.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/87231520ffbb599b9b54397f577be457.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Arnold Visser</h1>
+        <p>Arnold is on Twitter as <a href="//twitter.com/aim24" title="Arnold Visser on Twitter" rel="author">@aim24</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

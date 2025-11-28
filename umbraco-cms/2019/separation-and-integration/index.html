@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Separation and Integration of the UI</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Separation and Integration</h1>
+      <p class="byline"> by Phillip Whittaker, <span class="pubdate">posted on <time datetime="2019-12-10">Dec 10, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><img style="width: 500px; height: 400px;" src="/archive/media/2019/taming-the-alien-2x-8.png?width=500&amp;height=400" alt="" data-udi="umb://media/6e20061815484676bfb2c1293d4bd605"></p>
+<p class="intro">In the beginning, the web was simple, there was one job title for developers who built websites, the web developer. For many, the attraction of the job was the fusion between design and logic, a hybrid where one day you could be working on a database query and the next talking through page layouts with a designer. It was exciting and there was so much to learn. We were the original full-stack developers.</p>
+<p>But this way of working didn’t last long, in 2006 web development started to split into backend and frontend developers. This split was inevitable as the job became too big for one person. Some people were better at working with designers to create the UI and some were better at making things work. There was an increasing complexity of HTML with HTML 5 and CSS with CSS2/3 and later responsiveness.</p>
+<p>I call this the <strong>first stage of separation</strong>.</p>
+<p>But the separation between frontend and backend developers caused problems in production. Frontend developers created mock-up layouts from the designs and sent the finished markup to the backend developer to <strong>integrate</strong>.</p>
+<p>Integration was an inefficient process; UI code could be complicated and unforgiving, mistakes made during integration needed frontend developers to become involved. Later changes had to go through the same integration process, repeating the pain. A back and forth between frontend and backend developers became common, causing friction and tensions in development teams.</p>
+<p>The solution to this problem came from the frontend, they decided to take control. In 2009 the first client-side frameworks appeared. The idea was to take over the rendering of templates and application logic on the client-side, reducing the friction between frontend and backend by relegating backend to supply data via an API.</p>
+<p>I call this the <strong>second stage of separation</strong>.</p>
+<p>Over the past ten years these client-side frameworks have developed and stabilised into large architectures. They have introduced new patterns and approaches that solve problems in UI interaction, making application state easier to work with while being more maintainable and less error-prone.  Whole communities of addons and plugins have grown up around these frameworks to complement and extend their functionality.</p>
+<p>At the same time, Javascript has developed and improved beyond all expectations to become a powerful and mature programming language. But these advances have come at the cost of increased complexity. The job description for a frontend developer has grown during this time. It’s not unusual to see job specs that expect experience in HTML 5, CSS 3, responsiveness, modern Javascript, several client-side frameworks and Node Js.</p>
+<p>Naturally, with all this excitement, client-side frameworks have also started to attract backend developers. Why not? It’s a fast-paced environment with lots of new and exciting technologies. Last year there was an article that used the phrase, the <a href="https://hackernoon.com/the-backendification-of-frontend-development-62f218a773d4" title="Backendification of the frontend">backendification</a> of the frontend that went into more detail.</p>
+<p>Throughout this time of rapid development on the client-side, the complexity of UI creation hadn’t stopped or gone away, if anything it has become more complex; flex-box, css-grids etc.</p>
+<p> </p>
+<h3>What has happened to UI specialists working in frontend?<br><br></h3>
+<p>Unfortunately, when we see a client-side framework used, the importance of the UI is often diminished; hiding it under UI frameworks, simple design patterns, HTML management solutions or just poorly created UI’s. Has the UI become less important? It hasn’t! But UI skills are now seen as less critical to the role, which is terrible for our industry.</p>
+<p>Because much of web development has become compressed into the frontend, it feels to me like we have come full circle to pre-2006 where one developer does all of the production.</p>
+<blockquote>Are frontend developers now just web developers?</blockquote>
+<p>At the start of the year an article was published in CSS Tricks called <a href="https://css-tricks.com/the-great-divide/" title="The Great Divide">The Great Divide</a>, it highlights the problems with frontend development that I have talked about here, predicting that the frontend was about to split into Javascript developers and UI developers.<br><br></p>
+<h3>What has triggered this split to happen again?<br><br></h3>
+<p>I think that as the second step of separation took place frontend developers replicated backend processes on the client-side making a further split inevitable. UI <strong>definition</strong> and <strong>delivery</strong> had been recombined, removing separation entirely and moving everything onto the frontend. This was only a problem as client-side frameworks become more complex. We shouldn’t be surprised that history has repeated itself.</p>
+<p>Unfortunately, a consequence of this new split is that we will need <strong>three</strong> developers to create a website; an API developer, a Javascript developer and a UI developer! That’s fine if you have the budget to support three different sets of specialists, but how often is that the case?</p>
+<p>Also, I fear that the same problems of integration that affected the frontend and backend developers will affect the new UI and Javascript developers.</p>
+<blockquote>Are the new UI specialists going to retake control and repeat the whole cycle? Where will it end...</blockquote>
+<p>Client-side frameworks are not bad solutions, but they are not the next evolutionary step either. They are just a tool like anything else, useful for solving some problems. Unfortunately, they have been sold as the next step and we are now starting to see some of the longterm effects that these frameworks are causing.<br><br></p>
+<h2>How does this relate to CMS development in digital agencies?<br><br></h2>
+<p>Over the last year I’ve talked to numerous agencies (admittedly, this is no scientific study) that are using Umbraco and I have noticed a surprising trend; I’ve encountered more agencies that have stuck at stage one of separation than progressed to the second stage.</p>
+<p>Why is that? I think that the reasons are complicated, but I’ll try and highlight a few of my theories, experiences and observations here.</p>
+<blockquote>Content led vs Data led vs Process led</blockquote>
+<p>The workload of most agencies that use Umbraco is content-led or a hybrid of content-led and data-led site. The value that customers gain from these sites is in the <strong>Content / UX</strong>, <strong>design fidelity</strong> and the <strong>content authoring experience</strong>.</p>
+<p>Client-side frameworks add extra complexity to projects that the agency and the customer struggle to gain any value from. That is until the customer wants to use the content for multiple endpoints. But honestly, how many omnichannel projects are there out there?</p>
+<blockquote>How is not as important as what</blockquote>
+<p>Content-led sites are often tightly aligned to the brand, so the quality and implementation of the design are essential. It’s better to employ someone that is a UI specialist, they add more value to the project as their primary skill is converting designs into the UI. A full-stack frontend developer could be more expensive and probably wouldn’t be as current with the latest UI skills. No one can do everything at once.</p>
+<p>Agencies have been afraid of committing to one framework and becoming locked in. Framework development has moved so quickly that it’s been hard to decide which one to use. Once that decision has been made it becomes hard to change later on. If production code becomes obsolete either because of breaking changes or a better framework being released then the agency is left with a codebase that is challenging to maintain and difficult to recruit for (the Umbraco admin area!?!?). Many agencies have wisely decided to keep it simple (and adaptable).</p>
+<blockquote>Technological locked in can ruin a good project through technical debt</blockquote>
+<p>Most content-led projects need little interaction. Much of the web is static content that only requires a sprinkling of Javascript. Sometimes adding a full client-side framework just adds too much weight to a project and their use of the shadow DOM makes it impossible to use in conjunction with anything else. It’s all or nothing.</p>
+<p>Client-side frameworks have some fundamental problems when they are used to create content-led sites; SEO, client-side weight, time to first paint etc. Developers working with these frameworks have fixed these problems by creating aftermarket plugins creating complex chains of interdependencies to resolve issues that would have been trivial to solve using a more straightforward solution.</p>
+<blockquote>Often simpler is better</blockquote>
+<p>But… because these frameworks are the apparent new frontier, they have a lot of support from the community and the developer experience has advanced quicker than anywhere else. As a consequence complimentary plugins that add real value have been created such as <a rel="noopener" href="https://storybook.js.org/" target="_blank" title="StoryBook">StoryBook</a> or Static Site Generation tools like <a href="https://www.gatsbyjs.org/" title="Gatsby">Gatsby</a>.</p>
+<p>As the developer experiences and tooling around these frameworks become more advanced it is becoming harder for agencies to ignore them without any other alternative. Forcing agencies into making a decision that they have been avoiding, even though it will mean they give up control; of their interaction layer, their design fidelity and ultimately their costs.<br><br></p>
+<h2><strong>What is the alternative?<br><br></strong></h2>
+<p>I believe there needs to be a change of direction, looking for different production methods that try to resolve the issues caused by separation.</p>
+<p>Let's accept that there is a difference between developers that want to program and those that want to build UI’s. Being able to do both is fine, but just wanting to work on the UI shouldn’t be seen as a bad thing either. I don’t think the labels frontend and backend have ever been correct, even more so today.</p>
+<blockquote>We prefer to use the words <strong>Definition</strong> and <strong>Delivery</strong>.</blockquote>
+<p><strong>Definition developers</strong> concentrate on building and understanding the UI and its behaviour under different state changes. They work closely with designers to maximise the fidelity of the UI.</p>
+<p><strong>Delivery developers</strong> use the output from definition to deliver the UI using whatever delivery mechanism is required. They manipulate the data into a form that the UI is expecting and render templates in context at runtime.</p>
+<p>The key to <strong>solving integration</strong> is to allow definition complete <strong>control</strong> of the UI and to fully separate the delivery process. One solution we have found is to ask definition to create an interface to describe the dynamicity and interdependency of each component. Then delivery only need to understand the interface to use definition components, they need not see any of the details or work with any markup.</p>
+<blockquote>Integration will become a trivial one-way release process from definition to delivery. <br><br>There’s no need for a third specialist developer,</blockquote>
+<p>The definition development environment can be separated and tailored to the needs of the definition developer, elevating markup and style to primary importance. Taking back control, improving design fidelity and showing how state impacts the UI under different scenarios.</p>
+<p>By not being locked into a client-side framework the Javascript layer is freed. Developers can use one or more progressive framework, only when they are required, to implement interaction.</p>
+<p>Instead of all or nothing, the solution becomes an artist palette where all the different elements can be swapped out with ease without affecting anything else, based on a core composed of simple ideas and technologies that are easy to change.</p>
+<blockquote>A fully separated solution can be understood as many different levels where any element can be replaced without affecting anything else.</blockquote>
+<p>For me, this is an alternative to using a client-side framework. Only by separating our environments and solving the problems of integration can we create sites that have a higher level of control. Websites that reach our customers’ expectations and will be maintainable for years to come.</p>
+<p>And this is only the beginning, by better understanding separation we are going to discover new and unexplored paths. This rabbit is going to go much, much deeper.</p>
+<p>We have a new framework in beta called Yuzu that implements the ideas above while also mimicking many of the features of a client-side framework. We're currently in beta and writing documentation, there are more details at <a href="/umbraco/balanced.dev" title="Balanced Dev">balanced.dev</a> and <a href="https://github.com/balanced-dev" title="Balanced Dev github">github.com/balanced-dev</a></p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Phillip Whittaker"><img src="//gravatar.com/avatar/22c70b35c9da5a6629ee7d66ecca10a7.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/22c70b35c9da5a6629ee7d66ecca10a7.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Phillip Whittaker</h1>
+        <p>Phillip is on Twitter as <a href="//twitter.com/balanceddev " title="Phillip Whittaker on Twitter" rel="author">@balanceddev </a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

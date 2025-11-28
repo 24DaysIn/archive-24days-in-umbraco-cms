@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Developing Version 8</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Developing Version 8</h1>
+      <p class="byline"> by Stéphane Gay, <span class="pubdate">posted on <time datetime="2018-12-19">Dec 19, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Exploring some ancient Git repositories on vintage pre-SSD hard-disks, code archeologists have been able to unearth traces of v8 code dating from as early as 2013—a year now generally considered as the beginning of the “v8 period”.</p>
+<h2>The Origins</h2>
+<p class="intro">These old code fragments give a misleading idea of what v8 was originally meant to be. They talk about BTree, “snapshot dictionaries”, concurrent queues, XPath navigators… all giving the impression of a technology-driven effort.</p>
+<p>And yet, the spark that lighted it all was way more practical: developers were hitting some limits of the Umbraco architecture, in their daily usage. One of Umbraco’s best asset, its Xml document cache, which keeps all content in memory and immediately available for fast rendering, was becoming a constraint.</p>
+<p>From a technical standpoint, a monolithic Xml document is not really meant to be used as a database, nor is it designed for concurrency. Despite all efforts at working around these limitations—and users learning to “rebuild the cache” from time to time—the Xml document was causing memory and performance and stability problems.</p>
+<p>From a functional standpoint, the content <em>structure</em> started to overgrow the tree structure of Xml. Content became less hierarchical, Json crept in, new content editors started to manage structured content beyond simple strings or integers yet had to “fit in Xml” somehow.</p>
+<p>The original question therefore was: could we become more reliable and simplify developers’ life, by replacing the Xml cache with something else, that would essentially work the same yet provide more stability, finer granularity, and better support for newer content editors?</p>
+<h2>Minor to Major</h2>
+<p>Most of the old code fragments therefore implement what is known today as <em>NuCache</em> (or <em>Le Cache Nouveau</em>)—an object-based replacement for the Xml cache. It all happened in the v7 branch because, at that time, there was no v8. And the idea was that maybe, we could “just” transparently swap the cache, and solve immediate issues with live sites.</p>
+<p>And it ran fine, and some very brave early testers even tried it on their sites, and we even supported XSLT on top of it! Alas, it rapidly became obvious that any properly-functioning cache required radical changes to other parts of Umbraco, ultimately leading to breaking backward compatibility.</p>
+<p><img style="width: 196px; height: 196px;" src="/archive/media/2018/v8-196.png?width=196&amp;height=196" alt="" data-udi="umb://media/f04aa71f51864165acd79fb4b2990108"></p>
+<p>And thus, the idea of a next major—v8—was born.</p>
+<p>As soon as backward compatibility stopped being a constraint… oh the things we could do! We started to dream about dealing with all those small and irritating details we had to battle with every day when building sites. Inconsistent APIs. Weird application structure. Too many ways to do the same thing. Repetition of code.</p>
+<p>All in all, we realized that however “convenient” the v7 codebase was, it was not very friendly. Sure, it could do many things, but in many ways, some hard to discover and understand. It could be a painful experience. And this situation was not only slowing down site implementors, but also Umbraco’s own evolution—it was becoming harder and harder to change things.</p>
+<p>And so, v8 got defined: the simpler version.</p>
+<h2>The Maturing Years</h2>
+<p>And then, nothing happened.</p>
+<p>Or, at least, not what you would expect.</p>
+<p>First, v7 was relatively new, it was stable, and people loved its shiny Belle interface. There were tons of features that did not require a new major version and could be built immediately. And so, lots of efforts went into v7, leading to an impressive list of new features: new editors, grids, health checks…</p>
+<p>Second… maybe we learned the difference between <em>simple</em> and <em>easy</em>. If you have an hour to spare, I recommend you watch <a rel="noopener" href="https://www.infoq.com/presentations/Simple-Made-Easy" target="_blank" title="Simple Made Easy">Simple Made Easy</a>, a 2011 talk by Rick Hickey. Rick is the author of Clojure, a LISP dialect, and he draws a very interesting distinction between <em>simple</em>, and <em>easy</em>.</p>
+<p>He introduces simplicity as the opposite of complexity. And complexity is what we want to avoid because it makes everything harder to understand, to get right, to troubleshoot, to maintain, to grow. For instance, complexity is having 3 or 4 different but vaguely similar methods to modify a document in Umbraco.</p>
+<p>He argues that simplicity is often erroneously mistaken for easiness, when they are really two different things. Easy means immediate, close to us, quick. And maybe it was easier to have these 3 or 4 methods, that were originally meant to be very intuitive, versus one single method that would require a bit of reading of some documentation.</p>
+<p>He says:</p>
+<blockquote><span>If one chooses easiness, things move fast but accumulate complexity.<br></span>If simplicity is chosen, the project starts slower because one has to think things over.<span><br></span></blockquote>
+<p>And leaves us with this question: if v8 is the “simpler version”, what does that mean?</p>
+<h2>Growing v8</h2>
+<p>And so, while v7 gained features, some background work took place to slowly <em>grow</em> v8. It was not to be a ground-up rewrite—that had been tried in the past and... let's say it did not end well. We imposed ourselves a constraint: it had to<em> build and run</em>, at all time.</p>
+<p>It has been a long effort of working with legacy code and refactoring, cleaning things up, re-designing parts. Accepting to make things <em>better</em> if not perfect, and then maybe better again. Always keeping the original goal in mind: is this making things simpler?</p>
+<p>And then, sometime in 2017, we started talking about shipping… and realized that the v8 “vision” had become a huge list of cleanup ideas—and of course, meanwhile, some new feature ideas had crept in too. It seemed that anytime we cleaned something up, we had added two more cleanup opportunities to the list. And we came to the frightening realization that we would never, ever, manage to complete it all.</p>
+<p><img style="width: 390px; height: 260px;" src="/archive/media/2018/tree-trimming.jpg?width=390&amp;height=260" alt="Tree Trimming" data-udi="umb://media/9d3b02b88b884999baf712d9f0db4013"></p>
+<p>Thankfully, this was the time a brand-new CTO joined HQ, with little Umbraco experience—and that actually was a plus. Under his nice but consistent questioning and pressure, we did what you do when you grow trees: we trimmed v8. We learned to abandon the dream of doing <em>everything—</em>and it sure was frustrating at times—in order to achieve <em>something</em> at all.</p>
+<p>Feature-wise, v8 was to be:</p>
+<ul>
+<li>Content Apps, simplifying how the backoffice can be extended;</li>
+<li>Infinite Editing, simplifying editor's day to day life by reducing round-trips in the backoffice;</li>
+<li>Multi-lingual, providing core support for multi-lingual content and simple tools to build multi-lingual sites.</li>
+</ul>
+<p>Refactoring-wise, we would stabilize what had been done already.</p>
+<p>We also started to proof-check what we had done. For instance, we had “simplified” the codebase by introducing a dependency injection container. Problem is, community had some feedback: though technically sound, it was in no way “simpler” for users.</p>
+<blockquote><span>I've been reading through the source for V8 and there's something really worrying me about the DI implementation. [...] I cannot recommend strongly enough that you alter your approach now before it is too late.</span></blockquote>
+<p>We engaged into some more refactoring, this time involving community members. We asked people to create PRs, but not "perfect" PRs: rather, work-in-progress PRs. And then we started pair-programming in these PRs. We learned how to, humbly, exchange ideas, share unpolished code, and welcome criticism. Some of these PRs could go on for months, before being merged.</p>
+<p>And the same thing happened internally. With D-Team growing, new developers started to question some choices, and we had to learn how to not break everything today, but slowly keep track of where we want to go. All in all, growing v8 has also taught us a lot of lessons on how to manage the codebase. How to make bold changes through small, manageable steps. How to give structure to code<em>—</em>however imperfect that structure may be<em>—</em>so that it then becomes easy to change the structure itself.</p>
+<h2>Beyond v8</h2>
+<p>Yes, there <em>is</em> a “beyond v8”. v8 will ship at some point<em>—</em>it is getting closer everyday<em>—</em>and it feels good and exciting. It will not be the ultimate, perfect Umbraco, but it is so much better than v7!</p>
+<p>Because we already know this: by cleaning up the CMS, we have started a virtuous circle: getting things simpler gets simpler everyday things gets simpler. Maybe you want to read that sentence again.</p>
+<p>It is our hope that v8 is not only a better and simpler CMS, but also a better and simpler codebase, enabling faster turnaround of new features and new simplifications. With Headless, .NET Core, Deploy and many other features on the radar, the future looks promising.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/community/" title="See all articles tagged with Community">Community</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Stéphane Gay"><img src="//gravatar.com/avatar/8fad9c5b2d4f824ab420195de6ab45d2.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/8fad9c5b2d4f824ab420195de6ab45d2.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Stéphane Gay</h1>
+        <p>Stéphane is on Twitter as <a href="//twitter.com/zpqrtbnk" title="Stéphane Gay on Twitter" rel="author">@zpqrtbnk</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

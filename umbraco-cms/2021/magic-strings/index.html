@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Defence Against the Dark Arts of Magic Strings in Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Magic strings</h1>
+      <p class="byline"> by Joe Glombek, <span class="pubdate">posted on <time datetime="2021-12-06">Dec 6, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2 class="md-end-block md-heading"><span class="md-plain">Why are magic strings so bad?</span></h2>
+<p class="md-end-block md-p md-focus"><span class="md-plain md-expand">We use the phrase "magic strings" (and, to a lesser extent, "magic numbers") to refer to a constant string used directly in your code. An example of this that we, as Umbraco developers, may be all too familiar with is </span><span class="md-pair-s code">Model.GetPropertyValue("bodyText")</span><span class="md-plain">. Here, </span><span class="md-pair-s code">"bodyText"</span><span class="md-plain"> is the magic string. The text can be used in multiple places (maybe in the meta tags as well as the page body, or on different templates), has to be in this exact format (I can't swap it out with </span><span class="md-pair-s code">"Can I have the text for the body please?"</span><span class="md-plain">, as polite as that is) and refers to an external entity (the Umbraco database via the Umbraco APIs in this case). These things make it a particularly code-smelly example of a magic string that needs replacing.</span></p>
+<p class="intro"><span class="md-plain">Magic strings is a term used to cover multiple scenarios of when a string is used in place of a more robust method.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">Typos are the arch-enemy of magic strings. If we're having a particularly productive, Hollywood-hacker-style afternoon, smacking away at those keys, you'd be excused for mis-hitting the odd one.</span></p>
+<p class="md-end-block md-p"><span class="md-plain"><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/466d25370a7f44d48f9729a1a03f7818"><img style="width: 500px; height: 281.25px;" src="/archive/media/2021/hacking.gif?width=500&amp;height=281.25" alt="Clip from NCIS showing two people typing manically on one keyboard" data-udi="umb://media/466d25370a7f44d48f9729a1a03f7818"></span></p>
+<p>They can be particularly difficult to spot too: depending on your font, <span class="code">"bodyIext"</span> could easily go unnoticed. The folks that write our IDEs know this, and will correct us where possible. A string, however, cannot be easily corrected because <em>any</em> value of string <em>is a valid string</em>. As far as the IDE knows, you meant to type <span class="code">"bossyTRex"</span>. These cause runtime errors rather than the easier-to-spot compile-time issues.</p>
+<p>Fat-fingered-ness aside, magic strings can be exclusive to those who speak a different first language or people who have difficulty reading and writing. Even if you speak the same language, issues can arise when trying to agree how to spell "colour"!</p>
+<p>Or how about a piece of logic that sets <span class="code">this.ValidationMethod = "none"</span>. We then later decide we need to change the validation method, but it's not obvious what the other possible values are. Magic strings aren't self-documenting and so we rely on reference documents or "there's a comment that explains how to use it somewhere" or "didn't I put that in the README file?". This is far from ideal.</p>
+<p>And if all that wasn't enough, magic strings make it more difficult to replace a value, test your code or change logic on your test environments compared to production. We can do better!</p>
+<h3 class="md-end-block md-heading"><span class="md-plain">Is there such thing as a muggle string?</span></h3>
+<p class="md-end-block md-p"><span class="md-plain">Are there cases when a string is non-magic? Or perhaps when a magic string is ok? Yes, not all strings are magic strings and not all magic strings are necessarily bad.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">If you're typing a string value in code, the blog </span><span class="md-meta-i-c  md-link"><a href="http://www.douevencode.com/articles/2017-11/magic-strings-not-always-bad/"><span class="md-plain">do you even code, bro?</span></a></span><span class="md-plain"> has boiled it down to 4 questions you need to ask yourself:</span></p>
+<blockquote>
+<ul class="ul-list" data-mark="-">
+<li class="md-list-item md-focus-container">
+<p class="md-end-block md-p md-focus"><span class="md-plain md-expand">Can you reuse this constant?</span></p>
+</li>
+<li class="md-list-item">
+<p class="md-end-block md-p"><span class="md-plain">Can you easily change a few values at once?</span></p>
+</li>
+<li class="md-list-item">
+<p class="md-end-block md-p"><span class="md-plain">Does it improve readability?</span></p>
+</li>
+<li class="md-list-item">
+<p class="md-end-block md-p"><span class="md-plain">Is it part of configuration?</span></p>
+</li>
+</ul>
+</blockquote>
+<p class="md-end-block md-p"><span class="md-plain">This won't cover all scenarios, but it's a good place to get started. If any of your answers to these questions is "yes", it's time to look into alternatives.</span></p>
+<h3 class="md-end-block md-heading"><span class="md-plain">Did you just casually drop the term "magic numbers" too? I've only just got to grips with magic strings!</span></h3>
+<p class="md-end-block md-p"><span class="md-plain">Ah, yes. Sorry about that!</span></p>
+<p class="md-end-block md-p"><span class="md-plain">Yes, magic numbers are the lesser talked about sibling of magic strings. But they can cause the same sorts of issues.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain">Take this code as an example:</span></p>
+<pre><code class="language-csharp">public void PrepareForCheckout() {
+    if(Customer.Country == "United Kingdom") {
+		FinalValue = Value * 1.175;
+    }
+}</code></pre>
+<p class="md-end-block md-p"><span class="md-plain">It's not immediately obvious what this 1.175 is. You might have picked up that it's the old tax rate in the UK of 17.5%, but it could easily be missed, especially by a non-British developer.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">Now that we know this is the VAT rate, we also know it's wrong. The UK changed its VAT rate to 20% a few years back. Correcting this value could be difficult too - we need to replace all instances, but if it's written as </span><span class="md-pair-s code">value = value + value * (17.5/100)</span><span class="md-plain"> (someone has gone about code clarity in an odd way!), a simple find-and-replace won't suffice.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain">If, for example, we had a constant of this value somewhere that we reference from everywhere, it would be both clearer what the code was doing </span><span class="md-pair-s "><em><span class="md-plain">and</span></em></span><span class="md-plain md-expand"> easier to update.</span></p>
+<pre><code class="language-csharp">public void PrepareForCheckout() {
+    if(Customer.Country == "United Kingdom") {
+		FinalValue = Value * UkVatRate;
+    }
+}</code></pre>
+<p><span>(Now, there </span><span>a</span><span>re m</span><span>a</span><span>ny other twe</span><span>a</span><span>ks we could m</span><span>a</span><span>ke to this code, but I've just solved the one we've been t</span><span>a</span><span>lking </span><span>a</span><span>bout.)</span></p>
+<h2 class="md-end-block md-heading"><span class="md-plain">ModelsBuilder to the rescue</span></h2>
+<p class="md-end-block md-p"><span class="md-plain">The first example I gave in this article was </span><span class="md-pair-s code">Model.GetPropertyValue("bodyText")</span><span class="md-plain">, which, back in the Umbraco 7-days of 2013, </span><span class="md-meta-i-c  md-link"><a rel="noopener" href="https://twitter.com/zpqrtbnk" target="_blank"><span class="md-plain">Stephan Gay aka ZpqrtBnk</span></a> </span><span class="md-plain">identified it as a problem and developed the </span><span class="md-meta-i-c  md-link"><a rel="noopener" href="https://github.com/modelsbuilder/ModelsBuilder.Original" target="_blank"><span class="md-plain">ModelsBuilder</span></a></span><span class="md-plain"> package. ModelsBuilder is now a part of Umbraco and if you're not using it already, you </span><span class="md-pair-s "><em><span class="md-plain">really</span></em></span><span class="md-plain"> should be. It removes the need for magic strings when interacting with IPublishedContent across our Umbraco solutions by generating models for each document type. Dave Woestenborghs wrote an article on </span><span class="md-meta-i-c  md-link"><a rel="noopener" href="https://24days.in/umbraco-cms/2016/getting-started-with-modelsbuilder/" target="_blank"><span class="md-plain">Getting started with Umbraco Modelsbuilder</span></a></span><span class="md-plain"> back in 2016 which still holds up well.</span></p>
+<h2 class="md-end-block md-heading"><span class="md-plain">A </span><span class="md-pair-s "><em><span class="md-plain">constant</span></em></span><span class="md-plain"> problem</span></h2>
+<p class="md-end-block md-p"><span class="md-plain">I mentioned creating a constant just now. And that's probably one of the simplest methods of avoiding magic strings. Depending on the size and complexity of your project, it can be done by pulling your strings up into constant declarations in your class.</span></p>
+<pre><code class="language-csharp">public class Cart {
+	private const string BodyTextKey = "bodyText";
+	private const decimal UkVatRate = 1.175;
+	
+	//...
+}</code></pre>
+<p class="md-end-block md-p"><span class="md-plain">In .NET, constants (</span><span class="md-pair-s code">const</span><span class="md-plain"> declarations) are actually pretty efficient - at compile-time, they're not allocated any memory like variables are, so it's equivalent performance-wise to directly using the string in each location. It does, however, help us out a lot pre-compilation by removing the magic strings.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain">To make constants reusable across your project you might find it useful to create a </span><span class="md-pair-s code">Constants.cs</span><span class="md-plain"> file in your project and stick all your relevant strings in there. This can get pretty cluttered on bigger projects, so you may need to categorise your constants further, grouping them into logical classes and namespaces or adding your constants to related services like so:</span></p>
+<pre><code class="language-csharp">public static class VatHelper {
+	public const decimal UkVatRate = 1.175;
+	
+	//...
+}</code></pre>
+<p><span>In f</span><span>a</span><span>ct, with </span><span>a</span><span> helper, we could go even further in c</span><span>a</span><span>se we need to </span><span>a</span><span>pply V</span><span>A</span><span>T to other countries in the future:</span></p>
+<pre><code class="language-csharp">public static class VatHelper {
+	public decimal GetVatRate(string country) {
+        switch (country) {
+            case Countries.UnitedKingdom: 
+                return 1.175;
+            default:
+		        return 1;       
+        }
+    }
+}
+
+//...
+
+public class Cart {
+	private const string BodyTextKey = "bodyText";
+	
+    //...
+    
+	public void PrepareForCheckout() {
+    	FinalValue = FinalValue * VatHelper.GetVatRate(Customer.Country);
+    }
+    
+	//...
+}</code></pre>
+<p>(OK, so in most real-world examples the country and its respective VAT rate would probably both live in a database somewhere, but it works as an example!)</p>
+<h2 class="md-end-block md-heading"><span class="md-pair-s"><em><span class="md-plain">Enum</span></em></span><span class="md-plain">-ber of other solutions</span></h2>
+<p class="md-end-block md-p"><span class="md-plain">Constants are great and all, but they can get a little bit repetitive. Enumerated types (that's enums to you and me) are useful for a finite number of constants that won't change.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">Enums are a great solution to the </span><span class="md-pair-s code">ValidationMethod</span><span class="md-plain"> setting we were talking about earlier. We could create an enum with all the possible values and use this enum in place of our strings:</span></p>
+<pre><code class="language-csharp">public enum ValidationMethod {
+	None,
+	Required,
+	EmailAddress,
+	PhoneNumber,
+	Numeric
+}
+
+//...
+
+this.ValidationMethod = ValidationMethod.None;
+
+//...
+
+switch (field.ValidationMethod) {
+    case ValidationMethod.Required:
+        return !string.IsNullOrEmpty(field.Value);
+        // ...
+}</code></pre>
+<p><span>Enums </span><span>a</span><span>lso work well for st</span><span>a</span><span>tuses:</span></p>
+<pre><code class="language-csharp">public enum OrderStatus {
+	Draft,
+	Paid,
+    Pending,
+    Shipped,
+    Recieved
+}
+
+//...
+
+Order.Status = OrderStatus.Paid;
+
+//...
+
+if(Order.Status == OrderStatus.Paid) {
+    ProcessOrder();
+}</code></pre>
+<h3 class="md-end-block md-heading"><span class="md-plain">Magic numbers and enums</span></h3>
+<p class="md-end-block md-p md-focus"><span class="md-plain">Under the covers, enums actually store integers for each value. In the case of our </span><span class="md-pair-s code">OrderStatus</span><span class="md-plain"> enum, </span><span class="md-pair-s code">Draft</span><span class="md-plain"> is equivalent to </span><span class="md-pair-s code">0</span><span class="md-plain">, </span><span class="md-pair-s code">Paid</span><span class="md-plain"> is </span><span class="md-pair-s code">1</span><span class="md-plain">, </span><span class="md-pair-s code">Pending</span><span class="md-plain"> is </span><span class="md-pair-s code">2</span><span class="md-plain">, etc. You can even explicitly set the number applied to each value which can be useful if you need to map a readable name to a number, or if you need to add a value to an existing enum so enums can also provide a valuable solution to magic numbers.</span></p>
+<pre><code class="language-csharp">public enum OrderStatus {
+
+	/// We want to add a new status at the top,
+	/// but also to maintain the mapping of the original enum
+	/// so we specify the values
+	
+	Cancelled	= -1,
+	Draft		=  0,
+	Paid		=  1,
+    Pending		=  2,
+    Shipped		=  3,
+    Recieved	=  4
+}
+
+//...
+
+/// Readable definitions for all possible
+/// response codes from the ACME API docs
+public enum AcmeApiResponseCodes {
+	Ok				= 200,
+    BadRequest		= 400,
+    Unauthorized	= 401,
+    InvalidClientId = 490,
+	ExpiredClient = 491
+}</code></pre>
+<h3 class="md-end-block md-heading"><span class="md-plain">JSON and enums</span></h3>
+<p class="md-end-block md-p"><span class="md-plain">As a side effect of the underlying value being an integer, you might notice that by default if you return an enum as a JSON result, you'll end up returning the number rather than the pretty enum.</span></p>
+<pre><code class="language-json">{
+	"orderNumber": 51138461315,
+	"status": 2,
+    
+    "...": "..."
+}</code></pre>
+<p class="md-end-block md-p"><span class="md-plain">JSON (and JavaScript too, without some workarounds) don't support enums. So we have two choices here: return the number, or return the string. You've got a few options if you want to convert the enum to and from a string if you'd rather.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain">You can set the converter for your individual property with an attribute:</span></p>
+<pre><code class="language-csharp">public class Order {
+    
+	public long OrderNumber { get; set; }
+    
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public OrderStatus Status { get; set; }
+    
+    //...
+}</code></pre>
+<p>Alternatively, set the attribute it on the enum definition if you want it to be serialized to a string every time you use it. While we're here, you'll notice you can also customise how the enum is rendered as a string with the <span class="code">EnumMember</span> attribute.</p>
+<pre><code class="language-csharp">[JsonConverter(typeof(JsonStringEnumConverter))]  
+public enum OrderStatus {
+	Draft,
+	Paid,
+	
+    //...
+    
+    [EnumMember(Value = "Recieved by customer")]
+    RecievedByCustomer
+}</code></pre>
+<p>Or finally, you can set the behaviour globally for all enums by modifying the <span class="md-pair-s code">ConfigureServices</span> method in <span class="md-pair-s code">Startup.cs</span>. We need to add <span class="md-pair-s code">AddMvcAndRazor</span> to get ahold of the MVC config before adjusting the default JSON options.</p>
+<pre><code class="language-csharp">public void ConfigureServices(IServiceCollection services)
+{
+    services
+        .AddUmbraco(_env, _config)
+        
+        // Here's the good stuff
+
+        .AddMvcAndRazor(mvc =&gt;
+        {
+            mvc.AddJsonOptions(json =&gt;
+            {
+                json.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+        })
+
+        // That's all, folks!
+        
+        .AddBackOffice()
+        .AddWebsite()
+        .AddComposers()
+        .Build();
+}</code></pre>
+<p><span class="md-plain md-expand">Your configuration may differ slightly if you're using Umbraco 8 or below (with .NET Framework) or if you're using </span><span class="md-pair-s code">Newtonsoft.Json</span> (rather than <span class="md-pair-s code">System.Text.Json</span><span class="md-plain md-expand">) in your Umbraco 9+/.NET 5+ app, but the principles are the same.</span></p>
+<h3 class="md-end-block md-heading"><span class="md-plain">Flagged enums</span></h3>
+<p class="md-end-block md-p"><span class="md-plain md-expand">Simple enums work fine for things like statuses, where only one can be true at any one time. But how about where multiple values make sense?</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain">Our </span><span class="md-pair-s code">ValidationMethod</span><span class="md-plain"> example from earlier applies here. It may be possible to have a field that needs validating as </span><span class="md-pair-s code">Required</span><span class="md-plain"> but also </span><span class="md-pair-s code">EmailAddress</span><span class="md-plain">. With strings, we could have done this as an array and we can do the same with enums if we want...</span></p>
+<pre><code class="language-csharp">// How we might have allowed multiple values with magic strings
+field.ValidationMethods = new string[] { "email address", "required" };
+
+// We can do the same when using enums too
+field.ValidationMethods = new ValidationMethod[] { ValidationMethod.EmailAddress, ValidationMethod.Required };</code></pre>
+<p><span>But we c</span><span>a</span><span>n </span><span>a</span><span>lso do one better with fl</span><span>a</span><span>gged enums to </span><span>a</span><span>llow </span><span>a</span><span>n enum to h</span><span>a</span><span>ve multiple v</span><span>a</span><span>lues.</span></p>
+<pre><code class="language-csharp">[Flags]
+public enum ValidationMethod {
+	None			= 0,
+	Required		= 1,
+	EmailAddress	= 2,
+	PhoneNumber		= 4,
+	Numeric			= 8
+}
+
+//...
+
+this.ValidationMethods = ValidationMethod.EmailAddress | ValidationMethod.Required;
+
+//...
+
+if(this.ValidationMethods.HasFlag(ValidationMethod.Required)) {
+        return !string.IsNullOrEmpty(field.Value);
+}</code></pre>
+<p><span class="md-plain">In this example we've added the </span><span class="md-pair-s code">[Flags]</span><span class="md-plain"> attribute to the enum and assigned each enum a value - this bit is important. We can then assign multiple values using the "bitwise OR operator" or pipe character (</span><span class="md-pair-s code">|</span><span class="md-plain">) - it's the same we use two of in an or statement (</span><span class="md-pair-s code">this || that</span><span class="md-plain">).</span></p>
+<p class="md-end-block md-p"><span class="md-plain">To check if an enum has a flag, we can use the </span><span class="md-pair-s code">HasFlag</span><span class="md-plain"> on the enum value. I've had to refactor our switch statement from earlier to use an if statement for each value we want to check for.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">You might notice the integer I've assigned to each number isn't in order. Well, it </span><span class="md-pair-s "><em><span class="md-plain">is</span></em></span><span class="md-plain"> in order, but using a doubling sequence: 1, 2, 4, 8... etc. Each number is double the previous value. This is important because a flagged enum still only stores one integer!</span></p>
+<p class="md-end-block md-p"><span class="md-plain">It works by using bitwise operations (there's that word again) which, simply put, is looking at the individual "bits" (and I mean that in the technical term!) of a binary number and applying an "OR" operation - if any of the bits in that column is 1, it returns a 1, otherwise it returns a 0.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain">For those curious, let's look at the numbers in the doubling sequence in binary. <a href="#skip-binary">(Skip ahead if you don't want to think about binary too much!)</a></span></p>
+<pre>0000 (0)
+0001 (1)
+0010 (2<a href="#joke">*</a>)
+0100 (4)
+1000 (8)
+
+...etc</pre>
+<p><span>You'll notice, th</span><span>a</span><span>t bec</span><span>a</span><span>use they're </span><span>a</span><span>ll powers of 2, e</span><span>a</span><span>ch column only ever cont</span><span>a</span><span>ins </span><span>a</span><span> single 1. Therefore, no m</span><span>a</span><span>tter wh</span><span>a</span><span>t combin</span><span>a</span><span>tion we m</span><span>a</span><span>ke of these in </span><span>a</span><span> bitwise OR, we c</span><span>a</span><span>n work out which initi</span><span>a</span><span>l enum v</span><span>a</span><span>lues went into cre</span><span>a</span><span>ting it.</span></p>
+<pre><code class="language-csharp">var a = ValidationMethod.EmailAddress | ValidationMethod.Required;
+/// That's 1 and 2
+///
+///    0001
+/// OR 0010
+/// -------
+///    0011  (the last two columns have a 1 in the first number OR second number)
+
+
+var b = ValidationMethod.Required | ValidationMethod.EmailAddress | ValidationMethod.PhoneNumber| ValidationMethod.Numeric;
+/// That's 1 and 2
+///
+///    0001
+///    0010
+///    0100
+/// OR 1000
+/// -------
+///    1111</code></pre>
+<p><span class="md-plain md-expand">In both examples above, to check the value has the flag </span><span class="md-pair-s">Required</span><span class="md-plain">, which is </span><span class="md-pair-s">0001</span><span class="md-plain">, we simply need to check for a </span><span class="md-pair-s">1</span><span class="md-plain"> in the last column - the </span><span class="md-pair-s">HasFlag</span><span class="md-plain"> method is actually using the bitwise AND flag (</span><span class="md-pair-s code">&amp;</span><span class="md-plain md-expand">) under the covers which does this check.</span></p>
+<pre><code class="language-csharp">this.ValidationMethods.HasFlag(ValidationMethod.Required);
+
+// is the same as
+
+(this.ValidationMethods &amp; ValidationMethod.Required) == ValidationMethod.Required;
+
+// is the same as
+
+// Binary literals in C# are prefixed with 0b (C# 7+)
+0b0000011 &amp; 0b0000001 == 0b0000001;
+
+///     0011
+/// AND 0001
+/// --------
+///     0001 (the last column has a 1 in the first number AND second number)</code></pre>
+<p>Because of this behaviour, we can also add a value for common combinations or all into our enum by adding all the values of the combining values together (adding and bitwise operations provide the same result in this case because they're all powers of two, but not normally!)</p>
+<pre><code class="language-csharp">[Flags]
+public enum ValidationMethod {
+	// Regular items
+	None			=  0,
+	Required		=  1,
+	EmailAddress	=  2,
+	PhoneNumber		=  4,
+	Numeric			=  8,
+    
+    //Combinations
+    RequiredEmail	=  3 // 0001 | 0010 = 0011 or cheat by doing 1 + 2 = 3
+    All				= 15 // 0001 | 0010 | 0100 | 1000 = 1111 or cheat by doing 1 + 2 + 3 + 4 + 8 = 15
+}</code></pre>
+<p>Not that an "All" value makes any sense in this case, but it's good to know!</p>
+<h2 class="md-end-block md-heading md-focus"><span class="md-plain"><a id="skip-binary"></a>Config your way out of it</span></h2>
+<p class="md-end-block md-p"><span class="md-plain">One of the questions we asked at the beginning was "is it part of configuration?" This is a good question to ask because it may well change how we deal with it. What is configuration? I like to think of anything that can alter an application's behaviour. This value will have been flagged (in a specification or by yourself) as something that's likely to change - be that in the future or per environment. A URL to an API endpoint is a good example of a configuration variable:</span></p>
+<ul class="ul-list" data-mark="-">
+<li class="md-list-item">
+<p class="md-end-block md-p"><span class="md-plain">it sits outside the control of your application and could conceivably change</span></p>
+</li>
+<li class="md-list-item">
+<p class="md-end-block md-p"><span class="md-plain">or you may want to point your staging site at a sandbox version of the API.</span></p>
+</li>
+</ul>
+<p class="md-end-block md-p"><span class="md-plain">Now we're in the land of .NET 5, we can even get rid of some of the magic strings we have historically used to pull values out of config by mapping whole configuration sections to C# objects. I've also used a constant to get the configuration section name, to avoid that as a magic string.</span></p>
+<pre><code class="language-csharp">public class AcmeConfig
+{
+    public const string Section = "ACME";
+
+    public string ApiBaseUrl { get; set; }
+
+    //...
+}
+
+//...
+
+public class AcmeClient {
+    public AcmeClient(IConfiguration configuration) {
+        var config = configuration.GetSection(AcmeConfig.Section).Get&lt;AcmeConfig&gt;();
+        
+        //...
+    }
+    
+    //...
+}</code></pre>
+<h2 class="md-end-block md-heading"><span class="md-plain">Umbracadabra! Magic-less code</span></h2>
+<p class="md-end-block md-p"><span class="md-plain">Hopefully, I've been able to explain a little about why avoiding these magic strings might be necessary and how we can improve upon them. Don't go crazy - there's no need to replace every variable in your code, but it's worth thinking about in the future each time you open those double-quotes!</span></p>
+<p class="md-end-block md-p"><span class="md-plain">Happy </span><span class="code">const</span><span class="md-plain">-ing.. and <span class="code">enum</span>-ing... and Model Building!</span></p>
+<p class="md-end-block md-p"><span class="md-plain"><a id="joke"></a>*</span><span class="md-meta-i-c md-link"><a href="https://en.wikipedia.org/wiki/Mathematical_joke#Jokes_with_numeral_bases"><span class="md-plain">There are 10 types of people in the world: those who understand binary and those who don't.</span></a></span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/net-5/" title="See all articles tagged with .NET 5">.NET 5</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/net-core/" title="See all articles tagged with .NET Core">.NET Core</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Joe Glombek"><img src="//gravatar.com/avatar/b13ca7154a123b2762b2a82dbf2922d8.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/b13ca7154a123b2762b2a82dbf2922d8.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Joe Glombek</h1>
+        <p>Joe is on Twitter as <a href="//twitter.com/JoeGlombek" title="Joe Glombek on Twitter" rel="author">@JoeGlombek</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

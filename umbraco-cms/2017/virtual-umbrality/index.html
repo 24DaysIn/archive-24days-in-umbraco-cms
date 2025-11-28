@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Virtual Umbrality</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Virtual Umbrality</h1>
+      <p class="byline"> by Mike Masey, <span class="pubdate">posted on <time datetime="2017-12-18">Dec 18, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span style="font-weight: 400;">The past few years has seen a </span><span style="font-weight: 400;">multitude</span><span style="font-weight: 400;"> of technologies go from strength to strength, both in software and hardware. One area that’s starting to push its way into mainstream media is virtual and augmented reality (VR/AR). It’s an area of innovation that’s been worked on for over 20 years and the recent entry into the consumer market is only increasing its progression. The ability to view an alternative reality or add to our existing one in order to enhance our experience of it, in my view, will have a dramatic impact into the way that we interact with computers.</span></p>
+<p class="intro"> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">As the technology develops, it’s becoming more accessible to lower-end devices such as mobile phones. Web based VR is also gaining traction with frameworks and tools such as <a rel="noopener noreferrer" href="https://aframe.io/" target="_blank" title="A-Frame">A-Frame.io</a></span><span style="font-weight: 400;">, <a rel="noopener noreferrer" href="https://playcanvas.com/" target="_blank" title="PlayCanvas">PlayCanvas</a></span><span style="font-weight: 400;"><a rel="noopener noreferrer" href="https://playcanvas.com/" target="_blank" title="PlayCanvas"> </a>and <a rel="noopener noreferrer" href="https://threejs.org/" target="_blank" title="ThreeJS">Three.Js</a></span><span style="font-weight: 400;"> to name a few. The browser vendors are also working on the <a rel="noopener noreferrer" href="https://webvr.info/developers/" target="_blank" title="WebVR">WebVR spec </a></span><span style="font-weight: 400;">to make it easier to generate multi-platform, responsive VR content.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>What does any of this have to do with Umbraco?</h2>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">One of the great things about Umbraco is its incredible flexibility. Although commonly used for websites, it has also been used as a headless CMS for numerous non-browser based projects. From <a rel="noopener noreferrer" href="https://carolelogan.net/blog/amazon-alexa-skill-with-umbraco-cms/" target="_blank" title="IoT">IoT</a> </span><span style="font-weight: 400;">and <a rel="noopener noreferrer" href="https://medium.com/hifi-agency/umbraco-and-server-side-headless-integration-59746a9ca7b1" target="_blank">Handlebars.Net</a> integrations</span><span style="font-weight: 400;"> to the up coming <a rel="noopener noreferrer" href="https://twitter.com/thechiefunicorn/status/927531442971856897" target="_blank" title="Umbraco Headless">Umbraco Headless</a></span><span style="font-weight: 400;">, the ability to use Umbraco in new and interesting ways will continue to evolve. </span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">So with that in mind, how can Umbraco be used to help shape the future of WebVR and/or WebAR?  Let’s have a look at a few rough concepts in which Umbraco could be the powerhouse behind a VR/AR application, there might even be a few code samples. </span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">Bringing VR and AR to the web not only makes it far more accessible to more people, it also adopts all of the usual web development principles, such as progressive enhancement. This means those without the right equipment </span><span style="font-weight: 400;">should</span><span style="font-weight: 400;"> be able to access the information they need. As AR and VR on the web are still in their infancy from a consumer standpoint, it may be difficult to envisage the potential it has to offer, but as more people start investigating the technology themselves, who knows how our interactions with the internet with change.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>Innovating the online shopping experience</h2>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">The idea of a virtual store that you can put yourself in, or project into your home is already becoming attractive to a number of businesses. IKEA for example has an <a rel="noopener noreferrer" href="https://www.theverge.com/2017/9/20/16339006/apple-ios-11-arkit-ikea-place-ar-app" target="_blank">app</a></span><span style="font-weight: 400;"> that allows you to place furniture from their shop, into your own living room. Amazon has joined the scene with a similar AR <a rel="noopener noreferrer" href="https://www.amazon.com/b?ie=UTF8&amp;node=17403032011" target="_blank">app</a></span><span style="font-weight: 400;">. Shopify has also been experimenting with the medium and released this incredibly useful article about their process of building a <a rel="noopener noreferrer" href="https://www.shopify.com/partners/blog/building-a-vr-shopping-experience" target="_blank">VR Shopping Experience</a>. </span><a href="https://www.shopify.com/partners/blog/building-a-vr-shopping-experience"><span style="font-weight: 400;"></span></a></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">So let’s say we have our own store that sells magnificent Umbraco sculptures. On our product page, a photo of the sculpture is all fine and dandy, but what if we wanted to really get an idea of scale for it, to get a feeling of what it would be like to stand next to it.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h3>Demo time</h3>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">Quick heads up, this demo is a very rough and ready implementation to provide a basic idea of how something like this could be achieved. It was built using the Umbraco Starter kit and A-Frame.io (which is constantly being updated and improved).</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">The Umbraco starter kit already contains some product pages so to start, we’ll create a new “3d Model” tab on our “Product” doctype, that will contain the properties for uploading the necessary files for our virtual statue. In this example the object requires an obj file (this will create the geometry), and an mtl file (this defines what is on the surface of the model).</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;"><img style="width: 500px; height: 136.83844011142062px;" src="/archive/media/2017/3d-model-tab.png?width=500&amp;height=136.83844011142062" alt="" data-udi="umb://media/1ef0ffa22a574006a66bd90257b30aa3"></span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;"><img style="width: 500px; height: 257.6961271102284px;" src="/archive/media/2017/3d-model-tab-content-editor.png?width=500&amp;height=257.6961271102284" alt="" data-udi="umb://media/c77a649a73934b9081f56012b3b279b4"></span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">We’ll need to add the mtl and obj MIME types to the web.config so that IIS can handle them.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><em><span style="font-weight: 400;">Web.config</span></em></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-markup">&lt;staticContent&gt;		
+    &lt;remove fileExtension=".obj" /&gt;
+    &lt;mimeMap fileExtension=".obj" mimeType="text/plain" /&gt;
+    &lt;remove fileExtension=".mtl" /&gt;
+    &lt;mimeMap fileExtension=".mtl" mimeType="text/plain" /&gt;
+&lt;/staticContent&gt;</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">Once that’s in place, using ModelsBuilder, we’ll get hold of the files we want and if they exist, create a button that will take the user to a VR version of the page.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">At the top of our Product.cshtml, well check for the model files, and also check for a querystring to determine if we should be in VR mode (The link we will create will simple append a `?vr=1` to the url. If they both return true, we want to use a special “VRMaster.cshtml” template</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;"><em>Product.cshtml - Check for VR</em></span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-javascript">@{
+    bool vrMode = Request.QueryString["vr"] == "1";
+    bool hasVrAssets = Model.Content.ObjFile != null &amp;&amp; Model.Content.MtlFile != null;
+
+    Layout = vrMode &amp;&amp; hasVrAssets ? "VRMaster.cshtml" : "Master.cshtml";
+}
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">The VRMaster.cshtml template strips out all of the usual code used on a page, and adds a script file which gets the  A-Frame.io library. This is going to be a full page experience, but you could make this work on the product page without going to an external page if you wanted.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;"><em>VRMaster.cshtml </em></span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-javascript">@using ContentModels = Umbraco.Web.PublishedContentModels;
+@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+	Layout = null;
+
+	// Get basic design settings from the homepage
+	ContentModels.Home home = Model.Content.Site() as ContentModels.Home;
+	bool vrMode = Request.QueryString["vr"] == "1";
+}
+
+&lt;!doctype html&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;meta charset="utf-8"&gt;
+    &lt;meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"&gt;
+
+    &lt;title&gt;@Model.Content.Name - VR Mode - @home.Sitename&lt;/title&gt;
+    &lt;meta name="description" content=""&gt;
+    &lt;meta name="author" content=""&gt;
+    &lt;script src="https://aframe.io/releases/0.7.0/aframe.min.js"&gt;&lt;/script&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+     @RenderBody()
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">Back in our Product.cshtml, we add a new link to the VR version of the page, when if it is needed.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;"><em>Product.cshtml - VR mode button</em></span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-javascript">@if (hasVrAssets)
+{
+    &lt;div class="product-button"&gt;
+    &lt;a href="@(Model.Content.Url)?vr=1" class="button button--border--solid" target="_blank" rel="noopener noreferrer"&gt;View in VR&lt;/a&gt;
+    &lt;/div&gt;
+}
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">Our product page will now look something like this.</span> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><img style="width: 500px; height: 234.375px;" src="/archive/media/2017/exampe-product-page.png?width=500&amp;height=234.375" alt="" data-udi="umb://media/34aef4af8349479dadf2732fcc35be82"></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">Next up we need to add the code to make our amazing sculpture appear in VR. A-Frame allows us to do this all in the cshtml markup.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> <em>Product.cshtml - A-Frame</em></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-javascript">&lt;script&gt;
+    &lt;!-- Registers a component to handle a click event --&gt;
+    AFRAME.registerComponent('move-box',{
+        init:function(){
+        var view = document.getElementById("umbraco");
+            this.el.addEventListener('click',function(){
+                view.emit("startAnimation");
+            });
+        }
+    });
+&lt;/script&gt;
+
+&lt;!-- Creates the A-Frame scene --&gt;
+&lt;a-scene fog="type: exponential; color: #c1c1c1; density: 0.035;"&gt;
+    &lt;!-- Assets for the Umbraco statue --&gt;
+    &lt;a-assets&gt;
+        &lt;a-asset-item id="umbraco-obj" src="@Model.Content.ObjFile.Url"&gt;&lt;/a-asset-item&gt;
+        &lt;a-asset-item id="umbraco-mtl" src="@Model.Content.MtlFile.Url"&gt;&lt;/a-asset-item&gt;
+    &lt;/a-assets&gt;
+
+    &lt;!-- Creates the umbraco statue --&gt;
+    &lt;a-entity&gt;
+        &lt;a-entity id="umbraco" position="6 4.7 -5" rotation="0 -30 0" obj-model="obj: #umbraco-obj; mtl: #umbraco-mtl" shadow="cast: true; receive: true"&gt;
+            &lt;a-animation attribute="position" begin="startAnimation" repeat="0" from="6 4.7 -5" to="0 4.7 10" dur="2000" direction="alternate" easing="ease-in-out"&gt;&lt;/a-animation&gt;
+            &lt;a-animation attribute="rotation" begin="startAnimation" repeat="0" from="0 -30 0" to="0 0 0" dur="2000" direction="alternate" easing="ease-in-out"&gt;&lt;/a-animation&gt;
+        &lt;/a-entity&gt;
+    &lt;/a-entity&gt;
+
+    &lt;!-- Creates the ground --&gt;
+    &lt;a-plane rotation="-90 0 0" width="300" height="300" color="#eee" shadow="cast: true; receive: true"&gt;&lt;/a-plane&gt;
+
+    &lt;!-- Creates the sky --&gt;
+    &lt;a-sky color="#ffffff" radius="500" position="" rotation="" scale="" visible="" material="" geometry=""&gt;&lt;/a-sky&gt;
+
+    &lt;!-- Creates some lights to make shadows and light the environment --&gt;
+    &lt;a-light type="directional" color="#FFF" intensity="0.45" position="4 2 1" rotation="" scale="" visible="" light=""&gt;&lt;/a-light&gt;
+    &lt;a-light type="directional" color="#FFF" intensity="0.45" position="0 7 -25" rotation="0 0 0" scale="1 1 1" visible="true" light="shadowCameraRight:15;shadowCameraLeft: -12;type:directional;color:#FFF; shadowCameraTop: 16,  intensity: 0.45; castShadow: true"&gt;&lt;/a-light&gt;
+    &lt;a-light type="ambient" color="#A8A8A8" position="" rotation="" scale="" visible="" light=""&gt;&lt;/a-light&gt;
+
+    &lt;!-- Create a camera --&gt;
+    &lt;a-entity camera="userHeight:1.6;" wasd-controls look-controls="" position="0 1.46 15" rotation="5.6149863922820655 -0.34377467707848264 0"&gt;
+        &lt;a-entity cursor="fuse: true; fuseTimeout: 500"
+                    position="0 0 -1.3"
+                    geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                    material="color: black; shader: flat"&gt;
+        &lt;/a-entity&gt;
+    &lt;/a-entity&gt;
+
+    &lt;a-text text="width:50;wrapCount:17.53;value:Use WASD keys to move, or click on the red box to move the statue closer.;align:center;color:#333333" position="-40 15.668 -30.946" rotation="10 25 0" wrap-count="20"&gt;&lt;/a-text&gt;
+    &lt;a-entity move-box position="-10 1 3.761" material="color:red" rotation="0 40 0" geometry="" scale="4 2 1" shadow=""&gt;&lt;/a-entity&gt;
+&lt;/a-scene&gt;
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">This should create a 3d scene that can be used whether or not a user has a VR headset. Hooray for progressive enhancement.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> <img style="width: 500px; height: 250.9375px;" src="/archive/media/2017/vr-umbraco-statue.png?width=500&amp;height=250.9375" alt="" data-udi="umb://media/d5751dac5d614ca59b17ee53ce3a4330"></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">Now if a user visits the site and has a VR capable browser and device (Oculus Rift, HTC Vive, Windows Mixed Reality, Daydream etc), they can step into the world we have created by clicking on the icon in the bottom right of the screen. Below is an example of the running code, it's best viewed on a desktop device (iframes ignore orientation changes so it may not work on mobile for you, but you're more than welcome to take the code and play with it yourself).  Top tip: <span class="code">ctrl + alt + i</span></span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<figure class="codepen-embed"><p data-theme-id="dark" data-slug-hash="YEEdXW" data-default-tab="result" data-user="MMasey" data-embed-version="2" data-pen-title="Codepen by MMasey" class="codepen" data-height="500"><a href="https://codepen.io/MMasey/pen/YEEdXW">See the Pen</a> by MMasey (<a href="https://codepen.io/MMasey">@MMasey</a>) on <a href="https://codepen.io">CodePen</a>.
+				</p><script async="" src="https://production-assets.codepen.io/assets/embed/ei.js">
+//
+
+////
+</script><figcaption></figcaption></figure>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">In the grand scheme of things, this demo is fairly basic. The aim is to provide a rough example of how WebVR can be used alongside Umbraco. This could be taken further, perhaps into creating an entire shop.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2><span style="font-weight: 400;">The possibilities are endless</span></h2>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">As I stated previously, Umbraco can work as a CMS for applications outside the browser, thanks to its API Controllers and upcoming headless version on Umbraco Cloud. Using this, we can take a similar approach of the demo above for handling content on iOS/Android apps or more powerful PC based experiences. This also opens up the capabilities of Augmented Reality (a <a rel="noopener noreferrer" href="https://developers.google.com/ar/develop/web/getting-started" target="_blank">browser based solution</a> is in the works but not quite ready yet)</span><span style="font-weight: 400;">. To explain the differences between AR and VR, the VR version of the Umbraco statue provides a sense of scale in relation to the rest of the VR environment we have created, but with AR, we can get an idea of scale in relation to the rest of the real world. I’m sure those with the latest AR capable phones will have undoubtedly already played with this.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">Granted, seeing how a glorious Umbraco statue would look in your house may not be everyone's cup of tea, but when you transfer this same concept to an architects website for example, it turns into the tool that can show a client what their house may look like before it’s built. By placing a person inside their new home before it’s been built would give most people a far better understanding of how it would look and feel, compared to viewing a set of flat blueprints.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">Imagine logging into the Umbraco backoffice and putting on a headset to start editing content in an Umbraco VR scene. There are already tools available that allow you to have multiple screens all around you (think minority report, but with less Tom Cruise), but how about the actual Umbraco backoffice as its own virtual environment. The media library could surround you with images, when editing a content node you could have all the tabs visible to you at once, maybe even have voice to text integration to get those words out of your head and into the article you’ve been trying to write for a few weeks.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">VR and AR are often being touted as the next computing platform, sometimes referred to as MR (Mixed reality) when they are combined. When this it integrated with other computing services such as voice recognition, conversational UIs, image recognition we may one day even step away from our keyboards.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2><span style="font-weight: 400;">Wrapping up</span></h2>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">I could ramble on for ages about how VR/AR could be used alongside Umbraco, but i’m going to leave it here so your brain can start working on how you might use VR or AR. While your at it you should go grab yourself a tasty mince pie as well.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">If you want to get in touch to talk about Umbraco/VR/AR/MR or just about anything, you can find my Twitter info below.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">If you fancy making some new year's resolutions, maybe also think about coming along to some of the great Umbraco meetups that exist around the world. You can find information about the upcoming events at </span><a rel="noopener noreferrer" href="https://our.umbraco.org" target="_blank"><span style="font-weight: 400;">our.umbraco.org</span></a><span style="font-weight: 400;">. Maybe even take it a step further and have a go at talking at one.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;"><span>Also, don’t forget to join the Umbraco discord at <a rel="noopener" href="https://discord.gg/umbraco" target="_blank">discord.gg/umbraco</a></span><span>.</span></span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">Happy Holidays to you all.</span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/media/" title="See all articles tagged with Media">Media</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/responsive/" title="See all articles tagged with Responsive">Responsive</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Mike Masey"><img src="//gravatar.com/avatar/dac6d58da53e54f8b6d9b909c2e95cf9.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/dac6d58da53e54f8b6d9b909c2e95cf9.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Mike Masey</h1>
+        <p>Mike is on Twitter as <a href="//twitter.com/MikeMasey" title="Mike Masey on Twitter" rel="author">@MikeMasey</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

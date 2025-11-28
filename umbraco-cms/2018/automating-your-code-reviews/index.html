@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Automating Your Code Reviews</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Automating your code reviews</h1>
+      <p class="byline"> by Per Ploug, <span class="pubdate">posted on <time datetime="2018-12-25">Dec 25, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Working collaboratively with a team and even with the rich development tooling available to developers, there are still more things you can automate to ensure code checked into the master branch is compliant and safe to use.</p>
+<p class="intro">Of course, automation is not a replacement for skilled developers making the decision on what to include in the code base, but it can be a helpful checklist to preserve over time to ensure your software quality improves, even when new team members are on boarded.</p>
+<p>In this post, I will look at how you can create tailored code review tooling to perform simple scans after specific strings and warn developers if deprecated APIs are being introduced into the codebase. This is a very simplistic example of what you can do, but it creates a foundation to add your own custom checks on top of, tailored to the team and project needs.</p>
+<h2>Why even bother with automation?</h2>
+<p>If you look at how developers create value, it is by creative thinking and problem solving, ensuring they do not spend unnecessary amounts of time on tedious tasks which could be automated is a way to maximise the value from each developer on a project.</p>
+<p>Even for very specific project types like an Umbraco website, there are ways to automate parts of the code review to ensure that developers do not use APIs in the wrong locations, introduce anti-patterns or forget to document code.</p>
+<p>The ease of adding custom automation tasks in your central workspace on Github have the benefit of keeping a central list of things to avoid in your codebase, effectively blocking such code to enter production, this list is persisted as new team members work on the project and ensure that knowledge is not lost.</p>
+<h2>Let's do Automation with Github Bots and Probot!</h2>
+<p>Probot is an open source project made by Github engineers. It takes the complexity out of dealing with Github webhooks and accessing repository data. It comes complete with a boilerplate project which can get you up and running with a bot on your local machine in 5 minutes.</p>
+<p>While it would take too long to go over all the features of Probot, have a look at existing <a href="https://probot.github.io/apps/">Probot projects</a> or <a href="https://www.youtube.com/watch?v=AJXDdkd9U7M" data-anchor="?v=AJXDdkd9U7M">this introduction video</a> to understand how it works.</p>
+<p>Enough with the intro, onwards to the code!</p>
+<h2>Setting up a new Probot project</h2>
+<p>Let's setup a new probot on our local machine, thankfully <a href="https://github.com/probot/create-probot-app">Probot has a basic template</a>, which makes this easy, open your terminal of choice and run:</p>
+<p><span class="code">npx create-probot-app code-reviewer<br></span></p>
+<p>This will guide you through a quick wizard, where you can select a template in either Javascript or Typescript - for this example I went with Typescript, as it is lovely, but it also has an additional build step which I'll outline below.</p>
+<p>With this setup I now have complete app, open src/index.ts to see how the application reacts to Github events, below is my modified version which reacts to all pull request events:</p>
+<pre><code class="language-typescript">import { Application } from "probot";
+
+export = (app: Application) =&gt; {
+  app.log("Yay, the app was loaded!");
+
+  const handlePullRequest = require("./pull-request-change");
+  app.on(["pull_request"], handlePullRequest );
+};</code></pre>
+<p><br>When the bot runs, it will run the function inside a file called /pull-request-change.ts - below is a shortened down version of that - it collects the Pull Request Data - then all the files, scans the files for issues and then returns a check to put on the pull request review.</p>
+<pre><code class="language-typescript">import { Context } from "probot";
+
+async function handlePullRequestChange(context: Context) {
+  
+  const pr = context.payload.pull_request; 
+  if(!pr || pr.state !== "open") return;
+  const org = pr.base.repo.owner.login;
+  const repo = pr.base.repo.name;
+
+  const files = await context.github.pullRequests.listFiles({ number: pr.number, owner: org, repo: repo })
+  const feedback =[];
+
+  for (const file of files.data) {
+    // scan each file ...
+  }
+
+  const action_required = (feedback.length &gt; 0);
+  const conclusion = action_required ? "action_required" : "success";
+  const title = action_required ? feedback.length + " Issues found" : "No issues found";
+  
+  // if something is wrong ... populate the check with feedback data
+
+  let summary = '';
+  return context.github.checks.create({
+      owner: org,
+      repo: repo,
+      name: "File Scanner",
+      head_sha: pr.head.sha,
+      status: 'completed',
+      conclusion: conclusion,
+      completed_at: new Date().toISOString(),
+      output: {
+        title: title,
+        summary: summary
+      }
+    })
+}
+
+module.exports = handlePullRequestChange;</code></pre>
+<p><br>So that is our very basic code (full version is <a href="https://github.com/perploug/ViewScanBot/blob/master/src/pull-request-change.ts">here</a>)- you can always enhance this with whatever code you want to use to scan your commits with - but now let's get this code to run as we work on Github! </p>
+<h2>Connecting our code to Github</h2>
+<p>As we are running this locally, we first of all need a proxy url, go to <a href="https://smee.io/new">smee.io/new</a> and set one up. Secondly we need a Github app - follow <a href="https://developer.github.com/apps/building-github-apps/creating-a-github-app/">these instructions</a> on Github, fill in the form, the Webhook url put in that Smee url, and the Webhook secret put in development. Finally grant the app read/write access to <strong>checks and</strong> <strong>pull request</strong> and subscribe to the 3 pull request events further down the page - the outcome of this form is a Github App ID and Github will now ping your Webhook url on every pull request event, also Github asks you to download a private key file - download this file and place it in the <strong>root folder</strong> of your Probot project.</p>
+<p>In your probot code, rename <span class="code">.env.example</span> to <span class="code">.env</span> and put in the Github App Id and the Webhook proxy url. </p>
+<p>Finally - go to your Github app page and install it on a repository. </p>
+<p>We have no configured Github and your bot to connect to each other, finally let's get to the stage where we can run this thing locally!</p>
+<h2>Running your Probot locally</h2>
+<p>The quickest way to run this is to use the included npm tasks:</p>
+<p><span class="code">npm install (to install dependencies)</span><br><span class="code">npm run build (to compile typescript)</span><br><span class="code">npm start (to start the bot)</span></p>
+<p>With the bot running on my local machine I can follow all events being sent to it, and if I create a new pull request I get the following feedback on Github:</p>
+<p><img style="width: 500px; height: 411.98979591836735px;" src="/archive/media/2018/screenshot-2018-12-19-at-155810.png?width=500&amp;height=411.98979591836735" alt="" data-udi="umb://media/dd0e18e906b343f9ae92892c03a38382"></p>
+<p>In case I have any errors in the files in my pull request, the bot can also give me detailed feedback:</p>
+<p><img style="width: 500px; height: 234.251968503937px;" src="/archive/media/2018/screenshot-2018-12-19-at-160051.png?width=500&amp;height=234.251968503937" alt="" data-udi="umb://media/f0a5e6c187e742b4bed65ad36cc71c47"></p>
+<h2>Protect your master branch</h2>
+<p>While having a tool like this in place is great, you also have to ensure that no-one bypasses it, so protect your master branch, so changes can only be submitted by pull request, turn on reviews and enforce that checks must pass:</p>
+<p><img style="width: 500px; height: 318.744053282588px;" src="/archive/media/2018/screenshot-2018-12-19-at-160337.png?width=500&amp;height=318.744053282588" alt="" data-udi="umb://media/b203c3c2fc4543648f741495f2405e25"></p>
+<h2>What's next?</h2>
+<p>While the above snippets is shortened for brevity, the complete project is available on <a href="https://github.com/perploug/ViewScanBot">Github</a>. Including a <a href="https://github.com/perploug/ViewScanBot/tree/master/.vscode">VsCode Setup</a> for running the bot in debug mode, which enables you to set breakpoints as the bot reacts to webhooks. </p>
+<p>Finally - you can of course not run the bot locally forever, so for info on how to deploy the bot, follow the <a href="https://probot.github.io/docs/deployment/">deployment guides</a> on the Probot website, it also works with the current <a href="https://github.com/features/actions">Github Actions</a> beta, so in the future, you won't even have to worry about hosting your own bots for these kind of tasks.</p>
+<p>I hope this quick intro to setting up Probot and writing a basic script to test your pull requests will inspire you to write your own automation tools, nothing is too specific, maybe you just need a script to check that you did not spell "Macro" as "Marco", or you already have documentation and best practices, which you can turn into automated tests to run on each pull request, with this basic tool, the knowledge can evolve over time and help you improve the quality of your codebase. </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/continuous-deployment/" title="See all articles tagged with Continuous deployment">Continuous deployment</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/git/" title="See all articles tagged with Git">Git</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/github/" title="See all articles tagged with GitHub">GitHub</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/typescript/" title="See all articles tagged with TypeScript">TypeScript</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Per Ploug"><img src="//gravatar.com/avatar/a18989cfcf65eb7f1cc09208b20c4fc0.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/a18989cfcf65eb7f1cc09208b20c4fc0.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Per Ploug</h1>
+        <p>Per is on Twitter as <a href="//twitter.com/pploug" title="Per Ploug on Twitter" rel="author">@pploug</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

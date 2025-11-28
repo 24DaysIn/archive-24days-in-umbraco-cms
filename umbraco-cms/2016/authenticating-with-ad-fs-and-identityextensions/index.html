@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Authenticating Umbraco back office users with AD FS</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Authenticating with AD FS and IdentityExtensions</h1>
+      <p class="byline"> by Frederik Raabye, <span class="pubdate">posted on <time datetime="2016-12-19">Dec 19, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Next to Our Umbraco, 24 Days is probably the Umbraco resource I have found myself returning to and referring to the most. When Jan recently asked me if I wanted to contribute I thought it was about time I finally gave a little back to the community. This is my $0.05 …</p>
+<p class="intro">In the past couple of years we have seen quite a few demos of using various external back office authentication providers to Umbraco. I remember quite a cheer at Codegarden 15 during a demo of logins to the back office using Google and Facebook accounts. However, sweet as they are, the bells and whistles of social media doesn’t necessarily fare well with a corporate security policy and on-premise server requirements.</p>
+<p>I was recently faced with the task of securely managing Umbraco backoffice users from a Microsoft Active Directory. Furthermore, we wanted as few server dependencies as possible and if possible use Microsoft standard technology and rely on existing infrastructure. Enter Active Directory Federation Services (AD FS) and UmbracoCms.IdentityExtensions. </p>
+<p>AD FS is a Security Token Service (STS) that it is commonly used for claims-based authentication and authorization in newer Microsoft server products. If you have no experience with certificate management and working with claims it can be a bit daunting to set up an STS infrastructure correctly. If this is new to you and you don’t have it in place, set aside a few days, <a href="https://technet.microsoft.com/en-us/library/dn486820(v=ws.11).aspx" title="Windows Server 2012 R2 AD FS Deployment Guide">enjoy the ride</a> and head back here. You will not be able to use this post to log in to the Umbraco back office if you do not have the infrastructure and valid certificates in place!</p>
+<p>Now that you know what a claim, a token-signing certificate and a relying party is I hope you can use the rest of this article as a cut and paste solution to your problem.</p>
+<p>Most of the examples found in the wild are based on the <span>OAUTH </span>or OpenID protocols. Unfortunately our exisiting infrastructure was based on AD FS 3.0 which does not support <span>OpenID </span>and has limited support for OAUTH. Many Microsoft server products use WS-Federation as the default protocol for claims-based authentication and as I came out empty-handed when searching for examples using this protocol I decided to give it a go. This article sums up my experience and work arounds for a few pitfalls I found in the process.</p>
+<p>Note: AD FS 3.0 is the version that ships with Windows Server 2012 R2. Windows Server 2016 with AD FS 4.0 was released just last month and it should now support OpenID if you are setting up a new infrastructure. </p>
+<h3>Prerequisites</h3>
+<ol>
+<li>I will assume you have a working on-premise Active Directory infrastructure with an AD FS 3.x server role. This will be enough for local area network access to the Umbraco back office. (If you need publicly available login to the back office you will need an internet facing AD FS proxy server available as well.)</li>
+<li>Your preferred NuGet-enabled development environment. I will use Visual Studio 2015 below. </li>
+</ol>
+<h3>Come on… show me the code!</h3>
+<p>We are getting there… Although you might be dissappointed in how little code is actually required to do this.</p>
+<p>Let’s create a create a new empty ASP.NET web application hosted as you like. In this case I will go for an on-premise solution named BackofficeADFSAuthenticationDemo.  </p>
+<p><img style="width: 500px; height: 389.9491094147583px;" src="/archive/media/2016/image03.png?width=500&amp;height=389.9491094147583" alt="New Visual Studio project" rel="1243" data-id="1243"></p>
+<p>Now let’s add the latest and greatest version of UmbracoCms via NuGet: </p>
+<pre><code class="language-markup">Package Manager Console Host Version 3.4.4.1321
+Type 'get-help NuGet' to see all available NuGet commands.
+PM&gt; Install-Package UmbracoCms…
+Successfully installed 'UmbracoCms 7.5.4' to BackofficeADFSAuthenticationDemo</code></pre>
+<p>Compile and complete the Umbraco installer. Remember to keep track of your admin account in case you experience problems with the federated login provider.</p>
+<p>Once you have verified that Umbraco is working as expected, continue to add IdentityExtensions via Nuget:</p>
+<pre><code class="language-markup">PM&gt; Install-Package UmbracoCms.IdentityExtensions
+…
+Successfully installed 'UmbracoCms.IdentityExtensions 1.0.0' to BackofficeADFSAuthenticationDemo</code></pre>
+<p>Make sure you read the readme.txt that is displayed on install. It might actually be helpful and save you a cry for help on Our!</p>
+<p>Since you probably skipped it anyway: You will find a number of new files available in your App_Start folder if you have a Web Application project or in App_Code if you have a Website project. Examine the code and read the comments and notes. They will be enough to get you running with some external authentication providers. </p>
+<p>As you have learned from the documentation we will need to create a custom Owin Startup class and register it correctly in web.config. </p>
+<p>Let's create create a new class ConfigureOwinStartup and place it in your App_Start folder for now (and let the religious warfare commence).</p>
+<pre><code class="language-csharp">﻿using Microsoft.Owin;
+using Owin;
+using Umbraco.Core;
+using Umbraco.Core.Security;
+using Umbraco.Web.Security.Identity;
+using Umbraco.IdentityExtensions;
+using BackofficeADFSAuthenticationDemo;
+
+//To use this startup class, change the appSetting value in the web.config called 
+// "owin:appStartup" to be "UmbracoCustomOwinStartup"
+
+[assembly: OwinStartup("ConfigureOwinStartup", typeof(ConfigureOwinStartup))]
+namespace BackofficeADFSAuthenticationDemo
+{
+    /// &lt;summary&gt;
+    /// A custom way to configure OWIN for Umbraco
+    /// &lt;/summary&gt;
+    /// &lt;remarks&gt;
+    /// The startup type is specified in appSettings under owin:appStartup - change it to "ConfigureOwinStartup" to use this class
+    /// This startup class would allow you to customize the Identity IUserStore and/or IUserManager for the Umbraco Backoffice
+    /// &lt;/remarks&gt;
+    public class ConfigureOwinStartup
+    {
+        public void Configuration(IAppBuilder app)
+        {
+          
+        }
+    }
+}
+</code></pre>
+<p>Update your web.config and change the appSetting "owin:appStartup" to be "ConfigureOwinStartup". Compile and verify that your site still runs as expected. </p>
+<p>In order to use WS Federation you will need to get an additional package Microsoft.Owin.Security.WsFederation from NuGet. It has a number of dependencies related to token handling that will be installed as well: </p>
+<pre><code class="language-markup">Package Manager Console Host Version 3.4.4.1321
+Type 'get-help NuGet' to see all available NuGet commands.
+PM&gt;Install-Package Microsoft.Owin.Security.WsFederation 
+…
+Successfully installed 'Microsoft.Owin.Security.WsFederation 3.0.1' to BackofficeADFSAuthenticationDemo 
+PM&gt; </code></pre>
+<p>You should now have the needed dependencies in place. I hate to say it but we have to head to the AD FS server and do some initial configuration of our relying party there before you get to code any further.</p>
+<h2>Configuring a new relying party</h2>
+<p>In my example I will be using the AD FS Server role on a fully patched Windows Server 2012 R2. If you use a previous version the configuration might vary slightly. </p>
+<p>On your AD FS server find and open “AD FS Management”:</p>
+<p><img style="width: 326px; height: 228px;" src="/archive/media/2016/image02.png?width=326&amp;height=228" alt="AD FS Management on Windows Server 2012 R2" rel="1242" data-id="1242"></p>
+<p>If you expand the tree in the left side of the management console you should see something like this:</p>
+<p><img style="width: 500px; height: 269.62676962676966px;" src="/archive/media/2016/image01.png?width=500&amp;height=269.62676962676966" alt="AD FS Management console on Windows Server 2012 R2" rel="1241" data-id="1241"></p>
+<p>If you select AD FS ? Service ? Endpoints and scroll to the bottom you will find the metadata section:</p>
+<p><img style="width: 500px; height: 58.59094176851186px;" src="/archive/media/2016/image25.png?width=500&amp;height=58.59094176851186" alt="AD FS Metadata section" rel="1238" data-id="1238"></p>
+<p>Note the URI for Federation Metadata. It should look like this:</p>
+<p>https://FullyQualifiedHostname/FederationMetadata/2007-06/FederationMetadata.xml </p>
+<p>Typically the fully qualified hostname could be sts.domain.tld or sso.domain.tld.</p>
+<p>Next we need to create a relying party trust. This can be achieved in a number of different ways. I will use the GUI for the sake of illustrations and leave the PowerShell approach as an exercise. </p>
+<p>Back in the management console select AD FS ? Trust Relationships ? Relying Party Trusts. Right click the node and click “Add Relying Party Trust”.</p>
+<p><img style="width: 500px; height: 216.5492957746479px;" src="/archive/media/2016/image19.png?width=500&amp;height=216.5492957746479" alt="" rel="1232" data-id="1232"></p>
+<p>The Add Relying Party Trust Wizard displayed.</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image20.png?width=500&amp;height=403.36463223787166" alt="Add Relying Party Trust Wizard" rel="1233" data-id="1233"></p>
+<p>Keep your metadata URI at hand and press start. You will be asked to select a data source. Choose Enter data about the relying party manually and press Next.  </p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image22.png?width=500&amp;height=403.36463223787166" alt="Select Data Source" rel="1235" data-id="1235"></p>
+<p>In case you see this error dialog when using the wizard:  </p>
+<p><img style="width: 500px; height: 135.97612958226767px;" src="/archive/media/2016/image10.png?width=500&amp;height=135.97612958226767" alt="AD FS Error" rel="1223" data-id="1223"></p>
+<p>Do not pass go. Return to start and refer to the documentation or your preferred search engine to properly configure the AD FS infrastructure.</p>
+<p>But of course this did not happen to you and you can continue to Specify a display name:</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image16.png?width=500&amp;height=403.36463223787166" alt="Specify Display Name" rel="1229" data-id="1229"></p>
+<p>Click next to Choose Profile:</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image14.png?width=500&amp;height=403.36463223787166" alt="Choose Profile" rel="1227" data-id="1227"></p>
+<p>Leave the default option selected and click Next to Configure Certificate:</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image17.png?width=500&amp;height=403.36463223787166" alt="Configure Certificate" rel="1230" data-id="1230"></p>
+<p>Select your Token Signing Certificate and click Next  to Configure URL:</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image24.png?width=500&amp;height=403.36463223787166" alt="Configure URL" rel="1237" data-id="1237"></p>
+<p>Leave the defaults and click Next to Configure Identifiers. This is where you enter the address the server running your Umbraco backend.</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image07.png?width=500&amp;height=403.36463223787166" alt="Configure Identifiers" rel="1247" data-id="1247"></p>
+<p>You may add multiple hostnames if you wish but in this case we will only be running a local development environment on https://localhost. Keep in mind that https is a requirement and include the trailing slash to stay sane. (Also make sure to include the port number if you are running on a port other than 443.)</p>
+<p>Click next to Configure Multi-factor Authentication Now:</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image26.png?width=500&amp;height=403.36463223787166" alt="Configure Multi-factor Authentication Now?" rel="1239" data-id="1239"> </p>
+<p>You really should configure this to improve your overall security in a production environment!</p>
+<p>For a single display of brevity I will choose “I do not want to configure multi-factor authentication settings for this relying party trust at this time.” and click Next.</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image08.png?width=500&amp;height=403.36463223787166" alt="Choose Issuance Authorization Rules" rel="1221" data-id="1221"></p>
+<p>Under Choose Issuance Authorization Rules you decide which default issuance authorization rules should be applied to the Relying Party. </p>
+<p>The default option will allow all authenticated users to access your Umbraco back office. Basically all active members of your Active Directory will be able to login to Umbraco and edit content. Unless this is what you are trying to achieve, select Deny all users access to this relying party. and press Next. The default behaviour will now be to reject access even for a valid domain user.</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image15.png?width=500&amp;height=403.36463223787166" alt="Ready to add trust" rel="1228" data-id="1228"></p>
+<p>You will see see a summary page Ready to add trust. Verify your settings and press Next.</p>
+<p><img src="/archive/media/2016/image21.png?width=500&amp;height=403.36463223787166" alt="Finish" rel="1234" data-id="1234"></p>
+<p>As a last step we need to configure Claim Rules the relying party. These include the data shared between your AD and Umbraco and the valid user audience for your back office. Leave Open the Edit Claim Rules dialog for this relying party trust when the wizard closes and click Close. You will see the Edit Claims Rules for sts.yourdomain.tld dialog:</p>
+<p><img src="/archive/media/2016/image11.png?width=457.94871794871796&amp;height=500" alt="Issuance Transform Rules" rel="1224" data-id="1224"></p>
+<p>We need to create two types of rules Issuance Transform Rules and Issuance Authorization Rules. The first define the transformations of AD user attributes to claims and the second lets us describe which AD user groups we wish to grant access to the Umbraco back office.</p>
+<p>Click Add rule to create our Issuance Transform Rule to display the Add Transform Claim Rule Wizard:</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image23.png?width=500&amp;height=403.36463223787166" alt="Choose Rule Type" rel="1236" data-id="1236"></p>
+<p>Choose the default option Send LADP attributes as Claims and click Next.</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image13.png?width=500&amp;height=403.36463223787166" alt="Configure Claim Rule" rel="1226" data-id="1226"></p>
+<p>Provide a name and attribute store for your claim rule. For instance Send AD attributes and the attribute store Active Directory.</p>
+<p>Now we will need to map the AD user attributes we need in the back office to outgoing claims. </p>
+<p>You will need to create these claims which can be chosen from the drop down elements:</p>
+<table border="0">
+<tbody>
+<tr>
+<td>
+<p><strong>LDAP Attribute</strong></p>
+</td>
+<td>
+<p><strong>Outgoing Claim Type</strong></p>
+</td>
+</tr>
+<tr>
+<td>
+<p>E-Mail-Addresses</p>
+</td>
+<td>
+<p>E-Mail-Address</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>User-Principal-Name</p>
+</td>
+<td>
+<p>Name ID</p>
+</td>
+</tr>
+<tr>
+<td>
+<p>Display-Name</p>
+</td>
+<td>
+<p>Name </p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>This should yield a configuration similar to this: </p>
+<p><img src="/archive/media/2016/image04.png?width=500&amp;height=403.36463223787166" alt="Configure Claim Rule" rel="1244" data-id="1244"></p>
+<p>Press Finish to complete the rule creation. </p>
+<p>Now we need to select which AD groups should be allowed to access the back office by creating an Issuance Authorization Rule.</p>
+<p>Select Issuance Authorization Rule and select Add Rule to complete the Add Issuance Authorization Claim Rule Wizard:</p>
+<p><img style="width: 457.94871794871796px; height: 500px;" src="/archive/media/2016/image06.png?width=457.94871794871796&amp;height=500" alt="Issuance Authorization Rules" rel="1246" data-id="1246"></p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image12.png?width=500&amp;height=403.36463223787166" alt="Choose Rule Type" rel="1225" data-id="1225"></p>
+<p>In the first step Choose Rule Type choose Permit or Deny Users Based on an Incoming Claim and click Next.</p>
+<p><img style="width: 500px; height: 403.36463223787166px;" src="/archive/media/2016/image05.png?width=500&amp;height=403.36463223787166" alt="Configure Claim Rule" rel="1245" data-id="1245"></p>
+<p>In the Configure Claim Rule step provide a Claim Rule Name, Choose Group SID as the Incoming claim type.</p>
+<p>In the Incoming claim value choose the Active Directory Organizational Unit (group) you wish to grant access to the website.</p>
+<p>Finally leave the default setting Permit access to users with this incoming claim and press Finish.</p>
+<p>Congratulations you got past the the initial hurdle of configuration and you are close to letting your IT Department manage who should be able to manage your website.</p>
+<h3>Connecting the dots ... </h3>
+<p>We are almost there and you can get back to coding. Before we wire up the Owin startup handler, we will need to be able to manage a few settings namely an AD FS metadata endpoint, our relying party identifier and a federation server identifier. </p>
+<p>Initially, let us add them to AppSettings in web.config for easy maintenance and deployment:</p>
+<pre><code class="language-markup">&lt;appSettings&gt;
+...
+   &lt;add key="AdfsMetadataEndpoint" value="https://sts.yourdomain.tld/federationmetadata/2007-06/federationmetadata.xml" /&gt;
+   &lt;add key="AdfsRelyingParty" value="https://localhost:44344/" /&gt;
+   &lt;add key="AdfsFederationServerIdentifier" value="https://sts.yourdomain.tld/adfs/services/trust" /&gt;
+&lt;/appSettings&gt;</code></pre>
+<p>Remember to enable SSL in your project properties and use the port configured there: </p>
+<p><img style="width: 500px; height: 464.4067796610169px;" src="/archive/media/2016/image18.png?width=500&amp;height=464.4067796610169" alt="Visual Studio Properties" rel="1231" data-id="1231"></p>
+<p>Update your ConfigureOwinStartup.cs to include the following lines: </p>
+<pre><code class="language-csharp">// Configure back office users membership provider
+app.ConfigureUserManagerForUmbracoBackOffice(ApplicationContext.Current, MembershipProviderExtensions.GetUsersMembershipProvider().AsUmbracoMembershipProvider());
+
+// Ensure OWIN is configured for Umbraco back office authentication
+app.UseUmbracoBackOfficeCookieAuthentication(ApplicationContext.Current).UseUmbracoBackOfficeExternalCookieAuthentication(ApplicationContext.Current); 
+
+// Configure additional back office authentication options            
+app.ConfigureBackOfficeAdfsAuthentication(); </code></pre>
+<p>To get rid of the nasty red line below ConfigureBackOfficeAdfsAuthentication() add the helper class AdfsAuthenticationExtensions to your solution with this content.</p>
+<pre><code class="language-csharp">﻿using System.Configuration;
+using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.WsFederation;
+using Owin;
+using Umbraco.Web.Security.Identity;
+using Constants = Umbraco.Core.Constants;
+
+namespace BackofficeADFSAuthenticationDemo
+{
+    public static class AdfsAuthenticationExtensions
+    {
+        public static void ConfigureBackOfficeAdfsAuthentication(
+            this IAppBuilder app,
+            string caption = "AD FS",
+            string style = "btn-microsoft",
+            string icon = "fa-windows")
+        {
+            var adfsMetadataEndpoint = ConfigurationManager.AppSettings["AdfsMetadataEndpoint"];
+            var adfsRelyingParty = ConfigurationManager.AppSettings["AdfsRelyingParty"];
+            var adfsFederationServerIdentifier = ConfigurationManager.AppSettings["AdfsFederationServerIdentifier"];
+
+            app.SetDefaultSignInAsAuthenticationType(Constants.Security.BackOfficeExternalAuthenticationType);
+
+            var wsFedOptions = new WsFederationAuthenticationOptions
+            {
+                Wtrealm = adfsRelyingParty,
+                MetadataAddress = adfsMetadataEndpoint,
+                SignInAsAuthenticationType = Constants.Security.BackOfficeExternalAuthenticationType,
+                Caption = caption, 
+                Wreply = $"{adfsRelyingParty}umbraco" // Redirect to the Umbraco back office after succesful authentication
+            };
+
+            wsFedOptions.ForUmbracoBackOffice(style, icon);
+
+            wsFedOptions.AuthenticationType = adfsFederationServerIdentifier;
+
+            wsFedOptions.SetExternalSignInAutoLinkOptions(new ExternalSignInAutoLinkOptions(true));
+
+            app.UseWsFederationAuthentication(wsFedOptions);
+        }
+    }
+}</code></pre>
+<p>It contains code to read your configuration settings and get around a few quirks with the way Umbraco deals with the WsFederationAuthenticationOptions and account linking.</p>
+<p>Even though the code above yells for optimization refrain for now. The source order matters! Thanks to <a href="https://our.umbraco.org/member/40040" title="Elias on Our Umbraco">Elias</a> who <a href="https://our.umbraco.org/forum/extending-umbraco-and-using-the-api/79201-account-auto-linking-not-working-with-owin-ad-fsws-federation-authentication">got me on the right track</a> on Our when ExternalSignInAutoLinkOptions was playing tricks on me.  </p>
+<p>Now if you load the backoffice at <a href="https://localhost/umbraco">https://localhost/umbraco</a> you should see an option to login with AD FS. (Remember to include alternative port number if your website is not running on port 443.)</p>
+<p><img style="width: 341.5147265077139px; height: 500px;" src="/archive/media/2016/image09.png?width=341.5147265077139&amp;height=500" alt="Sign in with AD FS" rel="1222" data-id="1222"></p>
+<p>If you click the button you will be redirected to your AD FS server for authentication and authorization. If you are a member of the group you chose during the configuration of the relying party you will be granted access to the Umbraco back office. If not you will receive an error message informing you of missing privileges.</p>
+<p><strong>Pro tip:</strong> If you are using Windows and a supported browser (IE or Chrome works, Firefox might require a little extra effort) you can add the umbraco website and the AD FS server to your trusted sites to enable automatic sign-in using Windows credentials. If you do this you can just “click to login”.</p>
+<p><img style="width: 468.2422451994092px; height: 500px;" src="/archive/media/2016/image00.png?width=468.2422451994092&amp;height=500" alt="User Profile" rel="1240" data-id="1240"></p>
+<p>By default new users will be created with the role of Editor and have limited access to the back office.</p>
+<p>It is possible to change the default role and other properties assigned on account linking by adding an optional second parameter to ExternalSignInAutoLinkOptions.</p>
+<p>For further configuration options like default locale and allowed sections refer to the constructor from Umbraco.Web.Security.Identity.ExternalSignInAutoLinkOptions. </p>
+<pre><code class="language-csharp">public ExternalSignInAutoLinkOptions(bool autoLinkExternalAccount = false, string defaultUserType = "editor", string[] defaultAllowedSections = null, string defaultCulture = null);</code></pre>
+<h3>Final notes</h3>
+<p>Summing up I hope this lengthy post can save somebody a little time. In less than 20 effective lines of code you should have a near plug and play solution for authentication and authorization using WS-Federation with an AD FS server and Umbraco.</p>
+<p>The <a href="https://github.com/fraabye/Our.Umbraco.BackofficeADFSAuthenticationDemo" title="An example of Umbraco back office authentication using AD FS and Umbraco Identity on GitHub">demo site is available on GitHub</a> if you wish to have a look.</p>
+<p>If you find any mistakes (in code or language) or need any clarification please let me now in the comments or via @fraabye on Twitter.  I will try my best to update the post accordingly.</p>
+<h3>Further reading</h3>
+<p><a href="https://github.com/umbraco/UmbracoIdentityExtensions" title="UmbracoIdentityExtensions at GitHub">Umbraco Identity Extensibility</a></p>
+<p><a href="https://our.umbraco.org/documentation/Reference/Security/" title="Our Documentation Reference Security">Umbraco Backoffice Security Documentation</a></p>
+<p><a href="https://technet.microsoft.com/en-us/library/dn486820.aspx" title="Windows Server 2012 R2 AD FS Deployment Guide">?Windows Server 2012 R2 AD FS Deployment Guide</a></p>
+<p><a href="https://msdn.microsoft.com/en-us/library/ee748484.aspx" title="TechNet on Windows Identity Foundation">Windows Identity Foundation</a></p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Frederik Raabye"><img src="//gravatar.com/avatar/cd06f2c9fa8d102f201b8799fa204343.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/cd06f2c9fa8d102f201b8799fa204343.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Frederik Raabye</h1>
+        <p>Frederik is on Twitter as <a href="//twitter.com/fraabye" title="Frederik Raabye on Twitter" rel="author">@fraabye</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

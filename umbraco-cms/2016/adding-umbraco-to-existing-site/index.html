@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>How to add Umbraco to an existing MVC site</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Adding Umbraco to existing site</h1>
+      <p class="byline"> by Lotte Pitcher, <span class="pubdate">posted on <time datetime="2016-12-22">Dec 22, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Up first, a confession…</p>
+<blockquote><strong>The majority of the projects that my company build do not use Umbraco</strong></blockquote>
+<p class="intro">Now that's a bold opener for an article for 24 days in Umbraco! It's a true statement for 2016, who knows what 2017 holds. These projects are members-only data management, analysis and reporting applications for which pure MVC is absolutely the right approach to use.</p>
+<p>At the beginning of each project it's obvious whether it's a pure MVC site, or an Umbraco one. If there are no CMS requirements then we crack on with our standard MVC framework enabling us to build and maintain complex applications quickly and reliably.</p>
+<p>However client requirements change. Sometimes down the line they do actually want some public facing pages, and wouldn't it be nice if they could manage parts of the site themselves…</p>
+<h2>Keeping clients happy</h2>
+<p>That's our key objective. Working out how to meet their needs on time with a reasonable budget. To meet the above needs we have four options:</p>
+<ol>
+<li>'Just' roll our own little CMS into the site… argh, not a thought I have entertained since I discovered Umbraco in 2012!</li>
+<li>Build them a separate Umbraco site… argh, then we have to work out how to share common layouts and user sessions for a seamless user experience</li>
+<li>Start a new Umbraco site and rebuild all the existing functionality… argh, it all already works, the client won't want to pay for that (and we don't really want to do it either)</li>
+<li>Add Umbraco into the existing site with as little disruption as possible, and then build the new features</li>
+</ol>
+<p>Option 4 is definitely what we choose! Thanks to the sterling work done by the Umbraco Core team, this should be relatively straight-forward; assuming you are using Umbraco 7.3+, you have a good architecture, and you know where the important hoops are and how to jump through them.</p>
+<h2>Isn't this quite a niche requirement?</h2>
+<p>Well yes, I appreciate it may be. Although I imagine that there must be lots of experienced MVC developers only just discovering Umbraco. If they find their way to this article perhaps techniques here will enable them hit the ground running by using Umbraco for small parts of a site and familiar ways for the rest. It's to everyone's advantage to Keep It Simple (Stupid): weekends are <em>not</em> meant to be spent in front of a laptop!</p>
+<p>The approach may also be useful for Umbraco developers who want to build front-end areas of a website that only handle data, not content.</p>
+<h2>Let's get started: a walkthrough</h2>
+<p>I built a new site specifically for this walkthrough on how to add Umbraco into an existing MVC site. It's called h5yabeer.com and, in short, it's a website that allows you record your promise of a thank you beer (or coffee, cake etc.) so that it doesn't get forgotten. But more on that later.</p>
+<p>For now you just need to know that it is a fully working site using:</p>
+<ul>
+<li>MVC (v5.2.3)</li>
+<li>Entity Framework Code First (v6.1.3)</li>
+<li>ASP.Net Identity (v2.2.1) and Owin</li>
+<li>Dependency Injection using Castle Windsor (v3.3.0)</li>
+</ul>
+<p>The Visual Studio solution has five projects, with the web UI project having just front-end assets, controllers, views and start-up code.</p>
+<p>Our objective is for content editors to edit the home page using Umbraco without breaking our working application and whilst causing the least amount of 'disruption' to our code as possible.</p>
+<p>I've created a <a data-id="1480" href="/archive/media/2016/add-umbraco-to-existing-mvc-site-detailed-walkthrough.pdf" target="_blank" title="Add Umbraco to existing MVC Site - Detailed Walkthrough.pdf">PDF of a detailed walkthrough</a> to avoid this article getting far too long. This is a brief overview of the steps involved:</p>
+<ol>
+<li>Update your application's nuget packages to match the version currently used by Umbraco</li>
+<li>Move your controllers and views to a new MVC area to keep your application 'safely' separate from Umbraco</li>
+<li>Change database connection string name to umbracoDbDSN</li>
+<li>Install Umbraco via nuget</li>
+<li>Create a master template and home page in Umbraco back office</li>
+<li>Use a _ViewStart.html in the MVC area to use the new master template</li>
+<li>Rewire the start-up code:
+<ol>
+<li>Delete the MVC standard default route</li>
+<li>Move global.asax.cs code to a class that implements IApplicationEventHandler:<br>
+<pre><code class="language-csharp">public class ApplicationEventHandler : IApplicationEventHandler
+{
+    public void OnApplicationInitialized(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+    {            
+    }
+
+    public void OnApplicationStarting(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+    {
+    }
+
+    public void OnApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+    {
+        AreaRegistration.RegisterAllAreas();
+        BundleConfig.RegisterBundles(BundleTable.Bundles);
+    }
+}
+</code></pre>
+              <p class="snippet-caption">Wiring up our start-up code using IApplicationEventHandler</p>
+</li>
+</ol>
+</li>
+</ol>
+<h3>Dependency injection?</h3>
+<p>If your site uses dependency injection, change your controller factory to implement the IFilteredControllerFactory interface (our site uses Castle Windsor):</p>
+<pre><code class="language-csharp">public class WindsorControllerFactory : DefaultControllerFactory, IFilteredControllerFactory
+{
+	readonly IWindsorContainer _container;
+
+	public bool CanHandle(RequestContext requestContext)
+	{
+		var controllerType = GetControllerType(requestContext, requestContext.RouteData.Values["controller"].ToString());
+		return _container.Kernel.HasComponent(controllerType);
+	}
+
+	public WindsorControllerFactory()
+	{
+		this._container = IoC.Container;
+	}
+
+	public WindsorControllerFactory(IWindsorContainer container)
+	{
+		this._container = container;
+	}
+
+	public override void ReleaseController(IController controller)
+	{
+		_container.Release(controller);
+	}
+
+	protected override IController GetControllerInstance(RequestContext requestContext, Type controllerType)
+	{
+		if (controllerType == null) return null;
+		return (IController)_container.Resolve(controllerType);
+	}
+}</code></pre>
+      <p class="snippet-caption">Implementing the IFilteredControllerFactory interface and CanHandle method</p>
+<p>and insert your controller factory to the list:</p>
+<pre><code class="language-csharp">public void OnApplicationStarting(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+{
+	IoC.Container.Install(FromAssembly.This());
+	FilteredControllerFactoriesResolver.Current.InsertType&lt;WindsorControllerFactory&gt;(0);
+}</code></pre>
+      <p class="snippet-caption">Using FilteredControllerFactoriesResolver to add our controller factory to the site</p>
+<h3>ASP.Net Identity and Owin?</h3>
+<p>If your site uses Identity and Owin, change your start-up class to implement UmbracoDefaultOwinStartup. Your class must call the base configuration method first:</p>
+<pre><code class="language-csharp">//[assembly: OwinStartup(typeof(Startup))]
+namespace App.WebUmb
+{
+    public partial class Startup : Umbraco.Web.UmbracoDefaultOwinStartup
+    {
+        public override void Configuration(IAppBuilder app)
+        {
+            // Umbraco's Owin configuration must be done first
+            base.Configuration(app);
+
+            // Our Owin configuration
+            ConfigureAuth(app);
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Implementing UmbracoDefaultOwinStartup to add our start-up code</p>
+<p>and do three web.config changes:</p>
+<ul>
+<li>Change the owin:appStartup appSetting value to be your startup class</li>
+<li>Remove the &lt;authentication&gt; node in &lt;system.web&gt;</li>
+<li>In &lt;system.webServer&gt; remove the FormsAuthentication module</li>
+</ul>
+<p>And that's it! Ok so the amount of work will vary depending on your specific application. But my site is now showing an Umbraco-rendered home page, and if I navigate to /Promises then my application is working exactly as it was before.</p>
+<p>So objective achieved: we've got pure MVC and Umbraco playing nicely!</p>
+<h2>So What Next?</h2>
+<p>Now you can decide which features need to be moved into Umbraco and which ones can stay as they are.</p>
+<h3>Views used by both Umbraco and MVC</h3>
+<p>The easiest way I have found to have a .cshtml view that works as a master template for both Umbraco and pure MVC views is:</p>
+<pre><code class="language-javascript">@inherits UmbracoViewPage&lt;dynamic&gt;
+@{
+    var homeNode = Umbraco.TypedContentAtRoot().FirstOrDefault();
+}
+...
+&lt;a href="/" class="navbar-brand"&gt;@homeNode.GetProperty("logoText").Value&lt;/a&gt;</code></pre>
+      <p class="snippet-caption">A template that can be a master for Umbraco templates and MVC views</p>
+<p>The MVC area views are not rendering with models of type IPublishedContent, thus using dynamic.</p>
+<h3>Render MVC data in Umbraco templates</h3>
+<p>Let's say we want to display a list of the different gifts you can donate on the right hand side of a page rendered by Umbraco. To do this we create a child action in a controller in the MVC area:</p>
+<pre><code class="language-csharp">[AllowAnonymous]
+[ChildActionOnly]
+public ActionResult List()
+{
+	var model = _service.GetGiftListItems();
+	return View(model);
+}</code></pre>
+      <p class="snippet-caption">Child action in our MVC area</p>
+<p>a view in the MVC area:</p>
+<pre><code class="language-javascript">@model IEnumerable&lt;App.ViewModels.Gifts.GiftListItem&gt;
+@{
+    Layout = null;
+}
+
+@foreach (var item in Model)
+{
+    &lt;ul&gt;
+        &lt;li&gt;
+            @Html.DisplayFor(modelItem =&gt; item.Name)
+        &lt;/li&gt;
+    &lt;/ul&gt;
+}</code></pre>
+      <p class="snippet-caption">The view to render that child action</p>
+<p>and then call that from our Umbraco template using Html.Action; remembering to set the name of the Area:</p>
+<pre><code class="language-javascript">@Html.Action("List", "Gifts", new { area = "Promises" })</code></pre>
+      <p class="snippet-caption">Calling the child action from an Umbraco template</p>
+<h3>Render Umbraco content in MVC views</h3>
+<p>Let's say that the content editors want to be able to add a welcome message for members when they've logged in. We can achieve this by creating a new property on the home page node (in a new tab called Members) called 'Members Welcome'. We have to "new up" the Umbraco helper in our MVC area in order to find the home page node and retrieve this property:</p>
+<pre><code class="language-javascript">@using Umbraco.Web
+@{
+    ViewBag.Title = "Members Area";
+
+    var umbracoHelper = new UmbracoHelper(UmbracoContext.Current);
+    var homeNode = umbracoHelper.TypedContentAtRoot().FirstOrDefault();
+}
+
+&lt;h1&gt;Members Only&lt;/h1&gt;
+
+@homeNode.GetProperty("membersWelcome").Value</code></pre>
+      <p class="snippet-caption">UmbracoHelper used in MVC views</p>
+<h3>Back-office members section</h3>
+<p>To be honest one thing I've not needed to try yet is getting the 'public access' feature of Umbraco working in this set-up. If it could then we should recreate the login page in Umbraco so that it can be selected as the Login Page when configuring the access. But I think I need to post a forum post on Our Umbraco about this as my knowledge of that bit of the back-office is not great!</p>
+<p>I just hide the members section from our users so they don't get confused. And I've got all the member management functionality I need in the front-end of my website.</p>
+<h2>H5yabeer.com and Github</h2>
+<p>Hopefully by the time this article is published h5yabeer.com, the site I built to practise this walkthrough, will:</p>
+<ol>
+<li>Be online at <a href="http://h5yabeer.com" target="_blank">http://h5yabeer.com</a><a href="http://h5yabeer.com"></a>.</li>
+<li>Have its source on github - <a href="https://github.com/LottePitcher/h5yabeer">https://github.com/LottePitcher/h5yabeer</a> - the solution will contain both the original MVC website and the Umbraco-ified version for comparison.</li>
+</ol>
+<p>If they aren't online then follow me on Twitter (<a href="https://twitter.com/lottepitcher" target="_blank">@lottepitcher</a>) and I'll tweet as soon as they are.</p>
+<p>Disclaimer … the solution architecture is a pared down version of the MVC framework we usually use, but if you spot any mistakes or performance issues please still let me know!</p>
+<h2>Wrap Up</h2>
+<p>It's quite easy to add Umbraco to an existing site, depending on the specifics of your solution. Once you've got it all wired up you can crack on with standard MVC development in the MVC area, and good old Umbraco everywhere else.</p>
+<p>At my company, years of Entity Framework Code First experience combined with custom scaffolding tools mean we can build the data areas quickly and reliably, without all the developers needing specialist Umbraco knowledge. So it may not be the 'Umbraco' way, but for us it is definitely the 'right' way, for now at least!</p>
+<blockquote><strong>Fast Builds + Accurate Estimates = Happy Clients + Weekends Not Working!</strong></blockquote>
+<p><br>Any thoughts, suggestions etc will be gratefully received. Merry Christmas one and all!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Lotte Pitcher"><img src="//gravatar.com/avatar/dfc117e40bbeebce31ac6035015a6170.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/dfc117e40bbeebce31ac6035015a6170.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Lotte Pitcher</h1>
+        <p>Lotte is on Twitter as <a href="//twitter.com/lottepitcher" title="Lotte Pitcher on Twitter" rel="author">@lottepitcher</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Ajax Paging using AltTemplates</title>
+<meta name="description" content="How to take advantage of Umbraco's altTemplates for paging content with Ajax.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+	
+
+
+</head>
+<body>
+
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Ajax Paging Using AltTemplates</h1>
+      <p class="byline"> by Matt Brailsford, <span class="pubdate">posted on <time datetime="2012-12-06">Dec 6, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I'm sure we all know the joys of paging content, usually entailing reloading the page and passing a "page" querystring parameter through to say which page of content to load next. It works, but it's just not as sexy as an ajax one, but then you are talking about a whole heap load more work. Well, not with Umbraco and the use of altTemplates.</p>
+<h3>Step 1: Setup regular old paging</h3>
+<p class="intro">So to start with, just create the normal querystring based paged content. This will be our fallback, so if people don't have javascript enabled, our paged content will still work. Did I mention it was unobtrusive? no? oh, well, it is :)</p>
+<p>I won't go in to detail on how to do this as there are plenty of examples, but all I will recommend is to encapsulate your paged content within an Umbraco Macro as we are going to reuse it again in a moment.</p>
+<h3>Step 2: Wrap your paged content area</h3>
+<p>As we are going to want to get a handle on the paged content block via javascript, wrap your paged content Macro with a html element and set its ID to something memorable.</p>
+<p>You should now have a main template looking something along these lines:</p>
+<pre class="language-markup"><code>&lt;%@ Master Language="C#" MasterPageFile="~/umbraco/masterpages/default.master" AutoEventWireup="true" %&gt;
+&lt;asp:Content ContentPlaceHolderID="ContentPlaceHolderDefault" runat="server"&gt;
+&lt;html&gt;
+    &lt;head&gt;...&lt;/head&gt;
+    &lt;body&gt;
+	...
+        &lt;div id="page-content"&gt;
+            &lt;umbraco:Macro Alias="PagedContent" runat="server"&gt;
+        &lt;/div&gt;
+	...
+    &lt;/body&gt;
+&lt;/html&gt;
+&lt;/asp:Content&gt;</code></pre>
+      <p class="snippet-caption">MainTemplate.master</p>
+<h3>Step 3: Create an altTemplate</h3>
+<p>Next up, we are going to make an altTemplate. This template needs to be really clean and should simply contain your paged content macro. THAT'S IT.</p>
+<pre class="language-markup"><code>&lt;%@ Master Language="C#" MasterPageFile="~/umbraco/masterpages/default.master" AutoEventWireup="true" %&gt;
+&lt;asp:Content ContentPlaceHolderID="ContentPlaceHolderDefault" runat="server"&gt;
+&lt;umbraco:Macro Alias="PagedContent" runat="server"&gt;
+&lt;/asp:Content&gt;</code></pre>
+      <p class="snippet-caption">AjaxTemplate.master</p>
+<h3>Step 4: Wire it all together</h3>
+<p>The next and final step is to wire it all together. What we are going to do then is use a little bit of jQuery to tell all the pager links (I've assumed you've wrapped these in a div with the class of ".pager") within the paged content to, instead of reloading the whole page, just reload the paged content code block via ajax using the altTemplate (remember, this just contains the html for paged content block, nothing else).</p>
+<pre class="language-markup"><code>&lt;script type="text/javascript"&gt;
+
+	$(function(){
+
+		$("#page-content").on("click", ".pager a", function(e){
+			e.preventDefault();
+			var ajaxUrl = $(this).attr("href") + "&amp;altTemplate=ajaxTemplate";
+			$("#page-content").load(ajaxUrl);
+		});
+
+	});
+
+&lt;/script&gt;</code></pre>
+      <p class="snippet-caption">script.js</p>
+<p>And we are done. When you now click on the pager links, a request will be made via ajax to get the contents of the altTemplate, which, when it returns, will replace the previous paged content block with the html in the response.</p>
+<p>You could of course fancy it up and show a nice progress loader while it's loading, but I'll leave that to you to figure out :)</p>
+<p>So there we have it, super simple, reusable, unobtrusive ajax paging using altTemplates.</p>
+<p>Merry Christmas everyone.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/templates/" title="See all articles tagged with Templates">Templates</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/webforms/" title="See all articles tagged with Webforms">Webforms</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Matt Brailsford"><img src="//gravatar.com/avatar/34b41f8815601e9a16baa4e56c69bcc2.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/34b41f8815601e9a16baa4e56c69bcc2.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Matt Brailsford</h1>
+        <p>Matt is on Twitter as <a href="//twitter.com/mattbrailsford" title="Matt Brailsford on Twitter" rel="author">@mattbrailsford</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li class="selected"><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

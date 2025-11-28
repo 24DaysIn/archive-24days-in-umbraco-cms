@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Build a simple contextual language switcher</title>
+<meta name="description" content="Using Razor and the Multi-Node Tree Picker to build a language switcher">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Build a simple contextual language switcher</h1>
+      <p class="byline"> by Søren Kottal, <span class="pubdate">posted on <time datetime="2014-12-15">Dec 15, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column"><figure>
+  <a href="/archive/media/2014/languagepicker2.png">
+    <img src="/archive/media/2014/languagepicker2.png" alt="Language Picker" width="349">
+  </a>
+</figure>
+<p>For a current project, I had to implement a contextual language switcher, giving the user the ability to switch the language of the current page.</p>
+<p class="intro">Briefly, I was considering Matt Brailsford's awesome package <a href="http://our.umbraco.org/projects/backoffice-extensions/vorto" target="_blank">Vorto</a>. And I even figured out how to use it to store data from the even more awesome grid editor from 7.2. If you're interested in learning this too, look at this <a href="http://our.umbraco.org/projects/backoffice-extensions/vorto/bugs-feedback-suggestions/57764-Vorto-and-the-new-grid" target="_blank">forum post</a>. However, I didn't find it fitting and went back to the good old "one root node per language" approach.</p>
+<p>So here's how my content structure is set up:</p>
+<figure>
+  <a href="/archive/media/2014/languageversions2.png">
+    <img src="/archive/media/2014/languageversions2.png" alt="Language Versions" width="472">
+  </a>
+</figure>
+<p>I have the frontpage of each language set up as root nodes, with domain settings, language etc. set up. All Subpages have a multinode treepicker property, for setting up different language versions. This gives the editor the ability to precisely pick which page is the equivalent in other languages. This way I can have different structures in different languages etc.</p>
+<p>In my templates I have implemented a language switcher, which uses the before mentioned multinode treepicker as a way to output the correct link. If no language version is set, it just links to the frontpage.</p>
+<pre class="language-javascript"><code>@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@using umbraco.cms.businesslogic.web
+@using umbraco.MacroEngines
+@using System.Text.RegularExpressions
+
+@{
+    var currentLang = Domain.GetDomainsById(Model.Content.AncestorOrSelf(1).Id)[0].Language;
+
+    var versionIds = Model.Content.GetPropertyValue("languageVersions").ToString().Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+    
+    var contentRoot = new DynamicNode(-1);
+    var languages = contentRoot.Descendants("Frontpage");
+}
+
+&lt;button type="button" class="btn btn--navbar dropdown-toggle flag flag--@currentLang.CultureAlias.Substring(0,2)" data-toggle="dropdown"&gt;&lt;/button&gt;
+
+&lt;ul class="dropdown-menu languageselector pull-right" role="menu"&gt;
+    @foreach (var lang in languages)
+    {
+
+        var thisLang = Domain.GetDomainsById(lang.Id)[0].Language;
+
+        var thisLangName = Regex.Replace(thisLang.FriendlyName,"(,(.*)|[(].*)","").Trim();
+        var thisLangDisplay = thisLangName;
+        
+        switch(thisLangName) {
+            case "Danish":
+                thisLangDisplay = "Dansk";
+                break;
+            case "Swedish":
+                thisLangDisplay = "Svenska";
+                break;
+            case "Norwegian":
+                thisLangDisplay = "Norsk";
+                break;
+        }
+        
+        if (thisLang == currentLang)
+        {
+            &lt;li class="active"&gt;&lt;a href="@Model.Content.Url"&gt;&lt;i class="flag flag--@thisLang.CultureAlias.Substring(0,2)"&gt;&lt;/i&gt;
+                @thisLangDisplay
+            &lt;/a&gt;&lt;/li&gt;
+        }
+        else {
+            var link = lang.Url;
+
+            if (versionIds.Any())
+            {
+                foreach (var versionId in versionIds)
+                {
+                    var version = Umbraco.TypedContent(versionId);
+                    if (version != null)
+                    {
+                        if (version.AncestorOrSelf(1).Id == lang.Id)
+                        {
+                            link = v.Url;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            &lt;li&gt;&lt;a href="@link"&gt;
+                &lt;i class="flag flag--@thisLang.CultureAlias.Substring(0,2)"&gt;&lt;/i&gt;
+                @thisLangDisplay
+            &lt;/a&gt;&lt;/li&gt;   
+        }
+    }
+&lt;/ul&gt;
+
+</code></pre>
+<p>This basically boils down to looping through the different rootnodes, get their language, and then loop through the language versions of the current page until it meets a match. This means if two pages from the same language are set as language versions, the first one gets the link.</p>
+<p>Another usecase for a language version property could also be for setting <a href="https://support.google.com/webmasters/answer/189077?hl=en" target="_blank">canonical language URLs</a> for SEO benefits. This could be as simple as:</p>
+<pre class="language-javascript"><code>if (versionIds.Any())
+{
+    foreach (var versionId in versionIds)
+    {
+        var version = Umbraco.TypedContent(versionId);
+        if (version != null)
+        {
+        	var lang = Domain.GetDomainsById(version.AncestorOrSelf(1).Id)[0].Language.CultureAlias;
+
+        	&lt;link rel="alternate" href="@version.Url" hreflang="@lang" /&gt;
+	    }
+	}
+}</code></pre>
+<p>Feel free to comment. Some of my code examples could probably be done in a better way :)</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/templates/" title="See all articles tagged with Templates">Templates</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/translation/" title="See all articles tagged with Translation">Translation</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Søren Kottal"><img src="//gravatar.com/avatar/0133324ce8da84f19a69ba6907e4f010.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/0133324ce8da84f19a69ba6907e4f010.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Søren Kottal</h1>
+        <p>Søren is on Twitter as <a href="//twitter.com/skttl" title="Søren Kottal on Twitter" rel="author">@skttl</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li class="selected"><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

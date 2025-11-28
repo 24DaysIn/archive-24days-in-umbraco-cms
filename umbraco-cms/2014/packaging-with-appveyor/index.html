@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco Packaging with AppVeyor CI</title>
+<meta name="description" content="An introduction to using AppVeyor and related tools in the context of authoring Umbraco packages.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco Packaging with AppVeyor CI</h1>
+      <p class="byline"> by Jeavon Leopold, <span class="pubdate">posted on <time datetime="2014-12-18">Dec 18, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I am constantly amazed at the tools available to support and nurture open source projects. GitHub is truly the hub of any open source project but there are many other supportive tools we can use to enhance what GitHub is already giving us.  In this post I am going to introduce you to a few more of these wonderful tools and primarily <a href="http://www.appveyor.com/">AppVeyor</a> in the context of authoring Umbraco packages.</p>
+<div style="vertical-align: middle; text-align: justify;"><img src="/archive/media/2014/appveyor_kb_logo_228x41.jpg" width="228" height="41" alt="Appveyor -kb -logo" style="margin-right: 30px;"> <img src="/archive/media/2014/github_logo_100x41.jpg" width="100" height="41" alt="Git Hub _Logo" style="margin-right: 30px;"> <img src="/archive/media/2014/logo.png" width="125" height="40" alt="Logo" style="margin-right: 30px;"><img src="/archive/media/2014/nugetlogo_125x41.jpg" width="125" height="41" alt="Nugetlogo" style="margin-right: 30px;"><img src="/archive/media/2014/npm_logo_84x33.jpg" width="84" height="33" alt="Npm -logo"></div>
+<p class="intro">AppVeyor is essentially a Microsoft build server service hosted in the Azure cloud. Each build spins up an Azure VM and you can then execute whatever you want to in order to complete your build cycle and extract and deploy some artefacts (files you want post build).</p>
+<p style="display: block; float: left; width: 650px;">As you might know I have authored a few Umbraco packages myself and contribute to many more. One of the challenges with supporting an open source project is packaging and releasing, it's fantastic when you can fix a quick bug or even better when someone else does it for you and sends a pull request, but then you have to find the time and remember all the steps needed to create a release and package it up.</p>
+<p style="display: block; float: right;"><img src="/archive/media/2014/large__5777397412.jpg" width="150" height="150" alt="Large __5777397412"></p>
+<p style="display: block; float: left; width: 650px;">So, enter the Umbraco build scripts. A few years ago I ended up at small session upstairs at CodeGarden where Matt Brailsford presented a short demo of his Umbraco Build Tasks. Using MSBuild, from a ton of XML and few batch files, he could create an Umbraco installable ZIP package! I have been using various versions of these scripts for all of the packages I work on ever since. </p>
+<p style="display: block; float: right;"><img src="/archive/media/2014/large__4318850016.jpg" width="150" height="150" alt="Large __4318850016"></p>
+<p style="clear: both;">Having these build scripts makes packaging pretty quick, but what if we could have a build server execute the package build scripts? Well we can with AppVeyor and here's how.</p>
+<p>The following walkthrough is an introduction and a starting point for most packages. The sample package is expected to contain a single DLL and a collection of JS, CSS &amp; HTML files destined for the App_Plugins folder for your UI, this could be a typical Umbraco AngularJS property editor and a complimentary C# property value converter.</p>
+<p>Prerequisite: you will need to have MSBuild v12 installed on your local machine, if you have VS2013 you will have it already, if not, you can download it from <a href="http://www.microsoft.com/en-us/download/details.aspx?id=40760" target="_blank">here</a>. </p>
+<p><strong>1:</strong> First off we need to get MSBuild working and creating your package on your local machine, so get a copy of the BuildPackage folder from <a href="https://github.com/Jeavon/AppVeyorUmbracoPackage/tree/master/BuildPackage" target="_blank">here</a> and add it to the root of your project.</p>
+<p>These build scripts are setup to do two things, firstly build your Grunt project, then build your C# project. If you have only one of these, you can remove the lines applicable to the other project and it will work just fine.</p>
+<p>Package.build.xml</p>
+<ul>
+<li>Edit line 42 and set it to the folder of your C# project (it's "Test" in the sample).<br><span class="code">&lt;</span><span class="pl-ent code">CoreProjectDir</span><span class="code">&gt;$(RootDir)\Test&lt;/</span><span class="pl-ent code">CoreProjectDir</span><span class="code">&gt;</span></li>
+<li>Edit line 43 and set it to the folder containing your Grunt project (it's "Angular" in the sample)<br><span class="code">&lt;</span><span class="pl-ent code">GruntProjectDir</span><span class="code">&gt;$(RootDir)\Angular&lt;/</span><span class="pl-ent code">GruntProjectDir</span><span class="code">&gt;</span></li>
+<li>Edit line 72 and set to match your csproj filename (it's "Test.csproj" in the sample)<br><span class="code">&lt;</span><span class="pl-ent code">MSBuild</span><span class="pl-e code">Projects</span><span class="code">=</span><span class="pl-s1 code"><span class="pl-pds">"</span>$(CoreProjectDir)\Test.csproj<span class="pl-pds">"</span></span><span class="code"> /&gt;</span></li>
+<li>Edit line 81 and set to the output folder of your Grunt project ("dist" in the sample)<br><span class="code">&lt;</span><span class="pl-ent code">GruntProjectFiles</span><span class="pl-e code">Include</span><span class="code">=</span><span class="pl-s1 code"><span class="pl-pds">"</span>$(GruntProjectDir)\dist\**\*<span class="pl-pds">"</span></span><span class="code"> /&gt;</span></li>
+</ul>
+<p>Build.bat</p>
+<ul>
+<li>Edit line 4 and set it to the path of your Grunt project (it's "Angular" in the sample)<br><span class="pl-k code">cd</span><span class="code"> ..\Angular\</span></li>
+<li>Edit line 8 and set it to the path of your sln file, this is used to restore any NuGet packages you have referenced before build begins.<br><span class="pl-k code">Call</span><span class="code"> Tools\nuget.exe </span><span class="pl-k code">restore</span><span class="code"> ..\AppVeyorUmbracoPackage.sln</span></li>
+</ul>
+<p>Edit the meta data in both Package.xml and Package.nuspec, such as your package name.</p>
+<p>Now you should be able to run <strong>Test.bat</strong> and both a .zip and a .nupkg files containing your compiled files should be created in the /BuildPackage/Package/ folder.</p>
+<p><img src="/archive/media/2014/packages_500x88.jpg" width="500" height="88" alt="Packages"></p>
+<p>By default the Test.bat batch file will create build100, you can change this in the file itself but these packages are only for debugging on your local machine.</p>
+<p><strong>2:</strong> Add appveyor.yml to the root of your project. </p>
+<pre class="code"># version format
+version: 1.0.2.{build}
+
+# UMBRACO_PACKAGE_PRERELEASE_SUFFIX will only be used for Release builds
+# example UMBRACO_PACKAGE_PRERELEASE_SUFFIX=beta
+install:
+  - cmd: npm install -g grunt-cli
+  - cmd: set UMBRACO_PACKAGE_PRERELEASE_SUFFIX=
+  - cmd: set UMBRACO_PACKAGE_MIN_VERSION=7.2.0
+  - cmd: cd BuildPackage
+  - cmd: Build.bat
+
+# to disable automatic builds
+build: off
+
+artifacts:
+  - path: BuildPackage\Package\*.nupkg
+  - path: BuildPackage\Package\*.zip
+</pre>
+<p>You can do a lot of build configuration using the AppVeyor UI however you can do even more with appveyor.yml, and crucially, it allows us to maintain our package's version number in source control. When you have an appveyor.yml in the root of your project none of the settings you make in the AppVeyor UI will have any effect.</p>
+<p>The version number of your package is at the top of appveyor.yml and importantly it is only here. This number is used to version the DLL file and also you can use it for banners within your Angular files, as well as being used in the package meta data.</p>
+<p>Let's look at the options for a couple of those lines.</p>
+<pre class="code">version: 1.0.2.{build}</pre>
+<p>This defines your package's version, and after every release you should update the version number so that CI builds are for the next version. The {build} is the build number and this is managed by AppVeyor.</p>
+<p>By default your CI packages will be created in the format: MyPackageName.&lt;major&gt;.&lt;minor&gt;.&lt;patch&gt;-build&lt;buildNumber&gt;</p>
+<pre class="code">  - cmd: set UMBRACO_PACKAGE_PRERELEASE_SUFFIX=beta</pre>
+<p>Quite often you want to release a prerelease (publish it to our.umbraco.org and Nuget), so you can add valid suffixes here, e.g. "beta", "beta1" or "alpha".</p>
+<pre class="code">  - cmd: set UMBRACO_PACKAGE_MIN_VERSION=7.2.0</pre>
+<p>This is used in the Umbraco Package Meta data. I don't think it actually does anything but I believe it's supposed to prevent the package being installed on a version of Umbraco that is older than the one specified (that would be a good feature!).  Ideally this would also populate the version of UmbracoCms.Core used as a dependency in the NuGet package (but I've not worked out how to do this yet).</p>
+<p><strong>3:</strong> Push your project to GitHub</p>
+<p style="display: block; float: left; width: 650px;"><strong>4:</strong> Get an AppVeyor account and connect it to your GitHub, this is super simple to do just by following the wizard in AppVeyor. Once setup, you should see the "Latest build" tab and it's likely that your build is showing as queued. Time for some tea and biscuits!</p>
+<p style="display: block; float: right;"><img src="/archive/media/2014/large__2641793491.jpg" width="150" height="150" alt="Large __2641793491"></p>
+<p><img src="/archive/media/2014/appveyorqueue_545x99.jpg" width="545" height="99" alt="App Veyor Queue"></p>
+<p><strong>5:</strong> After some time, you will see the magic console appear and you will see the output from the build scripts live updating as it executes the various steps.</p>
+<p> <img src="/archive/media/2014/appveyorbuilding_717x486.jpg" width="717" height="486" alt="App Veyor Building"></p>
+<p><strong>6:</strong> Once the build has finished and was hopefully successful, you should see the "Artifacts" tab, here you can download both the Umbraco and NuGet packages and now you have package CI working.</p>
+<p><img src="/archive/media/2014/appveyorbuilt_725x390.jpg" width="725" height="390" alt="App Veyor Built"></p>
+<p style="display: block; float: left; width: 550px;"><strong>7:</strong> AppVeyor will now automatically build from every commit you make on GitHub. You can always post links directly to your package files and know that your user will be able to install the very latest prerelease version. Example from my upcoming Crop Healer Package (shameless plug) can be seen <a href="https://ci.appveyor.com/project/JeavonLeopold/umbraco-crop-healer/build/artifacts" target="_blank">here</a>. </p>
+<p style="display: block; float: right;"><img src="/archive/media/2014/small_4294553880.jpg" width="240" height="160" alt="Small _4294553880"></p>
+<p><strong>What about deployment and releases?</strong></p>
+<p>The way I have set up releases, to make a release you simply merge your master branch into a branch named "release". You then push that, AppVeyor will build it using the release version format and perform release deployment such as pushing the package automatically to NuGet (you will have to download the package from the artifacts tab and upload to our.umbraco.org). Once released, you immediately switch back to your "master" branch, increment the version number (e.g. v1.0.1 to v.1.0.2), commit and then carry on developing.</p>
+<p>For deployment of build releases, I generally setup a <a href="https://www.myget.org/" target="_blank">MyGet</a> feed for developers to be able to get the latest build using NuGet.</p>
+<p>For deployment of full releases I have AppVeyor automatically push my package to <a href="https://www.nuget.org/" target="_blank">NuGet</a> and then manually download the .zip file from AppVeyor and upload it to our.umbraco.org (maybe one day we can automate this also).</p>
+<p>To do this we need to configure the "deploy" section in appveyor.yml.</p>
+<pre><span class="code">deploy:
+  - provider: NuGet
+    server: https://www.myget.org/F/myPackage/
+    api_key:
+      secure: AEncryptedKeyFromAppVeyor
+    artifact: /.*\.nupkg/
+
+  - provider: NuGet
+    server: 
+    api_key:
+      secure: AEncryptedKeyFromAppVeyor
+    artifact: /.*\.nupkg/
+    on:
+      branch: release</span><br><br></pre>
+<p>This deploys every build to to MyGet from both the master and release branches but only builds from the release branch get pushed to NuGet.</p>
+<p><strong>Whoa, that was a lot of stuff!</strong></p>
+<p>Yes it was, and there is a lot more, such as the Grunt tasks for adding banners with the correct versions, unit tests, adding AppVeyor status badges, pull request builds etc., but I don't want this article to go on for eternity so I recommend you checkout the sample <a href="https://github.com/Jeavon/AppVeyorUmbracoPackage" target="_blank">AppVeyorUmbraco</a> package project and also the <a href="http://www.appveyor.com/docs" target="_blank">AppVeyor documentation</a>.</p>
+<p style="display: block; float: left; width: 550px;">If you are wanting to get AppVeyor builds and deployments working on an existing package or for something new, I will be more than happy to help get it going so don't hesitate to get in touch!<br><br>Also I would love to develop this process and the template <a href="https://github.com/Jeavon/AppVeyorUmbracoPackage" target="_blank">AppVeyorUmbraco</a> project further so please do get involved!</p>
+<p style="display: block; float: right;"><img src="/archive/media/2014/small_2891991931.jpg" width="240" height="160" alt="Small _2891991931"></p>
+<p style="clear: both;">photo credit: <a href="https://www.flickr.com/photos/jameson42/5777397412/" target="_blank">Jameson42</a> &amp; <a href="https://www.flickr.com/photos/west-park/4318850016/" target="_blank">westpark</a> &amp; <a href="https://www.flickr.com/photos/astrolondon/2641793491/" target="_blank">Kaustav Bhattacharya</a> &amp; <a href="https://www.flickr.com/photos/quinnanya/4294553880/" target="_blank">quinn.anya</a> &amp; <a href="https://www.flickr.com/photos/dhammza/2891991931/" target="_blank">dhammza</a> via <a href="http://photopin.com" target="_blank">photopin</a> <a href="http://creativecommons.org/licenses/by-nc-nd/2.0/" target="_blank">cc</a></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/contribution/" title="See all articles tagged with Contribution">Contribution</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jeavon Leopold"><img src="//gravatar.com/avatar/e0104aabbb25a50693daa0220b2ce31d.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/e0104aabbb25a50693daa0220b2ce31d.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jeavon Leopold</h1>
+        <p>Jeavon is on Twitter as <a href="//twitter.com/crumpled_jeavon" title="Jeavon Leopold on Twitter" rel="author">@crumpled_jeavon</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li class="selected"><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>All Your Images Are Belong to Umbraco</title>
+<meta name="description" content="How to get the best out of images in Umbraco using ImageProcessor to reduce the page weight.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">All Your Images Are Belong to Umbraco</h1>
+      <p class="byline"> by James Jackson-South, <span class="pubdate">posted on <time datetime="2014-12-16">Dec 16, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column"><figure>
+  <a href="/archive/media/2014/base.gif">
+    <img src="/archive/media/2014/base.gif" alt="Umbraco - Zero Wing Edition." width="812">
+  </a>
+  <figcaption>Umbraco - Zero Wing Edition.</figcaption>
+</figure>
+<p>Today I am going to talk to you about a tool that has been shipped within the Umbraco core since v7.1. It powers the <a href="http://our.umbraco.org/documentation/Using-Umbraco/Backoffice-Overview/Property-Editors/Built-in-Property-Editors-v7/Image-Cropper" target="_blank" title="Image Cropper PropertyEditor Documentation">Image Cropper</a> property editor but can do much much more to help you build high quality, performant websites. That tool is called ImageProcessor.<br><br>ImageProcessor is actually two libraries: ImageProcessor - A library for desktop and web that provides a <a href="http://imageprocessor.org/imageprocessor/" target="_blank" title="IageProcessor">fluent API</a> <span>allowing you to easily chain methods to deliver the desired output, and ImageProcessor.Web - A <span>web extension to ImageProcessor that allows the developer to perform image manipulation using a <a href="http://imageprocessor.org/imageprocessor-web/imageprocessingmodule/#methods" target="_blank" title="Url API">Url API</a> of querystring parameters as instructions.</span></span></p>
+<h2>The Ever Increasing Web</h2>
+<p class="intro">Web pages are getting bigger. According to the <a href="http://httparchive.org/interesting.php" target="_blank" title="Http Archive">HTTP Archive</a> <span>in the last year </span>the average web page has gone up by 252kb to a whopping 1953kb with 213kb of that due to images. I don't know about you but I find that to be a worrying trend, especially in this age of responsive websites and increased mobile browser usage.</p>
+<table border="0">
+<tbody>
+<tr>
+            <th>December 15th 2013</th>
+            <th>December 1st 2014</th>
+          </tr>
+</tbody>
+<tbody>
+<tr>
+<td>
+<figure>
+  <a href="/archive/media/2014/2013.jpg">
+    <img src="/archive/media/2014/2013.jpg" alt="At 1030kb Image weight is already high. " width="812">
+  </a>
+  <figcaption>At 1030kb Image weight is already high. </figcaption>
+</figure>
+</td>
+<td>
+<figure>
+  <a href="/archive/media/2014/2014.jpg">
+    <img src="/archive/media/2014/2014.jpg" alt="1243kb Eeek!" width="812">
+  </a>
+  <figcaption>1243kb Eeek!</figcaption>
+</figure>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Thankfully with Umbraco we have all the tools available to us to keep our webpages snappy. </p>
+<h2>Image Cropper</h2>
+<p>If you are using Umbraco 7 and you don't use the Image Cropper property editor then you are sorely missing out; it's pretty sweet. The Image Cropper utilizes ImageProcessor.Web's <a href="http://imageprocessor.org/imageprocessor-web/imageprocessingmodule/#methods" target="_blank" title="Url API">Url API</a> to generate crops of your images that are then cached in a super awesome auto cleaning diskcache mechanism that will serve the cropped image on subsequent requests.<br><br>It's possible to alter the generated url further to improve performance like this. Any of the ImageProcessor commands can be appended to the URL.<br><br></p>
+<pre class="language-markup"><code>&lt;img src='@CurrentPage.GetCropUrl("image", "banner")&amp;quality=70' /&gt;</code></pre>
+      <p class="snippet-caption">Dropping the quality slightly can dramatically decrease filesize without affecting the appearance.</p>
+<h2>Slimsy</h2>
+<p>This is a rather neat little <a href="http://our.umbraco.org/projects/website-utilities/slimsy" target="_blank" title="Slimsy Umbraco Package">package</a> written by Jeavon Leopold that when used in conjunction with ImageProcessor.Web and the built-in Umbraco Image Cropper will make your websites images respond to the viewport width and also the pixel density if supported by the client browser. It does this by providing extension methods and performing calculations on-the-fly via JavaScript to provide the correct instructions to the Url API. </p>
+<p>It's very flexible and I highly recommend you have a look at it.</p>
+<pre class="language-markup"><code>@foreach (var feature in homePage.umbTextPages.Where("featuredPage"))
+{
+    &lt;div class="3u"&gt;
+        &lt;!-- Feature --&gt;
+        &lt;section class="is-feature"&gt;
+            @if (feature.HasValue("Image"))
+            {
+                var featureImage = Umbraco.Media(feature.Image);
+                &lt;a href="@feature.Url" class="image image-full"&gt;
+                &lt;img src="@featureImage.GetResponsiveImageUrl(270, 161)" alt="" /&gt;
+                &lt;/a&gt;
+            }
+            &lt;h3&gt;&lt;a href="@feature.Url"&gt;@feature.Name&lt;/a&gt;&lt;/h3&gt;
+            @Umbraco.Truncate(feature.BodyText, 100)
+        &lt;/section&gt;
+        &lt;!-- /Feature --&gt;
+    &lt;/div&gt;
+}</code></pre>
+      <p class="snippet-caption">An initial image size of 270 x 161. This example is looping pages, each page has a media picker with property alias "Image"</p>
+<h2>Presets</h2>
+<p>ImageProcessor.Web has the ability to translate preset instructions passed to the Url API. (I find this very useful when generating images for specific items in widget based setups where you don't care so much about art direction). Presets allow you to configure the image output in a single location making it easy to tweak output for improved performance.<br><br>To set up presets you need the correct configuration files installed in your website. There's a nuget package available - <a href="https://www.nuget.org/packages/ImageProcessor.Web.Config/" target="_blank" title="ImageProcessor.Web.Config Nuget package">ImageProcessor.Web.Config</a> which allows you to install the files but there is also extensive <a href="http://imageprocessor.org/imageprocessor-web/#config" target="_blank" title="Configuration documentation for ImageProcessor.Web">documentation</a> online so you can set it up yourself.</p>
+<p>Here's an example of a signpost.</p>
+<pre class="language-markup"><code>&lt;div class="signpost"&gt;
+    &lt;!-- Signpost--&gt;
+    @if (signpost.HasValue("Image"))
+    {
+    var signpostImage = Umbraco.Media(signpost.Image);
+    &lt;a href="@signpost.Url"&gt;
+        &lt;img src="@signpostImage.Url?preset=signpost" alt="@signpostImage.Url" /&gt;
+    &lt;/a&gt;
+    }
+    &lt;h3&gt;&lt;a href="@signpost.Url"&gt;@signpost.Name&lt;/a&gt;&lt;/h3&gt;
+    &lt;!-- /Signpost --&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">A single signpost item with preset applied.</p>
+<p>With the relevant configuration.</p>
+<pre class="language-markup"><code>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+  &lt;processing preserveExifMetaData="false"&gt;
+    &lt;!-- Presets that allow you to reduce code in your markup. 
+         Note the use of &amp;#038; to escape ampersands. --&gt;
+    &lt;presets&gt;
+      &lt;preset name="signpost" value="width=768&amp;#038;height=480&amp;#038;mode=crop"/&gt;
+    &lt;/presets&gt;
+    &lt;!-- List of plugins. --&gt;
+    &lt;plugins autoloadplugins="true"&gt;</code></pre>
+      <p class="snippet-caption">Sample configuration trimmed for brevity.</p>
+<h2>Pre Processing</h2>
+<p>All the previous shown methods involve postprocessing the uploaded image on first instance of the page loading. This works perfectly 99% of the time but chances are there will be a client somewhere that will upload a huge image that will cause a performance hit as ImageProcessor processes and saves it for subsequent viewing.<br><br>Fortunately there is a way to deal with this.<br><br>Umbraco provides various events that you can tap into when saving media and you can use ImageProcessor's fluent API within these events to resize any images when they are saved to the media section. Here's the relevant code to demonstrate how to do this.</p>
+<pre class="language-markup"><code>public class ApplicationEvents : ApplicationEventHandler
+{
+    protected override void ApplicationStarting(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+    {
+        // Tap into the Saving event
+        MediaService.Saving += (sender, args) =&gt;
+        {
+            MediaFileSystem mediaFileSystem = FileSystemProviderManager.Current.GetFileSystemProvider&lt;MediaFileSystem&gt;();
+            IContentSection contentSection = UmbracoConfig.For.UmbracoSettings().Content;
+            IEnumerable&lt;string&gt; supportedTypes = contentSection.ImageFileTypes.ToList();
+
+            foreach (IMedia media in args.SavedEntities)
+            {
+                if (media.HasProperty("umbracoFile"))
+                {
+                    // Make sure it's an image.
+                    string path = media.GetValue&lt;string&gt;("umbracoFile");
+                    string extension = Path.GetExtension(path).Substring(1);
+                    if (supportedTypes.InvariantContains(extension))
+                    {
+                        // Resize the image to 1920px wide, height is driven by the
+                        // aspect ratio of the image.
+                        string fullPath = mediaFileSystem.GetFullPath(path);
+                        using (ImageFactory imageFactory = new ImageFactory(true))
+                        {
+                            ResizeLayer layer = new ResizeLayer(new Size(1920, 0), ResizeMode.Max)
+                            {
+                                Upscale = false
+                            };
+
+                            imageFactory.Load(fullPath)
+                                        .Resize(layer)
+                                        .Save(fullPath);
+                        }
+                    }
+                }
+            }
+        };
+    }
+}</code></pre>
+      <p class="snippet-caption">Using Umbraco events to preprocess images.</p>
+<h2>Onwards and Downwards</h2>
+<p>Hopefully this is enough to get you all started making the most of ImageProcessor within Umbraco. If you need any more information feel free to read the documentation at <a href="http://imageprocessor.org" title="ImageProcessor Homepage">ImageProcessor.org</a> or hit me up on the forums.</p>
+<p>Together we can all do our bit to ensure next year the charts show a swing in the other direction.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/media/" title="See all articles tagged with Media">Media</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="James Jackson-South"><img src="//gravatar.com/avatar/f8c1b521995075df5147b8acb6a11532.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/f8c1b521995075df5147b8acb6a11532.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>James Jackson-South</h1>
+        <p>James is on Twitter as <a href="//twitter.com/James_M_South" title="James Jackson-South on Twitter" rel="author">@James_M_South</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li class="selected"><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

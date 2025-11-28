@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Recreating the listview in your custom section</title>
+<meta name="description" content="Enabling the umbraco list view in custom sections">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Recreating the listview in a custom section</h1>
+      <p class="byline"> by David Brendel, <span class="pubdate">posted on <time datetime="2015-12-05">Dec 5, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Introduction</h2>
+<p dir="ltr"><span>In this article I will show how easy it is to add the Umbraco list view to your custom section.</span></p>
+<p class="intro"><span>I was always curious how you could use the Umbraco listview in a custom section of your own. A few days ago I had a little talk with Tim Geyssens about his new package </span><a href="https://github.com/TimGeyssens/UIOMatic"><span>UI-O-Matic</span></a><span> (if you haven't checked it out already i recommend you doing it!) and we talk about how to enable the list view for nodes in the custom section of this package. A day later and Tim had implemented a basic list view as it was nothing. So again a big #h5yr!</span> </p>
+<p dir="ltr"><span><span>So to be honest the list view is not the built-in list view of Umbraco. That's because it's so specific to all things umbraco does when editing content that it's not easy to implement it in a custom section. I really think it's not possible at all. But proof me wrong if you can! So to make it more clear we will implement the listview behaviour on our own!</span></span></p>
+<p dir="ltr"><span>The result we want to achieve is this:</span></p>
+<figure>
+  <a href="/archive/media/2015/outcome.png">
+    <img src="/archive/media/2015/outcome.png" alt="The desired outcome" width="730">
+  </a>
+  <figcaption>The desired outcome</figcaption>
+</figure>
+<p><span><span>After our section is ready, I need a tree that is responsible for the new section. I won't get into detail here as it is plain simple. It just returns one node as the root node, which has the view assigned with our listview. So nothing special here.</span></span></p>
+<pre class="language-markup"><code>[Tree("demoSection", "demoTree", "ListView Demo")]
+[PluginController("ListViewDemo")]
+public class DemoTreeController : TreeController
+{
+    protected override Umbraco.Web.Models.Trees.MenuItemCollection GetMenuForNode(string id, System.Net.Http.Formatting.FormDataCollection queryStrings)
+    {
+        return null;
+    }
+
+    protected override Umbraco.Web.Models.Trees.TreeNodeCollection GetTreeNodes(string id, System.Net.Http.Formatting.FormDataCollection queryStrings)
+    {
+        //check if we're rendering the root node's children
+        if (id == "-1")
+        {
+            var nodes = new TreeNodeCollection();
+            nodes.Add(CreateTreeNode("people", id, queryStrings, "People", "icon-people", false, FormDataCollectionExtensions.GetValue&lt;string&gt;(queryStrings, "application") + StringExtensions.EnsureStartsWith(this.TreeAlias, '/') + "/overviewPeople/all"));
+            return nodes;
+        }
+
+        //this tree doesn't suport rendering more than 2 levels
+        throw new NotSupportedException();
+    }
+}</code></pre>
+      <p class="snippet-caption">Tree for the created section</p>
+<p><span><span>For some convenience I use the ServerVariableParser to register the path to our API-Controller to reuse it in our AngularJS code a bit more easier. If you haven't, you should take a look at that way to store your paths.</span></span></p>
+<pre class="language-markup"><code>public class ServerVariableParserEvent : ApplicationEventHandler
+{
+    protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+    {
+        ServerVariablesParser.Parsing += ServerVariablesParser_Parsing;
+    }
+
+    void ServerVariablesParser_Parsing(object sender, Dictionary&lt;string, object&gt; e)
+    {
+        if (HttpContext.Current == null) return;
+        var urlHelper = new UrlHelper(new RequestContext(new HttpContextWrapper(HttpContext.Current), new RouteData()));
+
+        var mainDictionary = new Dictionary&lt;string, object&gt;();
+        mainDictionary.Add("demoBaseUrl", urlHelper.GetUmbracoApiServiceBaseUrl&lt;PeopleApiController&gt;(controller =&gt; controller.GetAll()));
+
+        if (!e.Keys.Contains("demoSection"))
+        {
+            e.Add("demoSection", mainDictionary);
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Tipp for easier path handling in our resource handler</p>
+<p dir="ltr"><span><span>To have some dummy data I create some on startup. </span><span>This is using PetaPoco to drop and create the necessary table and insert some dummy pocos. </span><span>For some additional information about PetaPoco I made a blog </span><a href="http://www.davidbrendel.de/en/news/2015/10/4/petapoco-in-umbraco-6/"><span>post</span></a><span> and there are some additional information on the </span><a href="http://www.toptensoftware.com/petapoco/"><span>web</span></a><span>.</span></span></p>
+<pre class="language-markup"><code>public class Startup : ApplicationEventHandler
+{
+    protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+    {
+        var db = applicationContext.DatabaseContext.Database;
+
+        if (db.TableExist("demo_people"))
+        {
+            db.DropTable&lt;People&gt;();
+        }
+        db.CreateTable&lt;People&gt;(false);
+
+        var objects = Enumerable.Range(0, 10).Select(i =&gt; new People() { FirstName = "Firstname" + i, LastName = "Lastname" + i, Age = i + 20 });
+        objects.ForEach(p =&gt; db.Save(p));
+    }
+}</code></pre>
+      <p class="snippet-caption">Short dummy data for our tree</p>
+<p><span style="font-size: 16px; font-weight: bold;">Models</span></p>
+<p><span><span>Let's have a look at the models that are used. As can be seen I use a "People" model for this demo. So the listview will display some people information. It's dead simple for this demo. The model is marked by different attributes which are used by PetaPoco to know the database structure and mapping of table columns to properties. Also I'm using DataContract for the json serialisation.</span></span></p>
+<pre class="language-markup"><code>/// &lt;summary&gt;
+/// Class which represents our people
+/// &lt;/summary&gt;
+[TableName("demo_people")]
+[PrimaryKey("id", autoIncrement = true)]
+[ExplicitColumns]
+[DataContract(Name = "people", Namespace = "")]
+public class People
+{
+    [Column("id")]
+    [PrimaryKeyColumn(AutoIncrement = true)]
+    [DataMember(Name = "id")]
+    public int Id { get; set; }
+
+    [Column("firstname")]
+    [DataMember(Name = "firstName")]
+    public string FirstName { get; set; }
+
+    [Column("lastname")]
+    [DataMember(Name = "lastName")]
+    public string LastName { get; set; }
+
+    [Column("age")]
+    [DataMember(Name = "age")]
+    public int Age { get; set; }
+}</code></pre>
+<p><span><span>I added just a few properties to the model to have at least three columns that I can show in the listview.</span></span></p>
+<pre class="language-markup"><code>[DataContract(Name = "pagedPeople", Namespace = "")]
+public class PagedPeopleResult
+{
+    [DataMember(Name = "people")]
+    public List&lt;People&gt; People { get; set; }
+
+    [DataMember(Name = "currentPage")]
+    public long CurrentPage { get; set; }
+
+    [DataMember(Name = "itemsPerPage")]
+    public long ItemsPerPage { get; set; }
+
+    [DataMember(Name = "totalPages")]
+    public long TotalPages { get; set; }
+
+    [DataMember(Name = "totalItems")]
+    public long TotalItems { get; set; }
+}</code></pre>
+<p><span><span>Additionally we have a secondary model which is used for the listview by providing information for paging and the people objects we want to show regarding to search and paging.</span></span></p>
+<h2>API controller</h2>
+<p dir="ltr"><span><span>The next thing I need is an API-Controller which returns the information for our listview as the PagedPeopleModel seen above.</span></span></p>
+<p dir="ltr"><span>The controller takes some arguments like the search term, itemsPerPage, order and so on.</span></p>
+<p dir="ltr"><span><span>With this information it gathers the right objects from the database. For this the controller generates an sql statement that considers the search term, sort column and sort order.</span></span></p>
+<pre class="language-markup"><code>/// &lt;summary&gt;
+/// People Api controller used by the people resource to get people for our custom section
+/// &lt;/summary&gt;
+[PluginController("ListViewDemo")]
+public class PeopleApiController : UmbracoAuthorizedJsonController
+{
+    public IEnumerable&lt;People&gt; GetAll()
+    {
+        return Enumerable.Empty&lt;People&gt;();
+    }
+
+    public PagedPeopleResult GetPaged(int itemsPerPage, int pageNumber, string sortColumn,
+        string sortOrder, string searchTerm)
+    {
+        var items = new List&lt;People&gt;();
+        var db = DatabaseContext.Database;
+
+        var currentType = typeof(People);
+
+        var query = new Sql().Select("*").From("demo_people");
+
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            int c = 0;
+            foreach (var property in currentType.GetProperties())
+            {
+                string before = "WHERE";
+                if (c &gt; 0)
+                {
+                    before = "OR";
+                }
+
+                var columnAttri =
+                       property.GetCustomAttributes(typeof(ColumnAttribute), false);
+
+                var columnName = property.Name;
+                if (columnAttri.Any())
+                {
+                    columnName = ((ColumnAttribute)columnAttri.FirstOrDefault()).Name;
+                }
+
+                query.Append(before + " [" + columnName + "] like @0", "%" + searchTerm + "%");
+                c++;
+            }
+        }
+        if (!string.IsNullOrEmpty(sortColumn) &amp;&amp; !string.IsNullOrEmpty(sortOrder))
+            query.OrderBy(sortColumn + " " + sortOrder);
+        else
+        {
+            query.OrderBy("id asc");
+        }
+
+        var p = db.Page&lt;People&gt;(pageNumber, itemsPerPage, query);
+        var result = new PagedPeopleResult
+        {
+            TotalPages = p.TotalPages,
+            TotalItems = p.TotalItems,
+            ItemsPerPage = p.ItemsPerPage,
+            CurrentPage = p.CurrentPage,
+            People = p.Items.ToList()
+        };
+        return result;
+    }
+}</code></pre>
+<p dir="ltr"><span>So what magic does happen here. First we check if a search term was set and if yes we need to build the where clause. To do this we go through each property of our poco and check if we find any column-attributes on them. If yes we enlarge the where clause with the name/value of that attribute, if not we just using the property name.</span></p>
+<p dir="ltr"><span><span>After that I check if sort column and sort order is set and adding the OrderBy part to the query with the column and sort order.If they are not provided the ORderBy is defined with default values.</span></span></p>
+<p><span><span>With the finished statement a query is run to the database to fetch all objects. To consider our pagination state the <span class="code">Paged()</span>-method is used which takes the current page number, how many items per page should be used and the build statement.</span></span></p>
+<h2>Package</h2>
+<p><span><span>As for each (or nearly each) extension built for Umbraco like grid or property editors there is the need of a package.manifest file. This is used to register our AngularJS controller and resource needed for the listview.</span></span></p>
+<pre class="language-javascript"><code>{
+	propertyEditors: [],
+	parameterEditors:[],
+	javascript: [
+		'~/App_Plugins/ListViewDemo/Resources/people.resource.js',
+		'~/App_Plugins/ListViewDemo/Controller/people.overview.controller.js'
+	],
+	css: []
+}</code></pre>
+      <p class="snippet-caption">Simple manifest file</p>
+<p><span><span>As this is a fairly simple demo only two js files are registered  and nothing more.</span></span></p>
+<h2>AngularJS</h2>
+<p><span><span>First have a look at the resource file. It used to have all calls to our API-Controller bundled in one file for more convenience and a better code structure. The resource provides two methods to fetch data from the API. The only one used in this demo is in fact the <span class="code">getPaged()</span>-method.</span></span></p>
+<pre class="language-javascript"><code>angular.module("umbraco.resources")
+        .factory("peopleResource", function ($http) {
+            return {
+                getall: function () {
+                    return $http.get(Umbraco.Sys.ServerVariables.demoSection.demoBaseUrl + "GetAll");
+                },
+
+                getPaged: function (itemsPerPage, pageNumber, sortColumn, sortOrder, searchTerm) {
+                    if (sortColumn == undefined)
+                        sortColumn = "";
+                    if (sortOrder == undefined)
+                        sortOrder = "";
+                    return $http.get(Umbraco.Sys.ServerVariables.demoSection.demoBaseUrl + "GetPaged?itemsPerPage=" + itemsPerPage + "&amp;pageNumber=" + pageNumber + "&amp;sortColumn=" + sortColumn + "&amp;sortOrder=" + sortOrder + "&amp;searchTerm=" + searchTerm);
+                }
+            };
+        });</code></pre>
+<p dir="ltr"><span>I reuse the paths that I saved through the ServerVariableParser to not have to type and remember the correct path for every method the resource has.</span></p>
+<p dir="ltr"><span><span>The next big thing is the controller which calls the resource file and handles the user input on the listview.</span></span></p>
+<pre class="language-javascript"><code>angular.module('umbraco')
+    .controller('DemoSection.PeopleOverviewController', function ($scope, peopleResource, notificationsService) {
+
+        $scope.selectedIds = [];
+
+        $scope.currentPage = 1;
+        $scope.itemsPerPage = 10;
+        $scope.totalPages = 1;
+
+        $scope.reverse = false;
+
+        $scope.searchTerm = "";
+        $scope.predicate = 'id';
+
+        function fetchData() {
+            peopleResource.getPaged($scope.itemsPerPage, $scope.currentPage, $scope.predicate, $scope.reverse ? "desc" : "asc", $scope.searchTerm).then(function (response) {
+                $scope.people = response.data.people;
+                $scope.totalPages = response.data.totalPages;
+            }, function (response) {
+                notificationsService.error("Error", "Could not load people");
+            });
+        };
+
+        $scope.order = function (predicate) {
+            $scope.reverse = ($scope.predicate === predicate) ? !$scope.reverse : false;
+            $scope.predicate = predicate;
+            $scope.currentPage = 1;
+            fetchData();
+        };
+
+        $scope.toggleSelection = function (val) {
+            var idx = $scope.selectedIds.indexOf(val);
+            if (idx &gt; -1) {
+                $scope.selectedIds.splice(idx, 1);
+            } else {
+                $scope.selectedIds.push(val);
+            }
+        };
+
+        $scope.isRowSelected = function (id) {
+            return $scope.selectedIds.indexOf(id) &gt; -1;
+        };
+
+        $scope.isAnythingSelected = function () {
+            return $scope.selectedIds.length &gt; 0;
+        };
+
+        $scope.prevPage = function () {
+            if ($scope.currentPage &gt; 1) {
+                $scope.currentPage--;
+                fetchData();
+            }
+        };
+
+        $scope.nextPage = function () {
+            if ($scope.currentPage &lt; $scope.totalPages) {
+                $scope.currentPage++;
+                fetchData();
+            }
+        };
+
+        $scope.setPage = function (pageNumber) {
+            $scope.currentPage = pageNumber;
+            fetchData();
+        };
+
+        $scope.search = function (searchFilter) {
+            $scope.searchTerm = searchFilter;
+            $scope.currentPage = 1;
+            fetchData();
+        };
+
+        $scope.delete = function () {
+            if (confirm("Are you sure you want to delete " + $scope.selectedIds.length + " calendar?")) {
+                $scope.actionInProgress = true;
+
+                //TODO: do the real deleting here
+                //This should be done by calling the api controller with the peopleResource using $scope.selectedIds
+
+                $scope.people = _.reject($scope.people, function (el) { return $scope.selectedIds.indexOf(el.id) &gt; -1; });
+                $scope.selectedIds = [];
+                $scope.actionInProgress = false;
+            }
+        };
+
+        fetchData();
+    });</code></pre>
+<p dir="ltr"><span>Let's have a look at the most important ones:</span></p>
+<p dir="ltr"><span>The <span class="code">fetchData()</span>-method is obviously used to fetch the data from the API by using the resource  created previously by calling the getPaged-method with some $scope variables which are holding information about the search term, itemsPerPage, current page and so on.</span></p>
+<p dir="ltr"><span>The <span class="code">order()</span>-method is used for ordering the data (yeah captain obvious). The variables reverse and predicate are used in the view which is described a bit later.</span></p>
+<p dir="ltr"><span>The <span class="code">toogleSelection()</span>-method is used to store the ids of the items we checked in the listview. This is needed for bulk deleting, updating or whatever else.</span></p>
+<p dir="ltr"><span>The <span class="code">prevPage()</span>-, <span class="code">nextPage()</span>- and <span class="code">setPage()</span>-methods are used for the pagination to set on which page we currently are.</span></p>
+<p dir="ltr"><span>The <span class="code">search()</span>-method is of course used to set the search term.</span></p>
+<p><span><span>All of these methods are calling <span class="code">fetchData()</span> at the end to get the right objects from the database regarding the variables we set through them.</span></span></p>
+<h2>HTML</h2>
+<p><span><span>The html view is divided into two main parts. The first one is the header above the table which holds the search box and the delete button for bulk deleting.</span></span></p>
+<pre class="language-markup"><code>&lt;div class="umb-sub-header"&gt;
+
+    &lt;div class="btn-group" ng-show="isAnythingSelected()"&gt;
+        &lt;a class="btn btn-danger" ng-disabled="actionInProgress" ng-click="delete()" prevent-default=""&gt;
+            &lt;localize key="actions_delete"&gt;Delete&lt;/localize&gt;
+        &lt;/a&gt;
+    &lt;/div&gt;
+
+    &lt;form class="form-search pull-right ng-pristine ng-valid" novalidate=""&gt;
+        &lt;div class="inner-addon left-addon"&gt;
+            &lt;i class="icon icon-search"&gt;&lt;/i&gt;
+            &lt;input type="text" class="form-control ng-pristine ng-valid" localize="placeholder" placeholder="Type to search..." ng-model="searchFilter" prevent-enter-submit="" no-dirty-check="" ng-change="search(searchFilter)"&gt;
+        &lt;/div&gt;
+    &lt;/form&gt;
+
+&lt;/div&gt;</code></pre>
+<p><span><span>The second one is of course the table itself. For the right look and feel for the pagination and the sorting of columns the <span class="code">&lt;thead&gt;</span>, <span class="code">&lt;tbody&gt;</span> and <span class="code">&lt;tfoot&gt;</span> parts of the table are used.</span></span></p>
+<p><span><span>The head part hold the column names with the sort mechanism. One small tip is to use the names for the <span class="code">order()</span>-method which are set in the <span class="code">column</span>-attributes.</span></span></p>
+<pre class="language-markup"><code>&lt;thead&gt;
+    &lt;tr&gt;
+        &lt;td style="width:35px"&gt;&lt;/td&gt;
+        &lt;td&gt;
+            &lt;a href="#" prevent-default class="sortable" ng-click="order('firstname')"&gt;FirstName&lt;/a&gt;
+            &lt;i class="icon" ng-class="{'icon-navigation-up': reverse, 'icon-navigation-down': !reverse}" ng-show="predicate == 'firstname'"&gt;&lt;/i&gt;
+        &lt;/td&gt;
+        &lt;td&gt;
+            &lt;a href="#" prevent-default class="sortable" ng-click="order('lastname')"&gt;LastName&lt;/a&gt;
+            &lt;i class="icon" ng-class="{'icon-navigation-up': reverse, 'icon-navigation-down': !reverse}" ng-show="predicate == 'lastname'"&gt;&lt;/i&gt;
+        &lt;/td&gt;
+        &lt;td&gt;
+            &lt;a href="#" prevent-default class="sortable" ng-click="order('age')"&gt;Age&lt;/a&gt;
+            &lt;i class="icon" ng-class="{'icon-navigation-up': reverse, 'icon-navigation-down': !reverse}" ng-show="predicate == 'age'"&gt;&lt;/i&gt;
+        &lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/thead&gt;</code></pre>
+<p><span><span>The body holds the data rendered with the angularjs directive ng-repeat. The first column is used for the checkbox with which we can select multiple rows for deleting.</span></span></p>
+<pre class="language-markup"><code>&lt;tbody&gt;
+    &lt;tr ng-repeat="p in people" ng-class="{selected: isRowSelected(p.id)}"&gt;
+        &lt;td style="width: 35px"&gt;
+            &lt;i class="icon icon-edit"&gt;&lt;/i&gt;
+            &lt;input type="checkbox" name="selectedItems[]" value="{{p.id}}" ng-checked="isRowSelected(p.id)" ng-click="toggleSelection(p.id)" /&gt;
+        &lt;/td&gt;
+        &lt;td&gt;
+            &lt;a href="#"&gt;{{p.firstName}}&lt;/a&gt;
+        &lt;/td&gt;
+        &lt;td&gt;{{p.lastName}}&lt;/td&gt;
+        &lt;td&gt;{{p.age}}&lt;/td&gt;
+    &lt;/tr&gt;
+&lt;/tbody&gt;</code></pre>
+<p><span><span>The footer holds the pagination. The available page numbers and the prev/next buttons are rendered. Of course this could be tweaked to only show a certain number of pages or hide the prev/next buttons if on the first/last page.</span></span></p>
+<pre class="language-markup"><code>&lt;tfoot ng-show="totalPages &gt; 1"&gt;
+    &lt;tr&gt;
+        &lt;th colspan="5"&gt;
+            &lt;div class="pagination pagination-right"&gt;
+                &lt;ul&gt;
+                    &lt;li ng-class="{disabled: currentPage == 1}"&gt;
+                        &lt;a href ng-click="prevPage()"&gt;Prev&lt;/a&gt;
+                    &lt;/li&gt;
+                    &lt;li ng-repeat="i in getNumber(totalPages) track by $index" ng-click="setPage($index+1)"&gt;&lt;span&gt;{{$index+1}}&lt;/span&gt;&lt;/li&gt;
+                    &lt;li ng-class="{disabled: currentPage == totalPages}"&gt;
+                        &lt;a href ng-click="nextPage()"&gt;Next&lt;/a&gt;
+                    &lt;/li&gt;
+                &lt;/ul&gt;
+            &lt;/div&gt;
+        &lt;/th&gt;
+    &lt;/tr&gt;
+&lt;/tfoot&gt;</code></pre>
+<p><span><span>Here is the complete view:</span></span></p>
+<pre class="language-markup"><code>&lt;umb-panel ng-controller="DemoSection.PeopleOverviewController"&gt;
+    &lt;umb-header&gt;
+        &lt;h1&gt;Overview&lt;/h1&gt;
+    &lt;/umb-header&gt;
+
+    &lt;div class="umb-panel-body"&gt;
+        &lt;div class="umb-pane"&gt;
+
+            &lt;div class="umb-sub-header"&gt;
+
+                &lt;div class="btn-group" ng-show="isAnythingSelected()"&gt;
+                    &lt;a class="btn btn-danger" ng-disabled="actionInProgress" ng-click="delete()" prevent-default=""&gt;
+                        &lt;localize key="actions_delete"&gt;Delete&lt;/localize&gt;
+                    &lt;/a&gt;
+                &lt;/div&gt;
+
+                &lt;form class="form-search pull-right ng-pristine ng-valid" novalidate=""&gt;
+                    &lt;div class="inner-addon left-addon"&gt;
+                        &lt;i class="icon icon-search"&gt;&lt;/i&gt;
+                        &lt;input type="text" class="form-control ng-pristine ng-valid" localize="placeholder" placeholder="Type to search..." ng-model="searchFilter" prevent-enter-submit="" no-dirty-check="" ng-change="search(searchFilter)"&gt;
+                    &lt;/div&gt;
+                &lt;/form&gt;
+
+            &lt;/div&gt;
+
+            &lt;div class="umb-listview"&gt;
+                &lt;table class="table table-striped"&gt;
+                    &lt;thead&gt;
+                        &lt;tr&gt;
+                            &lt;td style="width:35px"&gt;&lt;/td&gt;
+                            &lt;td&gt;
+                                &lt;a href="#" prevent-default class="sortable" ng-click="order('firstname')"&gt;FirstName&lt;/a&gt;
+                                &lt;i class="icon" ng-class="{'icon-navigation-up': reverse, 'icon-navigation-down': !reverse}" ng-show="predicate == 'firstname'"&gt;&lt;/i&gt;
+                            &lt;/td&gt;
+                            &lt;td&gt;
+                                &lt;a href="#" prevent-default class="sortable" ng-click="order('lastname')"&gt;LastName&lt;/a&gt;
+                                &lt;i class="icon" ng-class="{'icon-navigation-up': reverse, 'icon-navigation-down': !reverse}" ng-show="predicate == 'lastname'"&gt;&lt;/i&gt;
+                            &lt;/td&gt;
+                            &lt;td&gt;
+                                &lt;a href="#" prevent-default class="sortable" ng-click="order('age')"&gt;Age&lt;/a&gt;
+                                &lt;i class="icon" ng-class="{'icon-navigation-up': reverse, 'icon-navigation-down': !reverse}" ng-show="predicate == 'age'"&gt;&lt;/i&gt;
+                            &lt;/td&gt;
+                        &lt;/tr&gt;
+                    &lt;/thead&gt;
+                    &lt;tbody&gt;
+                        &lt;tr ng-repeat="p in people" ng-class="{selected: isRowSelected(p.id)}"&gt;
+                            &lt;td style="width: 35px"&gt;
+                                &lt;i class="icon icon-edit"&gt;&lt;/i&gt;
+                                &lt;input type="checkbox" name="selectedItems[]" value="{{p.id}}" ng-checked="isRowSelected(p.id)" ng-click="toggleSelection(p.id)" /&gt;
+                            &lt;/td&gt;
+                            &lt;td&gt;
+                                &lt;a href="#"&gt;{{p.firstName}}&lt;/a&gt;
+                            &lt;/td&gt;
+                            &lt;td&gt;{{p.lastName}}&lt;/td&gt;
+                            &lt;td&gt;{{p.age}}&lt;/td&gt;
+                        &lt;/tr&gt;
+                    &lt;/tbody&gt;
+                    &lt;tfoot ng-show="totalPages &gt; 1"&gt;
+                        &lt;tr&gt;
+                            &lt;th colspan="5"&gt;
+                                &lt;div class="pagination pagination-right"&gt;
+                                    &lt;ul&gt;
+                                        &lt;li ng-class="{disabled: currentPage == 1}"&gt;
+                                            &lt;a href ng-click="prevPage()"&gt;Prev&lt;/a&gt;
+                                        &lt;/li&gt;
+                                        &lt;li ng-repeat="i in getNumber(totalPages) track by $index" ng-click="setPage($index+1)"&gt;&lt;span&gt;{{$index+1}}&lt;/span&gt;&lt;/li&gt;
+                                        &lt;li ng-class="{disabled: currentPage == totalPages}"&gt;
+                                            &lt;a href ng-click="nextPage()"&gt;Next&lt;/a&gt;
+                                        &lt;/li&gt;
+                                    &lt;/ul&gt;
+                                &lt;/div&gt;
+                            &lt;/th&gt;
+                        &lt;/tr&gt;
+                    &lt;/tfoot&gt;
+                &lt;/table&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/umb-panel&gt;</code></pre>
+      <p class="snippet-caption">The complete markup</p>
+<h2>Wrapping up</h2>
+<p><span><span>As you can see it is possible with fairly simple methods to enhance the user experience of your packages or websites by reusing a functionality that is already used by umbraco itself and thus loved by our editors.</span></span></p>
+<p>For a better jumb start I created a github repo which is ready to go, so give it a try!</p>
+<p><a href="https://github.com/Mantus667/ListViewForCustomSection" target="_blank" title="Github repo">https://github.com/Mantus667/ListViewForCustomSection</a></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="David Brendel"><img src="//gravatar.com/avatar/bb5f65df7a08014b882175789f72b557.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/bb5f65df7a08014b882175789f72b557.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>David Brendel</h1>
+        <p>David is on Twitter as <a href="//twitter.com/byte5db" title="David Brendel on Twitter" rel="author">@byte5db</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li class="selected"><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

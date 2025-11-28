@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Upgrading Umbraco using Git</title>
+<meta name="description" content="A guide on how to use Git version control to support upgrading your Umbraco installation.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Upgrading Umbraco using Git</h1>
+      <p class="byline"> by Lee Kelleher, <span class="pubdate">posted on <time datetime="2014-12-12">Dec 12, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">With the recent release of Umbraco 7.2.0, I know there will be many developers who are itching to try out the latest and greatest features, including the new Grid editor.</p>
+<p class="intro">The Our Umbraco documentation site contains details on <a href="http://our.umbraco.org/documentation/Installation/Upgrading/" target="_blank">how to upgrade an existing installation</a> - this also covers special considerations for <a href="http://our.umbraco.org/documentation/Installation/Upgrading/version-specific" target="_blank">specific versions</a>.</p>
+<p>Whenever I perform an upgrade, my main issue is with merging my custom configurations with the default core files.  For this part I like to leverage a diff engine that comes with a source-control system, in my case I prefer to use <strong>Git</strong>.</p>
+<h3>New to Git?</h3>
+<p>If you are not familar with the Git source-control system, then I'd advise taking a little time to read up on the basics: <a href="https://try.github.io/" target="_blank">GitHub offer an excellent 15 minute Code School tutorial</a> and for more technical topics, there is <a href="http://git-scm.com/book/en/v2" target="_blank">a free Pro Git book</a>.</p>
+<p>Once you are familar with the basics, you'll be able to add your Umbraco installation to a local Git repository.  If you need advice on which files and folders to exclude from version-control, please refer to the <a href="https://github.com/github/gitignore/blob/master/Umbraco.gitignore" target="_blank"><span class="code">.gitignore</span> for Umbraco (hosted on GitHub)</a>.</p>
+<blockquote>
+<p><strong>Pro tip:</strong> To create a 'dot-file' in Windows Explorer, add a '.' to the end of the filename, e.g. "<span class="code">.gitignore.</span>"</p>
+</blockquote>
+<p>As for which Git client to use, that is up to you. Personally I use the <a href="http://sourceforge.net/projects/gitextensions/" target="_blank">GitExtensions</a> client, but there are popular alternatives like <a href="https://windows.github.com/" target="_blank">GitHub for Windows</a> or <a href="http://www.sourcetreeapp.com/" target="_blank">SourceTree</a>.</p>
+<h3>Preparing for upgrade</h3>
+<p>Once you have your Umbraco installation in a Git repository, you can then prepare for an upgrade.</p>
+<p>For this example, I am going to take an existing v7.1.9 installation (using the excellent <a href="http://our.umbraco.org/projects/starter-kits/localgov-starter-kit" target="_blank">LocalGov Starter Kit</a> starter-kit) and we'll upgrade it to v7.2.0.</p>
+<blockquote>
+<p><strong>Caveat:</strong> As always, please make a separate backup of your Umbraco files and database.</p>
+<p><em>Yes, yes, I know the files *should* be covered by Git, but for this article let us err on the side of caution. ;-)</em></p>
+</blockquote>
+<p>Next, we download a copy of <a href="http://our.umbraco.org/download" target="_blank">the latest Umbraco release</a> zip from the Our Umbraco website. Extract the contents of the zip archive into the folder of your existing Umbraco installation. Literally "replace all the files in the existing directory".</p>
+<p>Once all the files from the release zip have copied over, go to your Git client - you should see that there are a lot of modified files!</p>
+<figure>
+  <a href="/archive/media/2014/gitextensions_modified_files.png">
+    <img src="/archive/media/2014/gitextensions_modified_files.png" width="1000" alt="GitExtensions toolbar - Commit button displaying the number of modified files">
+  </a>
+  <figcaption>GitExtensions toolbar - Commit button displaying the number of modified files</figcaption>
+</figure>
+<p>When you click on the "Commit" button, it will open a window containing all of the modified files.</p>
+<figure class="pull-right">
+  <a href="/archive/media/2014/gitextensions_commit_panel.png">
+    <img src="/archive/media/2014/gitextensions_commit_panel.png" alt="GitExtensions commit panel - displaying modified files" width="499">
+  </a>
+  <figcaption>GitExtensions commit panel - displaying modified files</figcaption>
+</figure>
+<p>The left-side panel will list all the modified files, and the right-side will display the differences of the selected file.  In the screenshot above, we can see that the <span class="code">businesslogic.xml</span> has new content added.</p>
+<blockquote>
+<p><em><strong>Side-note:</strong> For those curious, this file is the XML code documentation for the <span class="code">businesslogic.dll</span> - this change illustrated means that a new class - <span class="code">WebformsPageTreeAuthorizeAttribute</span> - has been added to the assembly.</em></p>
+</blockquote>
+<h3><span style="font-size: 1.17em;">Pre-upgrade</span></h3>
+<p>The next step is to go through each modified file in the list and check whether it can be committed as is, (staged) or if it requires some further attention.</p>
+<p>The main folders where you are likely to have customisations are:</p>
+<ul>
+<li class="code">/Config/*.config</li>
+<li class="code">/Umbraco/Config/Create/UI.xml</li>
+<li class="code">/Umbraco/Config/Lang/*.xml</li>
+<li class="code">/Web.config</li>
+</ul>
+<figure class="pull-right">
+  <a href="/archive/media/2014/gitextensions_stage_modified_files.gif">
+    <img src="/archive/media/2014/gitextensions_stage_modified_files.gif" width="500" alt="GitExtensions commit panel - staging modified files">
+  </a>
+  <figcaption>GitExtensions commit panel - staging modified files</figcaption>
+</figure>
+<p><span>Generally the rest of the modified files will be core code fixes, but do keep a careful eye out if you have made any other customisations to the Umbraco core files.</span></p>
+<p>When you do find a modified file that has overwritten some of your customisations, we can investigate the changes at a granular level - restoring our customisations and staging the core additions.</p>
+<p>For example, we had the <a href="http://our.umbraco.org/projects/starter-kits/localgov-starter-kit" target="_blank">LocalGov Starter Kit</a><span> starter-kit installed, which comes with its own dashboard control. We can see from the next screenshot that the <span class="code">/Config/Dashboard.config</span> has several changes - some lines added, modified and removed.</span></p>
+<figure>
+  <a href="/archive/media/2014/gitextensions_file_customisations.gif">
+    <img src="/archive/media/2014/gitextensions_file_customisations.gif" width="995" alt="GitExtensions commit panel - viewing file customisations">
+  </a>
+  <figcaption>GitExtensions commit panel - viewing file customisations</figcaption>
+</figure>
+<p>This is the part where Git comes into its own, it enables you to select which lines that you want to commit and/or revert back to a previous state.</p>
+<figure class="pull-right">
+  <a href="/archive/media/2014/gitextensions_selected_lines_stage.gif">
+    <img src="/archive/media/2014/gitextensions_selected_lines_stage.gif" width="620" alt="GitExtensions commit panel - stage selected lines">
+  </a>
+  <figcaption>GitExtensions commit panel - stage selected lines</figcaption>
+</figure>
+<p><span>Looking through the additions, we see that there is a new section called "StartupFormsDashboardSection" - this looks good, so we want to commit that. Now you can highlight the lines that you want to commit, then right-click and select "Stage selected line(s)" (or press the "</span><span class="code">S</span><span>" key).</span></p>
+<p><span>The same approach applies to reverting your customisations. Highlight the lines that you want to restore, then right-click and select "Reset selected line(s)" (or press the "<span class="code">R</span>" key).</span></p>
+<p>Once you've gone through each line of the file, you will end up with a staged version of it, which you are able to review again before you commit.</p>
+<p>This process also gives you a good opportunity to see what has been fixed and updated throughout the Umbraco core... you never know, it may find a hidden gem?</p>
+<p><strong>Note:</strong> Before we move on to upgrade itself, there are a couple of things to verify with the <span class="code">/Web.config</span> file.  Make sure that the database connection-string for "umbracoDbDSN" is reverted back to its original value - otherwise the upgrade script wont know where your Umbraco database is.</p>
+<p>At this point, you can either commit the files to your local repository, or keep them in the staged area.  If you commit, give it a message like "<em>Preparing for upgrade to Umbraco 7.2.0</em>".</p>
+<h3>Now the upgrade itself!</h3>
+<p>Open your Umbraco installation in your web-browser and follow the on-screen instructions...</p>
+<figure>
+  <a href="/archive/media/2014/umbraco_upgrade_screen.png">
+    <img src="/archive/media/2014/umbraco_upgrade_screen.png" alt="Umbraco upgrade screen - what time is it?" width="500">
+  </a>
+  <figcaption>Umbraco upgrade screen - what time is it?</figcaption>
+</figure>
+<p>... once completed, you should be taken to the Umbraco back-office. There you can verify that all your content is there and everything upgraded as expected!</p>
+<h3>Post-upgrade analysis</h3>
+<p>After the upgrade, if you go back to your Git client, you will notice that there are a couple of files that have been modified. This is expected, as files like <span class="code">/Web.config</span> and <span class="code">/Config/ClientDependency.config</span> are updated during the upgrade to increment the version number.</p>
+<p>You can now stage and commit those post-upgrade modifications.</p>
+<h3>TL;DR;</h3>
+<p>This article tries to show how using Git can help with the upgrade process for Umbraco. By using the diff-engine it is possible to make granular customisations to updated core files.</p>
+<p>There are many different ways to perform an upgrade, this article wasn't intended as a definitive guide. If it helps someone with their upgrade concerns, that is good news.</p>
+<p>Wishing everyone in the Umbraco community a very Merry Christmas... all the best!</p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Lee Kelleher"><img src="//gravatar.com/avatar/ad04c192cc8336d9a329cd2ae4c359bb.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/ad04c192cc8336d9a329cd2ae4c359bb.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Lee Kelleher</h1>
+        <p>Lee is on Twitter as <a href="//twitter.com/leekelleher" title="Lee Kelleher on Twitter" rel="author">@leekelleher</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li class="selected"><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

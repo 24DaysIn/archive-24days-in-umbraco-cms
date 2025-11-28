@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Everything you need to know about MembershipProvider</title>
+<meta name="description" content="A dive into extending Members in Umbraco using the available providers">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Everything you need to know about MembershipProvider</h1>
+      <p class="byline"> by Pawel Bres, <span class="pubdate">posted on <time datetime="2015-12-13">Dec 13, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Members are crucial part of most of the websites nowadays. Everywhere where you need to give users of your website possibility to log in and store some personal information, membership enters the game.</p>
+<p class="intro">Let's then take a closer look at Membership in Umbraco. Out of the box we got a great solution that would cover most of scenarios in web projects. There are custom member types with customizable properties and member groups, which can be used to set permissions at the node level. All of that is explained very well in the <a href="https://our.umbraco.org/documentation/getting-started/data/members/" title="Umbraco Documentation - Members">official Umbraco Members documentation</a> by showing how to create and edit members in Backoffice.</p>
+<p>Last year Lee wrote great article about <a href="/umbraco-cms/2014/dealing-with-members/">"Dealing With Members Using The MemberService &amp; MembershipHelper"</a>. It's a very good place to start your journey and get to know how to query, register and update members straight from the code using MemberService and MembershipHelper. But let's look a little bit deeper and check what's going on under the hood.</p>
+<p>As you may already know, one of the greatest parts of Umbraco is the possibility to extend or replace almost all built-in features. One of them is the Membership Provider which we will going to explore today.</p>
+<p>Below you can find small agenda of this post:</p>
+<ol type="1">
+<li><span>Simple Log in form</span></li>
+<li><span>Extending default provider by Two-factor authentication</span></li>
+<li><span>Replacing default MembershipProvider</span></li>
+<li><span>Replacing default RoleProvider</span></li>
+<li><span>Summary</span></li>
+</ol>
+<h2><span>Simple Log in form</span></h2>
+<p>Ok, so we have members created in Backoffice or in the code but it would be nice to let them actually log in and get access to "Members only area".  To do this we need one surface controller and one view.</p>
+<pre class="language-markup"><code>public class MembersController : SurfaceController
+{
+    [HttpPost]
+    public ActionResult HandleLogin(string username, string password)
+    {
+        if (!Members.Login(username, password))
+        {
+            TempData["status"] = "Login failed";
+        }
+        return RedirectToCurrentUmbracoUrl();
+    }
+}
+</code></pre>
+      <p class="snippet-caption">HandleLogin method</p>
+<pre class="language-markup"><code>@using MembersProject.Controllers
+@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+    Layout = "Master.cshtml";
+}
+
+&lt;h1&gt; @CurrentPage.Name &lt;/h1&gt;
+@if (Members.IsLoggedIn())
+{
+    // if member is already logged in make redirect to /member-area
+    Response.Redirect("/member-area");
+}
+else
+{
+    using (Html.BeginUmbracoForm&lt;MembersController&gt;("HandleLogin", null))
+    {
+        &lt;div class="form"&gt;
+            &lt;div class="form-group"&gt;
+                &lt;label for="username"&gt;Username&lt;/label&gt;
+                &lt;input type="text" class="form-control" id="username" name="Username"&gt;
+            &lt;/div&gt;
+            &lt;div class="form-group"&gt;
+                &lt;label for="password"&gt;Password&lt;/label&gt;
+                &lt;input type="password" class="form-control" id="password" name="Password"&gt;
+            &lt;/div&gt;
+            
+            &lt;div class="form-group"&gt;
+                &lt;button type="submit" class="btn btn-default"&gt;Login&lt;/button&gt;
+                @if (TempData["Status"] != null)
+                {
+                    &lt;p&gt;
+                        @TempData["Status"]
+                    &lt;/p&gt;
+                }
+            &lt;/div&gt;
+        &lt;/div&gt; 
+    }    
+}
+</code></pre>
+      <p class="snippet-caption">Login Page template</p>
+<p>And that's it, members can now log into our website. Simple, right ?</p>
+<p>To make it complete we also need a Logout option. We will do it by creating Logout template as follows:</p>
+<pre class="language-markup"><code>@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+    Layout = "Master.cshtml";
+}
+
+@if (Members.IsLoggedIn())
+{
+    Members.Logout();
+    &lt;h2&gt;Logout successful&lt;/h2&gt;
+    &lt;a href="/Login"&gt;Login&lt;/a&gt;
+}
+else
+{
+    //if members is not logged in make redirect to /Logion page
+    Response.Redirect("/Login");
+}
+</code></pre>
+      <p class="snippet-caption">Logout Page template</p>
+<p>Now members can log in and log out from our website. That's cool but not cool enough to open champagne.<br>Let's see what we can do to make it little bit more complicated :)</p>
+<h2>Extending default provider by Two-factor authentication</h2>
+<p>If you take a look at <a href="https://github.com/umbraco/Umbraco-CMS/blob/d50e49ad37fd5ca7bad2fd6e8fc994f3408ae70c/src/Umbraco.Web/Security/MembershipHelper.cs#L215" title="MemberController in Umbraco sources">MemberController in Umbraco sources</a>, you can find that during login process it's calling ValidateUser method of current MembershipProvider. This means if we create our MembershipProvider inherited from original one we can override the ValidateUser method and add some custom code there. Don't be scared, it's really simple and I hope the comments put some light there.</p>
+<pre class="language-markup"><code>public class ExtendedMembershipProvider : MembersMembershipProvider
+{
+    public override bool ValidateUser(string username, string password)
+    {
+        var session = HttpContext.Current.Session;
+
+        //check what login step it is
+        var loginStep = session["loginStep"] != null ? session["loginStep"].ToString() : "1";
+
+        if (loginStep == "1")
+        {
+            if (base.ValidateUser(username, password))
+            {
+                //member is validated so set logiStep to 2
+                session["loginStep"] = "2";
+
+                //generate PIN number and store it in Session object
+                var pin = SecurityHelper.GeneratePinNumber();
+                session["currentPin"] = pin;
+
+                // store member username for later use
+                session["currentMember"] = username;
+
+                //send PIN to member via Email or SMS, we will just output it to tracelog
+                LogHelper.Info&lt;ExtendedMembershipProvider&gt;("PIN number for member {0} is {1}", () =&gt; username,
+                    () =&gt; pin);
+
+                //although Member is validated return false because PIN is not yet provided
+                return false;
+            }
+        }
+        else
+        {
+            var currentPin = session["currentPin"] != null
+                ? session["currentPin"].ToString()
+                : string.Empty;
+
+            //in this case password is PIN
+            if (currentPin == password)
+            {
+                // clear all values stored in session
+                session["currentPin"] = null;
+                session["loginStep"] = null;
+                session["currentMember"] = null;
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+</code></pre>
+      <p class="snippet-caption">Extended Membership Provider</p>
+<p>Just little changes in HandleLogin and Login view and we are ready to go.</p>
+<pre class="language-markup"><code>public ActionResult HandleLogin(string username, string password)
+{
+    var loginStep = Session["loginStep"];
+
+    // if it's second step get username from session as we are getting only PIN
+    if (loginStep != null &amp;&amp; loginStep.ToString() == "2")
+    {
+        username = Session["currentMember"] != null ? Session["currentMember"].ToString() : string.Empty;
+    }
+    if (!Members.Login(username, password))
+    {
+        // if we are still on the same step and Member validation failed that means we need to dispaly login error
+        if (loginStep == Session["loginStep"])
+        {
+            TempData["status"] = "Login failed";
+        }
+    }
+    return RedirectToCurrentUmbracoUrl();
+}
+</code></pre>
+      <p class="snippet-caption">HandleLogin method with 2FA</p>
+<pre class="language-markup"><code>@using MembersProject.Controllers
+@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+    Layout = "Master.cshtml";
+    var step = Session["loginStep"] != null ? Session["loginStep"].ToString() : "1";
+
+}
+
+&lt;h1&gt; @CurrentPage.Name &lt;/h1&gt;
+@if (Members.IsLoggedIn())
+{
+    // if member is already logged in make redirect to /member-area
+    Response.Redirect("/member-area");
+}
+else
+{
+    using (Html.BeginUmbracoForm&lt;MembersController&gt;("HandleLogin", null))
+    {
+        //display correct step header 
+        if (step == "2")
+        {
+            &lt;h2&gt;Step 2&lt;/h2&gt;
+        }
+        else
+        {
+            &lt;h2&gt;Step 1&lt;/h2&gt;
+        }
+        &lt;div class="form"&gt;
+            @if (step == "2")
+            {
+                // if it's step 2 display just PIN field
+                &lt;div class="form-group"&gt;
+                    &lt;label for="password"&gt;PIN&lt;/label&gt;
+                    &lt;input type="password" class="form-control" id="password" name="Password"&gt;
+                &lt;/div&gt;
+            }
+            else
+            {
+                &lt;div class="form-group"&gt;
+                    &lt;label for="username"&gt;Username&lt;/label&gt;
+                    &lt;input type="text" class="form-control" id="username" name="Username"&gt;
+                &lt;/div&gt;
+                &lt;div class="form-group"&gt;
+                    &lt;label for="password"&gt;Password&lt;/label&gt;
+                    &lt;input type="password" class="form-control" id="password" name="Password"&gt;
+                &lt;/div&gt;
+            }
+
+            &lt;div class="form-group"&gt;
+                &lt;button type="submit" class="btn btn-default"&gt;Login&lt;/button&gt;
+                @if (TempData["Status"] != null)
+                {
+                    &lt;p&gt;
+                        @TempData["Status"]
+                    &lt;/p&gt;
+                }
+            &lt;/div&gt;
+        &lt;/div&gt;
+    }
+}
+</code></pre>
+      <p class="snippet-caption">Login Page template with 2FA</p>
+<p>If you are curious how PIN is generated, here is the content of "magic box":</p>
+<pre class="language-markup"><code>public static class SecurityHelper
+{
+    private static readonly Random Rand = new Random();
+
+    public static string GeneratePinNumber()
+    {
+        return Rand.Next(1000, 9999).ToString();
+    }
+}
+</code></pre>
+      <p class="snippet-caption">Security Helper</p>
+<p>Ok, but let's just sum up what's going on above. We've overridden the ValidateUser method to hold Member validation until the correct PIN is provided. PIN is stored in Session object to keep this example simple. For the same reason, the generated PIN is outputted to UmbracoTraceLog instead of SMS, Email or any other way.</p>
+<p>One final step to make it work is replacing MembersMembershipProvider by ExtendedMembershipProvider in web.config.</p>
+<pre class="language-markup"><code>&lt;add name="UmbracoMembershipProvider" type="MembersProject.Extensions.ExtendedMembershipProvider, MembersProject" minRequiredNonalphanumericCharacters="0" minRequiredPasswordLength="8" useLegacyEncoding="true" enablePasswordRetrieval="false" enablePasswordReset="true" requiresQuestionAndAnswer="false" defaultMemberTypeAlias="Member" passwordFormat="Hashed"/&gt;
+</code></pre>
+      <p class="snippet-caption">Web.config change</p>
+<p>Now when you try to log in you will be asked for PIN number and you can find it in App_Data\Logs\UmbracoTraceLog.txt</p>
+<figure>
+  <a href="/archive/media/2015/pin.png">
+    <img src="/archive/media/2015/pin.png" width="677" alt="PIN numer in UmbracoTraceLog">
+  </a>
+  <figcaption>PIN numer in UmbracoTraceLog</figcaption>
+</figure>
+<p><span>Voil</span><span>à!</span><span> We've just created (very simple) two-factor authentication.</span></p>
+<figure>
+  <a href="/archive/media/2015/login_step_2.png">
+    <img src="/archive/media/2015/login_step_2.png" width="726" alt="Second step of Log in process">
+  </a>
+  <figcaption>Second step of Log in process</figcaption>
+</figure>
+<h2><span>Replacing default MembershipProvider</span></h2>
+<p>This is not the only thing we can do with MembershipProvider in Umbraco. Sometimes there are situations where Members are stored in another table, database or even in some remote service. Even in scenarios like this we can still use Umbraco Backoffice to handle website members just by replacing MembershipProvider. Let's take a look. This time we need to create CustomMembershipProvider inherited straight from MembershipProvider class. Otherwise Umbraco will recognize it as extension to original provider and won't let you take total control over members.</p>
+<pre class="language-markup"><code>public class CustomMembershipProvider : MembershipProvider
+{
+
+}</code></pre>
+      <p class="snippet-caption">Custom Membership Provider definition</p>
+<p>MembershipProvider is an abstract class so by itself it will force you to override a bunch of methods. We will focus only on those that let us display members in the member tree and pass the validation process.</p>
+<p>Script for creating CustomMembers table as well as whole working example you can find in Github repo which will be listed at the end of this post.</p>
+<p>Before all let's just make simple MembersRepository using PetaPoco to grab members from our custom table.</p>
+<pre class="language-markup"><code>public class CustomMember
+{
+    public Guid Id { get; set; }
+    public string Username { get; set; }
+    public string Email { get; set; }
+    public string Password { get; set; }
+    public string Comment { get; set; }
+    public bool IsApproved { get; set; }
+    public bool IsLockedOut { get; set; }
+    public DateTime LastLoginDate { get; set; }
+    public DateTime LastLockoutDate { get; set; }
+    public bool IsFrontendDev { get; set; }
+    public bool IsBackendDev { get; set; }
+}
+</code></pre>
+      <p class="snippet-caption">Custom member</p>
+<pre class="language-markup"><code>public class MembersRepository
+{
+    private readonly UmbracoDatabase _db;
+    public MembersRepository()
+    {
+        _db = ApplicationContext.Current.DatabaseContext.Database; 
+    }
+
+    public List&lt;CustomMember&gt; GetMembers(int pageIndex, int pageSize, out int totalRecords)
+    {
+        totalRecords = _db.ExecuteScalar&lt;int&gt;("SELECT Count(*) FROM CustomMembers");
+
+        var members = _db.SkipTake&lt;CustomMember&gt;(pageIndex * pageSize, pageSize, "SELECT * FROM CustomMembers");
+        return members;
+    }
+
+    public CustomMember GetMemberById(Guid id)
+    {
+        var member = _db.Single&lt;CustomMember&gt;("SELECT TOP 1 * FROM CustomMembers WHERE Id = @0", id);
+        return member;
+    }
+
+    public List&lt;CustomMember&gt; GetMembersByEmail(string emailToMatch, int pageIndex, int pageSize, out int totalRecords)
+    {
+        totalRecords = _db.ExecuteScalar&lt;int&gt;("SELECT Count(*) FROM CustomMembers WHERE Email = @0", emailToMatch);
+
+        var members = _db.SkipTake&lt;CustomMember&gt;(pageIndex * pageSize, pageSize, "SELECT * FROM CustomMembers WHERE Email = @0", emailToMatch);
+        return members;
+    }
+
+    public CustomMember GetMemberByUsername(string usernameToMatch)
+    {
+        var member = _db.Single&lt;CustomMember&gt;("SELECT TOP 1 * FROM CustomMembers WHERE Username = @0", usernameToMatch);
+        return member;
+    }
+
+    public List&lt;CustomMember&gt; GetMembersByUsername(string usernameToMatch, int pageIndex, int pageSize, out int totalRecords)
+    {
+        totalRecords = _db.ExecuteScalar&lt;int&gt;("SELECT Count(*) FROM CustomMembers WHERE Username = @0", usernameToMatch);
+
+        var members = _db.SkipTake&lt;CustomMember&gt;(pageIndex * pageSize, pageSize, "SELECT * FROM CustomMembers WHERE Username = @0", usernameToMatch);
+        return members;
+    }
+}
+</code></pre>
+      <p class="snippet-caption">Members Repository</p>
+<p>Now we can go back to CustomMembershipProvider and have a look on methods we need to override.</p>
+<pre class="language-markup"><code>public class CustomMembershipProvider : MembershipProvider
+{
+     private readonly MembersRepository _membersRepository;
+
+    public CustomMembershipProvider()
+    {
+        _membersRepository = new MembersRepository();
+    }
+
+    public override MembershipUserCollection FindUsersByEmail(string emailToMatch, int pageIndex, int pageSize, out int totalRecords)
+    {
+        var members = _membersRepository.GetMembersByEmail(emailToMatch, pageIndex, pageSize, out totalRecords);
+        var membersCollection = new MembershipUserCollection();
+        foreach (var customMember in members)
+        {
+            membersCollection.Add(ConvertToMembershipUser(customMember));
+        }
+        return membersCollection;
+    }
+
+    public override MembershipUserCollection FindUsersByName(string usernameToMatch, int pageIndex, int pageSize, out int totalRecords)
+    {
+        var members = _membersRepository.GetMembersByUsername(usernameToMatch, pageIndex, pageSize, out totalRecords);
+        var membersCollection = new MembershipUserCollection();
+        foreach (var customMember in members)
+        {
+            membersCollection.Add(ConvertToMembershipUser(customMember));
+        }
+        return membersCollection;
+    }
+
+    public override MembershipUserCollection GetAllUsers(int pageIndex, int pageSize, out int totalRecords)
+    {
+        var members = _membersRepository.GetMembers(pageIndex, pageSize, out totalRecords);
+        var membersCollection = new MembershipUserCollection();
+        foreach (var customMember in members)
+        {
+            membersCollection.Add(ConvertToMembershipUser(customMember));
+        }
+        return membersCollection;
+    }
+
+    public override MembershipUser GetUser(string username, bool userIsOnline)
+    {
+        var member = _membersRepository.GetMemberByUsername(username);
+        if (member != null)
+        {
+            return ConvertToMembershipUser(member);
+        }
+        return null;
+    }
+
+    public override MembershipUser GetUser(object providerUserKey, bool userIsOnline)
+    {
+        Guid id;
+        if (Guid.TryParse(providerUserKey.ToString(), out id))
+        {
+            var member = _membersRepository.GetMemberById(id);
+            if (member != null)
+            {
+                return ConvertToMembershipUser(member);
+            }
+        }
+        return null;
+    }
+
+    public override bool ValidateUser(string username, string password)
+    {
+        var member = _membersRepository.GetMemberByUsername(username);
+        if (member != null)
+        {
+            //This is only exmaple, avoid storing passwords in plain text :)
+            return member.Password == password;
+        }
+        return false;
+    }
+
+    private MembershipUser ConvertToMembershipUser(CustomMember member)
+    {
+        return new MembershipUser("UmbracoMembershipProvider", member.Username, member.Id, member.Email, "", "", member.IsApproved, member.IsLockedOut, DateTime.Now, DateTime.Now, DateTime.Now, DateTime.MinValue, DateTime.MinValue);
+    }
+}
+</code></pre>
+      <p class="snippet-caption">Custom Membership Provider Methods</p>
+<p>Pretty much code, but seriously nothing very complicated when you look at it closer. We are just using created MembersRepository to get members from database with different conditions. You can also see ValidateUser method there. Similar to previous example, this method will be hit every time member is trying to log in. Other point of interest could be ConvertToMembershipUser method which returns new instance of MembershipUser based on given CustomMember object.</p>
+<p>To make it work, we need to just replace MembershipProvider declaration in web.config.</p>
+<pre class="language-markup"><code>&lt;add name="UmbracoMembershipProvider" type="MembersProject.Extensions.CustomMembershipProvider, MembersProject" minRequiredNonalphanumericCharacters="0" minRequiredPasswordLength="8" useLegacyEncoding="true" enablePasswordRetrieval="false" enablePasswordReset="true" requiresQuestionAndAnswer="false" defaultMemberTypeAlias="Member" passwordFormat="Hashed"/&gt;
+</code></pre>
+      <p class="snippet-caption">Web.config change</p>
+<p>That's all, no need to make any changes in log in method or in backoffice views. </p>
+<figure>
+  <a href="/archive/media/2015/db.png">
+    <img src="/archive/media/2015/db.png" width="1140" alt="Table with Custom Members">
+  </a>
+  <figcaption>Table with Custom Members</figcaption>
+</figure>
+<h2>Replacing default RoleProvider</h2>
+<p>Last topic I would like to address is RoleProvider. For now it's not possible to combine default Umbraco MembersRoleProvider with totally custom MembershipProvider, so we need to create also custom RoleProvider. But don't worry, it's very easy, as you will see, very flexible. Again, I won't list here all methods that needs to be overridden but only those that are crucial for this example. </p>
+<pre class="language-markup"><code>public class CustomRoleProvider : RoleProvider
+{
+    private readonly MembersRepository _membersRepository;
+
+    public CustomRoleProvider()
+    {
+        _membersRepository = new MembersRepository();
+    }
+    
+    public override string[] GetAllRoles()
+    {
+        //we are using static array of roles but it can be db or service query as well
+        return new string[] { "Frontend Devs", "Backend Devs" };
+    }
+
+    public override string[] GetRolesForUser(string username)
+    {
+        var member = _membersRepository.GetMemberByUsername(username);
+        var memberRoles = new List&lt;string&gt;();
+        if (member != null)
+        {
+            if (member.IsBackendDev)
+            {
+                memberRoles.Add("Backend Devs");
+            }
+            if (member.IsFrontendDev)
+            {
+                memberRoles.Add("Frontend Devs");
+            }
+        }
+        return memberRoles.ToArray();
+    }
+
+    public override bool IsUserInRole(string username, string roleName)
+    {
+        var member = _membersRepository.GetMemberByUsername(username);
+        switch (roleName)
+        {
+            case "Backend Devs":
+                return member.IsBackendDev;
+            case "Frontend Devs":
+                return member.IsFrontendDev;
+        }
+        return false;
+    }
+}
+</code></pre>
+      <p class="snippet-caption">Role Provider</p>
+<p>It's very, very simple. Roles are defined by static strings array and we are using IsBackendDev and IsFrondendDev fields, that you may noticed before, to determine member roles. In your further experiments you can query another table in database or some external web service to get member roles but for now let's stay with static values.</p>
+<p>By changing one line in web.config we can put whole machine to work.</p>
+<pre class="language-markup"><code>&lt;add name="UmbracoRoleProvider" type="MembersProject.Extensions.CustomRoleProvider"/&gt;
+</code></pre>
+      <p class="snippet-caption">Web.config change</p>
+<p>Let's see what just happened. Now we have our new roles listed in Umbraco Backoffice under Member Groups node. Also Member roles are representing what we actually have in database.</p>
+<p>See that in db and in Backoffice Marcin is marked as both Frontend and Backend dev.</p>
+<figure>
+  <a href="/archive/media/2015/custom_roles.png">
+    <img src="/archive/media/2015/custom_roles.png" width="1118" alt="Custom Roles">
+  </a>
+  <figcaption>Custom Roles</figcaption>
+</figure>
+<p>But it's not all. Also "Public access" option is working great with our new roles.<span style="font-size: 10px;"><br></span></p>
+<figure>
+  <a href="/archive/media/2015/public_access.png">
+    <img src="/archive/media/2015/public_access.png" width="1120" alt="Custom Roles in Public Access management">
+  </a>
+  <figcaption>Custom Roles in Public Access management</figcaption>
+</figure>
+<p>Amazing, isn't it ?</p>
+<h2>Summary</h2>
+<p>With few simple steps (and lots of simple code :)) we manage to, firstly, extend default Umbraco MembershipProvider and next totally replace it with a custom one. It's not rocket science but I believe it can be useful for people looking for some extra Membership features. It also proves that Umbraco is very flexible and even when working with custom members data, it's still possible to take advantage of awesome Backoffice without creating custom sections.</p>
+<p>Further steps? I encourage you to play a little bit with solution you can find on Github and finish unfinished methods for Creating and Updating Members and Roles. Together with exploring Umbraco sources it could be a great excercise for testing possibilities of our favourite CMS :)</p>
+<p>If you have any questions please feel free to ask, I will be very happy to answer all of them.</p>
+<h3>Resources</h3>
+<ul>
+<li><a href="https://our.umbraco.org/documentation/getting-started/data/members/" title="Umbraco Documentation - Members">Official Umbraco Members documentation</a></li>
+<li><a href="/umbraco-cms/2014/dealing-with-members/">"Dealing With Members Using The MemberService &amp; MembershipHelper"</a></li>
+<li><a href="https://github.com/umbraco/Umbraco-CMS" title="Umbraco CMS on Github">Umbraco sources on Github</a></li>
+<li><a href="https://github.com/pbres/24days.in.Umbraco.MembersProject">This project on Github</a></li>
+</ul>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/members/" title="See all articles tagged with Members">Members</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Pawel Bres"><img src="//gravatar.com/avatar/9dc1bb4aae6749666023238642a34d5e.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/9dc1bb4aae6749666023238642a34d5e.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Pawel Bres</h1>
+        <p>Pawel is on Twitter as <a href="//twitter.com/pawelbres" title="Pawel Bres on Twitter" rel="author">@pawelbres</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li class="selected"><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

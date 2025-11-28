@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Writing Custom Property Editor for Newbies</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Custom Property Editor Tutorial</h1>
+      <p class="byline"> by Maria Lind, <span class="pubdate">posted on <time datetime="2016-12-05">Dec 5, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">This tutorial is created courtesy of Umbraco 7’s fantastically accessible way of setting up custom property editors. It will show how to write a one that provides the functionality to create, assign, and remove tags.</p>
+<p class="intro">You might wonder what is the difference between this editor (codename: tagged) and the existing tag editor you can find in newer versions of Umbraco. Imagine having 150 articles in your blog and discovering that you forgot an “m” in “recomendation” tag used on ? of all articles. With the existing tag editor, you would have to open each and every article, find the tag, correct the spelling and publish the article. The tag doesn’t tie back to other tags.</p>
+<p>This can be solved by doing an resource expensive database search and replacing the spelling everywhere.  Or it can be done by creating tags as documents in content tree rather than saving strings in the database. This small difference means that tags can be created, deleted and edited not only from an article but also as documents on their own.</p>
+<p>The solution also opens up (with a bit of adjusting) for other possibilities. A hierarchical category structure where an article categorized as “6-10 year old” belongs also to category “children” or a dashboard where you can see how your articles are categorised including some stats.</p>
+<h3>What we are trying to achieve</h3>
+<ol>
+<li>Get the list of available tags from the content tree and show them in controller</li>
+<li>On click on one of the tags, move them to applied tags so that they can be saved on the document</li>
+<li>"Create a tag" functionality - tag created as a document in content tree and is also available for applying in document</li>
+<li>"Remove a tag" functionality - tag is removed from applied tags Editing or removing tags in content tree edit or removes them in the custom property editor</li>
+</ol>
+<h3>What you will need</h3>
+<ol>
+<li>Doctypes: article (that will have the custom property editor), Tags (no properties, all tags will be created under here), Tag (no properties)</li>
+<li>In App_Plugins folder create:
+<ol>
+<li>Tagged folder package.manifest - it describes what is needed to for the custom editor</li>
+<li>tagged.controller.js - this is where AngularJS lives</li>
+<li>tagged.html - the template for controller</li>
+</ol>
+</li>
+<li>In Controllers folder:
+<ol>
+<li>TaggedController.cs - the c# code that will fetch data from Umbraco and send it on to the angular tagged.controller.js for processing and presentation</li>
+</ol>
+</li>
+</ol>
+<p><span style="font-weight: 400;">You might notice that I am not using any css. This is just because I am using bootstrap classes and bootstrap comes with Umbraco 7. If you wanted to use some custom css you would create css folder under Tagged folder and put your css there. You would then declare it in package.manifest:</span></p>
+<pre><code class="language-json">css: [
+        '~/App_Plugins/Tagged/css/main.css'
+ ]</code></pre>
+<p><span style="font-weight: 400;">To read more about how to create a custom property editor and how to set up your manifest, see <a href="http://umbraco.github.io/Belle/#/tutorials/manifest" target="_blank" title="Umbraco documentation - custom property editors">this documentation</a>.</span></p>
+<h3> Step One - The Manifest</h3>
+<pre><code class="language-json">{
+    propertyEditors: [
+        {
+            alias: "MAL.Tagged",
+            name: "Tagged",
+            editor: {
+                view: "~/App_Plugins/Tagged/tagged.html"
+            }
+        }
+    ]
+    ,
+    javascript: [
+        '~/App_Plugins/Tagged/tagged.controller.js'
+    ]
+}</code></pre>
+<h3>Step 2 - Fetching all available tags</h3>
+<p><span style="font-weight: 400;">First order of business is to fetch and display the available tags in the property editor. </span></p>
+<p><span style="font-weight: 400;">You have to instruct your AngularJS controller to request the tags from backend and to expose them to the template once they are fetched.</span></p>
+<pre><code class="language-javascript">
+angular.module("umbraco").controller("MAL.taggedController", function ($scope, taggedResource) {
+
+        $scope.alltags = [];
+
+        // Use taggedResource service to call surface controller
+        // Once the data is returned create array of tags (alltags)
+        // Each tag will contain a name and document id
+        taggedResource.getTags().then(function(res){
+            var data = res.data;
+            for (var tag in data) {
+                var name = tag;
+                if (data.hasOwnProperty(tag)) {
+                    $scope.alltags.push([tag, data[tag]]);
+                  }
+            }
+        });
+
+});
+
+angular.module("umbraco.resources").factory("taggedResource", function($http){ 
+    var taggedService = {};
+
+    // Service makes an ajax call to 
+    // umbraco surface controller and returns the result
+    taggedService.getTags = function(){
+        return $http.get("/umbraco/surface/Tagged/GetTags");
+    };
+
+    return taggedService;
+
+});</code></pre>
+<p><span style="font-weight: 400;">The surface controller that you created at the beginning (TaggedController.cs) has GetTags action which fetches all documents in the content tree under the folder "Tags" and returns key-value (name-id) pairs in JSON.</span></p>
+<pre><code class="language-csharp">public JsonResult GetTags()
+{
+    IPublishedContent tagRoot = Umbraco.TypedContentAtRoot().Where(x =&gt; x.DocumentTypeAlias == "tags").FirstOrDefault();
+    Dictionary&lt;string, int&gt; tags = new Dictionary&lt;string, int&gt;();
+    foreach (var tag in tagRoot.Children)
+    {
+        tags.Add(tag.Name, tag.Id);
+    }
+    return Json(tags, JsonRequestBehavior.AllowGet);
+}
+</code></pre>
+<p><span style="font-weight: 400;">Once the alltags array is ready and exposed on $scope, you can display them in the template, using ng-repeat:</span></p>
+<pre><code class="language-markup">&lt;h1&gt;Available tags&lt;/h1&gt;
+&lt;ul class="nav nav-pills"&gt;
+    &lt;li ng-repeat="tag in alltags"&gt;&lt;a href="" class="btn" ng-click="applyTag([tag[1], tag[0]])" data-id="{{tag[1]}}"&gt;{{tag[0]}}&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</code></pre>
+<p><span style="font-weight: 400;">tag[0] is the name while tag[1] is the id. Ng-click is used to hook up applyTag function, that we will create next.</span></p>
+<h3>Step 3 - Setting up the backoffice</h3>
+<p><span style="font-weight: 400;">Now that we have the basic function ready, we can set up the backoffice and see the property editor in action. </span></p>
+<p><span style="font-weight: 400;">In <strong>Developer</strong> section go to <strong>Data Types</strong> and create new Data Type. Choose Tagged in property editor dropdown and call the editor Tagged.</span></p>
+<p><span style="font-weight: 400;">In <strong>Settings</strong> section go to <strong>Article Document Type</strong> and add a property editor and choose Tagged</span></p>
+<p><span style="font-weight: 400;">The editor should now be available on your documents in Content section. Make sure to clean cache if you can’t see it immediately. The editor will of course be empty until you create some tags in the content tree. </span></p>
+<p><span style="font-weight: 400;">It is generally good to remember that backoffice is cached aggressively. When you make changes to your editor it is often necessary to refresh cache before they are visible.</span></p>
+<h3>Step 4 - Applying tags</h3>
+<p><span style="font-weight: 400;">The next step is to wire a function to a click on a tag, i.e. hook up applyTag() function. </span></p>
+<p><span style="font-weight: 400;">In your AngularJS controller declare two more empty variables on the scope:</span></p>
+<p><span style="font-weight: 400;"><em>$scope.appliedIds = [];</em> - this one will be used for fetching the current names of already applied tags. You’ll find out how in the next section.</span></p>
+<p><span style="font-weight: 400;"><em>$scope.appliedTags = [];</em> - this one will be used to store current applied tags, and includes both names and ids.</span></p>
+<p><span style="font-weight: 400;">The next part becomes a bit tricky. If we were to store tags as strings or in the database all that was needed, was to add the clicked tag to $scope.model.value. However, we are interested in being able to edit tags from the content tree, so this part will get a little bit more complicated.</span></p>
+<p><span style="font-weight: 400;">First we need to populate $scope.appliedIds with the ids of tags saved in $scope.model.value.</span></p>
+<pre><code class="language-javascript">for (var index in $scope.model.value) {
+    if ($scope.model.value.hasOwnProperty(index)) {
+        $scope.appliedIds.push($scope.model.value[index][0]);
+    }
+}
+
+
+</code></pre>
+<p><span style="font-weight: 400;">The next step is to create the service that is used to fetch current names of tags. It is connected to applying tags because each time a new tag is added, it should immediately be displayed so we need to fetch it from the content tree.</span></p>
+<pre><code class="language-javascript">taggedService.getAppliedTags = function(appliedIds){
+    return $http({
+        url: "/umbraco/surface/Tagged/GetAppliedTags", 
+        method: "GET",
+        params: {appliedIds: appliedIds}
+    });
+}
+</code></pre>
+<p><span style="font-weight: 400;">The GetAppliedTags action on the surface controller does almost the same as GetTags actions, only it is limited to fetching the documents that have the ids passed to the action.</span></p>
+<pre><code class="language-csharp">public JsonResult GetAppliedTags(List&lt;int&gt; appliedIds)
+{
+    Dictionary&lt;string, int&gt; tags = new Dictionary&lt;string, int&gt;();
+    var umbracoHelper = new UmbracoHelper(UmbracoContext.Current);
+   
+
+    if (appliedIds != null)
+    {
+        foreach (var id in appliedIds)
+        {
+            if (!tags.ContainsValue(id))
+            {
+                IPublishedContent tag = umbracoHelper.TypedContent(id);
+
+                if (tag != null)
+                {
+                    var name = tag.Name;
+                    tags.Add(name, id);
+                }
+                else
+                {
+                    var name = "---";
+                    tags.Add(name, id); 
+                }
+                
+            }
+            
+        }
+    }
+    
+
+    return Json(tags, JsonRequestBehavior.AllowGet);
+}</code></pre>
+<p><span style="font-weight: 400;">You might notice the funny thing I do in the if/else statement. The point to it is that if a tag is deleted from content tree, I also need to remove it from $scope.model.value so it doesn’t “hang around” in the property editor. The only way to find out that a tag was deleted is from C# controller and so I need to communicate it back to AngularJS. I do it by changing a name of such tag to “---”. And in AngularJS controller I filter them out in getAppliedTags function.</span></p>
+<pre><code class="language-javascript">taggedResource.getAppliedTags($scope.appliedIds).then(function(res) {
+    var data = res.data;
+    for (var tag in data) {
+        if (data.hasOwnProperty(tag)) {
+
+            if (tag != "---") {
+                $scope.appliedTags.push([res.data[tag], tag]);
+            }
+            else
+            {
+                var index = $scope.appliedIds.indexOf(res.data[tag]);
+                $scope.appliedIds.splice(index ,1);
+
+               for(var i = 0; i &lt; $scope.model.value.length; i++) {
+                  if($scope.model.value[i][0] == res.data[tag]) {
+                      $scope.model.value.splice(i, 1);
+                  }
+              }
+            }
+        }
+    }
+});</code></pre>
+<p><span style="font-weight: 400;">Finally, it is time to write applyTag function.</span></p>
+<pre><code class="language-javascript">$scope.applyTag = function(tag) {
+    if(!jQuery.isArray($scope.model.value)) {
+        $scope.model.value = [];
+    }
+
+    //if the tag hasn't been applied yet
+    if ($scope.appliedIds.indexOf(tag[0]) == -1) {
+        //add it to model.value and appliedIds
+        $scope.model.value.push(tag);   
+        $scope.appliedIds.push(tag[0]);
+
+        //clean appliedTags variable
+        $scope.appliedTags = [];
+
+        //and using getAppliedTags service, fetch current tags and push them to appliedTags
+        taggedResource.getAppliedTags($scope.appliedIds).then(function(res) {
+            var data = res.data;
+            for (var tag in data) {
+                if (data.hasOwnProperty(tag)) {
+                    $scope.appliedTags.push([res.data[tag], tag]);
+                  }
+            }
+        });
+    }
+};</code></pre>
+<p><span style="font-weight: 400;">In the template again use ng-repeat to iterate through appliedTags and display name/id pairs.</span></p>
+<pre><code class="language-markup">&lt;ul class="nav nav-pills"&gt;
+    &lt;li ng-repeat="tag in appliedTags"&gt;&lt;a class="btn" data-id="{{tag[0]}}"&gt;{{tag[1]}} &lt;span ng-click="removeTag(tag)"&gt;x&lt;/span&gt;&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+</code></pre>
+<h3>Step 5 - Removing tags</h3>
+<p><span style="font-weight: 400;">The next order of business it to wire removeTag(tag) function. On click on an "x" sign, the tag should be removed from applied tags. To do this we need to remove the tag from $scope.model.value, $scope.appliedTags, and $scope.appliedIds.</span></p>
+<pre><code class="language-javascript">$scope.removeTag = function(tag) {
+    for(var i = 0; i &lt; $scope.model.value.length; i++) {
+
+        if($scope.model.value[i][0] == tag[0]) {
+            $scope.model.value.splice(i, 1);
+        }
+    }
+
+    for(var i = 0; i &lt; $scope.appliedTags.length; i++) {
+
+        if($scope.appliedTags[i][0] == tag[0]) {
+            $scope.appliedTags.splice(i, 1);
+        }
+    }
+
+    for(var i = 0; i &lt; $scope.appliedIds.length; i++) {
+
+        if($scope.appliedIds[i] == tag[0]) {
+            $scope.appliedIds.splice(i, 1);
+        }
+    }
+    
+    return;
+}
+</code></pre>
+<h3>Step 6 - Creating Tags</h3>
+<p><span style="font-weight: 400;">In the template create a form and on submit call backend action to create a new document in content tree.</span></p>
+<p><span style="font-weight: 400;">Template:</span></p>
+<pre><code class="language-markup">&lt;h2&gt;Create new tag&lt;/h2&gt;
+&lt;form ng-submit="createTag(newTag)"&gt;
+      &lt;input type="text" ng-model="newTag"/&gt;
+      &lt;button type="submit"&gt;Create tag&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+<p><span style="font-weight: 400;">AngularJS service:</span></p>
+<pre><code class="language-javascript">taggedService.createTag = function(newTag) {
+    return $http({
+        url: "/umbraco/surface/Tagged/CreateTag", 
+        method: "GET",
+        params: {tag: newTag}
+     });
+};
+</code></pre>
+<p><span style="font-weight: 400;">AngularJS function:</span></p>
+<pre><code class="language-javascript">$scope.createTag = function(newTag) {
+    //make sure tag does not include empty spaces at the end
+    if(jQuery.trim(newTag).length &gt; 0) {
+        //backend controller creates the document 
+        taggedResource.createTag({ tag: newTag }).then(function (res) {
+            $scope.alltags = [];
+            
+            taggedResource.getTags().then(function(res){
+                var data = res.data;
+                for (var tag in data) {
+                    var name = tag;
+                    if (data.hasOwnProperty(tag)) {
+                        $scope.alltags.push([tag, data[tag]]);
+                      }
+                }
+            });
+        });
+        $scope.newTag = '';
+    }
+    else {
+        alert('Fill in the tag!');
+    }
+};</code></pre>
+<p><span style="font-weight: 400;">Surface Controller action</span></p>
+<pre><code class="language-csharp">public JsonResult CreateTag(string tag)
+{
+    JObject tagJ = JObject.Parse(tag);
+    var cs = Services.ContentService;
+    int parentId = Umbraco.TypedContentAtRoot().Where(x =&gt; x.DocumentTypeAlias == "tags").FirstOrDefault().Id;
+    var content = cs.CreateContent(tagJ["tag"].ToString(), parentId, "tag", 0);
+    cs.SaveAndPublishWithStatus(content);
+
+    Dictionary&lt;string, int&gt; tagitem = new Dictionary&lt;string, int&gt;();
+    tagitem.Add(tagJ["tag"].ToString(), content.Id);
+
+    return Json(tagitem, JsonRequestBehavior.AllowGet);
+}</code></pre>
+<p><span style="font-weight: 400;"> </span></p>
+<p><span style="font-weight: 400;">This is it. The property editor is all wired up and ready to go. </span></p>
+<p><span style="font-weight: 400;">Obviously, the styling and UX weren’t given much care in this mini-tutorial. And I am sure the code could be made simpler and more elegant. But this short tutorial shows how easy it is to start building custom property editors even for a person who hasn't worked with extending backoffice before. </span></p>
+<p><span style="font-weight: 400;">Here are all the files in their entirety once again:</span></p>
+<p>tagged.controller.js:</p>
+<pre><code class="language-javascript">angular.module("umbraco").controller("MAL.taggedController", function ($scope, taggedResource) {
+        $scope.newTag = '';
+        $scope.alltags = [];
+        $scope.appliedIds = [];
+        $scope.appliedTags = [];
+
+         
+        taggedResource.getTags().then(function(res){
+            var data = res.data;
+            for (var tag in data) {
+                var name = tag;
+                if (data.hasOwnProperty(tag)) {
+                    $scope.alltags.push([tag, data[tag]]);
+                  }
+            }
+        });
+
+
+        taggedResource.getAppliedTags($scope.appliedIds).then(function(res) {
+            var data = res.data;
+            for (var tag in data) {
+                if (data.hasOwnProperty(tag)) {
+
+                    if (tag != "---") {
+                        $scope.appliedTags.push([res.data[tag], tag]);
+                    }
+                    else
+                    {
+                        var index = $scope.appliedIds.indexOf(res.data[tag]);
+                        $scope.appliedIds.splice(index ,1);
+
+                       for(var i = 0; i &lt; $scope.model.value.length; i++) {
+                          if($scope.model.value[i][0] == res.data[tag]) {
+                              $scope.model.value.splice(i, 1);
+                          }
+                      }
+                    }
+                }
+            }
+        });
+
+
+
+        for (var index in $scope.model.value) {
+            if ($scope.model.value.hasOwnProperty(index)) {
+                $scope.appliedIds.push($scope.model.value[index][0]);
+            }
+        }
+
+        $scope.applyTag = function(tag) {
+            if(!jQuery.isArray($scope.model.value)) {
+                $scope.model.value = [];
+            }
+
+            //if the tag hasn't been applied yet
+            if ($scope.appliedIds.indexOf(tag[0]) == -1) {
+                //add it to model.value and appliedIds
+                $scope.model.value.push(tag);   
+                $scope.appliedIds.push(tag[0]);
+
+                //clean appliedTags variable
+                $scope.appliedTags = [];
+
+                //and using getAppliedTags service, fetch current tags and push them to appliedTags
+                taggedResource.getAppliedTags($scope.appliedIds).then(function(res) {
+                    var data = res.data;
+                    for (var tag in data) {
+                        if (data.hasOwnProperty(tag)) {
+                            $scope.appliedTags.push([res.data[tag], tag]);
+                          }
+                    }
+                });
+            }
+
+        };
+
+        $scope.removeTag = function(tag) {
+            for(var i = 0; i &lt; $scope.model.value.length; i++) {
+
+                if($scope.model.value[i][0] == tag[0]) {
+                    $scope.model.value.splice(i, 1);
+                }
+            }
+
+            for(var i = 0; i &lt; $scope.appliedTags.length; i++) {
+
+                if($scope.appliedTags[i][0] == tag[0]) {
+                    $scope.appliedTags.splice(i, 1);
+                }
+            }
+
+            for(var i = 0; i &lt; $scope.appliedIds.length; i++) {
+
+                if($scope.appliedIds[i] == tag[0]) {
+                    $scope.appliedIds.splice(i, 1);
+                }
+            }
+            
+            return;
+        }
+
+        $scope.createTag = function(newTag) {
+            //make sure tag does not include empty spaces at the end
+            if(jQuery.trim(newTag).length &gt; 0) {
+                //backend controller creates the document 
+                taggedResource.createTag({ tag: newTag }).then(function (res) {
+                    $scope.alltags = [];
+                    
+                    taggedResource.getTags().then(function(res){
+                        var data = res.data;
+                        for (var tag in data) {
+                            var name = tag;
+                            if (data.hasOwnProperty(tag)) {
+                                $scope.alltags.push([tag, data[tag]]);
+                              }
+                        }
+                    });
+                });
+                $scope.newTag = '';
+            }
+            else {
+                alert('Fill in the tag!');
+            }
+        };
+
+        if ($scope.model.value.length == 0) {
+            $scope.model.value = null;
+        }
+});
+
+angular.module("umbraco.resources").factory("taggedResource", function($http){
+
+    var taggedService = {};
+    
+    taggedService.getTags = function(){
+        return $http.get("/umbraco/surface/Tagged/GetTags");
+    };
+
+    taggedService.createTag = function(newTag) {
+        return $http({
+            url: "/umbraco/surface/Tagged/CreateTag", 
+            method: "GET",
+            params: {tag: newTag}
+         });
+    };
+
+    taggedService.getAppliedTags = function(appliedIds){
+        return $http({
+            url: "/umbraco/surface/Tagged/GetAppliedTags", 
+            method: "GET",
+            params: {appliedIds: appliedIds}
+        });
+    }
+    
+    return taggedService;
+
+
+});</code></pre>
+<p>tagged.html:</p>
+<pre><code class="language-markup">&lt;div ng-controller="MAL.taggedController"&gt;
+    &lt;h1&gt;Available tags&lt;/h1&gt;
+    &lt;ul class="nav nav-pills"&gt;
+        &lt;li ng-repeat="tag in alltags"&gt;&lt;a href="" class="btn" ng-click="applyTag([tag[1], tag[0]])" data-id="{{tag[1]}}"&gt;{{tag[0]}}&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+
+    &lt;h2&gt;Create new tag&lt;/h2&gt;
+    &lt;form ng-submit="createTag(newTag)"&gt;
+          &lt;input type="text" ng-model="newTag"/&gt;
+          &lt;button type="submit"&gt;Create tag&lt;/button&gt;
+    &lt;/form&gt;
+
+    &lt;h1&gt;Applied tags&lt;/h1&gt;
+    &lt;ul class="nav nav-pills"&gt;
+        &lt;li ng-repeat="tag in appliedTags"&gt;&lt;a class="btn" data-id="{{tag[0]}}"&gt;{{tag[1]}} &lt;span ng-click="removeTag(tag)"&gt;x&lt;/span&gt;&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+&lt;/div&gt;</code></pre>
+<p>TaggedController.cs</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Mvc;
+using Umbraco.Web;
+using Umbraco.Core.Models;
+using Umbraco.Core.Services;
+using Umbraco.Web.Mvc;
+using Newtonsoft.Json.Linq;
+
+namespace tagged.Controllers
+{
+    public class TaggedController : SurfaceController
+    {
+
+        public JsonResult GetTags()
+        {
+            IPublishedContent tagRoot = Umbraco.TypedContentAtRoot().Where(x =&gt; x.DocumentTypeAlias == "tags").FirstOrDefault();
+            Dictionary&lt;string, int&gt; tags = new Dictionary&lt;string, int&gt;();
+            foreach (var tag in tagRoot.Children)
+            {
+                tags.Add(tag.Name, tag.Id);
+            }
+            return Json(tags, JsonRequestBehavior.AllowGet);
+        }
+
+        public JsonResult CreateTag(string tag)
+        {
+            JObject tagJ = JObject.Parse(tag);
+            var cs = Services.ContentService;
+            int parentId = Umbraco.TypedContentAtRoot().Where(x =&gt; x.DocumentTypeAlias == "tags").FirstOrDefault().Id;
+            var content = cs.CreateContent(tagJ["tag"].ToString(), parentId, "tag", 0);
+            cs.SaveAndPublishWithStatus(content);
+
+            Dictionary&lt;string, int&gt; tagitem = new Dictionary&lt;string, int&gt;();
+            tagitem.Add(tagJ["tag"].ToString(), content.Id);
+
+            return Json(tagitem, JsonRequestBehavior.AllowGet);
+        }
+
+        public JsonResult GetAppliedTags(List&lt;int&gt; appliedIds)
+        {
+            Dictionary&lt;string, int&gt; tags = new Dictionary&lt;string, int&gt;();
+            var umbracoHelper = new UmbracoHelper(UmbracoContext.Current);
+           
+
+            if (appliedIds != null)
+            {
+                foreach (var id in appliedIds)
+                {
+                    if (!tags.ContainsValue(id))
+                    {
+                        IPublishedContent tag = umbracoHelper.TypedContent(id);
+
+                        if (tag != null)
+                        {
+                            var name = tag.Name;
+                            tags.Add(name, id);
+                        }
+                        else
+                        {
+                            var name = "---";
+                            tags.Add(name, id); 
+                        }
+                        
+                    }
+                    
+                }
+            }
+            
+
+            return Json(tags, JsonRequestBehavior.AllowGet);
+        }
+    }
+}</code></pre>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Maria Lind"><img src="//gravatar.com/avatar/aabb15cf6200774e8d33ac5db03301b5.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/aabb15cf6200774e8d33ac5db03301b5.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Maria Lind</h1>
+        <p>Maria is on Twitter as <a href="//twitter.com/inaboxdesign" title="Maria Lind on Twitter" rel="author">@inaboxdesign</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

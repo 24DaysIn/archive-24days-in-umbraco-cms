@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Quick Tips for Improving your Callouts</title>
+<meta name="description" content="How to manage, organize and keep track of callouts in Umbraco">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Quick Tips for Improving your Callouts</h1>
+      <p class="byline"> by Tom Fulton, <span class="pubdate">posted on <time datetime="2012-12-23">Dec 23, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">It seems like the majority of today's sites have some type of callouts (widgets) that need to be displayed on various pages, usually in a sidebar. Umbraco is great at handling this situation by utilizing document types and some of the new built-in datatypes. Hendy Racher wrote a <a href="http://blog.hendyracher.co.uk/sidebar-widgets-with-umbraco-v4/" target="_blank">great blog post</a> a some time ago explaining the concept, but the gist is:</p>
+<ul>
+<li>Create a section outside of your content tree to manage Callouts via document types</li>
+<li>Use a Multi-Node Tree Picker on Content pages to select callouts to display</li>
+<li>Use a macro to loop through the selected callouts and render them accordingly</li>
+</ul>
+<p class="intro">Here I'll detail a few quick tips we've implemented along the way to make the editing experience a bit more user-friendly and extensible. Some of these might be obvious to most, but hopefully you'll come away with at least one new idea!</p>
+<h2>Create document types for different types of callouts</h2>
+<p>Chances are your site has a few different "types" (or layouts) for callouts.  Rather than try to cram many different fields into one document type, or shoehorning advanced layouts into a Richtext Editor, make it super-simple for editors by creating a document type for each layout.  For some extra love, add a screenshot for the thumbnail of each type, so editors know exactly what they're creating.</p>
+<figure>
+  <a href="/archive/media/2012/callouttypes.png">
+    <img src="/archive/media/2012/callouttypes.png" alt="Using specific document types for differing layouts, and screenshots for thumbnails" width="612">
+  </a>
+  <figcaption>Using specific document types for differing layouts, and screenshots for thumbnails</figcaption>
+</figure>
+<p>Each specific document type should have fields relevant only to their layout.  For example, the "Bullet List" callout might use a <a href="http://ucomponents.codeplex.com/wikipage?title=MultipleTextstring&amp;referringTitle=Documentation" target="_blank">Multiple Textstring</a> datatype, while the "Review" callout would use a picker to select from available reviews.</p>
+<h2>Use a base document type for global fields</h2>
+<p>Even with different types of callouts, you'll likely have a set of "global" options that apply across all types. A great way to handle this is to create a Master document type for callouts, that all your Callout document types inherit from.</p>
+<figure>
+  <a href="/archive/media/2012/calloutbasetype.png">
+    <img src="/archive/media/2012/calloutbasetype.png" alt="Using a Master document type for global callout properties" width="653">
+  </a>
+  <figcaption>Using a Master document type for global callout properties</figcaption>
+</figure>
+<h2>Organize callouts into folders</h2>
+<figure class="pull-right">
+  <a href="/archive/media/2012/calloutfolders.png">
+    <img src="/archive/media/2012/calloutfolders.png" alt="CalloutFolders" width="171">
+  </a>
+</figure>
+<p><span>In large sites, your "Callouts" area can get extremely long. In a flat structure, it makes it pretty difficult for editors to find anything. To alleviate this, create a new document type called "Callout Folder", allow Callouts to be created beneath it, and allow it to be created under the "Callouts" node. Then, you can end up with a nice structure as shown in the figure.</span></p>
+<p>To ensure a Callout Folder can't be selected from a content page, adjust your MNTP settings to disallow this:</p>
+<figure>
+  <a href="/archive/media/2012/calloutxpathfilter.png">
+    <img src="/archive/media/2012/calloutxpathfilter.png" alt="CalloutXpathFilter" width="491">
+  </a>
+</figure>
+<h2>Keeping track of callout usages</h2>
+<p>There's a nice hidden gem in Umbraco 4.9 called Picker Relations, which wires up a Multi-Node Tree Picker (or other picker datatypes) to Relations. This means that when a node (Callout) is selected, a Relation entry is automatically created when the document is saved.</p>
+<p>This gives us some really cool possibilities - in this case, we can use it to show all nodes where a given callout is referenced, making it super easy for editors to know exactly which pages they're affecting when making an edit. <em>No code required!</em></p>
+<figure>
+  <a href="/archive/media/2012/calloutuses.png">
+    <img src="/archive/media/2012/calloutuses.png" alt="Showing which pages a callout is selected on" width="484">
+  </a>
+  <figcaption>Showing which pages a callout is selected on</figcaption>
+</figure>
+<p>To list the related pages, there's another built-in datatype called Relation Links, which does all the work for you (a custom datatype is pictured above). For more details on configuring these datatypes, check out Hendy Racher's post: <a href="/umbraco-cms/2012/who-picked-this/" target="_blank">Who Picked This?</a></p>
+<p><br>So, I hope you've got at least one new idea to improve your Callout system for yourself and content editors.  Merry Christmas!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Tom Fulton"><img src="//gravatar.com/avatar/11ae4c00864df2e3ca5df9381d4efa1a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/11ae4c00864df2e3ca5df9381d4efa1a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Tom Fulton</h1>
+        <p>Tom is on Twitter as <a href="//twitter.com/tomnfulton" title="Tom Fulton on Twitter" rel="author">@tomnfulton</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li class="selected"><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

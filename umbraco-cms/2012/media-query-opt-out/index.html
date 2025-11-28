@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Media Query opt-out with Umbraco</title>
+<meta name="description" content="Learn how to let your users opt-out (or back in) of your Media Query setup for layouts in Umbraco, using a little Razor &amp; JavaScript.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Media Query opt-out with Umbraco</h1>
+      <p class="byline"> by Tim Clulow, <span class="pubdate">posted on <time datetime="2012-12-17">Dec 17, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Responsive web design has been around for a good while now, and as nice as media queries are - sometimes you might be on a device that is more than capable of surfing a full website, or perhaps you even prefer to pinch and zoom on a minuscule screen because that's just the way you roll?<br> <br> <em>Hey it's the web right? - users can choose, we're cool with that.</em></p>
+<p class="intro"><img src="/archive/media/2012/media_query_opt_outs.png" width="715" height="418" alt="Illustration" align="middle"></p>
+<p style="text-align: right;"><em><a href="http://www.cssandstuff.com/media-query-opt-out/" target="_blank">&gt; tl;dr? See the working example here</a></em></p>
+<p><strong>Inspired by these posts:</strong><br> <em><a href="http://mistermorris.tumblr.com/post/19679735499/a-responsive-panacea">http://mistermorris.tumblr.com/post/19679735499/a-responsive-panacea</a><br> <a href="http://css-tricks.com/user-opt-out-responsive-design/">http://css-tricks.com/user-opt-out-responsive-design/</a></em> <br><br> I set about seeing if I could piece together a Media Query opt-out with Umbraco</p>
+<h3>Umbraco lets you be all anal retentive on the front end</h3>
+<p><img src="/archive/media/2012/uneve_808x259.jpg" width="808" height="259" alt="uneve"></p>
+<p class="snippet-caption">Umbraco: the <a href="http://ams-neve.com/">Neve</a> of the CMS world?</p>
+<p><br>As <a href="/umbraco-cms/2012/how-to-view-source-with-pride/">demonstrated beautifully by Dan Okkels Brendstrup</a>, front-enders hold dear the HTML that they write. By design with Umbraco you start from the ground up, so rather than trying to shoehorn your HTML &amp; CSS into an awkward templating system, it works with your way of working from the very start. While this post mostly may not be the most Umbraco specific of the bunch, it's the sheer fact that if you can imagine it, most likely you can do it with Umbraco.</p>
+<h3>Back to business</h3>
+<p> For simplicity lets say we have our media queries in a separate style sheet, which will be included in our <em>all singing, all dancing</em> version but excluded for our media query opt-out version.<br> We want to include these styles on a page based on whether the user is happy to receive a media-query based layout or not and set a cookie to remember what their preference is. <br> Without getting all grown up and creating a macro, lets just include it right within our masterpage where we would usually be including our styles.</p>
+<h3>Styles and Viewport (Razor)</h3>
+<pre class="language-javascript"><code>&lt;umbraco:Macro runat="server" language="cshtml"&gt;
+@{
+// check for a previously set cookie, so we know which version to serve. 
+HttpCookie optOutcss = new HttpCookie("noThanksToMediaQueries");
+optOutcss            = Request.Cookies["noThanksToMediaQueries"];
+
+	// Need to check for a null value if there's no cookie
+	if(optOutcss != null){
+	
+		// fixed viewport and no media queries
+		&lt;meta name="viewport" content="width=960, initial-scale=0.3333, user-scalable=yes"/&gt;
+		&lt;link rel="stylesheet" href="/css/nomediaqueries.css"/&gt;
+		
+	}else{
+	
+		// device width viewport with media queries
+		&lt;meta name="viewport" content="width=device-width; minimum-scale=0.3; maximum-scale=1;"/&gt;
+		&lt;link rel="stylesheet" href="/css/withmediaqueries.css" /&gt;
+	}
+}
+&lt;/umbraco:Macro&gt;</code></pre>
+      <p class="snippet-caption">Tip: The same could be done with XSLT. I haven't given myself to the dark side just yet.</p>
+<p> Now lets make a separate switch link (which could appear anywhere with our HTML source flow) that the user can click,<br> perhaps they know the full desktop site very well and want to see it how they would normally.</p>
+<h3>The switch link (Razor)</h3>
+<pre class="language-javascript"><code>&lt;umbraco:Macro runat="server" language="cshtml"&gt;
+@{
+// our variable optOutcss with tell us if the user said no to Media Queries
+HttpCookie optOutcss = new HttpCookie("noThanksToMediaQueries");
+optOutcss = Request.Cookies["noThanksToMediaQueries"];
+
+	// Need to check for a null value if there's no cookie
+	if(optOutcss != null){
+	
+		// Yep a cookie exist, the user has already opted out of Media Queries,
+		// lets give them the option of getting them back in case they're feeling adventurous.
+		&lt;div id="mediaqueries-off"&gt;Responsive styles are currently off &lt;a href="#"&gt;Switch On&lt;/a&gt;&lt;/div&gt;
+
+	}else{
+	
+		// The user hasn't set a preference for Media queries yet so they'll get them by default.
+		&lt;div id="mediaqueries-on"&gt;Responsive styles are currently on &lt;a href="#"&gt;Switch off&lt;/a&gt;&lt;/div&gt;
+	}
+}
+&lt;/umbraco:Macro&gt;</code></pre>
+<h3>The switch (js)</h3>
+<p>The final piece of the puzzle. I'm using jQuery &amp; the cookie plug-in here for convenience.<br> Smarter Umbracians that me would probably also have a non-JavaScript fallback - perhaps by just throwing an <span class="code">&amp;altTemplate=noMediaQueries</span> string into the URL and then adjusting the alternate master template accordingly.</p>
+<pre class="language-javascript"><code>$(document).ready(function(){
+
+  // When someone opts-out of media queries.
+  $("#mediaqueries-on a").click(function(){
+    if($.cookie('noThanksToMediaQueries') != "true"){
+    //Media queries to the ground!!!
+    $.cookie('noThanksToMediaQueries', 'true', { expires: 20, path: '/' });
+    location.reload();
+    }
+  });
+  
+  // When someone says gimmie that good Media Query shit.
+  $("#mediaqueries-off a").click(function(){
+    // Remove the cookie, The full site wasn't all that.
+    // Get me back to the mini version.
+    $.removeCookie('noThanksToMediaQueries', { path: '/' });
+    location.reload();
+    return false;
+  });
+  
+});</code></pre>
+      <p class="snippet-caption">You'd probably want to also include a non-js fallback in a real world scenario</p>
+<p>And there you have it - <a href="http://www.cssandstuff.com/media-query-opt-out/">See the example here</a></p>
+<p>Some web designers may be loathed to see all their hard work creating a responsive design undone, but the way I see it most users are going to be either appreciative or completely oblivious that they're being served a responsive design, and this is just one way of helping out users who know exactly what they want and dont want to be spoon fed, or feel like they're being hand-held just because they're on a certain screen-width or device. The particularly cranky or ultra savvy users may even be circumnavigating your design altogether with services like Instapaper and Readability anyway. So ease up! <a href="http://www.garfieldtech.com/blog/does-design-matter">Design still matters.</a></p>
+<p>Wishing you a very <a href="http://www.google.co.uk/url?sa=t&amp;rct=j&amp;q=all%20japan%20wants%20for%20christmas%20is%20kentucky%20fried%20chicken&amp;source=web&amp;cd=1&amp;cad=rja&amp;ved=0CDUQFjAA&amp;url=http%3A%2F%2Fwww.ft.com%2Fcms%2Fs%2F0%2Fbb2dafc6-0ba4-11e0-a313-00144feabdc0.html&amp;ei=64LOUKSjDsXLmAXxsoCIBA&amp;usg=AFQjCNEok8NLZOtzcCPza_Dmw5B-vzhoUg&amp;bvm=bv.1355325884,d.dGY">Kentucky Fried Christmas</a> from Japan</p>
+<p>
+        <iframe id="ytplayer" type="text/html" src="http://www.youtube.com/embed/d0duOfY9XKs?autoplay=0" frameborder="0" height="390" width="640"></iframe>
+      </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/responsive/" title="See all articles tagged with Responsive">Responsive</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Tim Clulow"><img src="//gravatar.com/avatar/53bdb210b3a28dca86a67715f6c96319.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/53bdb210b3a28dca86a67715f6c96319.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Tim Clulow</h1>
+        <p>Tim is on Twitter as <a href="//twitter.com/wolulcmit" title="Tim Clulow on Twitter" rel="author">@wolulcmit</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li class="selected"><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

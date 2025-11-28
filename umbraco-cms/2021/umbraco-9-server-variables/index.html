@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Why you should know about Server Variables in Umbraco 9</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco 9 Server Variables</h1>
+      <p class="byline"> by Lennard Fonteijn, <span class="pubdate">posted on <time datetime="2021-12-07">Dec 7, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">In today's article I want to talk you through the following things:</p>
+<div> </div>
+<ul>
+<li>What are Server Variables?</li>
+<li>Why would you need Server Variables?</li>
+<li>How do you use Server Variables?</li>
+</ul>
+<p class="intro">The primary focus of this article is Umbraco 9, but I will mention older versions where possible.</p>
+<h2 id="what-are-server-variables">What are Server Variables?</h2>
+<p>Before I try to explain this to you in my own words, let me start with a rather technical quote from the <a rel="noopener" href="https://our.umbraco.com/Documentation/Extending/version7-assets" target="_blank">Umbraco documentation</a>:</p>
+<blockquote>
+<p>In v7 once a user is authenticated a request is made to retrieve the Server Variables collection from the server which creates a global dictionary object that is accessible in JavaScript. This dictionary contains information based on the current Umbraco environment for which the JavaScript and client side needs to know about. Information such as whether the application is running in debug mode, the service API URLs, or other non-sensitive global server side variables.</p>
+</blockquote>
+<p>This is the only piece of documentation you will find on the subject on the official Umbraco documentation website. But only if you look for the words "server variables", which you would only do if you already knew this is how Umbraco calls whatever Server Variables are meant for. To make matters worse, it is also specifically targeted at Umbraco 7, meaning you would probably dismiss it as non-relevant if you are using Umbraco 9. Even if you do decide to read the old documentation, you will most likely be stuck on how it should be done in Umbraco 9.</p>
+<p>So, what are Server Variables, exactly? In short: Server Variables are a way to pass information from the backend (C#) to the backoffice (JavaScript).</p>
+<p>You can probably already imagine how useful this is. But sceptics, as most developers are, might also wonder: How is this different from "just" calling an API and getting said information that way when I need it? Answer: The Umbraco backoffice does all the work for you, before you even get the chance to call your API!</p>
+<h2 id="why-would-you-need-server-variables">Why would you need Server Variables?</h2>
+<p>Truth given, "pass information" in my explanation above is an overstatement. The use case for Server Variables is passing things like API URLs, constants and other "non-sensitive global server side variables", as per above documentation.</p>
+<p>The Umbraco backoffice itself uses it for exactly that! It gives the JavaScript an opportunity to figure out:</p>
+<ul>
+<li>What the URLs for most API endpoints are</li>
+<li>Whether or not debug-mode is enabled</li>
+<li>Which image extensions are allowed and disallowed</li>
+<li>Which background and logo to show on the Umbraco login screen</li>
+<li>Which version of Umbraco is running</li>
+<li>And so on... check <span class="code">/umbraco/ServerVariables</span> on a running Umbraco instance to see what else is inside.</li>
+</ul>
+<p>Everything you configure in files like <span class="code">appsettings.json</span> have to somehow end up on the JavaScript side of things! That is why you need Server Variables.</p>
+<p>Coming back to the "pass information" being an overstatement... Technically you could store a complex JSON object in a single Server Variable. But you should probably ask yourself the questions: Do you really want to do that? Do you really need all that information? I'll leave that one for you to figure out.</p>
+<p>Before moving on, let's put Server Variables into perspective by looking at an example: You made an awesome dashboard to show the backoffice user some statistics about content. In order to generate these statistics you have to call an API endpoint on a web service unrelated to Umbraco, directly from the dashboard.</p>
+<p>During development the API endpoint is located at <span class="code">http://localhost:8080/api/GenerateStatistics</span>. On your test environment it is located at <span class="code">https://test.mydomain.tld/api/GenerateStatistics</span>. While on your production environment it is located at <span class="code">https://www.mydomain.tld/api/GenerateStatistics</span>.</p>
+<p>You could make the decision to proxy the request from the server running the backoffice to the API endpoint and back, but let's assume this is not a feasible solution for various reasons. You are now posed with a problem: How can the JavaScript know which API endpoint to communicate with, without having to modify the JavaScript per environment? Now you know the answer: Server Variables!</p>
+<h2 id="how-do-you-use-server-variables">How do you use Server Variables?</h2>
+<p>With the above example in mind, how would one go about implementing that?</p>
+<p>For Umbraco 7, you can follow the instructions of the documentation page I linked earlier.</p>
+<p>If you need more handholding, or want to do this in Umbraco 8, you could take a look at <a rel="noopener" href="https://creativewebspecialist.co.uk/2014/06/23/what-on-earth-is-umbraco-servervariables-parsing/" target="_blank">an article</a> written by Umbraco's own Developer Advocate Warren Buckley.</p>
+<p>When it comes to Umbraco 9, things have changed quite a bit! So let's layout the process:</p>
+<ol>
+<li>Create a Composer</li>
+<li>Create a NotificationHandler</li>
+<li>Register a NotificationHandler</li>
+<li>Use the Server Variable in the backoffice</li>
+</ol>
+<p>As a bonus, let's also throw in:</p>
+<ol start="5">
+<li>Create, register and use an Options-section</li>
+</ol>
+<h3 id="step-1-create-a-composer">Step 1. Create a Composer</h3>
+<p>Since Umbraco 8, it's possible to use Dependency Injection (DI) to manage, well... your dependencies.</p>
+<blockquote>
+<p><strong>TIP!</strong> For those unfamiliar, <a rel="noopener" href="https://en.wikipedia.org/wiki/Dependency_injection" target="_blank">Dependency Injection</a> is a <a rel="noopener" href="https://en.wikipedia.org/wiki/Software_design_pattern" target="_blank">Design Pattern</a> and part of the <a rel="noopener" href="https://en.wikipedia.org/wiki/SOLID" target="_blank">SOLID</a> principles in more than one way. Definitely worth a read! I won't get into any further details as part of this article. As a Software Engineering lecturer I can also talk for hours on end about this, so I'll spare you that.</p>
+</blockquote>
+<p>With the introduction of DI, we said goodbye to the good ol' <span class="code">IApplicationEventHandler</span> and said hello to the <span class="code">IUserComposer</span>! In Umbraco 9, the <span class="code">IUserComposer</span> has been simplified to <span class="code">IComposer</span>.</p>
+<p>Besides handling DI, another use-case of <span class="code">IComposer</span> is telling Umbraco what it has to configure before fully starting up. You can read more about it <a rel="noopener" href="https://our.umbraco.com/Documentation/Implementation/Composing/" target="_blank">here</a>.</p>
+<p>For step 1, create a <span class="code">StartupComposer.cs</span> and add the following code to it:</p>
+<pre><code class="language-csharp">using Umbraco.Cms.Core.Composing;
+using Umbraco.Cms.Core.DependencyInjection;
+
+public class StartupComposer : IComposer
+{
+    public void Compose(IUmbracoBuilder builder)
+    {
+        //TODO: Add logic here
+    }
+}</code></pre>
+      <p class="snippet-caption">StartupComposer.cs</p>
+<p>As the name of the class implies, we are going to use this composer to handle everything we want to do when Umbraco starts up.</p>
+<h3 id="step-2-create-a-notificationhandler">Step 2. Create a NotificationHandler</h3>
+<p>Prior to Umbraco 9, the <span class="code">StartupComposer</span> would have been the place to register an event handler for the <span class="code">ServerVariablesParser.Parsing</span>-event. In Umbraco 9, the <span class="code">ServerVariablesParser</span>-class still exists, but it doesn't have an event anymore. Better yet, none of the original events like <span class="code">ContentService.Publishing</span> exist anymore!</p>
+<p>Fret not, they are not actually gone! You just have to register your event handlers in a slightly different way now by using notification handlers.</p>
+<p>To create a notification handler, you need to decide on two things:</p>
+<ul>
+<li>Which "notification" do you want to handle?</li>
+<li>Do you need to handle that notification synchronously or asynchronously?</li>
+</ul>
+<p>To figure out which notification you need to handle, take a look at the <a rel="noopener" href="https://our.umbraco.com/documentation/Reference/Notifications/" target="_blank">documentation</a>. Do keep in mind not all notifications are actually documented, so your safest bet it searching for <span class="code">Notification</span> on GitHub. The one we need for handling Server Variables is <span class="code">ServerVariablesParsingNotification</span>.</p>
+<blockquote>
+<p><strong>TIP!</strong> If you go the the <a rel="noopener" href="https://github.dev/umbraco/Umbraco-CMS" target="_blank">in-browser Visual Studio Code</a> of the <a rel="noopener" href="https://github.dev/umbraco/Umbraco-CMS" target="_blank">Umbraco CMS GitHub repository</a>, you can search through all files using CTRL+SHIFT+F. Be sure to enable "local indexing" when offered, as the GitHub index tends to not find what you are looking for.</p>
+</blockquote>
+<p>Next you need to decide if your notification handler has to run synchronously or asynchronously:</p>
+<ul>
+<li>If you want to run code synchronously, you need to use <span class="code">INotificationHandler</span>.</li>
+<li>If you want to run code asynchronously, you need to use <span class="code">INotificationAsyncHandler</span>.</li>
+</ul>
+<p>With both things decided, you can move on with step 2 and create your notification handler. For our example, we'll go with a synchronous notification handler.</p>
+<p>Create a <span class="code">ServerVariablesParsingNotificationHandler.cs</span> and add the following code to it:</p>
+<pre><code class="language-csharp">using Umbraco.Cms.Core.Events;
+using Umbraco.Cms.Core.Notifications;
+
+public class ServerVariablesParsingNotificationHandler : INotificationHandler&lt;ServerVariablesParsingNotification&gt;
+{
+    public void Handle(ServerVariablesParsingNotification notification)
+    {
+        //TODO: Add logic here
+    }
+}</code></pre>
+      <p class="snippet-caption">ServerVariablesParsingNotificationHandler.cs</p>
+<p>The important bit in here is the interface implementation: <span class="code">INotificationHandler&lt;ServerVariablesParsingNotification&gt;</span>. It's a combination of both things we decided on earlier. If we were to implement an asynchronous notification handler, this would have been <span class="code">INotificationAsyncHandler&lt;ServerVariablesParsingNotification&gt;</span>.</p>
+<p>Inside the Handle-method, we can now add logic to add information to the Server Variables, which get passed to the backoffice.</p>
+<p>The easiest way to explain this, is by showing it. For our example dashboard we need an API endpoint to be passed to the backoffice, so replace the TODO with something like this:</p>
+<pre><code class="language-csharp">notification.ServerVariables.Add("statisticsDashboard", new
+{
+    apiEndpoint = "http://localhost:8080/api/GenerateStatistics"
+});</code></pre>
+      <p class="snippet-caption">ServerVariablesParsingNotificationHandler.cs</p>
+<p>In this code, <span class="code">notification.ServerVariables</span> is of type <span class="code">Dictionary&lt;string, object&gt;</span>. The <span class="code">key</span> can be any name and is used to retrieve the <span class="code">object</span> in the backoffice later on. The object can be anything, as long as it is serializable to JSON. In the example above I'm using an anonymous object, which may contain other objects. But it could also be any other type like <span class="code">string</span> or <span class="code">bool</span>.</p>
+<p>Let's ignore the fact our API endpoint is still hardcoded and move on to the next step.</p>
+<h3 id="step-3-register-a-notificationhandler">Step 3. Register a NotificationHandler</h3>
+<p>Now that we have a composer and a notification handler, it's time to combine the two!</p>
+<p>Open up <span class="code">StartupComposer.cs</span> and replace the TODO with the following code:</p>
+<pre><code class="language-csharp">builder.AddNotificationHandler&lt;ServerVariablesParsingNotification, ServerVariablesParsingNotificationHandler&gt;();</code></pre>
+      <p class="snippet-caption">StartupComposer.cs</p>
+<p>You will also need an additional <span class="code">using</span> for this to work:</p>
+<pre><code class="language-csharp">using Umbraco.Cms.Core.Notifications;</code></pre>
+      <p class="snippet-caption">StartupComposer.cs</p>
+<p>If you were to use an asynchronous notification handler, instead of <span class="code">AddNotiticationHandler</span> you would use <span class="code">AddNotificationAsyncHandler</span>.</p>
+<p>Compile your code, start Umbraco and go to <span class="code">/umbraco/ServerVariables</span> in the browser. You should now see something like this somewhere in the response:</p>
+<pre><code class="language-json">"statisticsDashboard": {
+    "apiEndpoint": "http://localhost:8080/api/GenerateStatistics"
+}</code></pre>
+      <p class="snippet-caption">/umbraco/ServerVariables</p>
+<p>Great, almost there! Let's use this on our dashboard.</p>
+<h3 id="step-4-use-the-server-variable-in-the-backoffice">Step 4. Use the Server Variable in the backoffice</h3>
+<p>Because creating a dashboard is out of scope for this article, I'm just going to give you the steps to create a simple dashboard to demonstrate the Server Variables. If you want to read more about creating dashboards, go <a rel="noopener" href="https://our.umbraco.com/Documentation/Tutorials/Creating-a-Custom-Dashboard/" target="_blank">here</a>.</p>
+<ol>
+<li>Create an <span class="code">App_Plugins\StatisticsDashboard</span>-folder.</li>
+<li>Inside that folder, create a <span class="code">package.manifest</span> with the following contents:</li>
+</ol>
+<pre><code class="language-json">{
+    "dashboards": [
+      {
+        "alias": "statisticsDashboard",
+        "sections": [
+          "content"
+        ],
+        "view": "~/App_Plugins/StatisticsDashboard/dashboard.html",
+        "weight": -1
+      }
+    ],
+    "javascript": [
+      "~/App_Plugins/StatisticsDashboard/dashboard.js"
+    ]
+  }</code></pre>
+      <p class="snippet-caption">package.manifest</p>
+<ol start="3">
+<li>Inside that folder, create a <span class="code">dashboard.html</span> with the following contents:</li>
+</ol>
+<pre><code class="language-markup">&lt;div ng-controller="StatisticsDashboard.Controller as vm"&gt;
+    My API Endpoint is {{vm.apiEndpoint}}!
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">dashboard.html</p>
+<ol start="4">
+<li>Inside that folder, create a <span class="code">dashboard.js</span> with the following contents:</li>
+</ol>
+<pre><code class="language-javascript">angular.module("umbraco").controller("StatisticsDashboard.Controller", function() {
+    const vm = this;
+
+    vm.apiEndpoint = "something";
+});</code></pre>
+      <p class="snippet-caption">dashboard.js</p>
+<p>If you open Umbraco after restarting, you should now have a dashboard in your Content-section saying <span class="code">My API Endpoint is something!</span>.</p>
+<blockquote>
+<p><strong>TIP!</strong> Did you know you can register dashboards with a Composer instead of a <span class="code">package.manifest</span>? You can read more about it <a rel="noopener" href="https://our.umbraco.com/Documentation/Implementation/Composing/" target="_blank">here</a>.</p>
+</blockquote>
+<p>With that out of the way, let's replace the <span class="code">something</span> with the actual endpoint from the Server Variables!</p>
+<p>Replace <span class="code">vm.apiEndpoint = "something";</span> with the following code:</p>
+<pre><code class="language-javascript">const serverVariables = Umbraco.Sys.ServerVariables.statisticsDashboard;
+
+vm.apiEndpoint = serverVariables.apiEndpoint;</code></pre>
+      <p class="snippet-caption">dashboard.js</p>
+<p>All Server Variables are available from the global variable <span class="code">Umbraco.Sys.ServerVariables</span>. You can access them with the <span class="code">key</span> you decided on in step 2 by using <span class="code">.key</span> like in the code above, or by using <span class="code">["key"]</span>. If you have to retrieve more than one piece of data, it is wise to store your key in a temporary variable first. This keeps your code nice and clean!</p>
+<p>I then assign the <span class="code">apiEndpoint</span> from the Server Variables to <span class="code">vm.apiEndpoint</span> for it to show up on the dashboard. If you refresh Umbraco, the dashboard should now show: <span class="code">My API Endpoint is http://localhost:8080/api/GenerateStatistics!</span>.</p>
+<p>That's it, you've now successfully exposed a piece of information from the backend to the backoffice!</p>
+<p>Before wrapping up this article, let's solve our example "problem" with multiple environments and different API endpoints.</p>
+<h3 id="step-5-create-and-register-an-options-section">Step 5. Create, register and use an Options-section</h3>
+<p>Now that Umbraco 9 runs on .NET 5 and beyond, we have a whole slew of cool tricks we can use! One of those things is adding a custom options section.</p>
+<p>In .NET Framework you could add App Settings in the <span class="code">web.config</span>. This was by far the easiest way to make configurable settings, compared to making your own <a rel="noopener" href="https://docs.microsoft.com/en-us/previous-versions/aspnet/ms228056(v=vs.100)" target="_blank">custom configuration section</a>.</p>
+<p>In .NET 5, App Settings no longer exist. Luckily, adding custom option sections is now easier than ever! An added bonus on top of this bonus paragraph: we can reload changes to these custom option sections without having to restart the website.</p>
+<p>Create a <span class="code">StatisticsDashboardOptions.cs</span> and add the following code to it:</p>
+<pre><code class="language-csharp">public class StatisticsDashboardOptions
+{
+    public const string StatisticsDashboard = "StatisticsDashboard";
+
+    public string ApiEndpoint { get; set; }
+}</code></pre>
+      <p class="snippet-caption">StatisticsDashboardOptions.cs</p>
+<p>Open your <span class="code">StartupComposer.cs</span> and add the following code anywhere in the <span class="code">Compose</span>-method:</p>
+<pre><code class="language-csharp">builder.Services
+    .AddOptions&lt;StatisticsDashboardOptions&gt;()
+    .Bind(builder.Config.GetSection(StatisticsDashboardOptions.StatisticsDashboard));</code></pre>
+      <p class="snippet-caption">StartupComposer.cs</p>
+<p>You will need an additional <span class="code">using</span> for this to work:</p>
+<pre><code class="language-csharp">using Microsoft.Extensions.DependencyInjection;</code></pre>
+      <p class="snippet-caption">StartupComposer.cs</p>
+<p>Last but not least, open your <span class="code">appsettings.json</span> and add the following JSON to it. I left the <span class="code">$schema</span> as a reference, you do not need to actually add that again.</p>
+<pre><code class="language-json">{
+    "$schema": "./umbraco/config/appsettings-schema.json",
+    // ... Other keys ...
+    "StatisticsDashboard": {
+      "ApiEndpoint": "http://localhost:8080/api/GenerateStatistics" 
+    }
+  }</code></pre>
+      <p class="snippet-caption">appsettings.json</p>
+<p>In the above code, <span class="code">AddOptions&lt;StatisticsDashboardOptions&gt;()</span> registers our options class as an injectable dependency for other classes in our project. Next the <span class="code">Bind(builder.Config.GetSection(StatisticsDashboardOptions.StatisticsDashboard))</span> tells our application that the data for our <span class="code">StatisticsDashboardOptions</span>-class is located in our <span class="code">appsettings.json</span> under the key <span class="code">StatisticsDashboard</span>.</p>
+<p>You can read more about how all this works <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/fundamentals/configuration/options?view=aspnetcore-6.0" target="_blank" data-anchor="?view=aspnetcore-6.0">here</a>.</p>
+<p>Now that we've registered our dependency, we can inject it where we need it!</p>
+<p>Open your <span class="code">ServerVariablesParsingNotificationHandler.cs</span> and add the following code to it:</p>
+<pre><code class="language-csharp">private readonly StatisticsDashboardOptions _statisticsDashboardOptions;
+
+public ServerVariablesParsingNotificationHandler(
+    IOptionsMonitor&lt;StatisticsDashboardOptions&gt; statisticsDashboardOptions)
+{
+    _statisticsDashboardOptions = statisticsDashboardOptions.CurrentValue;
+}</code></pre>
+      <p class="snippet-caption">ServerVariablesParsingNotificationHandler.cs</p>
+<p>The magic in this piece of code is the <span class="code">IOptionsMonitor&lt;StatisticsDashboardOptions&gt; statisticsDashboardOptions</span>-argument in the constructor. Our application will automatically retrieve a reference to our custom options section in the <span class="code">appsettings.json</span> and keep track of changes in it. Every time we request <span class="code">.CurrentValue</span>, we will get the value that's in the <span class="code">appsettings.json</span> at that time.</p>
+<p>Because our <span class="code">ServerVariablesParsingNotificationHandler</span> is instanced every time the backoffice requests the Server Variables, we can immediately call <span class="code">.CurrentValue</span> and store its result in an instance variable (<span class="code">_statisticsDashboardOptions</span>).</p>
+<p>Inside your <span class="code">Handle</span>-method, update <span class="code">apiEndpoint = "http://localhost:8080/api/GenerateStatistics"</span> to <span class="code">apiEndpoint = _statisticsDashboardOptions.ApiEndpoint</span>.</p>
+<p>Compile your code, start Umbraco and take a look at your dashboard. It should still show: <span class="code">My API Endpoint is http://localhost:8080/api/GenerateStatistics!</span>.</p>
+<p>Now open your <span class="code">appsettings.json</span> again, and change the <span class="code">"ApiEndpoint": "http://localhost:8080/api/GenerateStatistics"</span> from earlier to <span class="code">"ApiEndpoint": "https://www.mydomain.tld/api/GenerateStatistics"</span>.</p>
+<p>Refresh Umbraco and behold, your dashboard should immediately reflect this change without having to restart: <span class="code">My API Endpoint is https://www.mydomain.tld/api/GenerateStatistics!</span>.</p>
+<h2 id="wrapping-up">Wrapping up</h2>
+<p>In this article, you've learned about Server Variables, Composers, Notification Handlers, Options and how all these things go hand in hand!</p>
+<p>Now there is only one thing left to do: start using this knowledge in your own projects as soon as possible!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v9/" title="See all articles tagged with v9">v9</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Lennard Fonteijn"><img src="//gravatar.com/avatar/b146f12c0e56d46befb90e171701b9a2.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/b146f12c0e56d46befb90e171701b9a2.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Lennard Fonteijn</h1>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Hacking around with search and strong typed models.</title>
+<meta name="description" content="A brief yet code heavy journey into the world of Examine and strong typed models.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Hacking around with search and strong typed models.</h1>
+      <p class="byline"> by James Jackson-South, <span class="pubdate">posted on <time datetime="2015-12-20">Dec 20, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Hi all, season's greetings! </p>
+<p class="intro"><img src="/archive/media/2015/troy_500x295.jpg" width="500" height="295" alt="Troy"></p>
+<p>Welcome to another edition of 24 days in Umbraco; I'm here today to talk about hacking with search and strong typed models. I've written about the benefits of using them with Umbraco on <a href="http://skrift.io/articles/archive/ditto-the-friendly-poco-mapper-for-umbraco/" target="_blank" title="Other great stuff to read.">Skrift</a>.</p>
+<p>As some of you may know I'm a strong proponent of using strong typed models within Umbraco. I'm part of the core team working on the <a href="https://our.umbraco.org/projects/developer-tools/ditto/" target="_blank" title="Ditto on Our Umbraco">Ditto</a> project and have written about using it in the past.</p>
+<p>One of the many things I've always wanted to integrate, in a nice way, using strong typed models is search. Umbraco has excellent search capabilities utilizing Examine which wraps around Lucene but every example I've seen requires extensive configuration which in my mind leads to a disconnect from the strong typed methodology.</p>
+<p>What follows is an approach I have been using recently which I feel works really quite well to bridge that disconnect. This is based on a snippet that <a href="https://twitter.com/hendyracher" target="_blank" title="Follow Hendy on Twitter">Hendy Racher</a> showed me last year that I fixed and expanded upon.<br><br> I'll take you through some code that allows for multiword wildcard enabled search that can be wired up with some simple attributes. I've also published an example project on <a href="https://github.com/JimBobSquarePants/Umbraco-Hacking-With-Search-24-Days-2015" target="_blank" title="The codezzzz">Github</a> containing functional demonstration code. </p>
+<p>By the end of this article you will be able to simply do the following to return your query.</p>
+<pre class="language-markup"><code>IEnumerable&lt;SearchMatch&gt; result = SearchEngine.SearchSite(query);</code></pre>
+<p><em>Warning: Some of this gets quite technical and there will be lots of code snippets so lay off the Eggnog until I'm finished. If you're not as nerdy as I am it might get a bit boring. The results are worth the read though.</em></p>
+<h3>Mapping Basic Properties </h3>
+<p>So let's get started with an example model representing my home page.</p>
+<pre class="language-markup"><code>/// &lt;summary&gt;
+/// The home document type.
+/// &lt;/summary&gt;
+[SearchCategory(new[] { "Content" })]
+public class Home : PageBase
+{
+    /// &lt;summary&gt;
+    /// Gets or sets the image.
+    /// &lt;/summary&gt;
+    public virtual Image Image { get; set; }
+
+    /// &lt;summary&gt;
+    /// Gets or sets the body text.
+    /// &lt;/summary&gt;
+    [SearchMergedField]
+    public virtual HtmlString BodyText { get; set; }
+}</code></pre>
+<p>There's two attributes here you would have noticed. <span class="code">SearchCategory</span> and <span class="code">SearchMergedField</span>. The former takes an array of category names and the latter instructs the search engine that I want to index this property for full text searching. There's nothing fancy about them so I won't display them here, you'll be able to see them on Github.  </p>
+<p>Collecting those properties is done in almost the same manner as you would gather node data - by tapping into the Umbraco event. There's a few differences though as you will see.</p>
+<pre class="language-markup"><code>/// &lt;summary&gt;
+/// Gathers the information from each node to add to the Examine index.
+/// &lt;/summary&gt;
+/// &lt;param name="sender"&gt;The sender.&lt;/param&gt;
+/// &lt;param name="e"&gt;The event arguments containing information about the nodes to be gathered.&lt;/param&gt;
+/// &lt;param name="helper"&gt;The &lt;see cref="UmbracoHelper"/&gt; to help gather node data.&lt;/param&gt;
+// ReSharper disable once UnusedParameter.Local
+private void GatheringNodeData(object sender, IndexingNodeDataEventArgs e, UmbracoHelper helper)
+{
+    StringBuilder mergedDataStringBuilder = new StringBuilder();
+    StringBuilder categoryStringBuilder = new StringBuilder();
+
+    // Convert the property and use reflection to grab the output property value adding it to the merged property collection.
+    IPublishedContent content = null;
+
+    switch (e.IndexType)
+    {
+        case "content":
+            content = helper.TypedContent(e.NodeId);
+            break;
+        case "media":
+            content = helper.TypedMedia(e.NodeId);
+            break;
+    }
+
+    if (content == null)
+    {
+        return;
+    }
+
+    Type doctype = ContentHelper.Instance.GetRegisteredType(content.DocumentTypeAlias);
+
+    List&lt;string&gt; mergedProperties = new List&lt;string&gt;();
+
+    if (doctype != null)
+    {
+        // Match the Ditto properties filters.
+        PropertyInfo[] properties =
+            doctype.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                    .Where(x =&gt; x.CanWrite)
+                    .ToArray();
+
+        // ReSharper disable once LoopCanBeConvertedToQuery
+        foreach (PropertyInfo property in properties)
+        {
+            SearchMergedFieldAttribute attr = property.GetCustomAttribute&lt;SearchMergedFieldAttribute&gt;(true);
+
+            if (attr == null)
+            {
+                continue;
+            }
+
+            mergedProperties.Add(!string.IsNullOrWhiteSpace(attr.ExamineKey) ? attr.ExamineKey : property.Name);
+
+            // Look for any custom search resolvers to convert the information to a useful search result.
+            SearchResolverAttribute resolverAttribute = property.GetCustomAttribute&lt;SearchResolverAttribute&gt;(true);
+
+            // Combine property values.
+            foreach (KeyValuePair&lt;string, string&gt; field in e.Fields.Distinct())
+            {
+                if (mergedProperties.Distinct().InvariantContains(field.Key))
+                {
+                    if (resolverAttribute != null)
+                    {
+                        SearchValueResolver resolver = (SearchValueResolver)Activator.CreateInstance(resolverAttribute.ResolverType);
+                        mergedDataStringBuilder.AppendFormat(" {0}", helper.StripHtml(resolver.ResolveValue(resolverAttribute, content, property, field.Value, Thread.CurrentThread.CurrentUICulture)));
+                    }
+                    else
+                    {
+                        mergedDataStringBuilder.AppendFormat(" {0}", helper.StripHtml(field.Value));
+                    }
+
+                    mergedProperties.Remove(!string.IsNullOrWhiteSpace(attr.ExamineKey) ? attr.ExamineKey : property.Name);
+                }
+            }
+        }
+
+        // Combine categories.
+        SearchCategoryAttribute categoryAttribute = doctype.GetCustomAttribute&lt;SearchCategoryAttribute&gt;();
+
+        if (categoryAttribute != null)
+        {
+            if (categoryAttribute.Categories.Any())
+            {
+                foreach (string category in categoryAttribute.Categories)
+                {
+                    categoryStringBuilder.AppendFormat("{0} ", category);
+                }
+            }
+        }
+    }
+
+    e.Fields[SearchConstants.CategoryField] = categoryStringBuilder.ToString().Trim();
+    e.Fields[SearchConstants.MergedDataField] = mergedDataStringBuilder.ToString().Trim();
+}
+</code></pre>
+<p>That's a lot of code for an article! So... what's going on here?  </p>
+<p>For each node that is passed to the handler I'm grabbing the type that I have created to represent that from a cache. If there is a <span>category attribute present <span>I add the category to the category field. </span></span>I then loop through the types properties and check for the appearance of the merged property attribute attribute mentioned above. If one present I grab the property value and add that to the properties field.</p>
+<p>That works great for simple properties like strings but there are more complicated properties out there that you might want to make searchable, like Json. Here's where we get a bit fancy.</p>
+<h3>Enter SearchResolverAttribute</h3>
+<p>You'll have noticed in the code there is an attribute referenced called <span class="code">SearchResolverAttribute</span>. This tells the event handler that we need to do something a little bit different in order to get something suitable for indexing. This is a little idea I stole borrowed from the Ditto project which ends up being a powerful concept. Here's a simple example of one for parsing the filename of an image.</p>
+<pre class="language-markup"><code>/// &lt;summary&gt;
+/// The image filename search resolver. Used to resolve a value suitable for indexing with Examine.
+/// &lt;/summary&gt;
+public class ImageFileSearchValueResolver : SearchValueResolver&lt;SearchResolverAttribute&gt;
+{
+    /// &lt;summary&gt;
+    /// Performs the value resolution.
+    /// &lt;/summary&gt;
+    /// /// &lt;returns&gt;
+    /// The &lt;see cref="string"/&gt; representing the converted value.
+    /// &lt;/returns&gt;
+    public override string ResolveValue()
+    {
+        string umbracoFile = Constants.Conventions.Media.File;
+        return this.Content.GetPropertyValue&lt;ImageCropDataSet&gt;(umbracoFile).Src;
+    }
+}</code></pre>
+<p>This approach can be applied to more complicated examples. Here's one using the excellent multilingual package <a href="https://our.umbraco.org/projects/backoffice-extensions/vorto" target="_blank" title="Vorto on Our Umbraco">Vorto</a>.  </p>
+<pre class="language-markup"><code>/// &lt;summary&gt;
+/// The Vorto search resolver. Used to resolve a value suitable for indexing with Examine.
+/// &lt;/summary&gt;
+public class VortoSearchValueResolver : SearchValueResolver&lt;SearchResolverAttribute&gt;
+{
+    /// &lt;summary&gt;
+    /// Performs the value resolution.
+    /// &lt;/summary&gt;
+    /// &lt;returns&gt;
+    /// The &lt;see cref="string"/&gt; representing the converted value.
+    /// &lt;/returns&gt;
+    public override string ResolveValue()
+    {
+        IEnumerable&lt;Language&gt; languages = LocalizationHelper.GetInstalledLanguages();
+        StringBuilder stringBuilder = new StringBuilder();
+        VortoValue vortoValue = JsonConvert.DeserializeObject&lt;VortoValue&gt;(this.RawValue);
+        string name = this.Property.Name;
+
+        foreach (Language language in languages)
+        {
+            string iso = language.IsoCode;
+            if (this.Content.HasVortoValue(name, iso))
+            {
+                object value;
+
+                // Umbraco method Parse internal links fails since we are operating on a background thread.
+                try
+                {
+                    value = this.Content.GetVortoValue(name, iso);
+                }
+                catch
+                {
+                    value = vortoValue.Values[iso];
+                }
+
+                stringBuilder.Append(string.Format(SearchConstants.CultureTemplate, iso, value));
+            }
+        }
+
+        return stringBuilder.ToString();
+    }
+}</code></pre>
+<p>Grabbing the value to display is fairly simple due to the extension methods available with Vorto but here you can see that we have to pull another trick out of the hat to deal with the different cultures stored within Vorto's Json object. We need to think outside the box.</p>
+<p><em>Warning: This is where the hacking part of the article and code appears.  </em></p>
+<p>Traditional approaches to multilingual sites within Umbraco involve using multiple copies of the same site with a different Examine index for each site to avoid search pollution. Since we are operating with a single index we need a way to store the values so they can be retrieved individually. We're going to use regular expressions to help us out.</p>
+<h3><span>Regular expressions</span></h3>
+<p>Regular expressions, for the uninitiated, are special text strings for describing a search pattern. You can think of regular expressions as wildcards on steroids. You are probably familiar with wildcard notations such as <span class="code">*.txt</span> to find all text files in Windows explorer. Used correctly they can be a powerful tool in a developer arsenal. Used incorrectly, however, you can cause all sorts of problems such as creating a hole in the space-time continuum t0 invOke the hiv3-mind repr3s3nting chao$. With ou7 Orrderrr. The NezPerdi4n h!ve-mind of ch@os. H£ C0M£Z. ZALGO!</p>
+<p>Ahem...</p>
+<p>The regular expression that will do most of the work is this doozy.</p>
+<pre class="language-markup"><code>"\u0000SearchDemoCulture:[^\u0000]+:(?&lt;replacement&gt;[^\u0000]+)\u0000";</code></pre>
+<p>I'm being a bit of a smart-arse here using the UTF-16 null character to wrap the expression but I wanted something that people wouldn't type. <br><br>Basically this allows me to match my culture specific values that are formatted to a specific layout in the Vorto resolver, and with some slight-of-hand, replace the full value in the Lucene field result with my content. You'll see how I do it below.</p>
+<h3>The Anatomy of a Search Result</h3>
+<p>Our search is made up of five classes. These classes are fairly simple to follow but combined provide us with some powerful tools. </p>
+<ol>
+<li>SearchConstants</li>
+<li>SearchMatch</li>
+<li>SearchRequest</li>
+<li>SearchResponse</li>
+<li>SeachEngine</li>
+</ol>
+<p>Most of the work happens in <span class="code">SearchRequest</span> so I'll only highlight code from there. <br><br>When a query comes in we want to ensure that it is set up as a multi word grouped or <span class="code">IBooleanOperation</span>. We do that as follows:</p>
+<pre class="language-markup"><code>IBooleanOperation searchCriteria = searchProvider.CreateSearchCriteria().OrderBy(string.Empty);
+
+if (!string.IsNullOrWhiteSpace(this.Query))
+{
+    searchCriteria = searchProvider
+        .CreateSearchCriteria()
+        .GroupedOr(SearchConstants.MergedDataField.AsEnumerableOfOne(),
+        this.Query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries).Select(w =&gt; w.Trim().MultipleCharacterWildcard())
+        .ToArray());
+}</code></pre>
+<p>That code allows us to search for any word that starts with any the individual words that make up our query.<br><br>We run the search, as standard and then it gets all a little crazy.<br><br>In our results we could potentially have matches that don't match our current culture. Now we don't want to pollute our search so we do the following process:</p>
+<ol>
+<li>Loop though the results and check for any values within them that match our culture pattern but belong to a different culture.</li>
+<li>If we find a match we replace that value with an empty string in our field result.</li>
+<li>We then check whether there are any matches left over in our field result by splitting up the query and using a wildcard regular expression to do a quick search. (told you it gets hacky!)</li>
+<li>If there are any results left over then we pass the result to a highlighter to format the result for the user.</li>
+</ol>
+<p>Wanna see some more code? Of coure you do! </p>
+<pre class="language-markup"><code>Analyzer analyzer = new StandardAnalyzer(Lucene.Net.Util.Version.LUCENE_29);
+Formatter formatter = new SimpleHTMLFormatter("&lt;strong&gt;", "&lt;/strong&gt;");
+
+foreach (SearchResult searchResult in searchResults.OrderByDescending(x =&gt; x.Score))
+{
+    // Check to see if the result is culture specific.
+    // This is a bit hacky but there is no way with property wrappers like Vorto to separate the results into 
+    // different indexes so we have to fall back to regular expressions.
+    string fieldResult = searchResult.Fields[SearchConstants.MergedDataField];
+    RegexOptions options = RegexOptions.IgnoreCase | RegexOptions.Multiline;
+
+    string opts = $"({string.Join("|", this.Query.Split(new[] { " " }, StringSplitOptions.RemoveEmptyEntries))})";
+
+    // First check to see if there is any matches for any installed languages and remove any
+    // That are not in our culture collection.
+    // ReSharper disable once LoopCanBeConvertedToQuery
+    foreach (Language language in this.languages)
+    {
+        if (!this.Cultures.Contains(language.CultureInfo))
+        {
+            fieldResult = Regex.Replace(
+                fieldResult,
+                string.Format(SearchConstants.CultureRegexTemplate, language.IsoCode, opts),
+                string.Empty,
+                options);
+        }
+    }
+
+    // Now clean up the languages we do have a result for.
+    MatchCollection matches = AllCultureRegex.Matches(fieldResult);
+
+    foreach (Match match in matches)
+    {
+        if (match.Success)
+        {
+            string replacement = match.Groups["replacement"].Value;
+
+            fieldResult = Regex.Replace(
+            fieldResult,
+            Regex.Escape(match.Value),
+            replacement + " ",
+            options);
+        }
+    }
+
+    // Now check to see if we have any match left over. If not, break out.
+    if (!new Regex(string.Format(SearchConstants.QueryRegexTemplate, opts), options).Match(fieldResult).Success)
+    {
+        continue;
+    }
+
+    this.AddSearchMatch(analyzer, formatter, searchResults, searchResponse, searchResult, fieldResult);
+}</code></pre>
+<p>Follow all that? Mental!... <br><br>After that, the highlighter does its magic and we have a nice pageable collection of search matches that can be broken down into their individual categories for display. </p>
+<p><img src="/archive/media/2015/search_810x317.jpg" width="810" height="317" alt="Search"></p>
+<p>Ain't that great! You've now totally nailed search and can stick it in your box of magic tricks to impress your boss and clients. <br><br>So I hope some of this is useful to other strong typed Umbracians out there. I dunno if it's best practise (I'm no Examine guru) but I like it and it's made my day-to-day work a lot easier. <br><br>Let me know what you think about it all in the comments below. A working code example is hosted on <a href="https://github.com/JimBobSquarePants/Umbraco-Hacking-With-Search-24-Days-2015" title="The codezzzz">Github</a> for you to play with and encorporate in your own work if you like.<br><br>Now go get that Eggnog inside you. You've earned it!<br><br></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/examine/" title="See all articles tagged with Examine">Examine</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/search/" title="See all articles tagged with Search">Search</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="James Jackson-South"><img src="//gravatar.com/avatar/f8c1b521995075df5147b8acb6a11532.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/f8c1b521995075df5147b8acb6a11532.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>James Jackson-South</h1>
+        <p>James is on Twitter as <a href="//twitter.com/James_M_South" title="James Jackson-South on Twitter" rel="author">@James_M_South</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li class="selected"><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

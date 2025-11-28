@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>A Modular Hybrid Headless Approach In Umbraco 8 and VueJS</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Hybrid Headless Approach</h1>
+      <p class="byline"> by Anthony Dang &amp; John Sheard, <span class="pubdate">posted on <time datetime="2019-12-11">Dec 11, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Modular Implementation</h2>
+<h3>Design</h3>
+<p>A truly modular design consists of blocks/modules/widgets, where each item may be placed on any page in any combination. As usual, we need to consider the backoffice editor experience, how the CMS models render, and also how interactive modules behave on the page. As part of this, the chosen javascript framework also needs to be flexible and modular, where components can be added multiple times in any order on the page. </p>
+<p class="intro">VueJS is a lean javascript framework which is nice to use for interactive components. The library is relatively easy to understand, meets HTML standards, and the Vue components match up with how we want to build a modular UI. When UI developers work on individual components, they create “templates” as .vue files. The UI developer uses vue-loader and vue-template-compiler in Webpack to compile the .vue files to a javascript file. </p>
+<p>In the following example, Vue components are small chunks of markup. The framework replaces these chunks with the Vue template’s HTML when Vue executes. The code and functionality can be isolated to the individual components, which means that Vue’s components can be repeated in any order and combination as required.</p>
+<p> </p>
+<pre><code class="language-markup">&lt;div&gt;
+  &lt;button-counter&gt;&lt;/button-counter&gt;
+  &lt;button-counter&gt;&lt;/button-counter&gt;
+  &lt;button-counter&gt;&lt;/button-counter&gt;
+&lt;/div&gt;
+</code></pre>
+<p> </p>
+<p>For more examples, check out the VueJS documentation: <a href="https://vuejs.org/v2/guide/components.html#Reusing-Components">https://vuejs.org/v2/guide/components.html#Reusing-Components</a></p>
+<p> </p>
+<p> </p>
+<h2>The Backoffice Experience</h2>
+<p>To ensure that the editor experience is intuitive and consistent, it is important to use consistent property editors. The contenders for Umbraco 8 (at the time of writing) were Nested Content, and the Grid. Both of these Backoffice data components use Umbraco’s Element types, which allow us to create a modular experience for the editors. </p>
+<p> </p>
+<p> <img style="width: 500px; height: 413.907284768212px;" src="/archive/media/2019/module-selection.png?width=500&amp;height=413.907284768212" alt="" data-udi="umb://media/e0a468efb6564c97b006db78fa13dc9f"></p>
+<p> </p>
+<p>In our implementation, we settled on Nested Content. Each page is given a field named `body`, of type Nested Content. The added benefit of using Nested Content is that Models Builder can be used to map the module content to strongly typed Models, and hence resulting in cleaner MVC partials. Below is an example of our implemented modules. The modules that are added to the corresponding Nested Content data type each correspond to an MVC partial and Vue component. </p>
+<p> </p>
+<h2>A Hybrid Headless Approach</h2>
+<h3>VueJS Component Data</h3>
+<p>The integration of Vue components and MVC views is one of the most interesting parts of this approach. To hydrate the Vue components with data, we decided to render JSON inside a data attribute in the Vue component. This approach is concise and clean, and allowed us to avoid a round-trip ajax request to get the data. In the example below, the Model is actually string, which comprises of raw JSON which was serialised from a strongly typed model.</p>
+<p> </p>
+<pre><code class="language-javascript">&lt;navigation-data :data='@(Html.Raw(Model))'&gt;&lt;/navigation-data&gt;</code></pre>
+<p> </p>
+<p><span style="font-weight: 400;">The VueJS component is very readable and elegant. Since the Vue component’s data is provided via rendered JSON, we call this a Hybrid Headless approach. A fully headless approach would supply the data via ajax API requests. One benefit of this hybrid approach means that we do not require the creation of APIs to be consumed. The same Vue component with it's rendered JSON can be seen below. </span></p>
+<p> </p>
+<pre><code class="language-markup">&lt;navigation-data :data="{
+    'logo': {'text': 'SiteName','href': '/'
+    },
+    'nodes': [
+        { 'label': 'First menu item', 'href': '/first-page', 'nodes': []
+        },
+        { 'label': 'Second menu item', 'href': '/second-page', 'nodes': []
+        },
+        { 'label': 'Third menu item', 'href': '/third-page', 'nodes': [
+                { 'label': 'First sub page item', 'href': '/third-page/sub-page-1', 'nodes': []
+                },
+                { 'label': 'Second sub page item', 'href': '/third-page/sub-page-2', 'nodes': []
+                },
+                { 'label': 'Third sub page item', 'href': '/third-page/sub-page-3', 'nodes': [
+                        { 'label': 'External site', 'href': 'https://external.site.com/', 'target': '_blank', 'nodes': []
+                        },
+                        { 'label': 'Detailed page', 'href': '/third-page/sub-page-3/detailed-page', 'nodes': []
+                        }
+                    ]
+                },
+                { 'label': 'Fourth sub page item', 'href': '/third-page/sub-page-4', 'nodes': []
+                }
+            ]
+        }
+    ]
+}"&gt;</code></pre>
+<p> </p>
+<p><span style="font-weight: 400;">One of the biggest advantages of this approach is that the integration with Umbraco is very quick. Traditionally backend developers would need to copy and paste various chunks of HTML into MVC partial views. This becomes problematic when parts of the markup need to change. In our approach this is dramatically reduced.</span></p>
+<p><span style="font-weight: 400;">When working with Vue, the UI developers work only on their .vue files. Subsequent changes to a component’s corresponding Vue file will be built into javascript. Therefore the backend developers will not need to touch the “already implemented” MVC partial views.</span></p>
+<p> </p>
+<h3>Generic MVC View For Droppable Modules</h3>
+<p><span style="font-weight: 400;">Using strongly typed Models Builder models means that corresponding MVC partials can be created which house the related Vue components. </span><span style="font-weight: 400;">Since the modules may be dropped on any page in any order, we need our MVC rendering to facilitate this in a non-verbose way. This mapping is very intuitive, however the challenge was to ensure that all partial views could be rendered in any combination.</span><span style="font-weight: 400;"></span></p>
+<p><span style="font-weight: 400;">In our solution, we use a naming convention to determine the modules to be rendered. We then use a single generic MVC partial view on the page.</span><span style="font-weight: 400;"></span></p>
+<p><span style="font-weight: 400;">Here is the MVC partial view. It is very clean. </span></p>
+<p> </p>
+<pre><code class="language-javascript">&lt;main role="main"&gt;
+    @foreach (var module in Model.Body)
+    {
+        Html.RenderAction($"Get{module.ContentType.Alias}", "Module", new { content = module });
+    }
+&lt;/main&gt;</code></pre>
+<p> </p>
+<p><span style="font-weight: 400;">The end result is some generic MVC View code which calls a child action, which in turn calls the actual MVC partial for the module. The MVC partial in turn renders a Vue component with the required JSON data. </span><span style="font-weight: 400;">Here is an example child action method:</span></p>
+<p> </p>
+<pre><code class="language-csharp">[ChildActionOnly]
+public ActionResult GetModuleSimpleQuote(ModuleSimpleQuote content)
+{
+	return PartialView("~/Views/Modules/_SimpleQuote.cshtml", content.Text);
+}</code></pre>
+<p> </p>
+<p><span style="font-weight: 400;">On a side note, you may decide that non-interactive components are standard MVC views.</span></p>
+<p> </p>
+<h2>Strange View Models</h2>
+<p>One strange thing about this approach is that our View Models are not actually traditional view models per se. The line is a little blurry, as the content was being rendered as JSON on MVC partials. To keep the Views clean, we serialise the View Models before we pass them (as a string) to the View. So there is some murkiness here. If this was a totally headless approach, then we would call these Data Models.</p>
+<p><span style="font-weight: 400;">Another oddity is that sometimes your frontend Vue component data field names will not match up totally with the backoffice Element type names. Therefore the view models might need to be attributed with JsonProperty[“&lt;insert name&gt;”]. You may even consider attributing all of your model properties for consistency, however this really makes the model more of a Data Model, rather than a View Model. An example of this is below.</span></p>
+<p> </p>
+<pre><code class="language-csharp">public class LinkWrapper
+{
+	[JsonProperty("text")]
+	public string Label { get; set; }
+
+	[JsonProperty("href")]
+	public string Url { get; set; }
+	
+	[JsonProperty("target")]
+	public string Target { get; set; }
+}
+
+</code></pre>
+<p><span style="font-weight: 400;"> </span></p>
+<h3>View Model Hydration</h3>
+<p><span style="font-weight: 400;">The construction of view models can sometimes be a little complex. In our approach, we gain clean MVC views, however the tradeoff is potentially complex or unconventional view model hydration. One such scenario is where the Vue component requires content from the CMS node, and dictionary items.</span><span style="font-weight: 400;"></span></p>
+<p>In the following two code snippets, the controller uses a service to create the view model, then another class is used to hydrate dictionary items.</p>
+<p>Controller: </p>
+<pre><code class="language-csharp">public override ActionResult Index(ContentModel model)
+{
+    var viewModel = _viewModelService.GetViewModel&lt;ExampleViewModel&gt;(model.Content);
+    _dictionaryItemHydrator.Hydrate(viewModel, Umbraco);    
+
+    return View("Example", viewModel);
+}</code></pre>
+<p> </p>
+<p>Dictionary Hydrator:</p>
+<pre><code class="language-csharp">public ExampleViewModel Hydrate(ExampleViewModel viewModel, UmbracoHelper umbracoHelper)
+{
+    var findOutMoreText = umbracoHelper.GetDictionaryValue("Global_CTA_Text");
+    
+    foreach (var item in viewModel.Content.Items)
+    {
+        if (item.Url != null)
+        {
+            item.Url.Label = findOutMoreText;
+        }
+    }
+
+    return viewModel;
+}</code></pre>
+<p><span style="font-weight: 400;"><br>Note: The problem can become more complex if you have nesting of models which also require dictionary items.</span></p>
+<p> </p>
+<h2>Final Thoughts</h2>
+<p>In our approach, a totally modular design was realised by using a combination Nested Content, Models Builder, a generic MVC partial, VueJS components, and content rendered as JSON. This resulted in very clean MVC views, where the actual component HTML is maintained only as .vue files by UI developers.<span style="font-weight: 400;"></span></p>
+<p><span style="font-weight: 400;">There are some oddities in this approach. Namely the fact that our view models don’t really seem like traditional MVC view models. They feel more like data models which would typically be consumed via a WebAPI.</span><span style="font-weight: 400;"></span></p>
+<p><span style="font-weight: 400;">One unintended side effect of this approach is an incredibly fast time to first byte. We found that our pages can typically respond in under 100ms, without any caching. This is due to the fact that server side rendering of HTML is very limited, hence the response time is incredibly fast.</span><span style="font-weight: 400;"></span></p>
+<p><span style="font-weight: 400;">We look forward to improving this approach, and may look into Vue server-side rendering in the future.</span></p>
+<p> </p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/adaptive/" title="See all articles tagged with Adaptive">Adaptive</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Anthony Dang"><img src="//gravatar.com/avatar/1187485c895a196272cb2ef629687b2a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/1187485c895a196272cb2ef629687b2a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Anthony Dang</h1>
+        <p>Anthony is on Twitter as <a href="//twitter.com/AnthonyDotNet" title="Anthony Dang on Twitter" rel="author">@AnthonyDotNet</a></p>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="John Sheard"><img src="//gravatar.com/avatar/c9c06eacecc45b046ba6f9284aa65b00.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c9c06eacecc45b046ba6f9284aa65b00.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>John Sheard</h1>
+        <p>John is on Twitter as <a href="//twitter.com/jsheard02" title="John Sheard on Twitter" rel="author">@jsheard02</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

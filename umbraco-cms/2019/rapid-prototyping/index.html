@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Rapid Prototyping in Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Rapid Prototyping</h1>
+      <p class="byline"> by Alice Meng, <span class="pubdate">posted on <time datetime="2019-12-12">Dec 12, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><img style="width: 500px; height: 216.4179104477612px;" src="/archive/media/2019/meta-data.jpg?width=500&amp;height=216.4179104477612" alt="what do you call a web dev's self-reflection? ...meta data." data-udi="umb://media/27af905b1fcf4e0bab132f761cf3bd36"></p>
+<p class="intro">At its core, Umbraco allows great amounts of flexibility in organizing data, allowing the architect to combine a variety of data types into document types that can be immediately used by the content editor. I wanted to take advantage of this inherent flexibility to quickly create a usable prototype for a videogame checkout system. </p>
+<h3><strong>I organized my process into the following steps:</strong></h3>
+<ol>
+<li>Review existing process flow</li>
+<li>Bring process into Umbraco (with initial changes/improvements)</li>
+<li>Prototype testing:<br>- Data organization review<br>- User experience review</li>
+<li>Further iteration: review and return to step 3</li>
+</ol>
+<h2><strong>The Brief: make a video game checkout system for a convention</strong></h2>
+<p>The idea for a checkout/borrowing system is simple: provide collateral, receive "the goods". In the context of a convention, it's give a badge, get a game. The convention has a video game and sometimes board game library where you can borrow a game as part of the con experience. Sometimes cons will have hardware and game demos as well!</p>
+<p><img style="width: 500px; height: 165.44117647058826px;" src="/archive/media/2019/give-a-badge-get-a-game.jpg?width=500&amp;height=165.44117647058826" alt="give a badge, get a game!" data-udi="umb://media/4f33a4edea814cf6b5f41e663e90a7d0"></p>
+<h3><strong>Details/Additional Complexity:</strong></h3>
+<p>There are additional complications in a con setting which make the situation differ from a library or a video rental model. A con is a temporary setting only present for a weekend, and it's not unusual for a con to share games between other cons, or for volunteers to temporarily lend their games for use at the con. Keeping track of who owns what becomes a necessary component to managing inventory.</p>
+<p>In addition, in this day and age having digital copies of games, rather than physical copies, is rather common. Depending on the console, the game may be console-specific (Nintendo Switch) or downloadable based on account (Xbox). </p>
+<p>Visitors can also request a number of non-game things, like joining tournaments or signing up for a product demo, or issues with using any of the consoles on the game floor. Collecting further data on issues can enrich later analysis.</p>
+<p>altering data and document types on the fly can allow for immediate improvements in captured data</p>
+<h2><strong>Previous Processes: aka the Dark Past</strong></h2>
+<h3><strong>The ol' pen &amp; paper</strong></h3>
+<p>I wasn't around for this time, so I can only imagine this stage. What games were popular? Did we keep track of what consoles were most used? The data here relies purely on memory, which can be foggy. Good for small situations, worse as the convention grows.</p>
+<p><img style="width: 500px; height: 194.06392694063928px;" src="/archive/media/2019/pen-and-paper-chaos.jpg?width=500&amp;height=194.06392694063928" alt="pen and paper chaos" data-udi="umb://media/5d2c556fb0c5468592738711caffa233"></p>
+<h3><strong>Online Formsbuilder</strong></h3>
+<p>This was a form thrown together to start logging data for future reference. The flow was as follows:</p>
+<ol>
+<li>Enter attendee name</li>
+<li>Select by Console (required)<br>This option also had the option to Select by Game Title instead: because of the limitations of Google Forms, searching in multiple ways was not so easy.</li>
+<li>Add a Controller?<br>This option was a dropdown allowing the user to select, 0-4</li>
+</ol>
+<p>Depending on the result in step 2, you could then:</p>
+<ul>
+<li>select a game by console</li>
+<li>select a specific game</li>
+</ul>
+<p><img style="width: 500px; height: 186.86868686868686px;" src="/archive/media/2019/formsbuilder-process.jpg?width=500&amp;height=186.86868686868686" alt="formsbuilder process" data-udi="umb://media/27430c1ee4284fe29c3bac1a6c5c5a90"></p>
+<p>There was no ability to go backwards in this process, as forms follow a linear flow. Hence the following feedback:</p>
+<blockquote>It was 'a little clunky'<br>- Josh, video games chair, 2018</blockquote>
+<p>Despite being clunky, we still managed to capture a great deal more data than we had the previous year (100% increase from no data capture!) However, beyond the process flow flaws, the flaws associated with an online forms builder made the idea of using the same process the next year uninviting. Games did not have additional information associated with them to help staff members locate the game, or information about who owned which game. Data entry required added in every single individual game at least twice manually. It was definitely a single-use solution – wild horses couldn’t make me enter that data again.</p>
+<p><img style="width: 500px; height: 228.64321608040203px;" src="/archive/media/2019/wild-horses.jpg?width=500&amp;height=228.64321608040203" alt="wild horses, asking me to enter data again" data-udi="umb://media/631031b35bd24e8997254cbe93a02549"></p>
+<h2><strong>Bringing the Process into Umbraco</strong></h2>
+<p>I started simple with the new process:</p>
+<ol>
+<li>Attendee makes a Request for a Game, hands over their badge.</li>
+<li>When the Game has been requested, mark it as unavailable.</li>
+<li>Attendee is given the game.</li>
+<li>When the Game is returned, mark it as available.</li>
+<li>Attendee is then given back their badge.</li>
+</ol>
+<p>Thus I have two main document types: Games and Requests.</p>
+<p>A Game has information associated with it, such as the console it is associated with (Switch, PS4, Xbox), the Real Owner (Pat, Josh, Me, Animaine, Jon, Ryan, Megan, etc), whether it is digital or physical, and whether it is checked out.</p>
+<p>A Request has information about the attendee (Name/handle/cosplay name), also links to the specific game in question via content picker, and notes if the game has been returned or not.</p>
+<h3><strong>Events</strong>:</h3>
+<p>To tackle all the “when this, do that” steps, I’ve set up event subscriptions. In the past, this was tackled via an ApplicationEventHandler type class, but for V8 I extended IComponent.</p>
+<p>Umbraco has pretty detailed documentation on both types (in case you decide to use V7 for your prototyping needs).</p>
+<p> For information on using composers, <a rel="noopener" href="https://our.umbraco.com/documentation/getting-started/Code/Subscribing-To-Events/" target="_blank" title="Umbraco Documentation on Composers">see the Umbraco documentation here</a>.</p>
+<p>When a request is created and published, the corresponding game is automatically flagged as isCheckedOut. Later, when the attendee returns the game, the game is unflagged for isCheckedOut. isReturned is always the inverse of isCheckedOut:</p>
+<p><span class="code"> gameselected.SetValue("checkedOut", !(node.GetValue&lt;bool&gt;("gameReturned")));</span></p>
+<p>When Attendee Ian requests a game, like Mario Kart 8, Ryan at the checkout counter enters the information: Ian, Mario Kart 8, 0 controllers requested and saves the request. When the request is saved, the Name of the Request is updated to reflect the information in the format: Ian – Mario Kart 8 – 11:25AM. Thus if Ryan needs to take a break and Megan steps in, when Attendee Ian returns Mario Kart 8, Megan can immediately see in the reverse: Mario Kart 8? That was taken out by Ian, let’s return Ian’s badge. Remembering attendees’ names is the ideal, but not everyone is an expert in remembering names, especially in a setting where there could be hundreds of them.</p>
+<h3><strong>Front End</strong></h3>
+<p>For this prototype, no front end was needed. The data was being stored locally, and the goal for this prototype is to be a tool to put less pressure for organization on the games lounge crew and put info at their fingertips to answer specific questions.</p>
+<h3><strong>Data Entry: Automation!</strong></h3>
+<p><img style="width: 500px; height: 150.1597444089457px;" src="/archive/media/2019/data-entry-nightmare.jpg?width=500&amp;height=150.1597444089457" alt="data entry joke" data-udi="umb://media/e4954a0a24274a0ea1035d406de07e6c"></p>
+<p>Automating data entry can be done via front-end (via the backoffice), in code, and it is relatively well-documented. If you are new to Umbraco, but familiar with such tools as Selenium, you can use such a tool to perform data entry tasks.</p>
+<p>Umbraco provides the ContentService (link to Content Service) allowing the creation and updating of content. I used this and a CSV of games data to automate the creation of all the games in a rather quick &amp; dirty way --- running on app startup. To be honest, I don’t exactly recommend doing this, as a mistake may mean needing to delete a bunch of content and start all over again. In the future, if starting from scratch I’d plan a bit further ahead on the data-import front.</p>
+<p><a rel="noopener" href="https://our.umbraco.com/documentation/reference/management/services/ContentService/" target="_blank" title="Umbraco Documentation on the ContentService">Here’s a link to documentation about Umbraco’s ContentService</a>. </p>
+<p><a rel="noopener" href="https://skrift.io/articles/archive/importing-external-data-as-content-in-umbraco/" target="_blank" title="Skrift Article on Importing External Data as Content">Here’s a link about automating content creation in Umbraco that does content automation in a much more wholesome and robust way</a>, courtesy of Skrift. Please note that V7 is the version used in this article.</p>
+<h2><strong>Iteration~</strong></h2>
+<p>The previous year of Unnamed Formsbuilder Hell served as an initial prototype for the Umbraco version. It allowed an attendee to relive their childhood and ask about games for a specific console (“What games do you have on the N64?”); after which the checkout person could say “On N64 we have GoldenEye, Pokemon Snap, …” I carried over this ability by automatically including the Console name in the Game Name.</p>
+<p>Sometimes the attendee might have a specific N64 game in mind, but hearing the games and commenting on all of them might result in a “well, Super Mario 64 was really fun but I think I wanna play Super Mario Maker II (Switch) instead.” Or, the checkout person could casually mention that “Super Mario Maker II just came out – do you want to try it?” The old checkout process required one to refresh the page and start over from scratch, whereas by using Umbraco’s native searching ability (no additional customization required), the backoffice user is able to directly type in “N64” to find all N64 games, and then pivot to “Super Mario Maker” to quickly change the games listed in the Content Picker.</p>
+<p>Similarly, the backoffice user can utilize search to see whether a game is included in the games list and if the game is already out.</p>
+<h3><strong>Iteration during Con</strong></h3>
+<p>Iterating on the backoffice during con resulted in addition of new Document Types:</p>
+<p><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/c5f03e4ed8344388b0e76c59db42fe8e"></p>
+<p>A Tournament Signup Document Type was created, which contains a list of persons (Repeated Textstrings) signed up for a tournament: this was used for Mario Kart and Super Smash Bros. tournaments</p>
+<p><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/fb98f3f368264f0aaddcaea1d95eac4f"></p>
+<p>A VR Queue Document Type was added for people signing up for VR. We had their names and info added via Nested Content, which held a list of VR Requests with name, isFinished, and isCancelled. The VR section of the games lounge ended up being the most popular area, and keeping an orderly list of attendees without restricting them to stand in a queue was a helpful addition to the backoffice.</p>
+<p>Since some games were not stored in their original packaging, the addition of location information (which box/bag) to the game title assisted in locating the requested game.</p>
+<p>Code-wise, the only update occurring during con was a bug fix to fix datestrings appended to Requests, and to create views to understand what games were available for each console for a slideshow view to present to visitors. Compared to last year’s process, this version was much more intuitive and had less in the way to “trip up” users. There were, however, some ideas that could be implemented for next year, which I’ll cover in Next Steps.</p>
+<h2><strong>Feedback &amp; Potential Next Steps</strong></h2>
+<p>In terms of critique, having the games auto-self-name was helpful, but not requiring name entry to Save and Publish the Document type was a sticking point – perhaps having a default document name would help.</p>
+<p>Updating the VR nodes to include comments on why a cancellation occurred might also allow us to schedule needed events like <em>charging VR controllers</em> during a quieter period, or letting us know that VR controllers malfunctioned multiple times and may need to be replaced next year. Compliments: much smoother process than last year</p>
+<p>Overall, the backoffice experience was far and away an improvement from the previous year’s tracking system. A sister convention stopped by to see the process and actually requested using the checkout system in their future con! I think we can look forward to another iteration next year.</p>
+<h3><strong>Unanswered Questions: Scale? Speed? </strong></h3>
+<blockquote>"is it better than a pencil and paper?"<br>- Chris, Animaine President, 2019</blockquote>
+<p>Pencil and paper could work, but for the purpose of later review and planning, having requests logged makes sense.</p>
+<p>Scale of this application for live purposes was pretty small. The system was run locally without external access, but could be set up as an intranet for the purpose of multi-user editing. Concurrent usage is inherently supported in Umbraco.</p>
+<p>Speed: working with a tight deadline and for the purpose of getting a prototype out there, speed was not exactly the most important factor. This is not to say the application was -slow-, however perhaps speed boosts could be achieved by returning to the work done and doing alterations</p>
+<h3><strong>Additional complexity?</strong></h3>
+<p>The real complexity for the game room comes from the digital-vs-physical copy divide. If I’m just looking at the Switch game console areas, each switch is owned by a different person and has different digital games already downloaded to it. Attendees can play the games already on the console, or they can ask for physical games to play. A console can be “locked out” because all the consoles of its type are taken, and a game can also be “locked out” if the corresponding console is in current use.</p>
+<p><img style="width: 500px; height: 277.6595744680851px;" src="/archive/media/2019/console-in-use.jpg?width=500&amp;height=277.6595744680851" alt="lockout: no console" data-udi="umb://media/ad2e6c22a4c14961bebce19bf6cdfd62"></p>
+<p> Part of the workflow of the checkout system involved adding the game Owner’s name, as well as whether or not the game was digital — this was added for the purpose of seeing who owned what...but also in a roundabout way became helpful to see if indeed a digital game was available to be played.</p>
+<p><img style="width: 500px; height: 265.4584221748401px;" src="/archive/media/2019/digital-game-on-console.jpg?width=500&amp;height=265.4584221748401" alt="lockout: digital game on console" data-udi="umb://media/1227a6ee305c499e9b8cc966d6ce4466"></p>
+<p>However, this did involve remembering which console out on the convention floor belonged to which person. If there were double the number of consoles, or they came from a large number of different sources, memorizing this map would not be ideal. Forcing attendees to sit in specific spots to try and avoid “lockout” would also be less than ideal. As the convention grows, these types of problems would occur. More likely than not, individual queues for specific consoles might be required, similar to the queue for VR… or, digital games could be all unlisted and simply considered a bonus on the console chosen.</p>
+<p><img style="width: 500px; height: 255.9171597633136px;" src="/archive/media/2019/manic-dependency-spiral.jpg?width=500&amp;height=255.9171597633136" alt="" data-udi="umb://media/87101b274a504554a325eb087a0f15ce"></p>
+<h3><strong>Baby Steps!!</strong></h3>
+<p>Before we fall down the manic complexity spiral, there are some immediate next steps that I think would make sense:</p>
+<ul>
+<li>Tournament Brackets functionality: create tournament brackets via the persons entered in the Tournament node. Annotate person who has won the tournament in some way. Attendees remember who won previous years; it’s time we do too.</li>
+<li>Backoffice editors should see a visual indication that a game is checked out, instead of relying on the Edit button for the Content Picker. Alternatively, checked out games can be removed from the games available list entirely. I prefer the first version as it allows the checkout person to know that the game in question is present in the library.</li>
+<li>A frontend or dashboard view with stats on games most popular, and comparison year over year</li>
+<li>Ability to export data to csv and possibly to import previous year data.</li>
+<li>Data import node (to clean up my quick ‘n’ dirty version, and cover up my guilt)<strong>  </strong></li>
+</ul>
+<h2><strong>TL;DR and Final Notes</strong></h2>
+<p>Overall, the time spent on this project was around an evening pre-con, and less than an hour during con. This is not to say that my personal skills are hyper-advanced, but to say that getting up and running with a functional prototype is doable quite quickly with Umbraco.</p>
+<p>This was also my first time using Umbraco 8, and I feel confident to say that if you are a reader with zero Umbraco knowledge, the documentation presently available could have you up and running with your own checkout system no problem, or your own inventory management system, or another project of your own choosing.</p>
+<p>Perhaps this is a nudge in the direction to create a prototype that can be presented to a developer/iterated on for speed/scaling/additional complexity, whether the final version ends up in Umbraco or not.</p>
+<p>And to all those who might possibly be inspired by this, happy holidays and happy prototyping!</p>
+<p><img style="width: 500px; height: 226.19047619047618px;" src="/archive/media/2019/happy-coding.jpg?width=500&amp;height=226.19047619047618" alt="happy coding!" data-udi="umb://media/3e82fdf7ab8e47ccb9c728d355c48da5"></p>
+<p>Special Thanks to Animaine for letting me make their chaos-organization platform!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Alice Meng"><img src="//gravatar.com/avatar/f8f0be4eb1adb2e2b8097c15c2d205e9.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/f8f0be4eb1adb2e2b8097c15c2d205e9.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Alice Meng</h1>
+        <p>Alice is on Twitter as <a href="//twitter.com/discintus" title="Alice Meng on Twitter" rel="author">@discintus</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Using Umbraco Heartcore (headless) with Next.js</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco Heartcore and Next.js</h1>
+      <p class="byline"> by Bjørn Fridal, <span class="pubdate">posted on <time datetime="2020-12-04">Dec 4, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">So you have been hearing about these headless CMS things and how they are getting more and more adoption. And now your favorite CMS also comes in a headless version. It’s called Umbraco Heartcore! I know you have been meaning to dive in and take it for a spin. You just haven't gotten around to it yet. Today is your lucky day though! In this blog post I will show you how to get started with Umbraco Heartcore and I will show you how we can integrate it with Next.js Our content will be managed with Umbraco, and presented with Next.js It's like mixing Oreos with ice cream! A solid combo! 💕</p>
+<p class="intro"> </p>
+<h3>TL;DR</h3>
+<p>Already know what Umbraco Heartcore and Next.js are and when it makes sense to use them? Awesome! Then feel free to <a href="#dirty-hands">skip down to the fun part where we get our hands dirty</a> 💅<br><br></p>
+<h2>Umbraco Heartcore</h2>
+<h3>What is a headless CMS?</h3>
+<p>I am assuming that Umbraco as a CMS is already familiar ground to you and that only the “headless” part is new to you. So a headless CMS is really the same as a classic CMS, only here we just have the backoffice to manage our content. There's no frontend, no views or templates to render the content. The content is completely decoupled from the presentation layer. Instead the CMS exposes the content via an API (actually two API's in the case of Umbraco Heartcore) and through that API one or more clients (website, mobile application, smart watch application etc) can fetch the content and render it to the end users.</p>
+<h3>I like the old Umbraco! Why do I need this here new thingy?</h3>
+<h3><img style="width: 250px; height: 223px;" src="/archive/media/2020/u_heartcore_heart_blue.png?width=250&amp;height=223" alt="" data-udi="umb://media/6bb596685660467d87bece92a1162a43"></h3>
+<p>Well the classic Umbraco CMS is great for creating websites. That's how most of us came to know and love Umbraco in the first place. A company needed a website and voila Umbraco was the perfect fit!</p>
+<p>These days (God that sounds like something grown ups say!) there are plenty of places where your content can live besides a website, though. Sure your company probably <em>does</em> need a new website, but it also has a mobile application on the drawing table. That mobile application needs content that is specifically tailored to the small device. It can't just reuse the content from the website.</p>
+<p>Additionally since it's 2020 that new company website should definitely be built with one of those fancy JavaScript frameworks. It needs to have that SPA "feel" and everything should load crazy fast! And because we still want Google to be able to search through our website, we will prebuild our content as static HTML files that are indexable by the search engines.</p>
+<p>So our company needs a CMS where we can manage the content for both clients (the website and the mobile application). I won't lie, we could totally handle that with the classic Umbraco CMS! However the clients also need a flexible way to fetch that data and they need to know when to fetch it. That part isn't as easy for the good ol' Umbraco CMS, but for Umbraco Heartcore it's childs play!<br><br></p>
+<p> </p>
+<h2>Next.js</h2>
+<h3>What is Next.js</h3>
+<p><img style="width: 170px; height: 91px;" src="/archive/media/2020/next-js-logo-7929bcd36f-seeklogocom-4.png?width=170&amp;height=91" alt="" data-udi="umb://media/b1d1a415b54340fba5b4b8ab057ea216">Next.js is a JavaScript framework built on top of React. If you are thinking “wait a minute, isn’t React a framework?” then you wouldn’t be the first. React actually "only" handles the UI part, so it is really a UI library. With React we can create kickass single page applications (SPA), but we will almost always need to install a bunch of additional packages to get a fully fledged application.</p>
+<p>Next.js though comes with a bunch of extra features compared to React. Some of the most important features are; static site generation (SSG), server side render (SSR) and routing. Next.js does a lot more and I encourage you to check out the <a rel="noopener" href="https://nextjs.org/" target="_blank">Next.js website</a>. In this blog post we will be using static site generation to generate HTML files with content from Umbraco and we will use routing to navigate between those HTML files. Pretty sweet right?</p>
+<p><em>"But Bjørn, isn't Next.js just another JavaScript fad? Who's even using it?"</em> I hear you! Next.js has been around since 2016 and there are some big players like <a rel="noopener" href="https://www.hulu.com/" target="_blank">Hulu</a>, <a rel="noopener" href="https://www.marvel.com/" target="_blank">Marvel</a>, <a rel="noopener" href="https://www.ticketmaster.com/" target="_blank">Tickmaster</a> and <a rel="noopener" href="https://nextjs.org/showcase" target="_blank">plenty of others</a> using it. If you do have a use case where you need to generate a static frontend, then Next.js is definitely worth considering.     </p>
+<h3>Did you say HTML files?</h3>
+<p>At first it might seem like we are taking a step back to the 90’s where a website often consisted of HTML files. Back then it wasn't unusual to have to manually enter content into a file and then manually upload the file via FTP to a server. If anything failed your only option was to email <a rel="noopener" href="https://en.wikipedia.org/wiki/Tim_Berners-Lee" target="_blank">Sir Tim</a> and ask for help! Luckily that’s not the case here! We will configure Next.js to fetch content from the Umbraco Heartcore API during the build process and then generate our static HTML files based on the content. Using the new webhooks feature in Umbraco Heartcore, we will trigger Next.js build process whenever content is published or unpublished in our Umbraco project. Nothing manual about that! </p>
+<p><a id="dirty-hands"></a>Alirght, enough talk! Let’s get our hands dirty!<br><br></p>
+<h2>Corporate website 👔 or record label website? 🤘</h2>
+<p>In my example, I was originally going to build a corporate website because I thought most readers would be able to identify with a project like that. You know, one of those websites where we have a “mission statement” page and smiling people in suits shaking hands. Then it occurred to me that nobody is dictating what I should build, so instead I decided on building a website for a fictitious record label. So much better! <br><br></p>
+<h2>Creating a Umbraco Heartcore project</h2>
+<p>We will start out with the easy part; setting up and configuring Heartcore. You will be pleased to hear that you can get a 14 day free trial of Heartcore either at the <a href="https://umbraco.com/products/umbraco-heartcore/get-started-with-umbraco-heartcore/">Umbraco website</a> or you can start a new trial project from within the <a rel="noopener" href="https://umbraco.io/" target="_blank">Umbraco Cloud portal</a>. Once done you can login into the Umbraco backoffice as you would with a classic Umbraco Cloud project.</p>
+<p>Since we’re building a website for a record label (oh yeah!), let’s head on over to the Settings section and add two document types: <span class="code">Artists</span> and <span class="code">Artist</span></p>
+<p>Artists will serve as our homepage where we list out the artist signed to our record label. From here you can click onto an Artist page which will present us with more information about the artist. That’s it for our website!</p>
+<p><strong>Artists document type</strong></p>
+<ul>
+<li style="font-weight: 400;">properties: <span class="code">title</span> (TextString), <span class="code">text</span> (TextArea)</li>
+<li style="font-weight: 400;">permissions: allow at root, allow <span class="code">Artist</span> as child</li>
+</ul>
+<p><strong>Artist document type</strong></p>
+<ul>
+<li style="font-weight: 400;">properties: <span class="code">biography</span> (RTE), <span class="code">image</span> (Media Picker) and <span class="code">imageCredits</span> (TextString)</li>
+<li style="font-weight: 400;">permissions: none</li>
+</ul>
+<p>Remember there are no views, CSS or JavaScript in our Headless CMS. It’s purely about creating and managing content.</p>
+<p>Next we head on over to the Content section and create the Artists page at root level and then we create a few artists under it. Remember we need an image to go along with each artist.</p>
+<p><img style="width: 500px; height: 236.1524717093508px;" src="/archive/media/2020/screenshot_2.png?width=500&amp;height=236.1524717093508" alt="" data-udi="umb://media/870942d5af474597a38e27b78e8c3100"></p>
+<p>Note: You may have noticed that the preview button is not available while creating content. Preview definitely can be enabled, but we already have enough on our plate for one blog post.</p>
+<p> </p>
+<h2>Installing Next.js</h2>
+<p>To install Next.js you will need NPX or Yarn installed on your computer. You can download Node (which includes NPX) from <a rel="noopener" href="https://nodejs.org/" target="_blank">nodejs.org</a>. </p>
+<p>Afterwards open your terminal/command and navigate to where you want to install the Next.js application. Proceed to running either <span class="code">npx create-next-app</span> or <span class="code">yarn create next-app</span> depending on which package manager you’re using and follow the instructions. <a rel="noopener" href="https://nextjs.org/docs/api-reference/create-next-app" target="_blank">create-next-app</a> is a CLI that helps you get going with Next.js fast. It installs dependencies, adds scripts to our package.json file and creates a few example pages for us.</p>
+<p>Once create-next-app is done doing it’s thing, use your terminal to step into the just created application directory and run <span class="code">npx next dev</span> (or <span class="code">yarn dev</span> if you used Yarn to install Next.js). If everything went the way it was supposed to, you should now have Next.js up and running on <a rel="noopener" href="http://localhost:3000/" target="_blank">http://localhost:3000</a> 🙌</p>
+<p><img style="width: 500px; height: 364.72945891783564px;" src="/archive/media/2020/screenshot_1.png?width=500&amp;height=364.72945891783564" alt="" data-udi="umb://media/e5dd5d57546d4f5abf9d56479f8bdb01"></p>
+<p> </p>
+<h2>Inspecting the Next.js files</h2>
+<p>So far, so good! Now open your Next.js application in your favorite editor and have a look at what files our Next.js application consists of:</p>
+<h3>.next/</h3>
+<p>The files in this directory are used by Next.js We shouldn’t need to modify them directly, since they will be overwritten later on. When running Next.js in development mode or when building out Next.js for production the static files are written to the .next folder.</p>
+<h3>pages/</h3>
+<p>The files in the pages/ folder are the public pages our Next.js application consists of. I explain pages in details in the next section <a href="#file-based-routing" data-anchor="#file-based-routing">file based routing</a>.</p>
+<h3>public/</h3>
+<p>You can place fonts, images and other static files in here.</p>
+<h3>styles/</h3>
+<p>Contains stylesheets that are imported by the pages components.</p>
+<h3>...and</h3>
+<p>There are few other files that are not important to us right now.</p>
+<p> </p>
+<h2><a id="file-based-routing"></a>File base routing</h2>
+<p>The files (or pages) in the pages folder are React components. On top of that each page has a route associated with it. File based routing! That means that you can add a Next.js page called pages/highfive.js and access it at <a rel="noopener" href="http://localhost:3001/highfive" target="_blank">http://localhost:3001/highfive</a> Pretty neat right? You can also create subdirectories under pages/ and the routing will work with those directories as well. If you add an index.js file to a page directory, then that file will serve as the default route for the current directory.</p>
+<p>Do note that since all the pages in the pages/ folder are accessible via routing, it is not where you want to keep your reusable React components. If you have a navigation or footer component you could instead place them in a components/ folder in the root directory.</p>
+<p>You can think of the components in the pages/ folder as being similar to views in classic Umbraco and other reusable components in your Next.js applications are similar to partial views.</p>
+<p>The pages folder also contains an api/ folder. I won’t be covering how to use it, since we will be relying on the Umbraco Heartcore API for our content needs.</p>
+<p> </p>
+<h2>Adding pages</h2>
+<p>Ok so remember how earlier I was ranting about building a record label website? Let’s get started! Open pages/index.js delete everything within the file and copy and paste the code <a rel="noopener" href="https://github.com/BjornFridal/heartcore-nextjs-24-days-in-umbraco/blob/stage-1/pages/index.js" target="_blank">from here</a>. Don’t worry too much about the code you just added. I will explain it shortly. Next replace styles/globals.css with <a rel="noopener" href="https://github.com/BjornFridal/heartcore-nextjs-24-days-in-umbraco/blob/stage-1/styles/globals.css" target="_blank">this file</a> and styles/Home.module.css with <a rel="noopener" href="https://github.com/BjornFridal/heartcore-nextjs-24-days-in-umbraco/blob/stage-1/styles/Home.module.css" target="_blank">this file</a>. Aftering saving the files, switch over to <a rel="noopener" href="http://localhost:3000/" target="_blank">http://localhost:3000/</a></p>
+<p><img style="width: 500px; height: 326.51245551601426px;" src="/archive/media/2020/artists.png?width=500&amp;height=326.51245551601426" alt="" data-udi="umb://media/8de8858b86b44221a65bb99b4152803b"></p>
+<p>You will notice that if you click any of the artists you end up with a 404 error. Let’s fix that! In the pages/ folder create a file called artist.js and paste in the code from <a rel="noopener" href="https://github.com/BjornFridal/heartcore-nextjs-24-days-in-umbraco/blob/stage-1/pages/artist.js" target="_blank">this file</a>. Next create a file called Artist.module.css in the styles/ directory and drop in the code from <a rel="noopener" href="https://github.com/BjornFridal/heartcore-nextjs-24-days-in-umbraco/blob/stage-1/styles/Artist.module.css" target="_blank">this file</a>. Now when we switch back over to <a rel="noopener" href="http://localhost:3000/" target="_blank">http://localhost:3000/</a> we should be able to click the artists and have the content from pages/artist.js show up. </p>
+<p><img style="width: 500px; height: 302.491103202847px;" src="/archive/media/2020/artist.png?width=500&amp;height=302.491103202847" alt="" data-udi="umb://media/1e74dc80741541ae8c98f6f8469edca7"></p>
+<p>Step back into the pages/artist.js page and locate the getStaticProps function. The data or props returned by getStaticProps is what is available to the page component at build time and it is where the artist page get’s its content from. Right now all the artists share the same hard coded content. We will change that soon 😉</p>
+<h2><a id="generating-html-files"></a>Generating HTML files from our pages</h2>
+<p>I think this is a good time to see what Next.js actually does with the page components when we build out the application for production. Switch over to the terminal and run the command <span class="code">npx next build</span> or <span class="code">yarn build</span>. After the build has finished, step into the .next/server/pages/ folder and open the artist.html file in your text editor. You will recognize the pages/artist.js component now rendered as HTML and you will see that the data returned by getStaticProps in pages/artist.js has been merged into the file. The getStaticProps function itself has been stripped out since it is only used during build time.</p>
+<h2>Data fetching</h2>
+<p>As we saw with the artist page, right now our content is hard coded directly into getStaticProps. Time to change that! In the root of our project create a new folder called lib/, inside that folder create a file called api.js and paste in <a rel="noopener" href="https://github.com/BjornFridal/heartcore-nextjs-24-days-in-umbraco/blob/stage-2/lib/api.js" target="_blank">this code</a>. As you can see we have a couple of functions in here to help us fetch our data from Umbraco Heartcore. You’re a smart person so you can tell what they are doing from the function names.</p>
+<p>If you want to learn more about Heartcore’s Content Delivery API you can find the <a rel="noopener" href="https://our.umbraco.com/documentation/Umbraco-Heartcore/API-Documentation/Content-Delivery/" target="_blank">documentation here</a>. You can also play around with the API from inside the Umbraco Heartcore backoffice. In the backoffice go to Settings expand the Headless tree and click on API browser. </p>
+<p>Before we can fetch data via the API we need to tell what Umbraco project it should fetch data from. You find that information by logging into Umbraco Cloud portal, choosing your Heartcore project and locating “Heartcore Project Alias”. Copy the alias and step back into lib/api.js and add the alias to the UMB_PROJECT_ALIAS const on the first line. In a real life project I would keep both the API root endpoint and the project alias in environmental variables, instead of hardcoding them into the api.js file. We are keeping it simple here 🙂</p>
+<p>Next open pages/index.js and replace it with <a rel="noopener" href="https://github.com/BjornFridal/heartcore-nextjs-24-days-in-umbraco/blob/stage-2/pages/index.js" target="_blank">this file</a>. Take a look at the getStaticProps function near the end of the file. As you can see, we are now fetching content from Umbraco Heartcore using the lib/api.js file we just added.</p>
+<p>Switch to your browser and go to <a rel="noopener" href="http://localhost:3000" target="_blank">http://localhost:3000</a> you should now see the artists you added to Umbraco Heartcore earlier listed here. If you made it this far and you were able to have content from your Umbraco Heartcore project show up in your Next.js application, then high five you rock™ my friend! 🙋‍♂️</p>
+<h2>Dynamic routing</h2>
+<p>Now that our content is coming from Umbraco the artist links on the homepage are not working anymore. The artist URL’s are generated by Umbraco and we need to tell Next.js how to handle them. Step back into your editor, locate the pages/artist.js page and rename it to [...slug].js Yeah that might need a little explanation. We saw how we could create routes based on the files we add to pages/ folder. Those routes are pretty static. Next.js also lets us create <a rel="noopener" href="https://nextjs.org/docs/routing/dynamic-routes" target="_blank">dynamic routes</a> which is perfect for our needs. Had we just named the file [slug].js it would match all routes at the root level of the website (eg. localhost:300/artist), but by adding in the three dots [...slug].js we are telling Next.js that this is a <a rel="noopener" href="https://nextjs.org/docs/routing/dynamic-routes#catch-all-routes" target="_blank" data-anchor="#catch-all-routes">catch all route</a> so now it will match anything at any level (eg.localhost:300/artists/kanye-west) as long as no other route matches first. The term “slug” is often used for part of or the entire page URL, but it’s not a special keyword in Next.js so we could have called it whatever we wanted.</p>
+<p>Alright with that outta the way, open pages/[...slug].js and replace with <a rel="noopener" href="https://github.com/BjornFridal/heartcore-nextjs-24-days-in-umbraco/blob/stage-2/pages/%5B...slug%5D.js" target="_blank">this file</a>. Good! Let's have a look at the code you just added. You can see that once again we are using getStaticProps to fetch data from the API. This time though we are fetching the content based on an argument called... slug. Yes you guessed it! Whenever a page URL matches our catch all route, the slug parameter is forwarded to the getStaticProps. The Content Delivery API has a convenient "<a rel="noopener" href="https://our.umbraco.com/documentation/Umbraco-Heartcore/API-Documentation/Content-Delivery/content/#get-by-url" target="_blank" data-anchor="#get-by-url">get by url</a>" endpoint which we can now use. </p>
+<p>Below getStaticProps we find getStaticPaths which is new! Before we introduced dynamic routes to our application, Next.js could simply look at the pages/ folder and generate 1:1 what it contained eg. there’s a page called pages/artist.js so Next.js will generate a HTML file called artist.html However since we are now using dynamic routes Next.js and [...slug].js can match all URL’s, Therefore we need to dictate to Next.js what files it should generate at build time. That’s what getStaticPaths is for. Inside getStaticPaths we use the API to fetch a list of all of the artists and then we return an array of those artists URL/slug. During build Next.js will get a list of our artists URLs from getStaticPaths and generate a HTML file for each one. Each file will still get it’s content from getStaticProps. If this seems a little tricky try building your Next.js application for production (see <a href="#generating-html-files">Generating HTML files from our pages</a>) and have a look at the files it’s generating. You should find a list of the artists that you have created in your Umbraco Hearcore project.</p>
+<p>Switch to your browser and go to <a rel="noopener" href="http://localhost:3000" target="_blank">http://localhost:3000</a> The artist links on the homepage should work now and you should see the actual content from Umbraco Heartcore when you navigate to the artist’s page 🙌</p>
+<p> </p>
+<h2>Deploying Next.js</h2>
+<p>Your Node.js application can be deployed to any host that supports Node.js (which is needed during the build process). You can also make exports which just gives you the static HTML files, but that’s really not useful for our scenario. </p>
+<h3>Vercel hosting</h3>
+<p>Vercel are the creators of Next.js It's also a hosting provider for static websites. As you may have guessed they have excellent support for hosting Next.js applications! Same as Umbraco has with Umbraco Cloud. They also have a very generous free hosting option which is the one I recommend you opt in for. Jump over to <a rel="noopener" href="https://vercel.com/" target="_blank">vercel.com</a> register and sign in.</p>
+<p>At this point make sure you have pushed all your changes to your remote Git repository. Vercel deployment works by connection to a Git repository (GitHub, BitBucket, GitLab etc) and a branch of your choice. Each time you commit to the chosen branch Vercel will fetch your code from the branch and build it. Vercel will automatically recognize that it’s dealing with a Next.js application and process it accordingly.</p>
+<p>While signed into the Vercel dashboard click the “Import project” button. Now choose your Git host and follow the instructions for connecting your Git repository. Once done, Vercel will start the first deployment. If the deployment should fail you can step into the build logs for more information. Assuming that the build succeeds Vercel will provide you with a unique URL where you can access the deployed application. As you can see Vercel is frickin awesome!</p>
+<p><img style="width: 500px; height: 247.80976220275343px;" src="/archive/media/2020/screenshot_4.png?width=500&amp;height=247.80976220275343" alt="Vercel Import Project" data-udi="umb://media/2811d6eb5c9f4da0b8aa7b19e7d09d3c"></p>
+<h2><br>Using webhooks to trigger deployments</h2>
+<p>We are now able to fetch content from Umbraco Heartcore, build and deploy our Next.js application. There is one crucial part missing though. Right now we only get fresh content into our Next.js application when we commit new changes to our remote Git host. That’s less than ideal. We want our application to be deployed (and built) whenever a content editor publishes or unpublishes content in our Umbraco Heartcore project. Luckily we have webhooks to solve that problem.</p>
+<h3>Heartcore Webhooks</h3>
+<p>Step into your Umbraco Heartcore project, go to Settings section, expand the Heartcore tree and click on Webhooks. If you’re like me you’re curious to see what information Heartcore will send when a webhook is triggered. To find out, jump over to hookbin.com and click “Create new endpoint”. Copy the URL under “Your Hookbin Endpoint” and step back into Heartcore. Here click “Create Webhook” and paste your Hookbin endpoint into the URL field. Next choose “Publish content” under Event and click the “Create” button. Now this webhook will be triggered whenever we publish new content. Head over into the Content section open the Artists page and smash the Publish button. Once published you switch back over to Hookbin, reload your page and you should see that our newly created webhook has made http POST request that looks something like this.</p>
+<p><img style="width: 500px; height: 446.4604402141582px;" src="/archive/media/2020/screenshot_2.png?width=500&amp;height=446.4604402141582" alt="" data-udi="umb://media/28d6bf9711fd42f288c32deb4228914a"></p>
+<h3>Vercel Deploy Hooks</h3>
+<p>Switch over to the Vercel dashboard, choose your Next.js project, click the Settings tab and then click the Git menu item in the sidebar. Scroll down until you see “Deploy Hooks”. Vercel allows you to create a unique hook endpoint that will trigger a new deployment when called with a GET or POST http request. In the “Hook Name” field enter a name that will make it easy to identify the source that will trigger the hook endpoint eg. <em>UmbracoHeartcore</em>. In the “Git Branch Name” enter the name of the branch you want to deploy. In my case that is simply <em>master</em>.</p>
+<p><img style="width: 500px; height: 191.8706293706294px;" src="/archive/media/2020/screenshot_3.png?width=500&amp;height=191.8706293706294" alt="" data-udi="umb://media/dee64ce7aae74e37a05717be376ce843"></p>
+<p>Once you have created your Deploy hook, copy your unique URL, switch back into Heartcore and create two new webhooks. One webhook for when publishing and one for unpublishing. They will both use the same deploy hook URL you just created in Vercel. Also feel free to delete the Hookbin webhook we created earlier.</p>
+<h2>Time to sink or swim! 🏄‍♀️</h2>
+<p>Head over to the content section of Umbraco, select the Artists page, make a change to the title text and click “Publish”. Afterwards switch over to Vercel, go to your Next.js project and click the Deployments tab. You should see a new deployment triggered by your publish in Heartcore (you may need to reload the Vercal Deployments page to pick up the new deployment). Once the deployment finishes and the state changes to “Ready“ you should be a very happy camper! We now have everything in place for our small record label website. We can make changes to the application, push them to the Git repo and Vercel will deploy our changes. And when we add new or change the existing artists in Heartcore, Vercel will be notified of the changes and start a new deployment. Awesome!</p>
+<p> </p>
+<h2>Conclusion</h2>
+<p>I hope that you by now have a basic idea of how Umbraco Heartcore and Next.js works. We covered quite a lot of ground in this blog post and still there's a <em>lot</em> more you do with both Umbraco Heartcore and Next.js And just in case you need a little break from the Christmas carols and confectionery, remember that you can get a 14 days free trial of Heartcore either at <a rel="noopener" href="https://umbraco.com/products/umbraco-heartcore/" target="_blank">umbraco.com</a> or in the <a rel="noopener" href="https://umbraco.io" target="_blank">Umbraco Cloud portal</a>. </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/headless/" title="See all articles tagged with Headless">Headless</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Bjørn Fridal"><img src="//gravatar.com/avatar/cb6e8b976449b16a13e2cda2ffbd93c5.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/cb6e8b976449b16a13e2cda2ffbd93c5.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Bjørn Fridal</h1>
+        <p>Bjørn is on Twitter as <a href="//twitter.com/bjornfridal" title="Bjørn Fridal on Twitter" rel="author">@bjornfridal</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

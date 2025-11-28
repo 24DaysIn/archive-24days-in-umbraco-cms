@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Can we add a poll?</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Polls in Umbraco</h1>
+      <p class="byline"> by Kenn Jacobsen, <span class="pubdate">posted on <time datetime="2016-12-23">Dec 23, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Have you ever had clients asking to integrate polls in their content? Preferably polls managed directly in Umbraco and not in some other third party service?</p>
+<p class="intro">It's pretty straight forward to do if you use Form Editor to do the heavy lifting. And even better, you won't need Visual Studio to implement it!</p>
+<p>Let's have a look at how we can create an article with a built-in poll.</p>
+<h2>Install Form Editor and set up Umbraco</h2>
+<p>First and foremost we have to install Form Editor. You can do this either by downloading the Umbraco package from the <a href="https://github.com/kjac/FormEditor/releases" target="_blank" title="Form Editor on GitHub">latest release</a> (it's the zip file attached to the release), or by installing it from <a href="https://www.nuget.org/packages/FormEditor/" target="_blank" title="Form Editor on NuGet">NuGet</a>.</p>
+<p>Once installed, create a Form Editor data type. For now you don't need to do a lot of configuration on the data type, but at the very least you must tick the "Use form statistics" checkbox, since we'll need the form submission statistics to generate the poll results.</p>
+<p><img style="width: 430px; height: 226px;" src="/archive/media/2016/use-form-statistics.png?width=430&amp;height=226" alt="" rel="1294" data-id="1294"></p>
+<p> Finally we'll need a document type for the article. Create a document type called "Article with poll" and compose it as follows:</p>
+<ul>
+<li>A "Content" tab with a "Title" property of type "Textstring" and a "Body text" property of type "Richtext editor".</li>
+<li>A "Poll" tab with a "Form" property of type "Form Editor".</li>
+</ul>
+<p><img style="width: 500px; height: 478.99159663865544px;" src="/archive/media/2016/document-type.png?width=500&amp;height=478.99159663865544" alt="" rel="1293" data-id="1293"></p>
+<h2>Create the first article</h2>
+<p>Create a page based on the "Article with poll" document type, and add some content on the "Content" tab. Now switch to the "Poll" tab and set up the poll form as follows:</p>
+<ul>
+<li>On the "Form layout" tab, add a one column row to the form and then add these fields:
+<ul>
+<li>A radio button group for the poll options. Make sure it's required and enter a suitable error message.</li>
+<li>A submit button for submitting the poll form.</li>
+</ul>
+</li>
+<li>On the "Receipt" tab, add a thank-you message. This message will be shown when the end users answer the poll.</li>
+<li>On the "Limitations" tab, tick the "Only one submission per user" checkbox and enter a message below. This message will be shown along with the poll results to end users that have answered the poll.</li>
+</ul>
+<h2>Render the article</h2>
+<p>When rendering the article, we need to either show the poll results or render the poll form, depending on whether the end user has already answered the poll or not. The Form Editor property can tell us which is the case - the method "MaxSubmissionsExceededForCurrentUser()" returns true if the end user has answered the poll.</p>
+<p>As mentioned above we'll use the form submission statistics to generate the poll results. You can read more about this feature <a href="https://github.com/kjac/FormEditor/blob/master/Docs/submissions_stats.md" target="_blank" title="Form submission statistics documentation">here</a>.</p>
+<p>For rendering the poll form, Form Editor ships with some <a href="https://github.com/kjac/FormEditor/blob/master/Docs/render.md" target="_blank" title="Form Editor rendering options documentation">rendering options</a> out of the box. We'll use the simplest one here, the "NoScript" option.</p>
+<p>And without further ado, here's the full template required to bring it all to life:</p>
+<pre><code class="language-javascript">﻿@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+  Layout = null;
+}
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;@Model.Content.Name&lt;/title&gt;
+  &lt;style&gt;
+    /* styles for the poll results */
+    ul.formStatistics {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    ul.formStatistics li div.formStatisticsItem {
+      display: inline-block;
+      height: 15px;
+      background-color: #C21F1F;
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  @* render the article content *@
+  &lt;h1&gt;@Model.Content.GetPropertyValue("title")&lt;/h1&gt;
+  @Model.Content.GetPropertyValue("bodyText")
+
+  @{
+    var form = Model.Content.GetPropertyValue&lt;FormEditor.FormModel&gt;("form");
+    // did the current user already answer the poll?
+    if(form.MaxSubmissionsExceededForCurrentUser() == false)
+    {
+      // nope, render the poll (the "form" property)
+      @Html.Partial("FormEditor/NoScript", Umbraco.AssignedContentItem)
+    }
+    else
+    {
+      // yes, show the poll results
+      // get the radio button group field from the form
+      var field = form.AllValueFields().OfType&lt;FormEditor.Fields.RadioButtonGroupField&gt;().FirstOrDefault();
+      if(field != null)
+      {
+        // get the submission statistics for the field
+        var statistics = form.GetFieldValueFrequencyStatistics(new[] { field.FormSafeName });
+        var fieldValueFrequencies = statistics.FieldValueFrequencies.FirstOrDefault();
+
+        // first render a message based on the configured "max submissions exceeded for current user" message - revert to default texts
+        &lt;h2&gt;@Umbraco.Coalesce(form.MaxSubmissionsForCurrentUserExceededHeader, "Thank you for voting!")&lt;/h2&gt;
+        &lt;p&gt;
+          @Html.Raw(Umbraco.ReplaceLineBreaksForHtml(Umbraco.Coalesce(form.MaxSubmissionsForCurrentUserExceededText, "Here are the current results.")))
+        &lt;/p&gt;
+
+        // then render the poll results based on the submission statistics (if any were found)
+        if(fieldValueFrequencies != null)
+        {
+          &lt;ul class="formStatistics"&gt;
+            @* list all field values and their respective statistics *@
+            @foreach(var fieldValue in field.FieldValues)
+            {
+              // get the field value frequency (if any submissions have been made for this field value)
+              var fieldValueFrequency = fieldValueFrequencies.Frequencies.FirstOrDefault(f =&gt; f.Value == fieldValue.Value);
+              // calculate the frequency in percent
+              var frequencyInPercent = fieldValueFrequency != null ? (100.0 * fieldValueFrequency.Frequency) / statistics.TotalRows : 0.0;
+              &lt;li&gt;
+                &lt;div&gt;@fieldValue.Value - @Math.Round(frequencyInPercent, 1)%&lt;/div&gt;
+                &lt;div class="formStatisticsItem" style="width: @frequencyInPercent%;"&gt;&lt;/div&gt;
+              &lt;/li&gt;
+            }
+          &lt;/ul&gt;
+        }
+      }
+    }
+  }
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      <p class="snippet-caption">Full template for the "Article with poll" document type</p>
+<p>And that's really all it takes to get the poll up and running!</p>
+<p><img style="width: 500px; height: 286.1035422343324px;" src="/archive/media/2016/votes.png?width=500&amp;height=286.1035422343324" alt="" rel="1295" data-id="1295"></p>
+<p>Now... let's see what we can do to improve it (besides styling it)!</p>
+<h2>?Help the editors</h2>
+<p>We don't really want our editors adding all sorts of form fields to the poll form. But rather than explaining to them that they really (pretty please) shouldn't add anything but a radio button group and a submit button, we can simply limit their choices to only those two field types.</p>
+<p>On the Form Editor data type we can configure "Field type groups" to group the available field types into whatever groups that make sense to our editors - and maybe more importantly, we can prevent field types from being available altogether. In our case we should create a single field type group called "Poll", containing only the radio button group and the submit button.</p>
+<p><img style="width: 500px; height: 229.2418772563177px;" src="/archive/media/2016/field-type-groups.png?width=500&amp;height=229.2418772563177" alt="" rel="1296" data-id="1296"></p>
+<h2>Asynchronous poll submission</h2>
+<p>If you're not a big fan of performing a full page reload when submitting the poll form, you're in luck; Form Editor supports asynchronous form submission.</p>
+<p>For this to work we could either add AngularJS to our site and use the "Async" rendering that's bundled with Form Editor... or we could roll our own solution with VanillaJS. Since we don't have to worry about cross field validation, the latter option is super easy to do, so let's go ahead and implement it.</p>
+<p>To perform the asynchronous form submission, all we need to do is POST the form data to the endpoint "/umbraco/FormEditorApi/Public/SubmitEntry/". The endpoint expects to find the ID of the page in the form variable "_id", but if you inspect the form you'll find it's already there - the "NoScript" rendering adds it by default.</p>
+<p>As we no longer have a page reload to show the thank-you message when the poll is answered, we need to render it up-front and show it once the form has been submitted (and hide the form at the same time).</p>
+<p>Here's the template from before with these two things added:</p>
+<pre><code class="language-javascript">﻿@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+  Layout = null;
+}
+&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;@Model.Content.Name&lt;/title&gt;
+  &lt;style&gt;
+    /* styles for the poll results */
+    ul.formStatistics {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    ul.formStatistics li div.formStatisticsItem {
+      display: inline-block;
+      height: 15px;
+      background-color: #C21F1F;
+    }
+
+    /* styles to hide and show elements */
+    div.hide {
+      display: none;
+    }
+    div.show {
+      display: block;
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  @* render the article content *@
+  &lt;h1&gt;@Model.Content.GetPropertyValue("title")&lt;/h1&gt;
+  @Model.Content.GetPropertyValue("bodyText")
+
+  @{
+    var form = Model.Content.GetPropertyValue&lt;FormEditor.FormModel&gt;("form");
+    // did the current user already answer the poll?
+    if(form.MaxSubmissionsExceededForCurrentUser() == false)
+    {
+      // nope, render the poll (the "form" property)
+      &lt;div id="pollFormContainer"&gt;
+        @Html.Partial("FormEditor/NoScript", Umbraco.AssignedContentItem)        
+      &lt;/div&gt;
+    
+      // render a hidden receipt message based on the configured receipt message - revert to default texts
+      &lt;div id="pollReceiptContainer" class="hide"&gt;
+        &lt;h2&gt;@Umbraco.Coalesce(form.ReceiptHeader, "Thank you for voting!")&lt;/h2&gt;
+        &lt;p&gt;
+          @Html.Raw(Umbraco.ReplaceLineBreaksForHtml(Umbraco.Coalesce(form.ReceiptBody, "Your vote is in - reload the page to see the results.")))
+        &lt;/p&gt;
+      &lt;/div&gt;
+    }
+    else
+    {
+      // yes, show the poll results
+      // get the radio button group field from the form
+      var field = form.AllValueFields().OfType&lt;FormEditor.Fields.RadioButtonGroupField&gt;().FirstOrDefault();
+      if(field != null)
+      {
+        // get the submission statistics for the field
+        var statistics = form.GetFieldValueFrequencyStatistics(new[] { field.FormSafeName });
+        var fieldValueFrequencies = statistics.FieldValueFrequencies.FirstOrDefault();
+
+        // first render a message based on the configured "max submissions exceeded for current user" message - revert to default texts
+        &lt;h2&gt;@Umbraco.Coalesce(form.MaxSubmissionsForCurrentUserExceededHeader, "Thank you for voting!")&lt;/h2&gt;
+        &lt;p&gt;
+          @Html.Raw(Umbraco.ReplaceLineBreaksForHtml(Umbraco.Coalesce(form.MaxSubmissionsForCurrentUserExceededText, "Here are the current results.")))
+        &lt;/p&gt;
+
+        // then render the poll results based on the submission statistics (if any were found)
+        if(fieldValueFrequencies != null)
+        {
+          &lt;ul class="formStatistics"&gt;
+            @* list all field values and their respective statistics *@
+            @foreach(var fieldValue in field.FieldValues)
+            {
+              // get the field value frequency (if any submissions have been made for this field value)
+              var fieldValueFrequency = fieldValueFrequencies.Frequencies.FirstOrDefault(f =&gt; f.Value == fieldValue.Value);
+              // calculate the frequency in percent
+              var frequencyInPercent = fieldValueFrequency != null ? (100.0 * fieldValueFrequency.Frequency) / statistics.TotalRows : 0.0;
+              &lt;li&gt;
+                &lt;div&gt;@fieldValue.Value - @Math.Round(frequencyInPercent, 1)%&lt;/div&gt;
+                &lt;div class="formStatisticsItem" style="width: @frequencyInPercent%;"&gt;&lt;/div&gt;
+              &lt;/li&gt;
+            }
+          &lt;/ul&gt;
+        }
+      }
+    }
+  }
+  &lt;script&gt;
+    document.addEventListener("DOMContentLoaded",
+      function () {
+        // add a submit event listener to the poll form
+        var forms = document.getElementById("pollFormContainer").getElementsByTagName("form");
+        if (!forms.length) {
+          // yikes! this shouldn't happen...
+          return;
+        }
+        forms[0].addEventListener("submit",
+          function(e) {
+            e.preventDefault();
+
+            var data = new FormData(e.target);
+            var request = new XMLHttpRequest();
+
+            request.onreadystatechange = function() {
+              if (request.readyState === 4 &amp;&amp; request.status === 200) {
+                var response = JSON.parse(request.responseText);
+                // is the form set up with a redirect to a thank-you page?
+                if (response.redirectUrlWithDomain) {
+                  // yep, better redirect to that page
+                  window.location = response.redirectUrlWithDomain;
+                }
+                else {
+                  // nope, let's hide the poll form and show the receipt message
+                  document.getElementById("pollFormContainer").classList.add("hide");
+                  document.getElementById("pollReceiptContainer").classList.add("show");
+                }
+              }
+            }
+
+            request.open("POST", "/umbraco/FormEditorApi/Public/SubmitEntry/", true);
+            request.send(data);
+          });
+      });
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      <p class="snippet-caption">Full template for the "Article with poll" document type - with asynchronous form submission</p>
+<h2>Help the editors even more</h2>
+<p>There are a few other things that makes sense to change in the Form Editor data type configuration, to make life easier for our editors:</p>
+<p>We don't need the two column row layout that's created by default, so that be removed. This way we're left with only one row layout, and our editors won't be asked to choose a layout when they're adding a row.</p>
+<p>Also, some of the Form Editor features are overkill for a poll, specifically notification/receipt emails and cross field validation. Fortunately we can remove these features from the data type by configuration.</p>
+<p><img style="width: 500px; height: 243.56435643564356px;" src="/archive/media/2016/tab-order-and-availability.png?width=500&amp;height=243.56435643564356" alt="" rel="1297" data-id="1297"></p>
+<h2>That's all, folks!</h2>
+<p>And there you have it; a fully functional poll system, built entirely upon existing Umbraco packages. No custom code, no integration with third party services - and fully manageable from the Umbraco backoffice.</p>
+<p>If this article has peaked your interest in Form Editor, there are <a href="https://github.com/kjac/FormEditor#tutorials" target="_blank" title="Form Editor tutorials">more tutorials</a> in the GitHub repository.</p>
+<p>Have a very merry Umbraco Christmas!</p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Kenn Jacobsen"><img src="//gravatar.com/avatar/5e7ecb4fffc216b7ee96f500d3b25710.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/5e7ecb4fffc216b7ee96f500d3b25710.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Kenn Jacobsen</h1>
+        <p>Kenn is on Twitter as <a href="//twitter.com/KennJacobsen_DK" title="Kenn Jacobsen on Twitter" rel="author">@KennJacobsen_DK</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

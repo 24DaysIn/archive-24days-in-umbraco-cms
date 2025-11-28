@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Tips For Better Code Reviews</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Tips For Better Code Reviews</h1>
+      <p class="byline"> by Callum Whyte, <span class="pubdate">posted on <time datetime="2020-12-14">Dec 14, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Let’s not deny it, developers can be socially inept creatures. In the remote-first world of 2020 solid communication skills are critical – and I don’t just mean having ALL the communication tools installed on your PC! Yet through my experience in agencies, as a freelancer, and leading a team, I’ve seen how different communication styles can affect the team’s workflow.</p>
+<p class="intro"><span style="font-weight: 400;">Code reviews are supposed to be collaborative and not a one-way process as is often seen – a senior dev reviews the code and where / why it’s wrong. I’d love to share my tips for running better code reviews on both work and open source projects.</span></p>
+<h2>The missing step</h2>
+<p>Counter to common practice, the code review process should start even before a single line of code has been written. It would be a terrible shame to put in hours of work only for the PR to be rejected because it doesn’t meet requirements, or the code isn’t a suitable fit for the project.</p>
+<p>Grab a colleague to appraise your proposed approach before you begin. Discussing the task and the solution can help you ensure you’ve understood correctly, that you’ve considered any relevant edge cases, or haven’t over engineered something. This is a great opportunity to discuss any challenges you think you might come up against and how you might tackle them.</p>
+<p>Another key pre-code step is to identify any patterns being followed in the project and ensure your solution matches where possible. If you call some, or change the whole project to use tabs instead of spaces, chances are your PR will be rejected.</p>
+<p>This advice is arguably just as (if not more) relevant for open source projects too. Maintainers don’t bite and will be likely excited to hear you want to give back – raise an issue or reach out to a maintainer before you get started to make sure it’s a change they’ll accept and any pointers they can give.</p>
+<h2>I am not a robot</h2>
+<p>The bigger the PR, the harder it is for a reviewer to process. Humans have limited attention spans and time in the day, so keeping your PR easy to digest will get far better results.</p>
+<p>Adding a clear and concise description to the PR overview can be good. Consider what a reviewer might need to know to acutely understand your changes – a list of requirements, instructions for how to test, and maybe some proof it’s working in the form of passing tests or a screenshot?</p>
+<p>As a rule of thumb:</p>
+<ul>
+<li>If you are introducing new functionality, explain what the feature is supposed to do<br><br></li>
+<li>If you are changing existing behaviour, explain how it worked previously, how it works now, and why the changes<br><br></li>
+<li>If you are refactoring logic, explain why this is in the interest of the project - maintainability, performance, etc</li>
+</ul>
+<p>For long winded PRs with a lot of changes I really like when I can step through the process. Committing your changes at regular intervals with clear and detailed messages can really help with the review, perhaps even clarifying your intent with the code in case anything was unclear and preventing the need for back-and-forth on the review comments.</p>
+<p><span style="font-weight: 400;">Don’t worry about having a lot of noise in the repo, they can be squashed into a single commit or cleaned up later. Github has these options already built in when merging a PR!</span></p>
+<p><span style="font-weight: 400;"><img style="width: 500px; height: 253.12145289443814px;" src="/archive/media/2020/github-squash.png?width=500&amp;height=253.12145289443814" alt="Github's squash and merge button" data-udi="umb://media/9512c8f7d6dd408a8a6fe5e7c04f6d31"></span></p>
+<p>It goes without saying that “Changes”, “Oops… broke something” or “FFS!” are terrible commit messages because it’s not at all clear what was changed. Guaranteed we’re all probably guilty of it once in a while! Probably the most common message I have seen would be something like “Changing the search logic”. This is certainly progress, but lacks key information of exactly what was changed and why. Here's the same commit message but now with a lot more information “Introducing facets into the search logic so results can be filtered by category”. It didn’t take too many more words and yet the outcome of the change is instantly obvious.</p>
+<h2>Tone of voice</h2>
+<p>Okay, maybe the code in front of you really is the worst you’ve ever seen… We've all seen some dumpster fires, but it is important to keep code reviews a constructive process. It can be a daunting experience for any developer to have their work “judged”, so treat it with the same level of attention and care as you would wish in return.</p>
+<p>Which of the following comments would you rather receive?</p>
+<blockquote>What is the difference between X helper method and this new method you have created?</blockquote>
+<p>Versus:</p>
+<blockquote>This method duplicates X helper method. Please remove it.</blockquote>
+<p>Of course everyone will have their preference here. Personally, I prefer #1. Rather than making an assertion the feedback is phrased as questions to instigate a discussion and evoke cooperation. Whereas #2 feels like a direct order - maybe the reviewer has good reasons for their comment, but on the face of it it comes across as confrontational and is slightly lacking in empathy with the dev.</p>
+<p>The age-old internet challenge of getting across tone and intent is ever present in pull requests. In the right time and place you may find GIFs, emojis, memes are your friend. Eh?! Yes, really! It’s a damning statement of humanity that these have become a social crutch, but there are occasions where they can add value.</p>
+<p>Maybe you don’t want to be sending your favourite cat memes to a client reviewing your code, but I have been known to drop the odd smiley face into some feedback to lighten it up. 😊</p>
+<p>Of course giving feedback works both ways. If you really like the work someone has done that should be highlighted too! Drop your favourite “You Rock!” GIF in there and tell them what a great job they did – chances are it will make their day and they’ll be even more receptive to your feedback in future.</p>
+<p><img style="width: 300px; height: 215px;" src="/archive/media/2020/whos-awesome.gif?width=300&amp;height=215" alt="A man in an orange shirt pointing at you, because you're awesome!" data-udi="umb://media/fc995052b39f4f76843d0f81d33a3f46"></p>
+<p><strong>Did you know:</strong> You’re not limited to just the emojis that Github offers, press <span class="code">Control</span> + <span class="code">Command</span> + <span class="code">Space</span> on a Mac or <span class="code">Control</span> + <span class="code">.</span> (period) on Windows to reveal a full suite of emojis.</p>
+<h2>Shake it up</h2>
+<p>Keeping engagement levels up on a PR is essential for its survival, no activity for ~24 hours and the chances of it being merged quickly rapidly start to disappear. For open source projects you may need to be a little more patient, please don’t forget maintainers are probably generously giving their free time. ❤️ There can be any number of reasons why a review goes quiet, devs get sidetracked by their next task or put large daunting PRs to the bottom of their list.</p>
+<p>I’m a big proponent of using video calls to replace 95% of the code review process – have the developer talk through the changes they made and demo the end result, asking questions as you go. Communicating feedback in this way is far more human, it prevents misunderstandings, and encourages discussion. Getting a demo helps verify the code works and also makes it easier to review aspects of the project that would be otherwise tough, such as the user experience, plus helps you to understand the context behind the code you’re reviewing.</p>
+<p>Video calls enable a review to have passive and active participants. Inviting a variety of team members along to listen in is a nice way to share knowledge.</p>
+<p>Learning to verbally communicate the changes you have made is a valuable skill when it comes to. You’d be surprised just how many issues you yourself may spot simply by talking through it aloud.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/contribution/" title="See all articles tagged with Contribution">Contribution</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/git/" title="See all articles tagged with Git">Git</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/github/" title="See all articles tagged with GitHub">GitHub</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Callum Whyte"><img src="//gravatar.com/avatar/05c1efd28f84ee7ebe5da188e220a47f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/05c1efd28f84ee7ebe5da188e220a47f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Callum Whyte</h1>
+        <p>Callum is on Twitter as <a href="//twitter.com/callumbwhyte" title="Callum Whyte on Twitter" rel="author">@callumbwhyte</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Authenticating and authorizing Umbraco 9 members with Discord</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Authenticating Members With Discord</h1>
+      <p class="byline"> by Sven Geusens, <span class="pubdate">posted on <time datetime="2021-12-12">Dec 12, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>What and why</h2>
+<p>Discord is community tool supplying multi server (guilds) access for its users with chat and VoIP rooms with a lot of bells and whistles. It works very well for small and larger communities when the focus is to have conversations in the here and now. What it is not good at is organising information for the long term. So I thought that for certain communities it would be handy to have a flexible system linked to your discord permissions to enable certain community members to update information into this system.</p>
+<p class="intro">Enter Umbraco with its build-in member system and its content management tools we all love.</p>
+<p>What I will be showing you in this article is how to let end users create a member in an Umbraco installation if they belong to a certain server (guild). On creation and every log in, we will also sync permission group names (roles) to member groups in Umbraco. This allows the management of Umbraco members to be done from within Discord.</p>
+<p>To check if everything works nicely, we will also be adding a dashboard with some useful information.</p>
+<h2>Requirements</h2>
+<ul>
+<li>An Umbraco 9 installation ready to go (with Modelsbuilder models available in VS) with at least 1 member group setup (for testing)</li>
+<li><a rel="noopener" href="https://discord.com/developers/applications" target="_blank">A Discord application</a> with its client Id and secret known to you</li>
+<li>A bot user linked to the discord application in a server you belong to (preferably as admin to invite the bot). The bot token needs no extra permissions as we will only be reading data that a User can't.</li>
+<li>Filled in <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/core/security/app-secrets?view=aspnetcore-6.0&amp;tabs=windows#json-structure-flattening-in-visual-studio" target="_blank" data-anchor="?view=aspnetcore-6.0&amp;tabs=windows#json-structure-flattening-in-visual-studio">user secrets</a> for the following keys<br><span class="code">{</span><br><span class="code">  "Discord": {</span><br><span class="code">    "BotToken": "",</span><br><span class="code">    "ClientId": "",</span><br><span class="code">    "ClientSecret": ""</span><br><span class="code">  }</span><br><span class="code">}</span></li>
+<li><a rel="noopener" href="https://www.nuget.org/packages/Flurl.Http/" target="_blank">Flurl.Http</a> installed (Nuget), we will be using this library to make HTTP calls to the Discord API</li>
+<li>(Optional) Usync installed to import the datatypes/document types</li>
+</ul>
+<h2>Disclaimer</h2>
+<p>Because this article is already going to be quite large, I have left some things as quick and dirty. I will try to mention the important ones trough out the article and have done my best to mark them in the code examples as well. This article and <a rel="noopener" href="https://github.com/Migaroez/UmbracoDiscord" target="_blank">GitHub repository</a> is by no means a drop in code or a package but will work out of the box except for some (unknown) edge cases. As always I welcome pull requests.</p>
+<h2>The plan</h2>
+<p>We will be creating 2 big components that share some common services</p>
+<ul>
+<li>The OAuth2 Login flow + permission sync</li>
+<li>Admin back-office to setup which discord guild permission groups (roles) should be synced to which Umbraco membership groups</li>
+</ul>
+<h3>The OAuth flow</h3>
+<p>Before we write any code or do Umbraco configuration, lets get a conceptual idea of what is needed to make the oath flow work.</p>
+<ol>
+<li>When a user want to login to the member area, we present them with a url to Discord to authenticate them.</li>
+<li>The user authenticates and discord sends the user back to us with a code</li>
+<li>We exchange the code for an OAuth token behind the scenes</li>
+<li>We get the user details from Discord and save them on an Umbraco member</li>
+<li>We login the member and display a page</li>
+</ol>
+<p><img style="width: 500px; height: 498.4472049689441px;" src="/archive/media/2021/diagrams-oauth-basic.png?width=500&amp;height=498.4472049689441" alt="" data-udi="umb://media/acd4cffe8d8c42f28e465d7419216e34"></p>
+<p>Now we have a basic understanding of what we are going to do, lets flesh out the idea, alas nothing is a simple as it first appears and we have quite a lot of work ahead of us.<br>One of the things we learn from the <a rel="noopener" href="https://discord.com/developers/docs/topics/oauth2" target="_blank">Discord Oath documentation</a> is that we need to pass a "state" value when we redirect an end-user to discord. When Discord then redirects back to our site, it will pass that state value back. This adds a layer of security so we can guarantee the origin of that authorization callback was our site.<br>Next is the issue that the majority of the Discord API endpoints are not accessible as a normal user. We will have to query some endpoints as a bot.<br>I have tried my best to represent all the needed steps (for a non blocking flow) into a nice diagram as it should be easier to follow along than reading walls of text.<br><br><img style="width: 403.16205533596843px; height: 500px;" src="/archive/media/2021/diagrams-oauth-full.png?width=403.16205533596843&amp;height=500" alt="" data-udi="umb://media/c14e5c9ec738402db1e80cbfbcf34226"></p>
+<p>We can see from this diagram that we will need to build the following components</p>
+<ul>
+<li>DiscordLoginController (to start the process)</li>
+<li>DiscordLoginRedirectHandlerController (to catch the authorization callback from Discord)</li>
+<li>DiscordAuthService</li>
+<li>DiscordRoleRepository</li>
+</ul>
+<p>Things not in the diagram but are pretty typical for Umbraco</p>
+<ul>
+<li>LogoutController</li>
+<li>Doctypes for all the controllers</li>
+<li>Some basic views for the login and logout actions</li>
+</ul>
+<h3>The admin backoffice</h3>
+<p><img style="width: 500px; height: 312.9459734964322px;" src="/archive/media/2021/dasboard.png?width=500&amp;height=312.9459734964322" alt="" data-udi="umb://media/b327f0db06524c4280422acbe8bbb839"></p>
+<p>For the back-office we will be creating a brand new section that will let us view and define sync rules.</p>
+<p>When viewing the section it will show us all accessible guilds. When selecting a guild, it will show us all the roles on that guild. Finally when when we select a role, it will show us all the member groups that will be assigned to a member that has a user in that guild with that role. It will also let us add new groups to a role and remove old ones.</p>
+<p>The logic to this will follow the standard pattern of HtmlView =&gt; AngularController =&gt; BackofficeController =&gt; ExternalApi + Repository<br>So we will be building/extending the following components</p>
+<ul>
+<li>Dashboard.html</li>
+<li>Dashboard.controller.js</li>
+<li>Package.manifest</li>
+<li>DiscordAdminController</li>
+<li>DiscordDashboard</li>
+<li>DiscordSection + SectionComposer</li>
+<li>DiscordRoleTableComponent + DiscordRoleComposer</li>
+<li>DiscordRoleRepository</li>
+</ul>
+<h2>Implementing the backoffice</h2>
+<p>Since the back-office is the most straightforward thing to build and easiest to implement, we will be tackling this first. When it is finished, we can be sure that the discord bot part of our architecture is working and we will have a way to manipulate the syncrules (which member groups a member should get based on their guild roles)</p>
+<h3>Getting things ready</h3>
+<p>The first thing to <a rel="noopener" href="https://our.umbraco.com/Documentation/Extending/Section-Trees/sections" target="_blank">add is a section</a>, it can be done in a package.manifest or C# code. I personally try to avoid the package.manifest as much as possible.</p>
+<p>Next is <a rel="noopener" href="https://our.umbraco.com/Documentation/Extending/Dashboards/#registering-with-c-type" target="_blank" data-anchor="#registering-with-c-type">adding a dashboard</a> to that section. This defines in what section it should appear, where the view file is and what access (if any) needs to be set to be able to see this dashboard.</p>
+<p>And lastly we tell the back-office need some files. When composing things like this I like to keep all of the classes in one file as they can't exist without each other.</p>
+<pre><code class="language-csharp">﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
+using Umbraco.Cms.Core.Composing;
+using Umbraco.Cms.Core.Dashboards;
+using Umbraco.Cms.Core.DependencyInjection;
+using Umbraco.Cms.Core.Sections;
+using Umbraco.Cms.Core.WebAssets;
+using Umbraco.Cms.Web.BackOffice.Authorization;
+using Umbraco.Cms.Web.Common.Authorization;
+
+namespace UmbracoDiscord.Core.Components
+{
+    public class DiscordSection : ISection
+    {
+        public string Alias =&gt; Constants.Backoffice.DiscordSection;
+        public string Name =&gt; "Discord";
+    }
+
+    public class DiscordDashboard : IDashboard
+    {
+        public string Alias =&gt; Constants.Backoffice.DiscordDashboard;
+        public string View =&gt; "/App_Plugins/Discord/Dashboard.html";
+        public string[] Sections =&gt; new[] { Constants.Backoffice.DiscordSection };
+
+        public IAccessRule[] AccessRules =&gt; new IAccessRule[]
+        {
+            new AccessRule {Type = AccessRuleType.Grant, Value = Umbraco.Cms.Core.Constants.Security.AdminGroupAlias}
+        };
+    }
+
+    // This will probably be changed in the future so it can be done more easily in the composer
+    // See https://github.com/umbraco/Umbraco-CMS/pull/11308
+    public class CustomPackageScript : JavaScriptFile
+    {
+        public CustomPackageScript() : base("/App_Plugins/Discord/Dashboard.controller.js") { }
+    }
+
+    public class DiscordSectionComposer : IComposer
+    {
+        public void Compose(IUmbracoBuilder builder)
+        {
+            builder.Sections().Append&lt;DiscordSection&gt;();
+            builder.BackOfficeAssets().Append&lt;CustomPackageScript&gt;();
+            builder.Services.AddAuthorization(o =&gt; AddSecurityPolicies(o, Umbraco.Cms.Core.Constants.Security.BackOfficeAuthenticationType));
+        }
+
+        private void AddSecurityPolicies(AuthorizationOptions options, string backOfficeAuthenticationScheme)
+        {
+            options.AddPolicy(Constants.Backoffice.DiscordSectionAccessPolicy, policy =&gt;
+            {
+                policy.AuthenticationSchemes.Add(backOfficeAuthenticationScheme);
+                policy.Requirements.Add(new SectionRequirement(Constants.Backoffice.DiscordSection));
+            });
+        }
+    }
+}
+</code></pre>
+<p>Do note the last Line in the <span class="code">Compose</span> function, this adds a new Backoffice Policy so we can add an <span class="code">Authorize</span> attribute to our Backend controller so we don't have to check permissions in every method.<br>Another thing you might notice is the use of constants, this is to reduce the chance of mistyping. You can find all the constants in <a rel="noopener" href="https://github.com/Migaroez/UmbracoDiscord/tree/main/UmbracoDiscord.Core/Constants" target="_blank">.core/Constants</a>.</p>
+<p>Before we add the view, build the solution and <a rel="noopener" href="https://our.umbraco.com/Documentation/Extending/Dashboards/#registering-with-c-type" target="_blank" data-anchor="#registering-with-c-type">give your Umbraco user access to the section</a> and add the following <a rel="noopener" href="https://our.umbraco.com/Documentation/Extending/Dashboards/#registering-with-c-type" target="_blank" data-anchor="#registering-with-c-type">language file</a> to the App_Plugins folder.</p>
+<pre><code class="language-markup">﻿&lt;?xml version="1.0" encoding="utf-8" standalone="yes"?&gt;
+&lt;language alias="en" intName="English (US)" localName="English (US)" lcid="" culture="en-US"&gt;
+    &lt;area alias="sections"&gt;
+        &lt;key alias="discordSection"&gt;Discord&lt;/key&gt;
+    &lt;/area&gt;
+&lt;/language&gt;</code></pre>
+<h3>Adding the Dashboard view</h3>
+<p>We should now be good to add the view and angular controller. The view uses as many Umbraco directives as possible with minimal custom styling (which is just defined at the bottom of the file). It is split up into 4 umb-boxes. Each box after the first is hidden until something is selected in the previous one and the last one overrides the third since they both handle the syncs (viewing/removing and adding). If somebody has tips on how to remove the last 2 styles, let me know.</p>
+<pre><code class="language-markup">﻿﻿&lt;div ng-controller="Discord.Dashboard as vm"&gt;
+    &lt;umb-box&gt;
+        &lt;umb-box-header title="Available guilds"&gt;
+            &lt;umb-button action="vm.getGuilds()"
+                        label="Refresh"
+                        type="button"
+                        button-style="info"&gt;
+            &lt;/umb-button&gt;
+        &lt;/umb-box-header&gt;
+        &lt;umb-box-content&gt;
+            &lt;div ng-repeat="guild in vm.guilds"
+                 class="discordDashboardItem"
+                 ng-class="{selected : vm.selectedGuild === guild}"
+                 ng-click="vm.selectGuild(guild)"&gt;
+                {{guild.name}}
+            &lt;/div&gt;
+        &lt;/umb-box-content&gt;
+    &lt;/umb-box&gt;
+
+    &lt;umb-box ng-if="vm.selectedGuild != null"&gt;
+        &lt;umb-box-header title="Available roles"&gt;
+            &lt;umb-button action="vm.getRoles()"
+                        label="Refresh"
+                        type="button"
+                        button-style="info"&gt;
+            &lt;/umb-button&gt;
+        &lt;/umb-box-header&gt;
+        &lt;umb-box-content&gt;
+            &lt;div ng-repeat="role in vm.roles"
+                 class="discordDashboardItem"
+                 ng-class="{selected : vm.selectedRole === role}"
+                 ng-click="vm.selectRole(role)"&gt;
+                {{role.name}}
+            &lt;/div&gt;
+        &lt;/umb-box-content&gt;
+    &lt;/umb-box&gt;
+
+    &lt;umb-box ng-if="vm.selectedRole != null &amp;&amp; vm.addingNewSync === false"&gt;
+        &lt;umb-box-header title="Assigned membership groups"&gt;
+            &lt;umb-button ng-if="vm.selectedSyncGroup != null"
+                        action="vm.removeSync(true)"
+                        label="Disable"
+                        type="button"
+                        button-style="warning"&gt;
+            &lt;/umb-button&gt;
+            &lt;umb-button ng-if="vm.selectedSyncGroup != null"
+                        action="vm.removeSync(false)"
+                        label="Remove"
+                        type="button"
+                        button-style="danger"&gt;
+            &lt;/umb-button&gt;
+            &lt;umb-button action="vm.startAddNewSync()"
+                        label="New"
+                        type="button"
+                        button-style="success"&gt;
+            &lt;/umb-button&gt;
+            &lt;umb-button action="vm.getSyncGroups()"
+                        label="Refresh"
+                        type="button"
+                        button-style="info"&gt;
+            &lt;/umb-button&gt;
+        &lt;/umb-box-header&gt;
+        &lt;umb-box-content&gt;
+            &lt;div ng-repeat="group in vm.syncedGroups"
+                 class="discordDashboardItem"
+                 ng-class="{selected : vm.selectedSyncGroup === group, strike: group.syncRemoval}"
+                 ng-click="vm.selectSyncedGroup(group)"&gt;
+                {{group.membershipGroupAlias}}
+            &lt;/div&gt;
+        &lt;/umb-box-content&gt;
+    &lt;/umb-box&gt;
+
+    &lt;umb-box ng-if="vm.addingNewSync === true"&gt;
+        &lt;umb-box-header title="Add new synced membership group"&gt;
+        &lt;/umb-box-header&gt;
+        &lt;umb-box-content&gt;
+            &lt;div ng-repeat="group in vm.groups"
+                 class="discordDashboardItem"
+                 ng-class="{selected : vm.selectedGroup === group}"
+                 ng-click="vm.selectGroup(group)"&gt;
+                {{group}}
+            &lt;/div&gt;
+            &lt;hr&gt;
+            &lt;umb-button ng-if="vm.selectedGroup != null"
+                        action="vm.addSync()"
+                        label="Save"
+                        type="button"
+                        button-style="success"&gt;
+            &lt;/umb-button&gt;
+            &lt;umb-button action="vm.cancelAddSync()"
+                        label="Cancel"
+                        type="button"
+                        button-style="success"&gt;
+            &lt;/umb-button&gt;
+        &lt;/umb-box-content&gt;
+    &lt;/umb-box&gt;
+&lt;/div&gt;
+
+ &lt;style&gt;
+     .discordDashboardItem {
+         padding: 3px;
+     }
+     .selected {
+         background-color: rgb(254,228,225);
+     }
+ &lt;/style&gt;</code></pre>
+<h3>Adding the dashboard controller</h3>
+<p>The real magic of this view happens in its controller. So lets have a look at the important bits as most of the code in here is for reactively manipulating the DOM. The functions that actually fetch data from our back-office API are grouped under <span class="code">Public get functions</span></p>
+<ul>
+<li><span class="code">vm.getGuilds()</span> which guilds our bot user can see</li>
+<li><span class="code">vm.getRoles()</span> which roles are defined on the selected guild</li>
+<li><span class="code">vm.getGroups()</span> the membership groups that are defined in Umbraco</li>
+<li><span class="code">vm.getSyncGroups()</span> which groups are synced to the selected role</li>
+</ul>
+<p>Each of these uses the angular HTTP service and updates the controllers data when a successful response is received. It would probably be best to show some kind of error message when the API call fails.</p>
+<p>The other functions deal with submitting data to the API and are grouped under <span class="code">Public Actions</span></p>
+<ul>
+<li>vm.addSync() Adds a new guild-role/membergroup sync rule.</li>
+<li>vm.removeSync(syncRemoval) Marks the sync as removed if the parameter is true [Disable], so that when a member logs in and has the membergroup assigned, it will be removed (if no other guild roles are linked to the same group). If false [Remove], no action will be taken when members log in(for this sync) because the sync will be removed from the database. Disabled sync rules appear crossed-out in the view.</li>
+</ul>
+<pre><code class="language-javascript">﻿//todo: handled error respones from $http calls
+
+angular.module("umbraco")
+    .controller("Discord.Dashboard", function ($scope, $http) {
+
+        /* Data definitions */
+        var baseApiUrl = "/umbraco/backoffice/api/discordadmin/";
+        var vm = this;
+        vm.guilds = [];
+        vm.selectedGuild = null;
+
+        vm.roles = [];
+        vm.selectedRole = null;
+
+        vm.syncedGroups = [];
+        vm.selectedSyncGroup = null;
+
+        vm.groups = [];
+        vm.selectedGroup = null;
+
+        vm.addingNewSync = false;
+
+        /* Public get functions */
+        vm.getGuilds = function () {
+            resetSelectedGuild();
+            $http.get(baseApiUrl + "Guilds").then((response) =&gt; {
+                vm.guilds = response.data;
+                if (vm.guilds.length === 1) {
+                    vm.selectedGuild = vm.guilds[0];
+                    vm.getRoles();
+                }
+            });
+        }
+
+        vm.getRoles = function () {
+            resetSelectedRole();
+            $http.get(baseApiUrl + "Roles?guildId=" + vm.selectedGuild.id).then((response) =&gt; {
+                vm.roles = response.data;
+            });
+        }
+
+        vm.getSyncGroups = function () {
+            resetSelectedSync();
+            $http.get(baseApiUrl + "Syncs?guildId=" + vm.selectedGuild.id + "&amp;roleId=" + vm.selectedRole.id).then((response) =&gt; {
+                vm.syncedGroups = response.data;
+            });
+        }
+
+        vm.getGetGroups = function () {
+            vm.groups = [];
+            vm.selectedGroup = null;
+            $http.get(baseApiUrl + "MemberShipGroups").then((response) =&gt; {
+                vm.groups = response.data;
+            });
+        }
+
+        /* Public select functions */
+        vm.selectGuild = function (guild) {
+            vm.selectedGuild = guild;
+            vm.getRoles();
+        }
+
+        vm.selectRole = function (role) {
+            vm.selectedRole = role;
+            vm.getSyncGroups();
+        }
+
+        vm.selectGroup = function (group) {
+            vm.selectedGroup = group;
+        }
+
+        vm.selectSyncedGroup = function(group) {
+            vm.selectedSyncGroup = group;
+        }
+
+        /* Public actions */
+        vm.startAddNewSync = function () {
+            resetSelectedGroup();
+            vm.getGetGroups();
+            vm.addingNewSync = true;
+        }
+
+        vm.addSync = function() {
+            $http.post(baseApiUrl + "RegisterRoleToMemberGroup", { guildId: vm.selectedGuild.id, roleId: vm.selectedRole.id, membershipGroupAlias:vm.selectedGroup}).then((response) =&gt; {
+                vm.getSyncGroups();
+            });
+        }
+
+        vm.cancelAddSync = function () {
+            vm.selectedGroup = false;
+            vm.addingNewSync = false;
+        }
+
+        vm.removeSync = function (syncRemoval) {
+            $http.post(baseApiUrl + "RemoveMemberGroupFromRole", { id: vm.selectedSyncGroup.id, syncRemoval: syncRemoval }).then((response) =&gt; {
+                vm.getSyncGroups();
+            });
+        }
+
+        //private functions
+        function resetSelectedGuild() {
+            vm.selectGuild = null;
+
+            vm.roles = [];
+            resetSelectedRole();
+        }
+
+        function resetSelectedRole() {
+            vm.selectedRole = null;
+
+            vm.syncedGroups = [];
+            resetSelectedSync();
+        }
+
+        function resetSelectedSync() {
+            vm.selectedSyncGroup = null;
+            resetAdding();
+        }
+
+        function resetAdding() {
+            resetSelectedGroup();
+            vm.addingNewSync = false;
+        }
+
+        function resetSelectedGroup() {
+            vm.selectedGroup = null;
+        }
+
+        //init
+        vm.getGuilds();
+    });</code></pre>
+<h3>A repository intermezzo</h3>
+<p>That is the front-end of the back-end done. Before we move over to the back-end controller, lets quickly talk about the repository and the Discord service it is using.<br>Everybody has a preferred way of handling data persistence so I am not going over how I did this but will give a shout out to the amazing <a rel="noopener" href="https://twitter.com/KevinJump" target="_blank">Kevin jump</a> for supplying a <a rel="noopener" href="https://github.com/KevinJump/DoStuffWithUmbraco/tree/master/Src/DoStuff.Core/RepoPattern/Persistance" target="_blank">nice Repositoy pattern (and more)</a>. The beauty of this pattern is that it uses the <span class="code">IUmbracoDatabase</span> and the related <span class="code">IScopeAccessor</span> to wrap everything up in transactrions. You can find the implementation of this in the <a rel="noopener" href="https://github.com/Migaroez/UmbracoDiscord/tree/main/UmbracoDiscord.Core/Repositories" target="_blank">.Core/Repositories folder</a> and its registration is done with <a rel="noopener" href="https://github.com/Migaroez/UmbracoDiscord/blob/main/UmbracoDiscord.Core/Components/DiscordRoleTable.cs" target="_blank">a composer</a>. This composer also registers a Migration that creates the database if it doesn't exist on startup.</p>
+<p>What is important is the Dto we will be using. Since Discord is multi server based, we need to map Guild+Role to a membership group. We also add an ID for easy selecting and a flag to know if we need to remove the membership group if the Rule is disabled.</p>
+<pre><code class="language-csharp">﻿using NPoco;
+using Umbraco.Cms.Infrastructure.Persistence.DatabaseAnnotations;
+
+namespace UmbracoDiscord.Core.Repositories.Dtos
+{
+    [TableName(Constants.Database.SyncedDiscordRoleTableName)]
+    [PrimaryKey("Id", AutoIncrement = true)]
+    [ExplicitColumns]
+    public class SyncedDiscordRole
+    {
+        [PrimaryKeyColumn(AutoIncrement = true, IdentitySeed = 1)]
+        [Column("Id")]
+        public int Id { get; set; }
+
+        [Column("GuildId")]
+        public decimal GuildId { get; set; }
+
+        [Column("RoleId")]
+        public decimal RoleId { get; set; }
+
+        [Column("MembershipGroupAlias")]
+        public string MembershipGroupAlias { get; set; }
+
+        [Column("SyncRemoval")]
+        public bool SyncRemoval { get; set; }
+    }
+}
+</code></pre>
+<h3>The beginnings of our DiscordService</h3>
+<p>Onto the DiscordService, for this one I will show you parts of the full file as we will be adding to this service later when we do the actual login handling.<br>As you might remember, the controller we will build in just a second will have 4 get methods with 2 of them being data from Discord, so lets add those to our Discord service</p>
+<p>We use the Flurl.Http library here to take a string (our endpoint), create a FlurlRequest by adding an authorization header that contains our bot token, send it as a get and read the response as json all nicely wrapped in async/await.</p>
+<p>Couple things to note here</p>
+<ul>
+<li>By default Flurl <a rel="noopener" href="https://flurl.dev/docs/error-handling/" target="_blank">throws an error if it does not receive a 200 response</a>.</li>
+<li>For the <span class="code">GetAvailableGuilds</span> method we are using the <span class="code">users/@me/guilds</span> endpoint and are passing a token that represents our bot user, so this endpoint will return all guilds the bot is invited to.</li>
+<li>The models used here can be found in <a rel="noopener" href="https://github.com/Migaroez/UmbracoDiscord/tree/main/UmbracoDiscord.Core/Models" target="_blank">.core/Models</a></li>
+</ul>
+<pre><code class="language-csharp">﻿using Flurl.Http;
+using Microsoft.Extensions.Configuration;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using UmbracoDiscord.Core.Models.DiscordApi;
+
+namespace UmbracoDiscord.Core.Partial
+{
+    public class DiscordService
+    {
+        private readonly IConfiguration _configuration;
+
+        public DiscordService(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
+        public async Task&lt;List&lt;GuildResult&gt;&gt; GetAvailableGuilds()
+        {
+            return await Constants.DiscordApi.GuildEndpoint.WithHeader("Authorization", "Bot " + _configuration["Discord:BotToken"])
+                .GetAsync().ReceiveJson&lt;List&lt;GuildResult&gt;&gt;().ConfigureAwait(false);
+        }
+
+        public async Task&lt;List&lt;GuildResult&gt;&gt; GetAvailableRolesForGuild(ulong guildId)
+        {
+            return await string.Format(Constants.DiscordApi.GuildRolesEndpoint, guildId).WithHeader("Authorization", "Bot " + _configuration["Discord:BotToken"])
+                .GetAsync().ReceiveJson&lt;List&lt;GuildResult&gt;&gt;().ConfigureAwait(false);
+        }
+    }
+}
+</code></pre>
+<p>Onward to the last piece of the back end puzzle, the <span class="code">UmbracoApiController</span></p>
+<h3>The all important Back-end controller</h3>
+<p>Note the <span class="code">[Authorize(Policy = Constants.Backoffice.DiscordSectionAccessPolicy)]</span> attribute, this uses the policy we declared in our DiscordSectionComposer so only users with the right permissions can call any of the methods in this controller. If we had not done this, we would have to check <span class="code">IBackOfficeSecurityAccessor.BackOfficeSecurity.UserHasSectionAccess()</span> in every method.</p>
+<ul>
+<li>The first 2 get methods are pretty straight forward, they get the data from our Discord Service and hand it over as a list of objects.</li>
+<li>The next one gets the data from our repository and passes it along</li>
+<li>And the last one gets all the membership groups from the Umbraco <span class="code">IMemberGroupService</span></li>
+</ul>
+<p>Next up are the post methods, these are pretty straight forward.</p>
+<ul>
+<li>The <span class="code">RegisterRoleToMemberGroup</span> checks if an existing sync exists for guild+role+group and creates a new one if it it doesn't.</li>
+<li>The <span class="code">RemoveMemberGroupFromRole</span> checks if the item to delete exists, if it does, it updates the flag if set and else deletes the sync.</li>
+</ul>
+<pre><code class="language-csharp">﻿using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Umbraco.Cms.Core.Scoping;
+using Umbraco.Cms.Core.Services;
+using Umbraco.Cms.Web.Common.Attributes;
+using Umbraco.Cms.Web.Common.Controllers;
+using UmbracoDiscord.Core.Controllers.SubmitModels;
+using UmbracoDiscord.Core.Models.DiscordDashboard;
+using UmbracoDiscord.Core.Repositories;
+using UmbracoDiscord.Core.Repositories.Dtos;
+using UmbracoDiscord.Core.Services;
+
+namespace UmbracoDiscord.Core.Controllers
+{
+    [IsBackOffice]
+    [Authorize(Policy = Constants.Backoffice.DiscordSectionAccessPolicy)]
+    public class DiscordAdminController : UmbracoApiController
+    {
+        private readonly DiscordRoleRepository _discordRoleRepository;
+        private readonly IScopeProvider _scopeProvider;
+        private readonly IMemberGroupService _memberGroupService;
+        private readonly IDiscordService _discordAuthService;
+
+        public DiscordAdminController(DiscordRoleRepository discordRoleRepository,
+            IScopeProvider scopeProvider,
+            IMemberGroupService memberGroupService,
+            IDiscordService discordAuthService)
+        {
+            _discordRoleRepository = discordRoleRepository;
+            _scopeProvider = scopeProvider;
+            _memberGroupService = memberGroupService;
+            _discordAuthService = discordAuthService;
+        }
+
+        public async Task&lt;IEnumerable&lt;DiscordGuildInfo&gt;&gt; Guilds()
+        {
+            var availableGuilds = await _discordAuthService.GetAvailableGuilds();
+            return availableGuilds.Select(g =&gt; new DiscordGuildInfo { Id = g.Id.ToString(CultureInfo.InvariantCulture), Name = g.Name });
+        }
+
+        public async Task&lt;IEnumerable&lt;DiscordRoleInfo&gt;&gt; Roles(ulong guildId)
+        {
+            var roles = await _discordAuthService.GetAvailableRolesForGuild(guildId);
+
+            return roles.Select(r =&gt; new DiscordRoleInfo() {Id = r.Id.ToString(CultureInfo.InvariantCulture), Name = r.Name});
+        }
+
+        public IEnumerable&lt;SyncedDiscordRole&gt; Syncs(ulong guildId, ulong roleId)
+        {
+            using (_scopeProvider.CreateScope(autoComplete:true))
+            {
+                return _discordRoleRepository.GetAll().Where(s =&gt; s.GuildId == guildId &amp;&amp; s.RoleId == roleId);
+            }
+        }
+
+        public IEnumerable&lt;string&gt; MemberShipGroups()
+        {
+            return _memberGroupService.GetAll().Select(g =&gt; g.Name);
+        }
+
+        [HttpPost]
+        public int RegisterRoleToMemberGroup([FromBody] AddSyncModel model)
+        {
+            using var scope = _scopeProvider.CreateScope();
+
+            // this is not optimal, but we don't expect to get enough items for this to be an issue
+            var existingItems = _discordRoleRepository.GetAll().Where(i =&gt; i.GuildId == model.GuildId &amp;&amp; i.RoleId == model.RoleId).ToList();
+            if (!existingItems.Any())
+            {
+                var item = AddItem(model.GuildId, model.RoleId, model.MembershipGroupAlias);
+                scope.Complete();
+                return item;
+            }
+
+            return existingItems.First().Id;
+        }
+
+        private int AddItem(decimal guildId, decimal roleId, string membershipGroupAlias)
+        {
+            var newItem = new SyncedDiscordRole
+            {
+                GuildId = guildId,
+                RoleId = roleId,
+                MembershipGroupAlias = membershipGroupAlias,
+            };
+            _discordRoleRepository.Save(newItem);
+            return newItem.Id;
+        }
+
+        [HttpPost]
+        public bool RemoveMemberGroupFromRole(RemoveSyncModel model)
+        {
+            using var scope = _scopeProvider.CreateScope();
+            var existing = _discordRoleRepository.Get(model.Id);
+            if (existing == null)
+            {
+                return false;
+            }
+
+            if (model.SyncRemoval)
+            {
+                existing.SyncRemoval = true;
+                _discordRoleRepository.Save(existing);
+            }
+            else
+            {
+                _discordRoleRepository.Delete(existing.Id);
+            }
+
+            scope.Complete();
+            return true;
+        }
+    }
+}</code></pre>
+<p>We should now have a working Discord dashboard that lets you configure synchronizations between guild roles and membership groups.</p>
+<h2>Implementing The Oath flow</h2>
+<p>I presume anyone reading this can setup doctypes and create content in Umbraco, if you are going to do this manually, we need the following structure with a single property on the Discord node (DiscordSection) called <span class="code">requiredGuildIds</span>. You could get this from config instead or add the selection of which guilds to the Discord Dashboard. But for now, we fetch this from the Content</p>
+<p><img style="width: 153px; height: 180px;" src="/archive/media/2021/content.png?width=153&amp;height=180" alt="" data-udi="umb://media/9ac5136c546542a98f311380cc2de34e"></p>
+<p>Alternatively, you can use Usync to import the <a rel="noopener" href="https://github.com/Migaroez/UmbracoDiscord/tree/main/UmbracoDiscord/uSync/v9" target="_blank">doctypes/content I used in the repo</a></p>
+<h3>(Hack) The controllers</h3>
+<p>As discussed at the beginning of this article, we will need 3 controllers. We will be using the lovely named <a rel="noopener" href="https://our.umbraco.com/documentation/reference/routing/custom-controllers" target="_blank">Route hijacking</a> functionality of Umbraco to use our custom controller every time a page of a specific node type is visited</p>
+<p>Lets start with the logout controller since it has the least logic in it as we only logout the member and redirect to the parent page</p>
+<pre><code class="language-csharp">﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.Extensions.Logging;
+using Umbraco.Cms.Core.Web;
+using Umbraco.Cms.Web.Common.Controllers;
+using Umbraco.Cms.Web.Common.Security;
+using Umbraco.Extensions;
+
+namespace UmbracoDiscord.Core.Controllers
+{
+    public class LogoutController : RenderController
+    {
+        private readonly IMemberSignInManager _memberSignInManager;
+
+        public LogoutController(ILogger&lt;LogoutController&gt; logger, ICompositeViewEngine compositeViewEngine, IUmbracoContextAccessor umbracoContextAccessor,
+            IMemberSignInManager memberSignInManager) : base(logger, compositeViewEngine, umbracoContextAccessor)
+        {
+            _memberSignInManager = memberSignInManager;
+        }
+
+        public override IActionResult Index()
+        {
+            _memberSignInManager.SignOutAsync().GetAwaiter().GetResult();
+
+            return base.Redirect(CurrentPage.AncestorOrSelf(1).Url());
+        }
+    }
+}
+</code></pre>
+<p>Next up is the login controller, this one has a bit more code but is pretty straightforward, we</p>
+<ol>
+<li>Check our config and Umbraco structure</li>
+<li>Get some values</li>
+<li>Redirect to the Umbraco Authorize endpoint which will call our CallBack endpoint when done</li>
+</ol>
+<p>Do note the <span class="code">state</span> variable that is passed along to Discord, as explained before, this is a security measure so we can only accept callbacks that originated from us.</p>
+<pre><code class="language-csharp">﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Umbraco.Cms.Core.Models.PublishedContent;
+using Umbraco.Cms.Core.Web;
+using Umbraco.Cms.Web.Common.Controllers;
+using Umbraco.Cms.Web.Common.PublishedModels;
+using Umbraco.Extensions;
+using UmbracoDiscord.Core.Constants;
+using UmbracoDiscord.Core.Services;
+
+namespace UmbracoDiscord.Core.Controllers
+{
+    public class DiscordLoginController : RenderController
+    {
+        private readonly IDiscordService _discordAuthService;
+        private readonly IConfiguration _configuration;
+
+        public DiscordLoginController(ILogger&lt;DiscordLoginController&gt; logger, ICompositeViewEngine compositeViewEngine, IUmbracoContextAccessor umbracoContextAccessor,
+            IDiscordService discordAuthService, IConfiguration configuration) : base(logger, compositeViewEngine, umbracoContextAccessor)
+        {
+            _discordAuthService = discordAuthService;
+            _configuration = configuration;
+        }
+
+        public override IActionResult Index()
+        { 
+            var settings = (CurrentPage as DiscordLogin).Ancestor&lt;DiscordSection&gt;();
+            if (settings == null)
+            {
+                return base.Index();
+            }
+
+            if (_configuration["Discord:ClientId"].IsNullOrWhiteSpace() || _configuration["Discord:ClientSecret"].IsNullOrWhiteSpace())
+            {
+                return base.Index();
+            }
+
+            var state = _discordAuthService.GetState(HttpContext, true);
+            if (state == null)
+            {
+                return base.Index();
+            }
+            var redirectPage = settings.FirstChild&lt;DiscordLoginRedirectHandler&gt;();
+
+            return Redirect(
+                $"{DiscordApi.AuthorizeEndpoint}?response_type=code&amp;client_id={_configuration["Discord:ClientId"]}&amp;scope=identify%20email%20guilds&amp;state={state}&amp;redirect_uri={redirectPage.Url(mode:UrlMode.Absolute)}&amp;prompt=none");
+        }
+    }
+}
+</code></pre>
+<p>And lastly the callback controller, here we</p>
+<ol>
+<li>Check if the state passed back to us from Discord, is one that we actually handed to it in the first place (More on this in the next section)</li>
+<li>Let our DiscordService handle the callback</li>
+<li>Login the Member if allowed and redirect</li>
+</ol>
+<pre><code class="language-csharp">﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ViewEngines;
+using Microsoft.Extensions.Logging;
+using Umbraco.Cms.Core.Security;
+using Umbraco.Cms.Core.Web;
+using Umbraco.Cms.Web.Common.Controllers;
+using Umbraco.Cms.Web.Common.PublishedModels;
+using Umbraco.Cms.Web.Common.Security;
+using Umbraco.Extensions;
+using UmbracoDiscord.Core.Services;
+
+namespace UmbracoDiscord.Core.Controllers
+{
+    public class DiscordLoginRedirectHandlerController : RenderController
+    {
+        private readonly ILogger&lt;DiscordLoginRedirectHandlerController&gt; _logger;
+        private readonly IDiscordAuthService _discordAuthService;
+        private readonly IMemberManager _memberManager;
+        private readonly IMemberSignInManager _memberSignInManager;
+
+        public DiscordLoginRedirectHandlerController(ILogger&lt;DiscordLoginRedirectHandlerController&gt; logger, ICompositeViewEngine compositeViewEngine, IUmbracoContextAccessor umbracoContextAccessor,
+            IDiscordAuthService discordAuthService,
+            IMemberManager memberManager,
+            IMemberSignInManager memberSignInManager) : base(logger, compositeViewEngine, umbracoContextAccessor)
+        {
+            _logger = logger;
+            _discordAuthService = discordAuthService;
+            _memberManager = memberManager;
+            _memberSignInManager = memberSignInManager;
+        }
+
+        //todo figure out why override doesn't work with async
+        public override IActionResult Index()
+        {
+            if (_discordAuthService.IsValidState(HttpContext) == false)
+            {
+                _logger.LogInformation("Discord redirect handling failed: Invalid state");
+                return base.Index();
+            }
+
+            var handleRedirectResult = _discordAuthService
+                .HandleRedirect(HttpContext, CurrentPage.Ancestor&lt;DiscordSection&gt;()).GetAwaiter().GetResult();
+            if (handleRedirectResult.Success == false)
+            {
+                _logger.LogError(handleRedirectResult.Exception, "DiscordAuthService failed to handle redirect");
+                return base.Index();
+            }
+
+            var memberIdentity = _memberManager.FindByEmailAsync(handleRedirectResult.Result).GetAwaiter().GetResult();
+            _memberSignInManager.SignInAsync(memberIdentity, true, "discord");
+
+            return base.Redirect(CurrentPage.AncestorOrSelf(1).Url());
+        }
+    }
+}
+</code></pre>
+<h3>Expanding the Discord Service</h3>
+<p>Before we can test the controllers, we will have to expand our discord service with all the new functionality</p>
+<ul>
+<li>Adding state</li>
+<li>Checking valid state</li>
+<li>Handling the callback</li>
+</ul>
+<p>Before we can do any of that, we will have to add a couple more namespaces and dependencies to it.</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Linq;
+using Umbraco.Cms.Core;
+using Umbraco.Cms.Core.Models;
+using Umbraco.Cms.Core.Models.PublishedContent;
+using Umbraco.Cms.Core.Scoping;
+using Umbraco.Cms.Core.Services;
+using Umbraco.Cms.Web.Common.PublishedModels;
+using Umbraco.Extensions;
+using UmbracoDiscord.Core.Repositories;
+
+private readonly ILogger&lt;DiscordService&gt; _logger;
+private readonly IMemberService _memberService;
+private readonly DiscordRoleRepository _discordRoleRepository;
+private readonly IConfiguration _configuration;
+private readonly IScopeProvider _scopeProvider;
+
+public DiscordService(ILogger&lt;DiscordService&gt; logger,
+	IMemberService memberService,
+	DiscordRoleRepository discordRoleRepository,
+	IConfiguration configuration,
+	IScopeProvider scopeProvider)
+{
+	_logger = logger;
+	_memberService = memberService;
+	_discordRoleRepository = discordRoleRepository;
+	_configuration = configuration;
+	_scopeProvider = scopeProvider;
+}</code></pre>
+<p>Alright, lets add the State management. This is quick and dirty and needs some extra love and attention, but what we have here works for demo purposes. We will save 1 Guid for every unique IP in a Static dictionary. Again, never a good idea for production, but good enough to get started.<br>The code that follows could/should probably be in a separate class as well.</p>
+<p>So lets declare the dictionary <br><span class="code">private static Dictionary&lt;string, Guid&gt; _stateTracker = new();</span><br>Next we create our methods to get (and thus set if non-existent) a state, note the HttpContext we are passing to it to get the IP-address. If we ever change the internal logic on what data makes a unique client, we do not have to change the signature.</p>
+<pre><code class="language-csharp">﻿public Guid? GetState(HttpContext httpContext, bool renew)
+{
+    if (httpContext?.Connection.RemoteIpAddress == null)
+    {
+        _logger.LogWarning("Could not issue State, httpContext or RemoteIpAddress unavailable");
+        return null;
+    }
+
+    var ip = httpContext.Connection.RemoteIpAddress.ToString();
+    if (renew || _stateTracker.ContainsKey(ip) == false)
+    {
+        return SetState(ip);
+    }
+
+    return _stateTracker[ip];
+}
+
+private Guid SetState(string ip)
+{
+    var state = Guid.NewGuid();
+    _stateTracker[ip] = state;
+    return state;
+}</code></pre>
+<p>And lastly our method to check if the passed httpContext contains a valid state</p>
+<pre><code class="language-csharp">﻿public bool IsValidState(HttpContext httpContext)
+{
+    if (httpContext?.Connection.RemoteIpAddress == null)
+    {
+        _logger.LogWarning("Could not validate State, httpContext or RemoteIpAddress unavailable");
+        return false;
+    }
+
+    var ip = httpContext.Connection.RemoteIpAddress.ToString();
+
+    return _stateTracker.ContainsKey(ip) &amp;&amp; _stateTracker[ip].ToString() == (string)httpContext.Request.Query["state"];
+}</code></pre>
+<p>Now that we have finished the state management, we can work on the actual Callback logic.</p>
+<p>First up lets have a look at our HandleRedirect Method, the code should be self documented enough to explain the intent and flow of the method. But there are a couple of extra things to note:</p>
+<ul>
+<li>We return an Attempt class so anything consuming this method has a clear idea when/why something failed without errors being thrown around</li>
+<li>a Fail with an <a rel="noopener" href="https://github.com/Migaroez/UmbracoDiscord/tree/main/UmbracoDiscord.Core/Services/Exceptions" target="_blank">EmailUnverifiedException</a> is returned when the user that is fetched from Discord is not verified, this early returns (and thus not wastes extra resources) on bot/temp accounts.</li>
+</ul>
+<pre><code class="language-csharp">﻿public async Task&lt;Attempt&lt;string&gt;&gt; HandleRedirect(HttpContext httpContext, DiscordSection settings)
+{
+    // get bearer token from redirect code
+    var bearerTokenResult = await ExchangeRedirectCode((string)httpContext.Request.Query["code"], settings);
+
+    // get user
+    var userResult = await GetUser(bearerTokenResult.AccessToken);
+    if (userResult.Verified == false)
+    {
+        return Attempt&lt;string&gt;.Fail(new EmailUnverifiedException());
+    }
+
+    // get guilds and check they are still a member of the guild specified
+    var guildResult = await GetUserGuilds(bearerTokenResult.AccessToken);
+
+    // if userId exists update them
+    var existingMember = _memberService.GetByEmail(userResult.Email);
+    if (existingMember != null)
+    {
+        var updateMemberResult = await UpdateMember(existingMember, userResult, guildResult, settings).ConfigureAwait(false);
+        if (updateMemberResult.Success == false)
+        {
+            return Attempt&lt;string&gt;.Fail(updateMemberResult.Exception);
+        }
+        return Attempt&lt;string&gt;.Succeed(userResult.Email);
+    }
+
+    // if no member exists create them
+    var newMemberResult = await CreateMember(userResult, guildResult, settings);
+    if (newMemberResult.Success == false)
+    {
+        return Attempt&lt;string&gt;.Fail(newMemberResult.Exception);
+    }
+    return Attempt&lt;string&gt;.Succeed(userResult.Email);
+}</code></pre>
+<p>Before we head into all the private methods this one calls, lets have a quick look at some of the more deep down code, mainly the wrapper code for the Discord Api. We made 2 of these before and will be adding 2 more, this time from the context of the user. Note the <span class="code">WithOAuthBearerToken</span>, this is a Flurl extension method that adds an Authentication header to the request.</p>
+<pre><code class="language-csharp">﻿private async Task&lt;UserResult&gt; GetUser(string accessToken)
+{
+    return await Constants.DiscordApi.UserEndpoint.WithOAuthBearerToken(accessToken)
+        .GetAsync().ReceiveJson&lt;UserResult&gt;().ConfigureAwait(false);
+}
+
+private async Task&lt;List&lt;GuildResult&gt;&gt; GetUserGuilds(string accessToken)
+{
+    return await Constants.DiscordApi.GuildEndpoint.
+        WithOAuthBearerToken(accessToken)
+        .GetAsync().ReceiveJson&lt;List&lt;GuildResult&gt;&gt;().ConfigureAwait(false);
+}</code></pre>
+<p>To get that token, we use the following method which is the first one called in the HandleRedirect.</p>
+<pre><code class="language-csharp">﻿private async Task&lt;BearerTokenResult&gt; ExchangeRedirectCode(string code, DiscordSection settings)
+{
+    return await Constants.DiscordApi.TokenEndpoint.PostUrlEncodedAsync(new
+    {
+        client_id = _configuration["Discord:ClientId"],
+        client_secret = _configuration["Discord:ClientSecret"],
+        grant_type = "authorization_code",
+        code = code,
+        redirect_uri = settings.FirstChild&lt;DiscordLoginRedirectHandler&gt;().Url(mode: UrlMode.Absolute)
+    }).ReceiveJson&lt;BearerTokenResult&gt;().ConfigureAwait(false);
+}</code></pre>
+<p>Now we have all the logic done to get all the information we need to actually create/update a member, so let us do that next.</p>
+<p>Before we can actually create/update a member we need to make sure their Discord user belongs to a guild we have access to.</p>
+<pre><code class="language-csharp">﻿private bool RequiredGuildsValidated(UserResult userResult, List&lt;GuildResult&gt; guilds, DiscordSection section)
+{
+    if (section.RequiredGuildIds.IsNullOrWhiteSpace())
+    {
+        return true;
+    }
+
+    var requiredGuildStrings = section.RequiredGuildIds.Split(",");
+    requiredGuildStrings.RemoveAll(i =&gt; i.IsNullOrWhiteSpace());
+    var requiredGuildIds = requiredGuildStrings.Select(id =&gt; Convert.ToUInt64(id));
+
+    if (requiredGuildStrings.Any() == false)
+    {
+        return true;
+    }
+
+    return guilds.Any(g =&gt; requiredGuildIds.Any(gi =&gt; gi == g.Id));
+}</code></pre>
+<p>And now we can create/disable/update members based on the data we have collected before.<br>Note that the member created is of type <span class="code">member</span>, nothing is stopping you from create another member type just for discord logins.</p>
+<pre><code class="language-csharp">﻿private async Task&lt;Attempt&lt;bool&gt;&gt; CreateMember(UserResult userResult, List&lt;GuildResult&gt; guilds, DiscordSection settings)
+{
+    if (RequiredGuildsValidated(userResult, guilds, settings) == false)
+    {
+        return Attempt&lt;bool&gt;.Fail(new FailedRequiredGuildsException());
+    }
+
+    var newMember = _memberService.CreateMember(userResult.Email, userResult.Email, userResult.Username, "member");
+    UpdateUserDetails(newMember, userResult);
+
+    _memberService.Save(newMember);
+    await SyncMemberGroups(newMember, userResult, guilds);
+    return Attempt&lt;bool&gt;.Succeed();
+}
+private async Task&lt;Attempt&lt;bool&gt;&gt; UpdateMember(IMember member, UserResult userResult, List&lt;GuildResult&gt; guilds, DiscordSection settings)
+{
+    if (RequiredGuildsValidated(userResult, guilds, settings) == false)
+    {
+        member.IsApproved = false;
+        _memberService.Save(member);
+        return Attempt&lt;bool&gt;.Fail(new FailedRequiredGuildsException());
+    }
+    UpdateUserDetails(member, userResult);
+    _memberService.Save(member);
+    await SyncMemberGroups(member, userResult, guilds);
+    return Attempt&lt;bool&gt;.Succeed();
+}
+private void UpdateUserDetails(IMember member, UserResult userResult)
+{
+    member.SetValue("discordId", userResult.Id);
+    member.SetValue("discordUserName", userResult.Username);
+    member.SetValue("discordDiscriminator", userResult.Discriminator);
+}</code></pre>
+<p>As you might have noticed, there is 1 method still missing which does the actual sync between the discord user roles and the configuration we set up in the first half of this article.</p>
+<pre><code class="language-csharp">﻿private async Task SyncMemberGroups(IMember member, UserResult userResult, List&lt;GuildResult&gt; guilds)
+{
+    using var scope = _scopeProvider.CreateScope(autoComplete: true);
+
+    var availableGuilds = await GetAvailableGuilds();
+
+    var syncRules = _discordRoleRepository.GetAll().ToList();
+    // we are not in the guild of the rule OR we no longer have access to the guild OR the rule has been marked as syncRemove
+    var groupsToRemove = syncRules.Where(r =&gt; guilds.Any(g =&gt; g.Id == r.GuildId) == false || availableGuilds.Any(g =&gt; g.Id == r.GuildId) || r.SyncRemoval)
+        .Select(r =&gt; r.MembershipGroupAlias).Distinct().ToList();
+
+    // we need to filter out unavailable guilds else fetching the discord information in the loop below will throw an error
+    var activeGuilds = syncRules.Where(r =&gt; r.SyncRemoval == false &amp;&amp; availableGuilds.Any(g =&gt; g.Id == r.GuildId)).Select(r =&gt; r.GuildId).Distinct();
+
+    var groupsToAdd = new List&lt;string&gt;();
+    foreach (var guildId in activeGuilds)
+    {
+        var guildMember = await string.Format(Constants.DiscordApi.GuildPermissionsEndpoint, guildId, userResult.Id)
+            .WithHeader("Authorization", "Bot " + _configuration["Discord:BotToken"])
+            .GetAsync().ReceiveJson&lt;GuildUserResult&gt;().ConfigureAwait(false);
+        var validGroups = syncRules
+            .Where(s =&gt; s.SyncRemoval == false &amp;&amp; s.GuildId == guildId &amp;&amp;
+                        guildMember.Roles.Any(r =&gt; r == s.RoleId)).Select(s =&gt; s.MembershipGroupAlias)
+            .Distinct();
+        foreach (var validGroup in validGroups)
+        {
+            if (groupsToAdd.Contains(validGroup) == false)
+            {
+                groupsToAdd.Add(validGroup);
+            }
+        }
+    }
+
+    // no need to delete rolls we are going to add
+    foreach (var role in groupsToAdd)
+    {
+        if (groupsToRemove.Contains(role))
+        {
+            groupsToRemove.Remove(role);
+        }
+    }
+
+    if (groupsToRemove.Any())
+    {
+        _memberService.DissociateRoles(new[] { member.Id }, groupsToRemove.ToArray());
+    }
+
+    if (groupsToAdd.Any())
+    {
+        _memberService.AssignRoles(new[] { member.Id }, groupsToAdd.ToArray());
+    }
+}</code></pre>
+<p>And that is our backend logic done, the only thing remaining now is to test it out and to be able to do that we need...</p>
+<h3>Some super basic views</h3>
+<p>Note the use of @inject this injects the dependency into the view just as you would do in the constructor if the controller.</p>
+<p>Homepage</p>
+<pre><code class="language-javascript">﻿@using Umbraco.Cms.Web.Common.PublishedModels;
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage&lt;ContentModels.Homepage&gt;
+@using ContentModels = Umbraco.Cms.Web.Common.PublishedModels;
+@using Umbraco.Cms.Core.Security
+@using Umbraco.Cms.Core.Media.EmbedProviders
+@inject IMemberManager MemberManager
+@{
+    Layout = null;
+}
+
+&lt;div&gt;
+    @if (MemberManager.IsLoggedIn())
+    {
+        var logoutPage = Model.FirstChild&lt;Logout&gt;();
+        &lt;span&gt;Logged in as @MemberManager.GetCurrentMemberAsync().GetAwaiter().GetResult().Name&lt;/span&gt;
+        if (logoutPage != null)
+        {
+            &lt;a href="@logoutPage.Url()"&gt; (Logout)&lt;/a&gt;
+        }
+    }
+    else
+    {
+        var discordLoginPage = Model.FirstChild&lt;DiscordSection&gt;().FirstChild&lt;DiscordLogin&gt;();
+        &lt;a href="@discordLoginPage.Url()"&gt;Login to discord&lt;/a&gt;
+    }
+
+&lt;/div&gt;</code></pre>
+<p>DiscordLogin (For when the configuration/Umbraco setup is invalid)</p>
+<pre><code class="language-javascript">﻿@using Umbraco.Cms.Web.Common.PublishedModels;
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage&lt;ContentModels.DiscordLogin&gt;
+@using ContentModels = Umbraco.Cms.Web.Common.PublishedModels;
+@{
+	Layout = null;
+}
+
+&lt;div&gt; Oops something went wrong, contact us if this keeps happening, try to &lt;a href="@Model.Url()"&gt;reload the page&lt;/a&gt; to try again.&lt;/div&gt;</code></pre>
+<p>DiscordLoginRedirectHandler (For when something goes wrong)</p>
+<pre><code class="language-javascript">﻿@using Umbraco.Cms.Web.Common.PublishedModels;
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage&lt;ContentModels.DiscordLoginRedirectHandler&gt;
+@using ContentModels = Umbraco.Cms.Web.Common.PublishedModels;
+@{
+	Layout = null;
+}
+
+&lt;div&gt; Oops something went wrong, contact us if this keeps happening, &lt;a href="@(Model.Ancestor&lt;DiscordSection&gt;().FirstChild&lt;DiscordLogin&gt;().Url())"&gt;click here to try again.&lt;/a&gt;&lt;/div&gt;</code></pre>
+<p>And with this, our journey into Discord Oauth land has come to an end.</p>
+<h2>Final words</h2>
+<p>I hope this article helps people who find themselves in the specific situation of having to integrate Umbraco with Discord or more broadly helps as a plan of attack for those having to write any kind of integration with an OAuth Provider into Umbraco members.</p>
+<p>This article has plenty of links to the Umbraco documentation and a working Github repository to help you make sense of it all. If however something remains unclear, don't hesitate to ping me on Twitter or on the Umbraco Community Discord.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v9/" title="See all articles tagged with v9">v9</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/members/" title="See all articles tagged with Members">Members</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Sven Geusens"><img src="//gravatar.com/avatar/3b649e2374645ae5d319823b19aec283.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/3b649e2374645ae5d319823b19aec283.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Sven Geusens</h1>
+        <p>Sven is on Twitter as <a href="//twitter.com/migaroez" title="Sven Geusens on Twitter" rel="author">@migaroez</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

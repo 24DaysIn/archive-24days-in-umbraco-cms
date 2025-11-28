@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Creating Vue Components</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Creating Vue Components</h1>
+      <p class="byline"> by Malte Arzt &amp; Laurens Bergmann, <span class="pubdate">posted on <time datetime="2019-12-21">Dec 21, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Then we have a treat for you: This article aims at helping Umbraco and Vue.js beginners figure out how to get started with their Vue project. If you have a basic understanding of JavaScript and Umbraco, this step-by-step guide is for you! We hope to provide you with everything you need to get your first Vue component with Typescript and Umbraco up and running.</p>
+<h2>Goal</h2>
+<p class="intro">We want to show a neat “Vue Media Gallery” based on the built-in Media Section in Umbraco. The component will be inserted into an MVC Context, so we will get the best of both worlds: routing via MVC – flexibility via Vue Component!</p>
+<h2>A Match Made in Heaven: Why You Should Pair Umbraco and Vue.js</h2>
+<p>Umbraco and Vue.js are a perfect fit! With this duo, you can create a Single Page Application (SPA) or even a hybrid with MVC and as many reactive components as you need. For instance, you can build a page structure and navigation entirely with MVC and only a few components with Vue. This is a great way to keep the cost low, but still provide a modern and fast experience. Additionally, as Vue and the Umbraco backend – which is based on AngularJS – have a similar templating system, it is much easier to get started with the development of Vue components, if you already have used AngularJS before.</p>
+<h2>Why Use Typescript?</h2>
+<p>Typescript was developed by Microsoft and released in 2012. It is a typed superset of JavaScript which has to be compiled down to pure JavaScript for the browser to interpret it correctly. One of its biggest advantages are the type annotations with the help which a good IDE continuous type checking and highlighting can be performed. At compile time, the typescript files get checked again.</p>
+<h2>Setting Up Umbraco</h2>
+<p>Setting up Umbraco is as simple and intuitive as it is to work with the CMS. One of the biggest benefits Umbraco offers is its flexibility which makes it easy to combine with other systems. Once your Umbraco is ready to go, start by creating an Umbraco API.</p>
+<p>When creating an API Controller, make sure to use "System.Web.Http" instead of "System.Web.Mvc" as your function attribute declaration, otherwise it won't work. For our demonstration, we are creating a public API, therefore the controller needs to inherit from "UmbracoApiController".</p>
+<h2>Setting Up Webpack</h2>
+<p>The Webpack docs describe it as a module bundler. Using Webpack, we compile our Typescript to pure JavaScript. Webpack as well is versatile:</p>
+<blockquote>"It can be configured/extended to do lots more. The main purpose is to bundle JavaScript files for usage in a browser, yet it is also capable of transforming, bundling, or packaging just about any resource or asset."</blockquote>
+<p>The following npm packages are needed:</p>
+<ul>
+<li>ts-loader compiles Typescript to JavaScript</li>
+<li>vue-loader is needed for Single-File Components (SFC's)</li>
+</ul>
+<pre><code class="language-javascript">module: {
+    rules: [
+        {
+            test: /\.ts$/,
+            exclude: /node_modules/,
+            use: [{
+                loader: "ts-loader",
+                options: {
+                    appendTsSuffixTo: [/\.vue$/]
+                }
+            }]
+        },
+        {
+            test: /\.vue$/,
+            use: "vue-loader"
+        },
+    ]
+},
+plugins: [
+    new VueLoaderPlugin(),
+    ...
+]</code></pre>
+<p> </p>
+<p>Want to learn more about Webpack? Why not go read Dennis Zille's <strong><em>24 Days in Umbraco</em> </strong>article, <a rel="noopener" href="/umbraco-cms/2017/the-one-with-performance/increasing-umbraco-performance-with-webpack/" target="_blank" title="Increasing Umbraco Performance with Webpack">"Increasing Umbraco Performance with Webpack"</a> after this!</p>
+<h2><strong>Preparing Umbraco</strong></h2>
+<p>To get the most out of the Vue Approach, we need to define an API endpoint as described in „Setting Up Umbraco“. Our goal is to show a nice media gallery based on the Media Section which includes categories and pagination.</p>
+<h3>Umbraco API</h3>
+<p>We create our own controller, derived from the base UmbracoApiController. With a Dependency Injection, we insert a service which is able to consume the built-in „Umbraco Media Library“.</p>
+<p> </p>
+<pre><code class="language-javascript">using System;
+using System.Web.Http;
+using byte5.Web.BusinessLogic.Interfaces;
+using Umbraco.Core.Logging;
+using Umbraco.Web.WebApi;
+
+namespace byte5.Web.BusinessLogic.Controller
+{
+    public class MediaLibraryController : UmbracoApiController
+    {
+        private readonly ILogger _logger;
+        private readonly IMediaLibraryService _mediaLibraryService;
+
+        public MediaLibraryController(ILogger logger, IMediaLibraryService mediaLibraryService)
+        {
+            _logger = logger;
+            _mediaLibraryService = mediaLibraryService;
+        }
+
+        [HttpGet]
+        public IHttpActionResult GetMediaByTypeAndCategory(int id, string type = "", string category = "", int page = 0, int pageSize = 300)
+        {
+            try
+            {
+                return Ok(_mediaLibraryService.GetMediaByTypeAndCategory(id, type, category, page, pageSize));
+            }
+            catch (Exception ex)
+            {
+                _logger.Error&lt;MediaLibraryController&gt;(ex);
+                return InternalServerError();
+            }
+        }
+    }
+}
+
+</code></pre>
+<h3><strong>ASP.net MediaLibraryService</strong></h3>
+<p> </p>
+<pre><code class="language-markup">public MediaLibraryViewModel GetMediaByTypeAndCategory(int currentNodeId[……])
+        {
+            var mediaLibrary = new MediaLibraryViewModel();
+            var mediaItemList = new List&lt;MediaLibraryItem&gt;();
+
+            var mediaLibraryMeta = new MediaLibraryMetaInformations()
+            {
+                PageNumber = page,
+                PageSize = pageSize 
+            };
+
+            var cache = _context.Content;
+            var currentNode = cache.GetById(currentNodeId) as MediaLibrary;
+
+            int currentPageItems = 0;
+
+            [……]
+
+            mediaLibrary.MediaItems = mediaItemList;
+            mediaLibrary.Meta = mediaLibraryMeta;
+
+            return mediaLibrary;
+        }
+
+</code></pre>
+<h3>Getting Data</h3>
+<p>Our next step is to access the API end point:</p>
+<p> </p>
+<pre><code class="language-typescript">import axios, { AxiosResponse } from "axios";
+
+const baseURL: string = "/umbraco/api/keyDate";
+
+class MediaLibraryAPI {
+        public async get(id: number, type: string = "", category: string = "", page: number = 0, pageSize: number = 300): Promise&lt;MediaLibraryModel&gt; {
+        try {
+            const res = await axios.get(`"/umbraco/api/MediaLibrary/GetMediaByTypeAndCategory?id=${id}&amp;type=${type}&amp;category=${category}&amp;page=${page}&amp;pageSize=${pageSize}`);
+            if (res &amp;&amp; res.status === 200) {
+                return res.data;
+            }
+            throw new Error(res.data);
+        } catch (ex) {
+            throw new Error(ex);
+        }
+    }
+}
+export const mediaLibraryAPI: MediaLibraryAPI = new MediaLibraryAPI();</code></pre>
+<h2>Your Vue.js Component</h2>
+<p>Now on to creating our first component: We are using Single File Components (SFC), this means our "template (html)", "script (js|ts)" and "style (css|sass|scss)" are stored in one file.</p>
+<p>This is what an SFC boilerplate looks like:</p>
+<p> </p>
+<pre><code class="language-markup">&lt;template&gt;&lt;/template&gt;
+&lt;script lang="ts"&gt;
+&lt;/script&gt;
+&lt;style&gt;&lt;/style&gt;</code></pre>
+<p> </p>
+<p> </p>
+<p>We want to use class-based components instead of the default "Options API". Hence, we use the "vueproperty-decorator" which extends "vue-class-component". With Vue 3, we can use the "Composition API" to achieve a similar result. This helps us to better organise, split and structure our code. With these libraries, we can declare the "MediaLibrary":</p>
+<p> </p>
+<pre><code class="language-typescript">    import Vue from "vue";
+    import { Component, Prop } from "vue-property-decorator";
+
+    @Component();
+    export default class MediaLibrary extends Vue {
+        @Prop() public nodeid!: number;
+        @Prop() public language!: string;
+        @Prop() public headertext!: string;
+
+
+        // get data from out umbraco api
+        public mediaList: MediaLibraryModel = new MediaLibraryModel();
+
+        public async mounted() {
+            try {
+                this.mediaList = await MediaLibraryAPI.get(this.nodeid);
+            }
+            catch (err) {
+                // do something with it
+            }
+        }
+    }</code></pre>
+<p> </p>
+<p> To display our media items, we loop over them with "v-for".</p>
+<pre><code class="language-markup">    &lt;div class="link-tile col-lg-3" v-for="(media, i) in mediaList.mediaItems" :key="i"&gt;
+        &lt;div class="tile-text"&gt;
+            &lt;div class="row"&gt;
+                &lt;div class="col-lg-8"&gt;
+                    &lt;span&gt;{{media.imageText}}&lt;/span&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;</code></pre>
+<h3>main.ts</h3>
+<p>The component entry point is "main.ts": This is where we attach the Vue components to our div containers. As you can see, we are looking for a div container with the ID "mediaLibrary" and expose the components with the custom tag "media-library".</p>
+<pre><code class="language-typescript">import MediaLibrary from "@components/MediaLibrary.vue";
+import Vue from "vue";
+
+const mediaLibrary: HTMLElement | null = document.getElementById("mediaLibrary");
+if (mediaLibrary) {
+    const mediaLibraryApp = new Vue({
+        components: {
+            "media-library": MediaLibrary,
+        },
+        el: mediaLibrary,
+    });
+}</code></pre>
+<p> </p>
+<h3>partial.cshtml</h3>
+<p>The last step is to render the div container to which the Vue component will be attached. We will also be passing a few properties to our mediaLibrary.</p>
+<pre><code class="language-javascript">&lt;div id="mediaLibrary"&gt;
+    &lt;media-library nodeid="@Model.Id" language="@culture" headertext="@headerText"&gt;&lt;/media-library&gt;
+&lt;/div&gt;</code></pre>
+<p> </p>
+<p><strong>Umbraco and Vue: One of our favourite couples! With your new skills in Vue components, you will be able to provide interactive content on your Umbraco website and have a smoother experience. We hope with the help of our guide, you will get started right away and use Umbraco and Typescript to create Vue components in no time!</strong></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/typescript/" title="See all articles tagged with TypeScript">TypeScript</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Malte Arzt"><img src="//gravatar.com/avatar/d47d327836af65c7a9e35c2ee0ad5ba7.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/d47d327836af65c7a9e35c2ee0ad5ba7.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Malte Arzt</h1>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="Laurens Bergmann"><img src="//gravatar.com/avatar/f64191338c4a315b86d0f33376c4fb08.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/f64191338c4a315b86d0f33376c4fb08.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Laurens Bergmann</h1>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

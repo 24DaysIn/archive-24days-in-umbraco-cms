@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco and Sass loops: a flexible approach to colour theming</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco Sass loops</h1>
+      <p class="byline"> by Lynne Finnigan, <span class="pubdate">posted on <time datetime="2019-12-07">Dec 7, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Umbraco’s Color Picker Data Type makes it really easy for us to achieve this, whether you are looking to add various colour options to a content block or component, or whether you want to apply a global colour theme to your website.</p>
+<p class="intro">Here are the steps we will take to achieve this:</p>
+<ul>
+<li>Add the Umbraco color picker property editor to a Document Type</li>
+<li>Use Sass to apply the colours to a content block, based on the user selection in Umbraco</li>
+</ul>
+<h3>Adding the color picker</h3>
+<p>We can add a colour picker to any Document Type. If I was working on a client project, I would create a content block, and add a colour picker to change the background of that specific block. That is a typical use case for me, however this approach is very flexible and can be used in many ways to suit your needs. For the purposes of this article, let’s add it to a content block.</p>
+<p>In the Umbraco backoffice, go to Settings and create a Document Type without a template. In this Document Type, click on add property, and we will call this property ‘Background colour’, then click on Add editor and we will add the <strong>Color Picker</strong>.</p>
+<p>There is a toggle in the Color Picker settings which says <strong>Include labels</strong>. We have two options here; we can either turn this on and give each colour a label, in which case we will be able to access the hex value and the label in our View. Or we can leave this turned off and only receive the hex value. If we choose to have no labels, we may have to create a Colour Helper method in order to apply our class names for colour customisation. We will talk about that a little later on in the article, but for now, let’s switch this toggle on to include the labels.</p>
+<p><img style="width: 24px; height: 24px;" src="/nothing.jpg" alt="" data-udi="umb://media/9ec4672b9db74d218c5d0888f107e36c"></p>
+<p>Add a few hex values, along with labels to describe them and any other properties you would like for your content block, and then save it. Normally I would then use <a href="https://our.umbraco.com/documentation/reference/templating/modelsbuilder/">ModelsBuilder</a> in Visual Studio to generate my models.</p>
+<p>In the content area of the site, when we add our block to a page, we should now see a <strong>Background colour</strong> property where we can select a background colour from the swatch of colours we have just set up in the Document Type. This is going to be our content block background colour.</p>
+<h3>The View</h3>
+<p>When we created our Document Type, we had the option to add a label as well as setting the hex value. Adding the label is optional, and in this example we will use the label we’ve set in the CMS as our class name.</p>
+<p>In the View we want to pull through the label value from the Background colour property and set it as a variable:</p>
+<pre><code class="language-csharp">var bgColour = (Model.BackgroundColour != null) ? Model.BackgroundColour.Label?.ToLower() : String.Empty;</code></pre>
+<p>This will take the label value, if a colour has been set, and make it lower case. We added the labels in the CMS with capital letters for better presentation in the backoffice, but for our CSS class names, we'd rather have them lower case. We can then apply this as a class in our markup:</p>
+<pre><code class="language-javascript">
+&lt;section class="contentBlock @bgColour"&gt;&lt;/section&gt;
+
+</code></pre>
+<h3>Adding a Colour Helper</h3>
+<p>As discussed earlier, in some cases you may want the label to be different to the class name itself. If that’s the case, you can add a Colour Helper. In your project, navigate to the Core/Helpers folder and create a new file called ColourHelper.cs. Add the following code:</p>
+<pre><code class="language-csharp">namespace Project.Core.helpers
+{
+    public static class ColourHelper
+    {
+        public static string GetColourBasedOnHex(string hexValue, string defaultColour = "grey")
+        {
+            switch (hexValue)
+            {
+                case "000000":
+                    return "black";
+                case "ffffff":
+                    return "white";
+                case "d5d5d5":
+                    return "grey";
+                default:
+                    return defaultColour;
+            }
+        }
+    }
+}
+</code></pre>
+<p>To use this in our View we can then do the following:</p>
+<pre><code class="language-csharp">var bgColour = Model.BackgroundColour != null ? 
+        ColourHelper.GetColourBasedOnHex(Model.BackgroundColour.ToString()) : string.Empty; 
+</code></pre>
+<p>Whichever way you choose to do it, we now have a section with a colour class (“grey”, “black”, or “white”) applied to it, which is controlled from the CMS. The next step is to use a Sass each loop to apply this background colour to the section.</p>
+<h3>Using an Each loop in Sass</h3>
+<p><span>The @each rule in Sass is usually written like so: @each &lt;variable&gt; in &lt;expression&gt; { ... }, where the expression returns a list. The code examples shown below are taken from the <a href="http://sass-lang.com/documentation">Sass documentation</a>.</span></p>
+<pre><code class="language-scss">$list: 10px, 20px, 30px;
+
+@each $size in $list {
+  .icon-#{$size} {
+    font-size: $size;
+   }
+}
+</code></pre>
+<p><span>@each also supports destructuring and mapping:</span></p>
+<pre><code class="language-scss">$icons:
+  "eye" "\f112" 12px,
+  "start" "\f12e" 16px,
+  "stop" "\f12f" 10px;
+
+@each $name, $glyph, $size in $icons {
+  .icon-#{$name}:before {
+    display: inline-block;
+    font-family: "Icon Font";
+    content: $glyph;
+    font-size: $size;
+  }
+}
+
+$icons: ("eye": "\f112", "start": "\f12e", "stop": "\f12f");
+
+@each $name, $glyph in $icons {
+  .icon-#{$name}:before {
+    display: inline-block;
+    font-family: "Icon Font";
+    content: $glyph;
+  }
+}
+</code></pre>
+<p><span>Now onto our own code! We have a few different background options we could use for our block, which we’ve set up in our Document Type. We need our Sass loop to take into account both the class name and the hex value, so for this we will use mapping.</span></p>
+<pre><code class="language-scss">$background-colours: (
+  black: #000000,
+  white: #ffffff
+  grey: #d5d5d5
+);
+
+.contentBlock {
+    @each $class, $colour in $background-colours {
+        &amp;.#{$class} {
+          background: $colour;
+        }
+    }
+}
+</code></pre>
+<p>Using this Sass each loop means that we don't have to write out the individual code for each colour, which would normally look like this:</p>
+<pre><code class="language-scss">.contentBlock {
+  &amp;.white {
+    background: #ffffff;
+  }
+  &amp;.grey {
+    background: #d5d5d5;
+  }
+  &amp;.black {
+    background: #000000;
+  }
+}
+</code></pre>
+<p>This might not seem like much, but the @each loop will save you a lot of code!</p>
+<p><span>Now if we ever want to add any more colours to our background colour options, we just need to add our class name and hex value to the $background-colours variable in Sass, and then add the same values in our Document Type for the user to be able to select it from Umbraco.</span></p>
+<p><span>And that’s it! I hope this helps to create a more flexible and customisable experience for Umbraco users.</span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Lynne Finnigan"><img src="//gravatar.com/avatar/9952a6a33e560e4f260bfa4756c13d81.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/9952a6a33e560e4f260bfa4756c13d81.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Lynne Finnigan</h1>
+        <p>Lynne is on Twitter as <a href="//twitter.com/lynnewritescode" title="Lynne Finnigan on Twitter" rel="author">@lynnewritescode</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

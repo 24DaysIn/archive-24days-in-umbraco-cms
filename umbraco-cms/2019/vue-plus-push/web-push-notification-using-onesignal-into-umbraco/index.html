@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Web Push Notification Using OneSignal Into Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Web Push Notification Using OneSignal Into Umbraco</h1>
+      <p class="byline"> by Pasang Tamang, <span class="pubdate">posted on <time datetime="2019-12-21">Dec 21, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span>If you want to keep your consumer engaged with your website or app and never want to let them to miss new updates then first thing that hits your mind is sending notifications. Be it social media promotion, be it email newsletter, push notification or any other channels that fits your requirements, the goal is to keep updating your consumers about what's going around your website or app. Popularity of push notification as a communication channel is growing every day. This can be even defined as a micro marketing method also.<span></span></span></p>
+<p class="intro">Today I am going to share how I have done web push notification using OneSignal with Umbraco.</p>
+<h2>Quick Dive into OneSignal</h2>
+<p>I found OneSignal is easy to use in terms of setup and development. It's available for websites and mobile applications which supports all major native and mobile platforms. Availability of REST API and well explained documentation also makes easier to implement. Another reason is it's free plan that includes 30K web subscribers and unlimited subscribes in mobile. Number of push notifications can be sent in free plan is unlimited. A/B testing and real-time reporting dashboard are another key features included in their free plan.</p>
+<p><img style="width: 500px; height: 257.0789865871833px;" src="/archive/media/2019/dashboard.png?width=500&amp;height=257.0789865871833" alt="" data-udi="umb://media/edc3232f073e41819ddd195efc22123c"></p>
+<p><img style="width: 500px; height: 257.24907063197026px;" src="/archive/media/2019/report.png?width=500&amp;height=257.24907063197026" alt="" data-udi="umb://media/3fc9b50ecc224ccd92400dfd766f6dfe"></p>
+<h2>Steps to Take in OneSignal</h2>
+<ol>
+<li>
+<h3>Create a free account</h3>
+OneSignal free account can be create from their <a rel="noopener" href="https://app.onesignal.com/signup" target="_blank">signup</a> page. Just fill up the required detail or use any external methods then you are all set to go.</li>
+<li>
+<h3>Create an application</h3>
+After completing registration, first thing you need to consider is to add application from dashboard. Each app comes with unique app id and REST API key which is needed for subscription and send notifications. You can find more details about creating an application <a rel="noopener" href="https://documentation.onesignal.com/docs/web-push-quickstart" target="_blank">here.</a><br><img style="width: 500px; height: 202.56410256410254px;" src="/archive/media/2019/app-dashboard.png?width=500&amp;height=202.56410256410254" alt="" data-udi="umb://media/264db7433e9a4386acd87e8c8a15dd8b"></li>
+<li>
+<h3>Configure an application</h3>
+You can give your site name, URL of your website or app details, configure the notification styling in configuration section. Details about how to configure an application can be found <a rel="noopener" href="https://documentation.onesignal.com/docs/web-push-typical-setup" target="_blank">here</a>.<br><img style="width: 500px; height: 187.07191780821918px;" src="/archive/media/2019/configuration.png?width=500&amp;height=187.07191780821918" alt="" data-udi="umb://media/037e0c47fe024a73b58b75277078958f"><br><img style="width: 500px; height: 260.75949367088606px;" src="/archive/media/2019/prompt.png?width=500&amp;height=260.75949367088606" alt="" data-udi="umb://media/3ce7d8dc9aca44feba7f660054e2abf6"></li>
+</ol>
+<h2>How It Works in Umbraco?</h2>
+<p>Before we start coding there are 2 things you need to consider which is required to enable OneSignal in your site.</p>
+<ul>
+<li>
+<h3>Adding OneSignal SDK files</h3>
+SDK file can be download from <a rel="noopener" href="https://github.com/OneSignal/OneSignal-Website-SDK/releases/download/https-integration-files/OneSignal-Web-SDK-HTTPS-Integration-Files.zip" target="_blank" title="OneSignal SDK">here</a>. Unzip the SDK files and upload the SDK files (<span class="code">OneSignalSDKWorker.js</span> and <span class="code">OneSignalSDKUpdaterWorker.js</span>) to the root directory of your site. Those SDK files should be accessible publicly.</li>
+<li>
+<h3>Adding OneSignal code to site</h3>
+At the end of the configuration steps in OneSignal, you will get code snippets that you have to include in your website. That snippet has to place inside the <span class="code">&lt;head&gt;</span> tag.<br><img style="width: 500px; height: 211.6695059625213px;" src="/archive/media/2019/onesignalcode.png?width=500&amp;height=211.6695059625213" alt="" data-udi="umb://media/cbdc22281fb84bb99c8bde56dd2e003d"><br><br>After completing above steps, when you browse your site you will asked for notification permission.<br><img src="/archive/media/2019/notification-access.png" alt="" data-udi="umb://media/79f850c25f4f458688ee3d2f94ed904e"></li>
+</ul>
+<h3>Settings in Umbraco</h3>
+<p>Pushing data from Umbraco to OneSignal is done by subscribing Published event. I will be describing about publish event code a bit later but first let’s look into the important settings that has to add in <em>web.config</em> file's  <em>appSettings</em> section.</p>
+<p><span class="code">&lt;add key="PushNotificationOnPublish" value="false"/&gt;</span><br><span class="code">&lt;add key="PushNotificationAllowedTypes" value="blogpost,notificationPost"/&gt;</span><br><span class="code">&lt;add key="PushNotificationTitleProperty" value="pageTitle"/&gt;</span><br><span class="code">&lt;add key="PushNotificationContentProperty" value="excerpt"/&gt;</span><br><span class="code">&lt;add key="OneSignal:appId" value="6f68b2ff-c68b-4551-bbbb-e0fc9432b0c0"/&gt;</span><br><span class="code">&lt;add key="OneSignal:apiKey" value="NTI5ZWQzNDUtMzViYS00MjFjLTllODUtMjM2YzIxN2Q4MTcx"/&gt;</span><br><span class="code">&lt;add key="OneSignal:restUrl" value="https://onesignal.com/api/v1/notifications"/&gt;</span></p>
+<p><strong>PushNotificationOnPublish </strong>controls the behavior of pushing content from Umbraco to OneSignal. If value is set to true then notification sent each time when content is published. If this is set to false then notification is sent when property <em>Send Push Notification (alias: sendPushNotification)</em> is set to true. After notification sent, this property is set to false automatically to stop notification being sent again for same content node.</p>
+<p><strong>PushNotificationAllowedTypes</strong> controls which type of content nodes will be use to send push notification. You can add your document type alias with the separation of comma. </p>
+<p><strong>PushNotificationTitleProperty </strong>property's value will be use as title of the push notification where as <strong>PushNotificationContentProperty</strong> property's value will be use as body content of the push notification.</p>
+<p>Rest 3 settings <em><strong>OneSignal:appId</strong></em>, <em><strong>OneSignal:apiKey</strong></em> and <em><strong>OneSignal:restUrl</strong></em> holds APP Id, API key and REST API URL of OneSignal</p>
+<p>So now let’s discuss about the code that push Umbarco content to OneSignal. Here I have created a class file that inherits <span class="code">IComponent</span> to subscribe Published event inside a Component.</p>
+<pre><code class="language-csharp">﻿public class PushNotificationComponent: IComponent
+{
+	private readonly ILogger _logger;
+	private readonly IContentService _contentService;
+	private readonly IUmbracoContextFactory _umbracoContext;
+	private UmbracoContext _context;
+
+	public PushNotificationComponent(ILogger logger, IContentService contentService, IUmbracoContextFactory umbracoContext)
+	{
+		_logger = logger;
+		_contentService = contentService;
+		_umbracoContext = umbracoContext;
+	}
+
+	public void Initialize()
+	{
+		
+	}		
+
+	public void Terminate()
+	{
+		
+	}
+}</code></pre>
+<p>You can see I have used <span class="code">IContentService</span> and <span class="code">IUmbracoContextFactory</span> in constructor. <span class="code">IContentService</span> is used to publish the content node after reset the value of <em>Send Push Notification</em> property to false. And <span class="code">IUmbracoContextFactory</span> is used to get the URL of published node to send to Onesignal. </p>
+<p>And here is the code that reads all the setting from <em>web.config</em></p>
+<pre><code class="language-csharp">﻿private bool SendPushNotificationOnPublish { get; } = bool.Parse(ConfigurationManager.AppSettings["PushNotificationOnPublish"]);
+
+private string AppId { get; } = ConfigurationManager.AppSettings["OneSignal:appId"];
+
+private string ApiKey { get; } = ConfigurationManager.AppSettings["OneSignal:apiKey"];
+
+private string ApiUrl { get; } = ConfigurationManager.AppSettings["OneSignal:restUrl"];
+
+private string TitleProperty { get; } = ConfigurationManager.AppSettings["PushNotificationTitleProperty"];
+
+private string ContentProperty { get; } = ConfigurationManager.AppSettings["PushNotificationContentProperty"];
+
+private bool IsAllowedDocType(string documentTypeAlias)
+{
+	var allowedDocumentTypes = ConfigurationManager.AppSettings["PushNotificationAllowedTypes"];
+	return allowedDocumentTypes.Contains(documentTypeAlias);
+}</code></pre>
+<p> Finally we are in the main code block that fires when content node is published.</p>
+<pre><code class="language-csharp">﻿public void Initialize()
+{
+	ContentService.Published += ContentService_Published;
+}
+
+private void ContentService_Published(IContentService sender, Umbraco.Core.Events.ContentPublishedEventArgs e)
+{
+	using (var contextReference = _umbracoContext.EnsureUmbracoContext())
+	{
+		_context = contextReference.UmbracoContext;
+	}
+
+	foreach (var item in e.PublishedEntities)
+	{
+		if (IsAllowedDocType(item.ContentType.Alias))
+		{
+			var title = item.GetValue(TitleProperty) != null ? item.GetValue&lt;string&gt;(TitleProperty) : item.Name;
+			var content = item.GetValue(ContentProperty) != null ? item.GetValue&lt;string&gt;(ContentProperty) : item.Name;
+			var url = "";
+
+			if (_context != null)
+			{
+				var publishedEntity = _context.Content.GetById(item.Id);
+				url = publishedEntity.Url(mode: UrlMode.Absolute);
+			}
+
+
+			var segments = new string[] { "All" };
+
+			if (SendPushNotificationOnPublish)
+			{
+				if (PushNotification(title, content, segments, url))
+				{
+					_logger.Info&lt;PushNotificationComponent&gt;(
+						$"Notification sent successfully. Page Details : '{title}' ('{item.Id}')");
+				}
+				else
+				{
+					_logger.Warn&lt;PushNotificationComponent&gt;(
+						$"Notification send failed. Page Details : '{title}' ('{item.Id}')");
+				}
+			}
+			else
+			{
+				if (item.GetValue&lt;bool&gt;("sendPushNotification"))
+				{
+					if (PushNotification(title, content, segments, url))
+					{
+						item.SetValue("sendPushNotification", false);
+						_contentService.SaveAndPublish(item, raiseEvents: false);
+						_logger.Info&lt;PushNotificationComponent&gt;(
+							$"Notification sent successfully. Page Details : '{title}' ('{item.Id}')");
+					}
+					else
+					{
+						_logger.Warn&lt;PushNotificationComponent&gt;(
+							$"Notification send failed. Page Details : '{title}' ('{item.Id}')");
+					}
+				}
+			}
+		}
+	}
+}
+
+private bool PushNotification(string title, string content, string[] segments, string link)
+{
+	try
+	{
+		var request = WebRequest.Create($"{ApiUrl}") as HttpWebRequest;
+
+		request.KeepAlive = true;
+		request.Method = "POST";
+		request.ContentType = "application/json; charset=utf-8";
+
+		request.Headers.Add("authorization", $"Basic {ApiKey}");
+
+		var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+		var obj = new
+		{
+			app_id = AppId,
+			headings = new {en = title},
+			contents = new {en = content},
+			included_segments = segments,
+			url = link
+		};
+		var param = serializer.Serialize(obj);
+		var byteArray = Encoding.UTF8.GetBytes(param);
+
+		using (var writer = request.GetRequestStream())
+		{
+			writer.Write(byteArray, 0, byteArray.Length);
+		}
+
+		using (var response = request.GetResponse() as HttpWebResponse)
+		{
+			if (response != null)
+			{
+				using (var reader = new StreamReader(response.GetResponseStream()))
+				{
+					var responseContent = reader.ReadToEnd();
+					return !responseContent.Contains("error");
+				}
+			}
+		}
+	}
+	catch (Exception ex)
+	{
+		return false;
+	}
+
+	return false;
+}</code></pre>
+<p>You can see there is nothing fancy in the code. It's just a basic code that checks all the settings and call <span class="code"><em>PushNotificaion</em></span> function from <span class="code"><em>ContentService_Published</em></span>. <span class="code"><em>PushNotification</em></span> function is simply posting data to OneSignal REST API with <span class="code"><em>WebRequest</em></span>.</p>
+<p>So we have completed coding component. Now we have to register our component with Umbraco using a composer.</p>
+<pre><code class="language-csharp">﻿public class NotificationComposer : ComponentComposer&lt;PushNotificationComponent&gt;
+{
+}</code></pre>
+<p>Here is the final output with how it looks in windows notification.</p>
+<p><img style="width: 500px; height: 300.80482897384303px;" src="/archive/media/2019/notification.png?width=500&amp;height=300.80482897384303" alt="" data-udi="umb://media/83cc15cb038942f5b68b0b34670747bd"></p>
+<p> </p>
+<p> </p>
+<p>And here is our final code. </p>
+<pre><code class="language-csharp">﻿using System;
+using System.Configuration;
+using System.IO;
+using System.Net;
+using System.Text;
+using Umbraco.Core.Composing;
+using Umbraco.Core.Logging;
+using Umbraco.Core.Models.PublishedContent;
+using Umbraco.Core.Services;
+using Umbraco.Core.Services.Implement;
+using Umbraco.Web;
+
+namespace Umbraco24DaysIn.Components
+{
+	public class PushNotificationComponent: IComponent
+	{
+		private readonly ILogger _logger;
+		private readonly IContentService _contentService;
+		private readonly IUmbracoContextFactory _umbracoContext;
+		private UmbracoContext _context;
+
+		public PushNotificationComponent(ILogger logger, IContentService contentService, IUmbracoContextFactory umbracoContext)
+		{
+			_logger = logger;
+			_contentService = contentService;
+			_umbracoContext = umbracoContext;
+		}
+
+		private bool SendPushNotificationOnPublish { get; } =
+			bool.Parse(ConfigurationManager.AppSettings["PushNotificationOnPublish"]);
+
+		private string AppId { get; } =
+			ConfigurationManager.AppSettings["OneSignal:appId"];
+
+		private string ApiKey { get; } =
+			ConfigurationManager.AppSettings["OneSignal:apiKey"];
+
+		private string ApiUrl { get; } =
+			ConfigurationManager.AppSettings["OneSignal:restUrl"];
+
+		private string TitleProperty { get; } =
+			ConfigurationManager.AppSettings["pushNotificationTitleProperty"];
+
+		private string ContentProperty { get; } =
+			ConfigurationManager.AppSettings["pushNotificationContentProperty"];
+
+		private bool IsAllowedDocType(string documentTypeAlias)
+		{
+			var allowedDocumentTypes = ConfigurationManager.AppSettings["PushNotificationAllowedTypes"];
+			return allowedDocumentTypes.Contains(documentTypeAlias);
+		}
+
+		public void Initialize()
+		{
+			ContentService.Published += ContentService_Published;
+		}
+
+		private void ContentService_Published(IContentService sender, Umbraco.Core.Events.ContentPublishedEventArgs e)
+		{
+			using (var contextReference = _umbracoContext.EnsureUmbracoContext())
+			{
+				_context = contextReference.UmbracoContext;
+			}
+
+			foreach (var item in e.PublishedEntities)
+			{
+				if (IsAllowedDocType(item.ContentType.Alias))
+				{
+					var title = item.GetValue(TitleProperty) != null ? item.GetValue&lt;string&gt;(TitleProperty) : item.Name;
+					var content = item.GetValue(ContentProperty) != null ? item.GetValue&lt;string&gt;(ContentProperty) : item.Name;
+					var url = "";
+
+					if (_context != null)
+					{
+						var publishedEntity = _context.Content.GetById(item.Id);
+						url = publishedEntity.Url(mode: UrlMode.Absolute);
+					}
+	
+
+					var segments = new string[] { "All" };
+
+					if (SendPushNotificationOnPublish)
+					{
+						if (PushNotification(title, content, segments, url))
+						{
+							_logger.Info&lt;PushNotificationComponent&gt;(
+								$"Notification sent successfully. Page Details : '{title}' ('{item.Id}')");
+						}
+						else
+						{
+							_logger.Warn&lt;PushNotificationComponent&gt;(
+								$"Notification send failed. Page Details : '{title}' ('{item.Id}')");
+						}
+					}
+					else
+					{
+						if (item.GetValue&lt;bool&gt;("sendPushNotification"))
+						{
+							if (PushNotification(title, content, segments, url))
+							{
+								item.SetValue("sendPushNotification", false);
+								_contentService.SaveAndPublish(item, raiseEvents: false);
+								_logger.Info&lt;PushNotificationComponent&gt;(
+									$"Notification sent successfully. Page Details : '{title}' ('{item.Id}')");
+							}
+							else
+							{
+								_logger.Warn&lt;PushNotificationComponent&gt;(
+									$"Notification send failed. Page Details : '{title}' ('{item.Id}')");
+							}
+						}
+					}
+				}
+			}
+		}
+
+		public void Terminate()
+		{
+			
+		}
+
+		private bool PushNotification(string title, string content, string[] segments, string link)
+		{
+			try
+			{
+				var request = WebRequest.Create($"{ApiUrl}") as HttpWebRequest;
+
+				request.KeepAlive = true;
+				request.Method = "POST";
+				request.ContentType = "application/json; charset=utf-8";
+
+				request.Headers.Add("authorization", $"Basic {ApiKey}");
+
+				var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+				var obj = new
+				{
+					app_id = AppId,
+					headings = new {en = title},
+					contents = new {en = content},
+					included_segments = segments,
+					url = link
+				};
+				var param = serializer.Serialize(obj);
+				var byteArray = Encoding.UTF8.GetBytes(param);
+
+				using (var writer = request.GetRequestStream())
+				{
+					writer.Write(byteArray, 0, byteArray.Length);
+				}
+
+				using (var response = request.GetResponse() as HttpWebResponse)
+				{
+					if (response != null)
+					{
+						using (var reader = new StreamReader(response.GetResponseStream()))
+						{
+							var responseContent = reader.ReadToEnd();
+							return !responseContent.Contains("error");
+						}
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				return false;
+			}
+
+			return false;
+		}
+	}
+}</code></pre>
+<p> </p>
+<p>All code used in above demonstration is available at <a href="https://github.com/usome/Umbraco24DaysIn">https://github.com/usome/Umbraco24DaysIn</a>. Database backup also included inside the database folder. CMS username/password is admin@admin.com/umbraco2019.</p>
+<p>Thank you for getting your time to read this article. Merry Christmas to all of you. </p>
+    </div><footer></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Pasang Tamang"><img src="//gravatar.com/avatar/40c6e1f6145c99e309633c2768b60a3d.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/40c6e1f6145c99e309633c2768b60a3d.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Pasang Tamang</h1>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

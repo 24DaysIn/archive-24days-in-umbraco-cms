@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Moving a site into Umbraco Cloud should be a simple process!</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Cloud Migration</h1>
+      <p class="byline"> by Jon Humphrey, <span class="pubdate">posted on <time datetime="2017-12-24">Dec 24, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>TL:DR Make sure the core version is the same as currently running on Cloud, all packages work on Cloud and are up to date or uninstalled if you can't.</h2>
+<p><img style="width: 500px; height: 246.09375px;" src="/archive/media/2017/umbraco-install-page-1024x521.jpg?width=500&amp;height=246.09375" alt="" data-udi="umb://media/a22ceefa53a04618852593d1d353aa47"></p>
+<p class="intro">I have been interested in Umbraco Cloud, or the platform formerly known as UaaS, since whispers began floating around the ether way back in late 2015 - I think the first time we saw anything was at UK Festival when Per <a href="https://www.youtube.com/watch?v=_16Qt2dkICI&amp;index=6&amp;list=PLGPkEAN13WaVEkJlkcwDCM_4kUS3-_9x_">demoed</a> developing templates on v7.4 from a Mac during the keynote. Having just switched to a Macbook earlier that year and having spent many hours setting up and configuring virtual machines with windows on it, or using Bootcamp exclusively, being able to develop directly from the primary OS without having to use another platform wowed me into fanboy bliss!</p>
+<p>Fast forward to earlier this year, where I answered a tweet from Bob Baty Barr asking if anyone would be willing to help a friend of his move one of their clients up to Cloud as they wanted to gain all the benefits of the hosting package from HQ.</p>
+<p>I eagerly accepted and began discussions with Kevin Reszel, owner of <span>RESZEL iNDUSTRIES, iNC. and good friends with</span> Bob, where we discussed the nuances of the move, agreed on timeframes and initiated the Trello workflows to help monitor progress.</p>
+<p>The primary issues were that the site was then running an older version of Umbraco, and would mean updating to the latest version as well as updating all the packages currently used some of which were either no longer developed, or were not known to run on Cloud at that time?</p>
+<p>I also began re-reading the <a href="https://our.umbraco.org/documentation/Add-ons/UmbracoForms/Installation/Version-Specific" title="Upgrading - version specific">upgrade documentation</a> on Our, as well as asking around in the different Umbraco Slack channels I belong to, to determine if anyone could provide a better way to handle the updates required than the path I had already used for my site?</p>
+<p>As usual, the community stepped up to the plate and verified my thought process as well as advised me that some packages were available that could replace other, archived, ones.</p>
+<p>More on that later though!</p>
+<p>The first step after I received a copy of the site files, alongside an export of the current database, was to begin by adding the site folder to the Visual Studio solution. Setting up Visual Studio has been covered in many articles, like <a href="https://our.umbraco.org/Documentation/Umbraco-Cloud/Set-Up/Visual-Studio/" title="Visual Studio Setup on Our">this one</a>, or <a href="http://www.jondjones.com/learn-umbraco-cms/umbraco-developers-guide/umbraco-getting-started-advice/installing-umbraco-7-in-visual-studio-via-nuget" title="Installing Umbraco 7 In Visual Studio Via Nuget by Jon Jones">this one</a>, or even <a href="https://www.youtube.com/watch?v=79LksNwGjLk" title="Create a Page Builder in about 15 minutes with Archetype for Umbraco by Kevin Giszewski (Not Umbraco specific but a good example of the VS setup)">this one</a>, so take a look at those if you would like more information!</p>
+<p>Once the site loaded into the asp.net website project, alongside the class project for core; I also added another project to allow for any "new" front-end styling via Sass and scripting in ES6 that might be required, thereby allowing me to keep the principal source as close to the original as I could.</p>
+<p>The next step was to integrate source control into the solution by initialising git and to add an <a href="https://www.gitignore.io/api/umbraco" title="gitignore.io">Umbraco specific gitignore</a> to the root of the site. If you ever run into adding a gitignore file AFTER the fact may I suggest reading <a href="https://our.umbraco.org/forum/using-umbraco-and-getting-started/86095-gitignore-rules" title="Using Umbraco and getting started">this post on Our</a>?</p>
+<p>After initialising the source control, as well as pushing the files up to a private repo, I then followed the first of the community recommendations by incorporating NuGet into the solution which should allow me a <a href="https://our.umbraco.org/Documentation/Getting-Started/Setup/Upgrading/general#are-you-using-nuget">"smoother" update path</a>.</p>
+<p>NuGet integration was one of the simplest of the steps as all that was required was to install the same version as was currently running on the site and allow NuGet to overwrite the config files! Each config file was already source controlled therefore I was able to compare them line by line inside my Git client and copy any required information over where needed!</p>
+<p>Except, core NuGet integration was all I could do at this point as I still had to work out which of the packages would work on Cloud BEFORE updating the core files!</p>
+<p><img src="/archive/media/2017/2017-12-19_23-52-58.png?width=477.84810126582283&amp;height=500" alt="Trello is amazing!" data-udi="umb://media/a724fe3de64c4a53b22e3ad406a73812"></p>
+<p>I began by listing out the packages that were installed on the Trello board and working out a reference to what could be updated and what couldn't:</p>
+<p>One of these was specific to the earlier migration from one CMS to Umbraco, so while Richard Soeteman's CMS Import worked perfectly for the original task, it was no longer required, so it could be left alone.</p>
+<p>A snag point arose where there wasn't an update or replacement for a package; this was specific to packages like Robot Text Editor or Search Engine Sitemap - both brilliant packages, but neither were still actively developed? It was decided at this point that they would be brought up to the latest core version supported by each and then only action if there was a problem caused by each. Thankfully there hasn't been, and our progress proceeded to the next step!</p>
+<p>I then integrated NuGet on to the packages I could again allowing smoother updates where possible based on the Core requirements for each version shown in the package description. However, the next snag arose in that there were packages that couldn't be updated without updating Umbraco first, so the order of updates became version specific between minor and patch Core versions! Working this out took a little while but was helped immensely by the dependencies listed in the package descriptions:</p>
+<p><img style="width: 500px; height: 377.4468085106383px;" src="/archive/media/2017/2017-12-23_01-05-31.png?width=500&amp;height=377.4468085106383" alt="" data-udi="umb://media/ad130655eb154d6e88f522dd3d429315"></p>
+<p> </p>
+<p>Finally, it was at this point that I began the actual update process though ... thankfully!</p>
+<p>Sadly, when I tried to update the Core on each iteration, something else failed as outlined in the breakdown below:</p>
+<ul>
+<li>7.2.6 ~&gt; 7.2.7 =&gt; Stuck at non-refreshing web redirection screen</li>
+<li>7.2.6 ~&gt; 7.2.8 =&gt; Upgrade completes but no back office login page, white screen displayed with no errors in console</li>
+<li>7.2.6 ~&gt; 7.3.0 =&gt; Same as 7.2.8</li>
+<li>7.2.6 ~&gt; 7.4.0 =&gt; Upgrades, however, Nested Content properties are empty on content nodes in back office, BUT front-end renders correctly</li>
+<li>7.2.6 ~&gt; 7.4.1 =&gt; Upgrades too, however still no Nested Content properties in content nodes AND front-end YSOD's as well with a null reference error on the Nested Content property </li>
+<li>7.2.6 ~&gt; 7.4.3 =&gt; Upgrades yet once again still no Nested Content in content node properties BUT front end worked again as Matt Brailsford explained to me via Slack:</li>
+</ul>
+<blockquote><span>"</span><em>[...] the recommended approach we've suggested in the past is to first upgrade NC, then resave all nodes with NC on them so this will apply the auto fix to switch to doc type aliases, and then do the Umbraco upgrade.</em><span>"</span></blockquote>
+<p><span>As you can see in the forum post <a href="https://our.umbraco.org/forum/using-umbraco-and-getting-started/87413-upgrading-from-726-to-latest-and-i-cant-even-get-up-to-74x" title="Umco to the rescue!">here</a>, the final snag turned out to be failing to save the "old" DataTypes for Nested Content to "new" DataTypes between updates and when I had done that the site update completed and we had manageable content again!!! Thanks again to Lee, Matt, Sebastiaan's <a href="https://cultiv.nl/blog/how-to-diagnose-umbraco-upgrade-problems/" title="Check it out!">upgrade checklist</a>, and everyone on the Slack channel for their help!</span></p>
+<p><span>Once we had an updateable core, it was smooth sailing again, all the way up to v7.5.14 - the penultimate version before taking the leap to 7.6 due to breaking database changes highlighted by both the community in conversations as well as the upgrade documentation!</span></p>
+<h3>Make sure you update to v7.5.14 before moving onto v7.6!</h3>
+<p><span>I had, at this point, also been able to convert the out-dated</span> packages like Angular Maps to TerraType, with no loss of mapping as mentioned before! Thanks to the community for pointing out the replacement as well as hats off to Jonathan Richards for both packages and especially the smooth migration process between, it was well appreciated by this time! </p>
+<p>Therefore, I was relieved to know that I would be initiating the final push to 7.6.5 the next morning, as well as <span>updating the last three packages to their respective latest versions in preparation for the migration to the Cloud! </span></p>
+<p><span><img style="width: 500px; height: 84.05545927209705px;" src="/archive/media/2017/2017-08-12_20-09-09.png?width=500&amp;height=84.05545927209705" alt="" data-udi="umb://media/31e3529e5b2a49b4971b55423f1254d5"></span></p>
+<p><span></span><span>I was then able to complete the core update all the way to 7.6.5, </span><span>install the local version of Cloud into a new VS Solution by following the <a href="https://our.umbraco.org/documentation/Umbraco-Cloud/Set-Up/Working-With-Visual-Studio/">brilliant directions</a> from HQ, as well as commit all the local files up to the Cloud instance! </span></p>
+<p><span><img style="width: 500px; height: 158.5014409221902px;" src="/archive/media/2017/2017-08-12_20-10-49.png?width=500&amp;height=158.5014409221902" alt="" data-udi="umb://media/8cb8ab11a203415ab6b50072e27dbfca"></span></p>
+<p><span>The rest of the migration in Cloud itself, i.e. from the Dev instance to Live, still had a few minor hiccups but each was handled resolutely by the Triple-S team, as well as other members of HQ when needed. In conversations with others who have moved to Cloud this timely response and perseverance to sort out the issues goes a long, long way in showing the dedication the entire HQ have for Cloud.</span></p>
+<p><span>Point to be made, about migrating the Database up, is that the migration process handles all updates to the Azure DB that you set up when you create the Cloud instance. The local instances maintain their connection strings in the web.config as usual, and the HQ have created a magical process that handles the data transformation for you behind the scenes! Thank you HQ, it's the little tweaks and tricks we don't see that make Cloud so amazing!</span></p>
+<p>So, to sum it all up, to move to Cloud you need to make sure your core version is at the newest version as well as each package used on the site is on their latest respective version supported by Cloud. Sign-up or log in to create a new project on Cloud and then download and install the Cloud repo into your local IDE, copy your site files into the local solution and use Git to commit everything up to the remote Cloud repo!</p>
+<p><span>So, for me, while the entire process proved to be a bit more complicated than originally thought, this was, in fact, an edge case in that the site required loads of updates to be able to work on Cloud, as well as having out-dated packages that required the same. It goes to show that you should always u</span><span>pdate your Core and packages as often as new versions are released to maintain the highest level of performance and security as well as making any further updates a load easier for you to handle! P</span><span>ersonally, I think the greatest feature of Cloud is the fact that HQ handle these Core updates for you and you're only left managing the packages updates when released! <br><br>I hope this helps anyone who is contemplating moving on up to Cloud and I would be happy to answer any questions you might have ... after the holidays! <br><br>Happy holidays to all, and to all a good night!</span></p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/community/" title="See all articles tagged with Community">Community</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/git/" title="See all articles tagged with Git">Git</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/github/" title="See all articles tagged with GitHub">GitHub</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/umbraco-cloud/" title="See all articles tagged with Umbraco Cloud">Umbraco Cloud</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jon Humphrey"><img src="//gravatar.com/avatar/f1b773013e7c1b03c3a1bdc6e3e74d8c.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/f1b773013e7c1b03c3a1bdc6e3e74d8c.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jon Humphrey</h1>
+        <p>Jon is on Twitter as <a href="//twitter.com/precisioncoding" title="Jon Humphrey on Twitter" rel="author">@precisioncoding</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

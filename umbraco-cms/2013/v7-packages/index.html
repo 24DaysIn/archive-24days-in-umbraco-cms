@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco V7 Compatible packages</title>
+<meta name="description" content="Tips on making your packages compatible with Umbraco 7 and using a single installer for both versions.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco V7 Compatible packages</h1>
+      <p class="byline"> by Richard Soeteman, <span class="pubdate">posted on <time datetime="2013-12-19">Dec 19, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><a href="http://umbraco.com/follow-us/blog-archive/2013/11/21/umbraco-7.aspx">Umbraco V7</a> is released almost a month ago. I'm working hard to make the <a href="http://soetemansoftware.nl/">current packages</a> compatible with Umbraco V7. I've already converted CMSImport, Mediaprotect and MemberExport. The process of converting is pretty straight forward but I had to make some tweaks in my packages that I want to share in this article.</p>
+<p class="intro">Maybe it's just me, but I want to have a single package installer for all supported versions of Umbraco. Otherwise users will download the wrong version of the package and their environment will explode.  You may guess who gets blamed ;-). This is the way I developed my packages in the past and I really want to continue this when making my packages compatible with Umbraco V7.  </p>
+<h2>How to make packages backwards compatible?</h2>
+<p>All you need to do to make a package compatible with an older version of Umbraco is to compile against that version. For example CMSImport is compatible with version 4.5.2 of Umbraco and above so the whole project is compiled against that version. This ensures I can only use the classes and methods available in that version.  This method works very well for me, even with the new Content and media services. The Umbraco core team did a really great job to ensure the old methods would still work.</p>
+<h2>Then V7 came...</h2>
+<p>With V7 not only the UI layer changed from <a href="http://www.asp.net/web-forms">Webforms </a>to <a href="http://angularjs.org/">Angular JS</a> but because of that the following breaking changes got introduced:</p>
+<ul>
+<li>The ContentTreeController replaced the old BaseTree</li>
+<li>Legacy events won't execute when they are initiated form the new ContentTreeController</li>
+<li>Legacy data types don't work anymore</li>
+</ul>
+<figure class="pull-right">
+  <a href="/archive/media/2013/different_event_versions.png">
+    <img src="/archive/media/2013/different_event_versions.png" width="314" alt="VsStructure">
+  </a>
+</figure>
+<p>This was a serious issue for me. It took me a few days to figure out what to do. I realized quickly that I needed to split up parts of the functionality into multiple projects. For example all event handlers were part of the MediaProtect assembly  in previous releases but are now separated into multiple Assemblies:</p>
+<ol>
+<li>MediaProtect.Events . Targeted at Umbraco V7</li>
+<li>MediaProtect.Events.Legacy. Targeted at all versions before Umbraco V7</li>
+</ol>
+<p>This allowed me to use the new events in the MediaProtect.Events which references the Umbraco V7 assemblies, the legacy events project still references the old 4.5.2 assemblies.</p>
+<h2>Packager challenge</h2>
+<p>This split-up of assemblies fixed the backwards compatibility issue I had, but introduced a new problem. How can I create an installer that works on all versions of Umbraco? Usually this isn't an issue but since we use some of the methods introduced in umbraco V7 for the MediaProtect.Events project that don't exist in older versions of Umbraco the logfiles would have been full with missing method exceptions.</p>
+<h2>Package actions to the rescue</h2>
+<p>If you are familiar with creating packages for Umbraco. You've probably heard of <a href="http://our.umbraco.org/wiki/reference/packaging/package-actions">package actions</a>. Package actions are simple classes that you can include in your assembly and gets executed by the Umbraco package installer by providing an XML Snippet for configuration telling the action what to do.</p>
+<p>In this case I wrote a package action that I call ConditionalFileDeploy that gets a source and target location. It also can take a min and optional max version.  During install it will inspect the Umbraco version number and when it meets the version criteria it will copy the file to the bin folder and otherwise delete it.</p>
+<pre class="language-csharp"><code>using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Web;
+using System.Xml;
+using MediaProtect.Umbraco.PackageActions.Helpers;
+using umbraco.BusinessLogic;
+using umbraco.cms.businesslogic.packager.standardPackageActions;
+using umbraco.interfaces;
+
+namespace MediaProtect.Umbraco.PackageActions
+{
+     /// &lt;summary&gt;
+    /// Copies a file when it doesn't exists in the target location
+    /// &lt;/summary&gt;
+    public class ConditionalFileCopyAction : IPackageAction
+    {
+        /// &lt;summary&gt;
+        /// Executes action
+        /// &lt;/summary&gt;
+        /// &lt;param name="packageName"&gt;Name of the package.&lt;/param&gt;
+        /// &lt;param name="xmlNode"&gt;The XML node.&lt;/param&gt;
+        /// &lt;returns&gt;&lt;/returns&gt;
+        public bool Execute(string packageName, XmlNode xmlNode)
+        {
+            var source = HttpContext.Current.Server.MapPath(XmlHelper.GetAttributeValueFromNode(xmlNode, "source"));
+            var target = HttpContext.Current.Server.MapPath(XmlHelper.GetAttributeValueFromNode(xmlNode, "target"));
+            var minversion = new UmbracoVersionInfo(XmlHelper.GetAttributeValueFromNode(xmlNode, "minversion"));
+            var maxversion = new UmbracoVersionInfo(XmlHelper.GetAttributeValueFromNode(xmlNode, "maxversion"));
+
+            Log.Add(LogTypes.Debug, -1, string.Format("Executing Package Action {0} with Params  Source:{1} target:{2} minversion:{3} maxversion{4} currentVersion{5}", Alias(), source, target, minversion, maxversion, UmbracoVersionInfo.Current));
+
+            if (CanCopy(UmbracoVersionInfo.Current,minversion,maxversion))
+            {
+                //File doesn't exists
+                //Make sure folder gets created
+                var targetFolder = Path.GetDirectoryName(target);
+                Directory.CreateDirectory(targetFolder);
+
+                //Copy file
+                File.Copy(source, target);
+            }
+            File.Delete(source);
+            return true;
+        }
+
+        /// &lt;summary&gt;
+        /// Determines whether the specified version is valid to copy.
+        /// &lt;/summary&gt;
+        /// &lt;param name="currentVersion"&gt;The current version.&lt;/param&gt;
+        /// &lt;param name="minVersion"&gt;The min version.&lt;/param&gt;
+        /// &lt;param name="maxVersion"&gt;The max version.&lt;/param&gt;
+        /// &lt;returns&gt;
+        ///   &lt;c&gt;true&lt;/c&gt; if [is valid version] [the specified current version]; otherwise, &lt;c&gt;false&lt;/c&gt;.
+        /// &lt;/returns&gt;
+        public bool CanCopy(UmbracoVersionInfo currentVersion, UmbracoVersionInfo minVersion,
+                                   UmbracoVersionInfo maxVersion)
+        {
+            return currentVersion.IsGreaterOrEqual(minVersion) &amp;&amp; (!maxVersion.IsSpecified() || currentVersion.IsSmallerOrEqual(maxVersion));
+        }
+
+        public string Alias()
+        {
+            return "MediaProtect_ConditionalFileCopyAction";
+        }
+
+        public bool Undo(string packageName, XmlNode xmlData)
+        {
+            return true;
+        }
+
+        public XmlNode SampleXml()
+        {
+            return helper.parseStringToXmlNode(string.Format("&lt;Action runat=\"install\" alias=\"{0}\" source=\"~/app_data/temp/package.config\" target=\"~/umbraco/plugins/package/package.config\" minversion=\"4\" maxversion=\"6.9.1\" /&gt;", Alias()));
+        }
+    }
+}
+</code></pre>
+      <p class="snippet-caption">Conditional file copy action</p>
+<p>Using the above package action I could include both dll's into my package but instead of specifying the /bin folder I specified the app_data/temp folder as target location</p>
+<pre class="language-markup"><code>&lt;file&gt;
+  &lt;guid&gt;Mediaprotect.Events.dll&lt;/guid&gt;
+  &lt;orgPath&gt;/app_data/temp/Mediaprotect&lt;/orgPath&gt;
+  &lt;orgName&gt;Mediaprotect.Events.dll&lt;/orgName&gt;
+&lt;/file&gt;
+&lt;file&gt;
+  &lt;guid&gt;Mediaprotect.Events.Legacy.dll&lt;/guid&gt;
+  &lt;orgPath&gt;/app_data/temp/Mediaprotect&lt;/orgPath&gt;
+  &lt;orgName&gt;Mediaprotect.Events.Legacy.dll&lt;/orgName&gt;
+&lt;/file&gt;
+</code></pre>
+      <p class="snippet-caption">Package files</p>
+<p>And  use this snippet to copy the correct dll</p>
+<pre class="language-markup"><code>&lt;Action runat="install" alias="MediaProtect_ConditionalFileCopyAction" source="~/app_data/temp/Mediaprotect/Mediaprotect.Events.dll" target="~/bin/Mediaprotect.Events.dll" minversion="7" /&gt;
+&lt;Action runat="install" alias="MediaProtect_ConditionalFileCopyAction" source="~/app_data/temp/Mediaprotect/Mediaprotect.Events.Legacy.dll" target="~/bin/Mediaprotect.Events.Legacy.dll" minversion="4" maxversion="6.*" /&gt;
+</code></pre>
+      <p class="snippet-caption">Package actions</p>
+<p>This magic XML snippet basically says Copy MediaProtect.Events.dll to the bin folder when the Umbraco version is 7 or higher. Or copy MediaProtect.Events.Legacy.dll to the bin folder when the Umbraco between 4 and 6.</p>
+<h2>UI tips</h2>
+<p>So that was all to make sure our packages would still work in Umbraco V7 and still use a single package installer file. Of course it didn't look "Belle" without a few UI changes. What I did was creating a method to check which icon to display in the tree. <a href="http://www.nibble.be/?p=318">Something similar Tim used in his blog post</a>.</p>
+<figure class="pull-right">
+  <a href="/archive/media/2013/buttons.png">
+    <img src="/archive/media/2013/buttons.png" width="499" alt="Buttons">
+  </a>
+</figure>
+<p>Another thing I found that the new UI had nice looking buttons. Could be just Twitter bootstrap but I'm not familiar with this yet.  But when installing Media protect buttons were Ugly compared to the ones used by Umbraco. This could easily be solved by adding some css classes to the buttons.</p>
+<ol>
+<li>btn btn-success</li>
+<li>btn btn-danger</li>
+<li>btn</li>
+</ol>
+<p>One last thing make sure to use the default Umbraco controls as described on the <a href="http://our.umbraco.org/documentation/Installation/Upgrading/v7-upgrade">upgrade instructions page</a>. This ensures that the lay-out of the page looks consistent.</p>
+<p>Hope you can use this article when updating your packages for Umbraco V7 during the Christmas break.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Richard Soeteman"><img src="//gravatar.com/avatar/269eafaf2cbe7ca7efe5936ac25e832d.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/269eafaf2cbe7ca7efe5936ac25e832d.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Richard Soeteman</h1>
+        <p>Richard is on Twitter as <a href="//twitter.com/rsoeteman" title="Richard Soeteman on Twitter" rel="author">@rsoeteman</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li class="selected"><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

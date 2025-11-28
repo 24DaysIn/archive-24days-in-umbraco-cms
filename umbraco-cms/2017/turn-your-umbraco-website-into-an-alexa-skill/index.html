@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Turn your Umbraco website into an Alexa Skill!</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Turn your Umbraco website into an Alexa Skill!</h1>
+      <p class="byline"> by Carole Logan, <span class="pubdate">posted on <time datetime="2017-12-09">Dec 9, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span style="font-weight: 400;">Users are consuming content in a variety of different formats on countless number of devices. Recently developers have been facing challenges in how we can get our content to them in these different formats to just the traditional website and importantly, how do we easily and consistently update content for these feeds. Hopefully this post will show how to do this for the Amazon Alexa platform but show how this could be easily applied to your chosen technology.</span></p>
+<p class="intro"> </p>
+<p><span style="text-decoration: underline;"><strong>An Introduction to Alexa:</strong></span></p>
+<p>(If you already know the basics about Alexa skills, feel free to skip down a few paragraphs.)</p>
+<p>I am sure you have heard of Amazon’s venture to AI world via the echo devices, even if not currently available in your country. The out the box functionality of these devices is pretty cool, but for me the really awesome part is that, as programmers, we can get it to some clever apps without having to do all the complicated language recognition stuff. Amazon does that for us and leaves us free to build the actual functionality of the app! The AI behind the system is called Alexa and these apps are called Skills.</p>
+<p><span style="font-weight: 400;">There are several types of Alexa skills:</span></p>
+<ul>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Smart home skills- Integrated with smart home devices to be controlled by Alexa. “Alexa, switch on the lights”, for example.</span></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Video skills- Integrate with connected TVs to control what to watch. “Alexa, watch Wonder Woman”, for example.</span></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Flash Briefing- Provider users with content from subscribed sources. “Alexa, what’s the news?”.</span></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Custom skills- you can provide code in a choice of programming languages to do anything else you want to not covered by these other options. I have given a quick guide to building a custom skill integrating with Umbraco <a href="http://carolelogan.net/blog/amazon-alexa-skill-with-umbraco-cms/">here</a>.</span></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Echo Show Skills- a new to the market version of the Amazon Echo that has a display. I haven’t looked into this much but I understand we can provide content for on the screen as well as the audio.</span></li>
+</ul>
+<p><span style="font-weight: 400;">More details and getting started tutorials <a href="https://developer.amazon.com/alexa-skills-kit/">here</a>.</span></p>
+<p><span style="font-weight: 400;">For this tutorial, I want to focus on creating a news skill. A flash briefing is a way to get updates from feeds you have subscribed to via your Amazon echo. It’s usually headlines and then you can get more detail by using the Alexa app and clicking on a “read more” link on the card to read the full article. Most of the large news companies have one so you can ask “Alexa, what’s the news?” and you will get a collated list of your subscribed feeds read out to you.</span></p>
+<p><img style="width: 344.4108761329305px; height: 500px;" src="/archive/media/2017/flashbriefingcards.jpg?width=344.4108761329305&amp;height=500" alt="" data-udi="umb://media/91970bf1841f4b019c5df93f19125fce"></p>
+<p><span style="font-weight: 400;">So, where does the data come from for this? You can do it in RSS by pointing it at your existing RSS feed... but where’s the fun in that, eh? JSON is the prefered format from Amazon anyway so that’s the option I will discuss in this post. <a href="https://developer.amazon.com/docs/flashbriefing/flash-briefing-skill-api-feed-reference.html">Here </a>is some more info on the feed and the format it needs to be in.</span></p>
+<p><span style="text-decoration: underline;"><strong>Building your Alexa data feed:</strong></span></p>
+<p><span style="font-weight: 400;">Since flash briefing skills are a way to keep people up to date with content published in the last 7 days (using the update date in above api reference, after this Amazon don’t use it as it’s no longer news) so I thought it would be a cool proof of concept to be able to tell people about recently published blog posts. My blog is built in Umbraco so I decided to extend my repo to also provide content as a headless CMS for the Alexa skill JSON feed as well as the standard use of the content on the website blog.</span></p>
+<p><span style="font-weight: 400;">When working on Alexa skills for clients, we try to keep the API content being controlled within the same CMS instance as the website. The client already use Umbraco for their website, so let’s not duplicate content updates needed but just supplement that data with anything needed for the new feed. So I decided to try this for my site too.</span></p>
+<p><span style="font-weight: 400;">My site structure is a “BlogPostRepository” under the homepage which then contains many child nodes of type “Blogpost”. See screenshot:</span></p>
+<p><img style="width: 343px; height: 193px;" src="/archive/media/2017/blogscructure.jpg?width=343&amp;height=193" alt="" data-udi="umb://media/9be73650e10447c2afad90a35ce5b238"></p>
+<p> </p>
+<p><span style="text-decoration: underline;"><strong>Umbraco Doctype configuration:</strong></span></p>
+<p> </p>
+<p><span style="font-weight: 400;">I updated my Blog Post doctype to have extra fields to support this new feature. I decided to add a property to let me decide if this blog post should be included in my Alexa feed: “Include In Flash Briefing?” </span></p>
+<p><span style="font-weight: 400;">I also added content fields specifically for use in this feed such as “Flash Briefing Title” and “Flash Briefing Main Text”. These could have been fed from existing fields in the CMS but I may want the Alexa headline to use different wording to the blog post introduction used on the site for example, so I made them separate.</span></p>
+<p><img style="width: 500px; height: 250.28376844494892px;" src="/archive/media/2017/doctypeconfig.jpg?width=500&amp;height=250.28376844494892" alt="" data-udi="umb://media/2784df07acd04f8c9667375974db431c"></p>
+<p><span style="text-decoration: underline;"><strong>The API:</strong></span></p>
+<p><span style="font-weight: 400;">I started off by creating a WebAPI endpoint within my exisiting Umbraco project, more info on this <a href="https://our.umbraco.org/documentation/reference/routing/webapi/">here.</a></span></p>
+<p> </p>
+<p><span style="font-weight: 400;">As you can see from the code snippet, I created a webAPI controller inheriting from “UmbracoApiController” and implementing a call to get the flash briefing content.</span></p>
+<p><span style="font-weight: 400;">Within this function I get the blog posts from the content tree and create a strongly typed model to represent my Alexa JSON structure. In production, I would use something like <a href="http://umbraco-ditto.readthedocs.io/en/latest/">Ditto</a> </span><span style="font-weight: 400;">to do the mapping here, but I wanted to show clearly what is happening and not distract from the point of this post. Finally, I then serialise this object and then return it to the API.</span></p>
+<pre><code class="language-csharp">public class FlashBriefingController : UmbracoApiController
+    {
+        public HttpResponseMessage GetFlashBriefing()
+        {
+            var root = UmbracoContext.ContentCache.GetAtRoot().FirstOrDefault();
+            var blogPostRepo = root.Children.Where(x =&gt; x.DocumentTypeAlias == "BlogPostRepository").FirstOrDefault();
+            var blogPosts = blogPostRepo.Children.Where(x =&gt; x.DocumentTypeAlias == "BlogPost").OrderByDescending(x =&gt; x.CreateDate);
+            var newGuid = Guid.NewGuid();
+            var modelList = new List&lt;AlexaNewsBriefingResponseModel&gt;();
+
+            //loop through blogposts and return those that are selected to be in flash briefing.
+            foreach (var blogPost in blogPosts)
+            {
+                if (blogPost.GetPropertyValue&lt;bool&gt;("includeInFlashBriefing") == true)
+                {
+                    
+                    var alexaModel = new AlexaNewsBriefingResponseModel()
+                    {
+                        uid = "urn:uuid:" + newGuid,
+                        updateDate = blogPost.UpdateDate.ToString("yyyy-MM-dd'T'HH:mm:ss'.0Z'"),
+                        titleText = blogPost.GetPropertyValue&lt;string&gt;("flashBriefingTitle"),
+                        mainText = blogPost.GetPropertyValue&lt;string&gt;("flashBriefingMainText"),
+                        redirectionUrl = blogPost.UrlWithDomain(),
+                        streamUrl = null // defaults to null
+                    };
+
+                    if (!String.IsNullOrEmpty(blogPost.GetPropertyValue&lt;string&gt;("flashBriefingAudioFile")))
+                    {
+                        //Set the streamUrl if an audio file has been given. 
+                        //If this is provided, Amazon use this over the text.
+                        var nodeId = blogPost.GetPropertyValue&lt;int&gt;("flashBriefingAudioFile");
+                        alexaModel.streamUrl = HttpContext.Current.Request.Url + UmbracoContext.MediaCache.GetById(nodeId).Url();
+                    }
+
+                    modelList.Add(alexaModel);
+                }
+            }
+
+            //Serialise to JSON
+            string output = JsonConvert.SerializeObject(modelList);
+            HttpContext.Current.Response.ContentType = "application/json";
+            HttpContext.Current.Response.Write(output);
+
+            return new HttpResponseMessage();
+            
+        }
+    }</code></pre>
+<p><span style="font-weight: 400;">So let’s put this all together…</span></p>
+<p><span style="font-weight: 400;">Here is a new blog post, configured in Umbraco to show in the Alexa feed.</span></p>
+<p><span style="font-weight: 400;"><img style="width: 500px; height: 439.7590361445783px;" src="/archive/media/2017/doctypecontent.jpg?width=500&amp;height=439.7590361445783" alt="" data-udi="umb://media/b517c9d12b6d428fa527150f317b0528"></span></p>
+<p> </p>
+<p><span style="font-weight: 400;">And here is the JSON returned from the the API:</span></p>
+<pre><code class="language-json">[  
+   {  
+      "uid":"urn:uuid:334f3990-03bc-473d-8c01-d00f010dd340",
+      "updateDate":"2017-10-24T22:49:00.0Z",
+      "titleText":"Code Craft Conf 2017",
+      "mainText":"On 15th September I went along to Citizen M Glasgow to spend the day with about 60 other developers chatting about code! I was a guide for a conversation about mental health within the tech industry.For a wee overview of what happened on the day, click on the link within the Alexa app.",
+      "redirectionUrl":"http://carolelogan.net/blog/codecraftconf-2017/",
+      "streamUrl":null
+   }
+]</code></pre>
+<p><span style="font-weight: 400;">You are probably wondering “Carole, you said we were making an Alexa skill, this is just an API” … so, we have an API controlled in Umbraco but Alexa can’t get this to users without actually setting up a skill!</span></p>
+<p> </p>
+<p><span style="text-decoration: underline;"><strong>Alexa Flash Briefing configuration:</strong></span></p>
+<p><span style="font-weight: 400;">So, now we have our data feed but we need to actually tell Alexa how to find this! You can sign up to an Amazon developer account: </span><a href="https://developer.amazon.com/alexa"><span style="font-weight: 400;">https://developer.amazon.com/alexa</span></a><span style="font-weight: 400;"> and select the Alexa tab:</span></p>
+<p><span style="font-weight: 400;"><img style="width: 500px; height: 179.92874109263659px;" src="/archive/media/2017/24days-getstarted.png?width=500&amp;height=179.92874109263659" alt="" data-udi="umb://media/f46aeb048d594614b36c9cf8c0b114e2"></span></p>
+<p> </p>
+<p><span style="font-weight: 400;"><img style="width: 500px; height: 325.187969924812px;" src="/archive/media/2017/24days-skillstep2.png?width=500&amp;height=325.187969924812" alt="" data-udi="umb://media/463829aa3a7d44c298f7a6999b9f11d4"></span></p>
+<p><span style="font-weight: 400;">Now you can complete the forms to configure your skill to point at your JSON API. The Alexa portal will fetch the data when you do this to ensure it is reachable and is of a suitable data structure. You can now test this on your own device registered to your developer account and check that when you ask for your news, your posts are read out!</span></p>
+<p><span style="font-weight: 400;">Here is the card shown in the Alexa app when I ask for my flash briefing. </span></p>
+<p><img style="width: 320px; height: 443px;" src="/archive/media/2017/alexacardscreenshot.jpg?width=320&amp;height=443" alt="" data-udi="umb://media/fb63f25ba19740bebe8c4002789f2214"></p>
+<p><span style="font-weight: 400;">As you can see, this is the content in CMS sent in JSON and the image is set in the skill configuration. Note: Interestingly, when making a custom skill you can define in your data response the image in the card but don’t seem to have this in flash briefing skill.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Should you want to submit you skill to be available to people to subscribe to (please let me know if you do!) then you will need to fill in a few more details like the name, description and keywords to let people find your skill.</span></p>
+<p> </p>
+<p><span style="text-decoration: underline;"><strong>** A few days later…**</strong></span></p>
+<p><span style="font-weight: 400;">Amazon accepted my skill! Here is my flash briefing skill where you can get any new blog posts in your Alexa news updates. You can see how the skill appears in the app store:</span></p>
+<p><img style="width: 324px; height: 306px;" src="/archive/media/2017/alexaskillsearch.jpg?width=324&amp;height=306" alt="" data-udi="umb://media/0a4d5c33a65d445abe015e2d98264f63"></p>
+<p> </p>
+<p><span style="font-weight: 400;">So, is an Alexa skill super useful for my wee blog? Probably not. But this was a good proof of concept of how we can do this for a news website or client blog without *too* much extra development.</span></p>
+<p><span style="font-weight: 400;">TLDR; Already have an Umbraco blog? Turn this into an Alexa flash briefing skill within a few hours.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Any questions? Working on Alexa skills? Just want to say hello? Get me on </span><a href="https://twitter.com/crgrieve"><span style="font-weight: 400;">@crgrieve</span></a></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/iot/" title="See all articles tagged with IOT">IOT</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Carole Rennie Logan"><img src="//gravatar.com/avatar/95cb27cec6315e12d4b4d23d168bbe8d.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/95cb27cec6315e12d4b4d23d168bbe8d.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Carole Rennie Logan</h1>
+        <p>Carole is on Twitter as <a href="//twitter.com/crgrieve" title="Carole Rennie Logan on Twitter" rel="author">@crgrieve</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

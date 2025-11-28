@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Streamline your development workflow with IIS Builder</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">IIS Builder</h1>
+      <p class="byline"> by Matthew Hart, <span class="pubdate">posted on <time datetime="2020-12-15">Dec 15, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>What is IIS Builder and why did I create it?</h2>
+<p>IIS Builder is a single <a rel="noopener" href="https://en.wikipedia.org/wiki/PowerShell" target="_blank">Powershell</a> script and a JSON file designed to build a local IIS Site. It was born out of the frustration from my colleague, a front-end developer, who just wanted to focus on writing the front end instead of being bogged down by Visual Studio. Having to constantly build the project to view the website within the slow debugger was a big pain for them. They did not need the debugger at all and preferred to use their own editor which I believe was Atom at the time. So, having to switch between VS and Atom would be quite disruptive. I sought a way to rectify this and came up with IIS Builder.</p>
+<h2>A quick demo?</h2>
+<p class="intro">Below is a quick demonstration of using IIS Builder as an External Tool in Visual Studio. In no time at all, I have built an IIS Site for my blog and can begin working on it without having to run the debugger. Provided the project has been built recently you are all set to start hacking away.</p>
+<p><img style="width: 500px; height: 281.25px;" src="/archive/media/2020/iis-builder-external-tool.gif?width=500&amp;height=281.25" alt="Running IIS Builder as an External Task in Visual Studio" data-udi="umb://media/a438af3ef7f44f63b6df3ca5d351f7cc"></p>
+<h2>What does it do?</h2>
+<p>As mentioned, it builds a local IIS site for any web project so not just Umbraco (.NET) but PHP, Node or anything that IIS can support. That's if you get the correct modules for IIS. I used to play around with Laravel (a PHP framework) in the past and wanted to see if the script would work and it did!</p>
+<p>The site is configured by a small JSON file that needs to live in the web root. This could be committed into your repository and shared with your team. Allowing for your whole team to have the same bindings when working on a web project together. No more arguing over who changed the Culture &amp; Hostnames! Below is the config for the local IIS site, notice how multiple bindings can be configured:</p>
+<pre><code class="language-json">{
+    "IIS-Site-Name": "test-site",
+    "App-Pool-Name": "test-site",
+    "IIS-App-Pool-Dot-Net-Version": "v4.0",
+    "bindings": ["test-site.localtest.me","test-site-v1.localtest.me","test-site-v2.localtest.me"]
+}</code></pre>
+<p>It has a lot of features already baked in to ensure the whole process is just a click. Below is a quick summary on the features:</p>
+<h3>Automatically opens as Admin</h3>
+<p>Since we are updating IIS, the script will need Admin permissions. If the script is ran without Admin permissions it will request to open as Admin. Saving you from having to open an Elevated Powershell terminal to run the script.</p>
+<h3>Multi-domain/Binding support</h3>
+<p>It can handle multiple bindings (domains) which could be whatever you wish as it will place those bindings into your HOSTS file, point them at your machine and then assign those bindings to the IIS site. It also supports the <strong>localtest.me</strong> domain which has been kindly provided a wildcard DNS setup where any host name points to 127.0.0.1. So if you want to keep your HOSTS file clean specify a localtest.me domain.</p>
+<h3>Applies the necessary permissions to your web root</h3>
+<p>The script will iterate through your web root and apply <strong>modify</strong> permissions for <strong>IUSR</strong>, <strong>IIS_IUSRS</strong> and the <strong>App Pool</strong> specified in the config.</p>
+<h3>Generates and renews self-signed certificates for all bindings</h3>
+<p>As the script iterates through the bindings specified it will create a self signed certificate for each domain and add them to your <strong>Personal</strong> and <strong>Trusted</strong> certificate stores. So, when you visit your local site under IIS the browser will see the certificate is in the trusted store and trust it.</p>
+<p>After 2 years the certificates will expire, not to worry simply run IIS Builder again and it will re-create the site, identify the expired certificates and renew them.</p>
+<p>It also identifies if there are multiple certificates for a single domain, it will identify the the one with the longest expiry date and remove the older ones. This is particularly useful if you have used older versions of the script.</p>
+<p>By default, the script won’t delete old certificates from your Trusted Store however this can be enabled if you wished.</p>
+<h3>Recently added: Has -Path parameter support</h3>
+<p>This is a very useful feature that was recently added, previously the script had to live in the Web root as you couldn't specify external locations. This caused multiple older versions of IIS Builder to float around in various repositories at my workplace. Now with <strong>-Path</strong> the script can live in one location on my machine and I can tell IIS Builder that my site lives here when running it. This opens a range of possibilities such as using Visual Studio external tools to configuring Powershell Aliases.</p>
+<h2>How do I use it?</h2>
+<p>There are multiple ways of using the script, but the first important step is to download it. There is a quick start guide on the Github README: <a href="https://github.com/mattou07/iis-builder">https://github.com/mattou07/iis-builder</a></p>
+<p>I will start from the very simple methods down to more intuitive ways to use the script.</p>
+<h3>Right click and Run with Powershell</h3>
+<p>This is the quick and dirty approach where we put the Powershell file in the web root and <strong>right click</strong> and <strong>run with powershell</strong>. The script will elevate itself to admin, find the json config and build the IIS site based off that config.</p>
+<p><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/6946582596ce44c19ea9d13988305d06"></p>
+<h3>Post Build Event</h3>
+<p>You could run it as a Post Build Event, this means the script will be triggered every time you start a build. Useful if you want to destroy and re-create the IIS site on each build but can be a little annoying at times.</p>
+<h3>Visual Studio External Tool</h3>
+<p>This is currently my favorite method as its seamless with Visual Studio. This was demonstrated in the gif at the beginning of this post. I only need to run it once from Visual Studio Tools menu and I am done. Instructions to set this up are in the <a rel="noopener" href="https://github.com/mattou07/iis-builder/blob/master/README.md" target="_blank">README</a>.</p>
+<h3>Using a Powershell alias</h3>
+<p>Alternatively you could call the script from the terminal and pass in the <strong>-Path</strong>. However doing this can be messy as you would have to keep typing out the paths. So why not create a Powershell Alias instead? </p>
+<p><img style="width: 693px; height: 370px;" src="/archive/media/2020/powershell-alias.png?width=693&amp;height=370&amp;mode=max" alt="" data-udi="umb://media/234d41780f804e1c9fe258278040ebe5"></p>
+<p>As shown above, with an Alias all you need to do is type <strong>IISBuilder</strong> or whatever alias you like and the script will run in your current directory.</p>
+<h2>Thanks for reading</h2>
+<p>I hope you enjoyed this post as well as the others this year. Details on how to run the script are in the <a rel="noopener" href="https://github.com/mattou07/iis-builder" target="_blank">Github README</a>. If you come across any issues or think of anything else you would like added let me know and I will look into it. Happy IIS Building!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/devops/" title="See all articles tagged with Devops">Devops</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/iis/" title="See all articles tagged with IIS">IIS</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/powershell/" title="See all articles tagged with PowerShell">PowerShell</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Matthew Hart"><img src="//gravatar.com/avatar/f1e2ce231a9f477c3b2b0026ff106d61.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/f1e2ce231a9f477c3b2b0026ff106d61.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Matthew Hart</h1>
+        <p>Matthew is on Twitter as <a href="//twitter.com/mattou07" title="Matthew Hart on Twitter" rel="author">@mattou07</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

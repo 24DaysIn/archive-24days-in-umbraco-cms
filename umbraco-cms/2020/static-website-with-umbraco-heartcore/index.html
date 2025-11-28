@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>ASP.NET Core 5.0 static website with Umbraco Heartcore</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Static website with Umbraco Heartcore</h1>
+      <p class="byline"> by Emmanuel Tissera, <span class="pubdate">posted on <time datetime="2020-12-03">Dec 3, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Stazor (<strong>Sta</strong><em>tic</em> + <em>Ra</em><strong>zor </strong> = <strong>Stazor</strong> /steɪzə/) pages is a concept which has been gnawing in my mind for quite some time with the advent and proliferation of JAMstack. <a rel="noopener" href="https://www.luminary.com/jamstack" target="_blank" title="Learn more about JAMstack">JAMstack</a> stands for JavaScript, APIs, and Markup. It’s a modern web development architecture based on client-side JavaScript, reusable APIs, and prebuilt Markup.</p>
+<p class="intro">JAMstack brings with it speed, stability, scalability, security, serviceability and simplicity. Adam Griffith, Luminary's Managing Director, has written an article on the <a rel="noopener" href="https://www.luminary.com/blog/benefits-of-the-jamstack" target="_blank" title="Learn about the benefits of JAMstack">benefits of the JAMstack</a> which is a good read if you need more information.</p>
+<h2>Speedy Gonzales</h2>
+<p><img style="width: 200px; height: 251px;" src="/archive/media/2020/speedy-small.png?width=200&amp;height=251" alt="Speedy Gonzales from Warner Brothers" data-udi="umb://media/dc7ba45eca5e43e9a5f12fee85a921b0"></p>
+<p>The speed and stability of JAMstack comes from the static prebuilt markup which is stored on the server.</p>
+<p>An easy way to describe this is as follows:</p>
+<p><img style="width: 500px; height: 357.3466476462197px;" src="/archive/media/2020/stazor-pages-static-vs-dynamic.png?width=500&amp;height=357.3466476462197" alt="Request flow for static vs dynamic pages" data-udi="umb://media/d7f8b8ea6e61454a9919e70ad307d906"></p>
+<p>With the razor file, the webserver needs to access a database or an API or even a cache store to get the Title. In the illustration above, the razor file relies on the Controller to communicate with <a rel="noopener" href="https://umbraco.com/products/umbraco-heartcore/" target="_blank" title="Umbraco Heartcore">Umbraco Heartcore</a> and retrieve content. This requires the webserver to work a bit harder to render the content.</p>
+<p>With a static file, the webserver just needs to serve index.html. No extra work is needed to generate the content as it is already in the markup.</p>
+<h2>Generating static files</h2>
+<p>I feel we have come the full circle with developing websites. Back in college, I used Dreamweaver to create and update static HTML files. Then FTP it to a shared webserver. Rinse and repeat.</p>
+<p>The problem with the above workflow is that my customer could not edit any content on their own accord and had to rely on a developer (or school-kid in my instance). So content management systems such as Umbraco CMS came into being. While a CMS allows editors to do what they want, it added in a few extra requirements such as executable code and databases.</p>
+<p>With JAMstack, the idea was to get web servers to serve static pages rather than execute code. So platforms such as Gatsby Cloud and Netlify are utilized to pull in content from a CMS, generate a static HTML file and push it to a web server or to a storage resource.</p>
+<h2>Heartcore and JAMstack</h2>
+<p>While a traditional CMS could be plugged into generating static pages, a headless CMS is best suited to do this. Its RESTful API architecture, Image delivery service, Content Delivery Network (CDN), Webhooks and GraphQL API makes Heartcore an ideal fit for building a static website.</p>
+<p>A static website generator such as <a rel="noopener" href="https://www.gatsbyjs.com/" target="_blank" title="Gatsby">Gatsby</a> or <a rel="noopener" href="https://nuxtjs.org/" target="_blank" title="Nuxt.js">Nuxt</a> could be used to pull in content from Heartcore and generate static HTML files. Mix in the GraphQL API and GraphQL filtering capabilities of Heartcore to the recipe. Voila! You have got a JAMstack-ready tech-stack rearing to go!</p>
+<h2>Sticky JAM</h2>
+<p>JAMstack works beautifully when it does. But as in any scenario, there would be tradeoffs. With static pages, you get speed, stability, scalability, security, serviceability and simplicity. But on the negatives, you lose the ability for real-time updates, quick previews, and custom functionality such as forms/workflows. You also rely heavily on third party systems to do most of the heavy lifting for generating static pages.</p>
+<p>What happens when a single update to a content item triggers the need for a thousand pages to be generated in one-go? Or when your build minutes are exhausted? These are real-world scenarios we have encountered. While there are indisputable benefits of using JAMstack, I wanted a way to work with razor views and avoid some of these pitfalls which JAMstack introduces.</p>
+<p>Also, what if you are a die-hard .NET fan? What if you want to build a website with .NET 5.0 but still want the benefits of a static site? What if you are more comfortable writing C# and Razor markup than Javascript and <a rel="noopener" href="https://handlebarsjs.com/" target="_blank" title="Handlebars">Handlebars</a>?</p>
+<h2>Stazor Pages</h2>
+<p>This is where the concept of Stazor pages (or Static Razor pages) come to the rescue. In it’s simplest form, Stazor pages generate static HTML files on the first request and deletes the same file on a webhook call.</p>
+<p>The server would still need to execute some code rather than only serve static pages. Let’s see how this works.</p>
+<h2>Stazor Pages Middleware</h2>
+<p>Stazor Pages Middleware has three distinctive actions it takes in response to page requests and webhook calls.</p>
+<p><img style="width: 500px; height: 356.8376068376068px;" src="/archive/media/2020/stazor-pages-lifecycle.gif?width=500&amp;height=356.8376068376068" alt="Stazor Pages Lifecycle" data-udi="umb://media/0ae63fe763be410c8875da5546e895e1"></p>
+<h3>First Request</h3>
+<p>When receiving the first request for a given URL, the content will be retrieved from Umbraco Heartcore, passed to an MVC Controller and will be rendered out as a page. The usual ASP.NET MVC concept of views, shared layouts, _ViewImports, _ViewStart, ViewComponents, DisplayTemplates all work without any modification. In short, if you have written an ASP.NET MVC Web Application, Stazor Pages Middleware can be easily plugged in with very little modification.</p>
+<p>Once the page is rendered, the middleware saves the page as an HTML file to <span class="code">`AppData\Pages`</span> folder. This location is used by the <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.staticfiles.staticfilemiddleware?view=aspnetcore-5.0" target="_blank" title="StaticFileMiddleware on Microsoft Docs" data-anchor="?view=aspnetcore-5.0">StaticFileMiddleware</a> to serve the static file on subsequent requests. </p>
+<h3>Subsequent Requests</h3>
+<p>On subsequent requests to the same URL, the Stazor Pages Middleware uses the ASP.NET StaticFileMiddleware to serve the previously generated static HTML file. No calls to Heartcore, no processing in Controllers. Just serving some static HTML goodness.</p>
+<h3>Webhook Call</h3>
+<p>Whenever content is updated, we have setup Heartcore to send a webhook request to our web application. Once again the Stazor Middleware takes over and deletes the previously generated content.</p>
+<h2>Stazor Page Lifecycle</h2>
+<p>This diagram outlines those three distinct actions which make up the Stazor Page Lifecycle.</p>
+<p><img style="width: 500px; height: 356.8376068376068px;" src="/archive/media/2020/stazor-pages-hearcore-lifecycle.png?width=500&amp;height=356.8376068376068" alt="Stazor Pages with Heartcore" data-udi="umb://media/91091a805f354215bd4b73abbd5da276"></p>
+<h2>Lord Lamington in Action</h2>
+<p>As with all things new, shiny and performant, Lord Lamington (our world-famous fictional client) wants to get in on the action. Lord Lamington wants to rebuild his website with Stazor Pages on .NET 5. He is also very pleased that he can use most of the Controllers and Views from his previous .NET Core 3.1 web application.</p>
+<p>This is the boring part where I show the developers how we coded this new web application. Feel free to skip to where I show you <a href="#SampleStazorPagesSite">a Stazor Pages sample site</a>.</p>
+<h3>New ASP.NET Core Web Application Project</h3>
+<p>The code I explain below is available on GitHub. Feel free to <a rel="noopener" href="https://github.com/emmanueltissera/TwentyFourDaysIn.StazorPages.Heartcore" target="_blank" title="Code on GitHub">clone the repo</a> and make your own changes.</p>
+<p>First off, make sure you have got Visual Studio 2019 version 16.8.2 or higher. Then create a new ASP.NET Core Web Application (Model-View-Controller) project with ASP.NET Core 5.0. I have called mine <span class="code">TwentyFourDaysIn.StazorPages.Heartcore</span>. Add in references to the following NuGet packages using the Package Manager.</p>
+<ul>
+<li><a rel="noopener" href="https://www.nuget.org/packages/StazorPages/" target="_blank" title="StazorPages on NuGet Gallery">StazorPages</a> - <span class="code">PM&gt; Install-Package StazorPages -Prerelease</span></li>
+<li><a rel="noopener" href="https://www.nuget.org/packages/StazorPages.Heartcore" target="_blank" title="Stazor Pages Heartcore on NuGet Gallery">StazorPages.Heartcore</a> - <span class="code">PM&gt; Install-Package StazorPages.Heartcore -Prerelease</span></li>
+</ul>
+<h3>Cross-Platform Bonus</h3>
+<p>Running your code on macOS or Ubuntu? No Problem! Your cloned repo could run using Visual Studio Code or the .NET Core CLI. More instructions can be found in the <a rel="noopener" href="https://github.com/emmanueltissera/TwentyFourDaysIn.StazorPages.Heartcore/blob/master/README.md" target="_blank" title="README for the sample site">README file</a> on the repo. </p>
+<h3>Add in your configuration</h3>
+<p>Modify your <span class="code">appsetting.config</span> to add configuration to point to your Umbraco Heartcore project. For this example, feel free to use my personal Heartcore project to start off.</p>
+<pre><code class="language-json">{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft": "Warning",
+      "Microsoft.Hosting.Lifetime": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "UmbracoConfig": {
+    "ProjectAlias": "damazingnut",
+    "ApiKey": ""
+  }
+}</code></pre>
+      <p class="snippet-caption">Appsettings for Umbraco Heartcore</p>
+<h3>Content Structure on my Umbraco Heartcore instance</h3>
+<p>The following screen-grab will give you an idea of how I have structured the content in my Heartcore instance.</p>
+<p><img style="width: 500px; height: 270.1107011070111px;" src="/archive/media/2020/content-tree.png?width=500&amp;height=270.1107011070111" alt="Content Tree" data-udi="umb://media/9f69a5730ace4ab197bac99991bb488e"></p>
+<h3>The Cafe Model</h3>
+<p>In this article, I will go through the steps to render out a static page which renders a cafe location. In order to do that, we need a model for <span class="code">Cafe</span> which is derived from <span class="code">HeartcorePage</span> and implements the <span class="code">IRetrievedContent</span> interface. The class also needs to be decorated with the <span class="code">ModelBinder</span> attribute with the type of <span class="code">StazorPages.Routing.RouteDataModelBinder</span>. The <span class="code">MapToType()</span> method also uses <span class="code">StazorPages.Heartcore.Models.HeartcorePage.MapCommonProperties()</span> to map fields such as Id, Url, Name and IsVisible.</p>
+<pre><code class="language-csharp">﻿using Microsoft.AspNetCore.Mvc;
+using StazorPages.Heartcore.Extensions;
+using StazorPages.Heartcore.Models;
+using StazorPages.Models;
+using StazorPages.Routing;
+using Umbraco.Headless.Client.Net.Delivery.Models;
+
+namespace TwentyFourDaysIn.StazorPages.Heartcore.Models
+{
+    [ModelBinder(typeof(RouteDataModelBinder))]
+    public class Cafe : HeartcorePage, IRetrievedContent
+    {
+        public const string ContentTypeAlias = "cafe";
+
+        public string BuildingNumber { get; set; }
+
+        public string AddressLine1 { get; set; }
+
+        public string AddressLine2 { get; set; }
+
+        public string Suburb { get; set; }
+
+        public string Postcode { get; set; }
+
+        public string State { get; set; }
+
+        public string Title { get; set; }
+
+        public string GetContentTypeAlias() =&gt; ContentTypeAlias;
+
+        public static Cafe MapToType(Content content)
+        {
+            var model = new Cafe
+            {
+                Title = content.Name,
+                BuildingNumber = content.Value&lt;string&gt;("buildingNumber"),
+                AddressLine1 = content.Value&lt;string&gt;("addressLine1"),
+                AddressLine2 = content.Value&lt;string&gt;("addressLine2"),
+                Suburb = content.Value&lt;string&gt;("suburb"),
+                Postcode = content.Value&lt;string&gt;("postcode"),
+                State = content.Value&lt;string&gt;("state")
+            };
+            model.MapCommonProperties(content);
+            return model;
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">The Cafe Model, derived from HeartcorePage and implementing IRetrievedContent</p>
+<h3>Cafe Document Type</h3>
+<p>The model above corresponds with this document type on my Heartcore instance.</p>
+<p><img style="width: 500px; height: 369.5823483057526px;" src="/archive/media/2020/cafe-document-type.png?width=500&amp;height=369.5823483057526" alt="Document Type for Cafe" data-udi="umb://media/061296aae68042cda9fef57048d268d8"></p>
+<h3>The Cafe Controller</h3>
+<p>We are going to add a controller to render out a cafe page for us. Nothing special at all here.</p>
+<pre><code class="language-csharp">﻿using Microsoft.AspNetCore.Mvc;
+using TwentyFourDaysIn.StazorPages.Heartcore.Models;
+
+namespace TwentyFourDaysIn.StazorPages.Heartcore.Controllers
+{
+    public class CafeController : Controller
+    {
+        public IActionResult Index(Cafe model)
+        {
+            return View(model);
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Cafe Controller - Get your Lamingtons here</p>
+<h3>The View</h3>
+<p>A view file for the cafe uses a simple bootstrap layout. Again, no special markup or skulduggery here.</p>
+<pre><code class="language-javascript">﻿@model Cafe
+
+@{
+    Layout = "_SimpleLayout";
+}
+&lt;div class="container"&gt;
+    &lt;div class="jumbotron mt-3"&gt;
+        &lt;h3&gt;A little bit of indulgence at our cafe in&lt;/h3&gt;
+        &lt;h1&gt;@Model.Title&lt;/h1&gt;
+        &lt;p class="lead"&gt;@Model.BuildingNumber @Model.AddressLine1 @Model.AddressLine2&lt;/p&gt;
+        &lt;p class="lead"&gt;@Model.Suburb @Model.State @Model.Postcode&lt;/p&gt;
+        &lt;a class="btn btn-lg btn-primary" href="@Model.Url" role="button"&gt;URL to self&lt;/a&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">View for the Cafe</p>
+<p>The <span class="code">_SimpleLayout.cshtml</span> file can be <a data-udi="umb://media/d057e86615fd4364a43a37c67d59737e" href="/archive/media/2020/_simplelayout.cshtml" title="SimpleLayout.cshtml">found here</a>.</p>
+<h3>TypeResolver</h3>
+<p>An implementation of <span class="code">ITypeResolver</span> is needed so that the StazorPages Middleware could map a <span class="code">ContentTypeAlias</span> to a strongly typed model. A simple implementation is given below.</p>
+<pre><code class="language-csharp">﻿using System;
+using StazorPages.Heartcore.Resolvers;
+using StazorPages.Models;
+using TwentyFourDaysIn.StazorPages.Heartcore.Models;
+using Umbraco.Headless.Client.Net.Delivery.Models;
+
+namespace TwentyFourDaysIn.StazorPages.Heartcore.Resolvers
+{
+    public class TypeResolver : ITypeResolver
+    {
+        public IRetrievedContent GetTypedContent(Content content)
+        {
+            return content.ContentTypeAlias switch
+            {
+                Cafe.ContentTypeAlias =&gt; Cafe.MapToType(content),
+                // truncated for brevity
+                _ =&gt; throw new TypeLoadException($"Unknown type {content.ContentTypeAlias} encountered.")
+            };
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">TypeResolver for Cafe ContentTypeAlias</p>
+<h3>Wire up the Startup file</h3>
+<p>In <span class="code">ConfigureServices()</span> make a call to <span class="code">services.AddStazorPagesHeartcore()</span> and in <span class="code">Configure()</span>, call <span class="code">app.UseStazorPages(env)</span>. You also need to map an endpoint for StazorPages using <span class="code">endpoints.MapStazorPages()</span>. The full Startup.cs file is given below for your reference.</p>
+<pre><code class="language-csharp">using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using StazorPages.Heartcore.Config;
+using StazorPages.Heartcore.Extensions;
+using StazorPages.Routing;
+using TwentyFourDaysIn.StazorPages.Heartcore.Resolvers;
+
+namespace TwentyFourDaysIn.StazorPages.Heartcore
+{
+    public class Startup
+    {
+        private readonly IWebHostEnvironment _webHostEnvironment;
+
+        public Startup(IConfiguration configuration, IWebHostEnvironment env)
+        {
+            Configuration = configuration;
+            _webHostEnvironment = env;
+        }
+
+        public IConfiguration Configuration { get; }
+
+        public void ConfigureServices(IServiceCollection services)
+        {
+            services.AddControllersWithViews();
+
+            var umbracoConfig = new UmbracoConfig();
+            Configuration.GetSection(nameof(UmbracoConfig)).Bind(umbracoConfig);
+
+            services.AddStazorPagesHeartcore(_webHostEnvironment, umbracoConfig, new TypeResolver());
+        }
+
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        {
+            if (env.IsDevelopment())
+            {
+                app.UseDeveloperExceptionPage();
+            }
+            else
+            {
+                app.UseExceptionHandler("/Home/Error");
+                app.UseHsts();
+            }
+
+            app.UseHttpsRedirection();
+            app.UseStaticFiles();
+
+            app.UseRouting();
+
+            app.UseAuthorization();
+
+            app.UseStazorPages(env);
+
+            app.UseEndpoints(endpoints =&gt;
+            {
+                endpoints.MapControllers();
+                endpoints.MapStazorPages();
+            });
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Wireup Startup.cs to use StazorPages</p>
+<h2>Heartcore Content</h2>
+<p>The content for the Melbourne CBD cafe on my Heartcore instance is filled in like this.</p>
+<p><img style="width: 500px; height: 235.60000000000002px;" src="/archive/media/2020/cafe-melbourne-cbd-data.png?width=500&amp;height=235.60000000000002" alt="Melbourne CBD Cafe data" data-udi="umb://media/2c25b61348324c2bb08757eb6b835713"></p>
+<p>If you visit https://localhost:44340/cafes/melbourne-cbd on your development machine, you should get this simple page with data retrieved from Umbraco Heartcore.</p>
+<p><img style="width: 500px; height: 363.01369863013696px;" src="/archive/media/2020/melbourn-cbd-cafe.png?width=500&amp;height=363.01369863013696" alt="Webpage with Melbourne Cafe details" data-udi="umb://media/7e02e99004414e8eadc1db95b941182d"></p>
+<h2> Voila! Static File</h2>
+<p>On the first request to the URL, content is retrieved from Heartcore and then saved to this static HTML file.</p>
+<pre><code class="language-markup">&lt;!doctype html&gt;
+&lt;html lang="en"&gt;
+&lt;head&gt;
+    &lt;!-- Required meta tags --&gt;
+    &lt;meta charset="utf-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"&gt;
+
+    &lt;!-- Bootstrap CSS --&gt;
+    &lt;link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous"&gt;
+
+    &lt;title&gt;24 Days In Umbraco - Melbourne CBD&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+&lt;div class="container"&gt;
+    &lt;div class="jumbotron mt-3"&gt;
+        &lt;h3&gt;A little bit of indulgence at our cafe in&lt;/h3&gt;
+        &lt;h1&gt;Melbourne CBD&lt;/h1&gt;
+        &lt;p class="lead"&gt;Level 1 195 Little Collins Street &lt;/p&gt;
+        &lt;p class="lead"&gt;Melbourne VIC 3000&lt;/p&gt;
+        &lt;a class="btn btn-lg btn-primary" href="/cafes/melbourne-cbd/" role="button"&gt;URL to self&lt;/a&gt;
+    &lt;/div&gt;
+&lt;/div&gt;
+    &lt;div class="container"&gt;
+        &lt;small&gt;Stazor Page generated at 29-Nov-2020 09:20:21 UTC&lt;/small&gt;
+    &lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      <p class="snippet-caption">The final HTML output saved by StazorPages Middleware</p>
+<p>Any subsequent requests to the same cafe page would result in this static file been served.</p>
+<h3>Pro Dev Tip</h3>
+<p>Want to debug some tricky code? You can turn off the generation of static files on your development environment by amending the <span class="code">app.UseStazorPages(env)</span> in the <span class="code">Startup.cs</span> file to <span class="code">app.UseStazorPages(env, !env.IsDevelopment())</span>.</p>
+<h2>Content Update process</h2>
+<p>Creating a webhook in Umbraco Heartcore and pointing to the <span class="code">`/api/contentupdate`</span> endpoint deletes the page whenever a <span class="code">Publish content</span> event occurs. This endpoint is defined in the <span class="code">StazorPages.Heartcore</span> library. Essentially, Heartcore webhook calls are handled automagically. 💫</p>
+<p><img style="width: 392.85714285714283px; height: 500px;" src="/archive/media/2020/heartcore-webhook.png?width=392.85714285714283&amp;height=500" alt="Umbraco Heartcore Webhook Configuration" data-udi="umb://media/ad631d8f221640148deb189ab1b7fc31"></p>
+<p>Similarly, other events such as <span class="code">Unpublish content</span>, <span class="code">Delete content</span> should be configured to the same endpoint.</p>
+<h2 id="SampleStazorPagesSite">Sample Stazor Pages Site</h2>
+<p>Lord Lamington has got a <span class="code">StazorPages.Heartcore</span> sample site at <a href="https://lordlamingtonheartcore.azurewebsites.net/" title="Lord Lamington's StazorPages Heartcore site">https://lordlamingtonheartcore.azurewebsites.net/</a>.</p>
+<p><img style="width: 500px; height: 329.4172932330827px;" src="/archive/media/2020/website-screen-grab.png?width=500&amp;height=329.4172932330827" alt="Lord Lamington's website" data-udi="umb://media/bdcd260371034f4a8a892c45a9a6d66a"></p>
+<p>You can see a screengrab below which highlights the generated time of the static file. For example, you might see <strong><span class="code">Stazor Page generated at 25-Nov-2020 01:12:03 UTC</span></strong></p>
+<p><img style="width: 414px; height: 74px;" src="/archive/media/2020/last-generated-time.png?width=414&amp;height=74" alt="Generated time of Stazor Page" data-udi="umb://media/443f0d0474404ddcad3f5721af4db2b0"></p>
+<h2>Speedy Gonzales Again</h2>
+<p><img style="width: 200px; height: 251px;" src="/archive/media/2020/speedy-small.png?width=200&amp;height=251" alt="Speedy Gonzales from Warner Brothers" data-udi="umb://media/dc7ba45eca5e43e9a5f12fee85a921b0"></p>
+<p>Time to check some metrics regarding speed. I don't claim this to be a proper benchmark, it's anecdotal.</p>
+<p>I tested loading <a rel="noopener" href="https://lordlamingtonheartcore.azurewebsites.net/cafes/" target="_blank" title="Cafes page">https://lordlamingtonheartcore.azurewebsites.net/cafes/</a> on my local machine running IIS Express with the following setup. Each time, I restarted the application and loaded the home page prior to loading the cafes page using Postman. All durations are in milliseconds.</p>
+<table border="1" style="border-collapse: collapse; width: 622px; height: 84px;">
+<tbody>
+<tr style="height: 21px;">
+<td style="width: 261px; height: 21px;"> </td>
+<td style="width: 110px; height: 21px;"><strong>First Run</strong></td>
+<td style="width: 107px; height: 21px;"><strong>Second Run</strong></td>
+<td style="width: 142px; height: 21px;"><strong>Third Run</strong></td>
+</tr>
+<tr style="height: 21px;">
+<td style="width: 261px; height: 21px;">Stazor Pages disabled</td>
+<td style="width: 110px; height: 21px;">99</td>
+<td style="width: 107px; height: 21px;">465</td>
+<td style="width: 142px; height: 21px;">870</td>
+</tr>
+<tr style="height: 21px;">
+<td style="width: 261px; height: 21px;">First request with Stazor Pages</td>
+<td style="width: 110px; height: 21px;">179</td>
+<td style="width: 107px; height: 21px;">2374</td>
+<td style="width: 142px; height: 21px;">254</td>
+</tr>
+<tr style="height: 21px;">
+<td style="width: 261px; height: 21px;">Second request with Stazor Pages</td>
+<td style="width: 110px; height: 21px;">65</td>
+<td style="width: 107px; height: 21px;">78</td>
+<td style="width: 142px; height: 21px;">86</td>
+</tr>
+</tbody>
+</table>
+<blockquote><strong>Speedy's verdict</strong> - Overall, the first request with Stazor Pages enabled was a bit slower than with Stazor Pages disabled. But with the second and subsequent requests, hands down, Stazor Pages wins on speed.</blockquote>
+<h2>In its infancy</h2>
+<p>At the time of writing this article, Stazor Pages is in its infancy. There are many improvements which are needed both to the codebase and to the routing mechanism. As I plan on dogfooding this for my wife's business site, follow me on <a rel="noopener" href="https://twitter.com/dAmazingNut/" target="_blank" title="Follow me on Twitter">@dAmazingNut</a> for future updates.</p>
+<h2>Open Source Code</h2>
+<p>With the disclaimer above, the source code is shared on GitHub. It is open for Pull Requests and Suggestions.</p>
+<ul>
+<li>StazorPages - Source code for the NuGet package - <a rel="noopener" href="https://github.com/emmanueltissera/stazorpages" target="_blank" title="Stazor Pages on Github">https://github.com/emmanueltissera/stazorpages</a></li>
+<li>StazorPages.Heartcore - Source code for the NuGet package - <a rel="noopener" href="https://github.com/emmanueltissera/stazorpages.heartcore" target="_blank" title="Stazor Pages Heartcore on GitHub">https://github.com/emmanueltissera/stazorpages.heartcore</a></li>
+<li>LordLamington.Heartcore - Source code for Lord Lamington's website running on Azure - <a rel="noopener" href="https://github.com/emmanueltissera/lordlamington.heartcore" target="_blank" title="Lord Lamington's website code on Azure">https://github.com/emmanueltissera/lordlamington.heartcore</a></li>
+</ul>
+<h2>Happy Servers and Happier Developers</h2>
+<blockquote>“In a nutshell, Heartcore means: happy marketers who reduce their time to market, happy editors who create content early-on, and happy developers who get to use the latest tech.”</blockquote>
+<p>Okay! So that's my own quote. But now Heartcore + Stazor Pages allow for Happy servers. Servers which do not need to work as hard. They just need to work hard once and serve static content on subsequent requests.</p>
+<p>Developers who are happy with Heartcore, now have more reasons to be happier. They (I, nerd 🤓) get to use ASP.NET Core 5 and still build a static website for optimum performance.💥</p>
+<p>Anyone for some <a rel="noopener" href="https://lordlamingtonheartcore.azurewebsites.net/products/jam-and-vanilla-lamington/" target="_blank" title="JAM and Vanilla Lamingtons">Jam and Vanilla Lamingtons</a>?</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/caching/" title="See all articles tagged with Caching">Caching</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/headless/" title="See all articles tagged with Headless">Headless</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/net-5/" title="See all articles tagged with .NET 5">.NET 5</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Emmanuel Tissera"><img src="//gravatar.com/avatar/6c8916d04e60f7c64785f023b85a6328.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/6c8916d04e60f7c64785f023b85a6328.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Emmanuel Tissera</h1>
+        <p>Emmanuel is on Twitter as <a href="//twitter.com/dAmazingNut" title="Emmanuel Tissera on Twitter" rel="author">@dAmazingNut</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

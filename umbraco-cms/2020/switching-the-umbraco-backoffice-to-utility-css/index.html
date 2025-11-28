@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Could the Umbraco backoffice benefit by switching to utility CSS?</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Switching the Umbraco backoffice to utility CSS</h1>
+      <p class="byline"> by Karl Tynan, <span class="pubdate">posted on <time datetime="2020-12-23">Dec 23, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">We will look at some of the problems with the existing Umbraco CSS architecture and how Umbraco ended up there. Then we will see how using a utility CSS library can help combat those problems, benefitting new features, improvements, and contribution.</p>
+<p class="intro"><strong>Let's look at the Umbraco CSS architecture.</strong></p>
+<p>At the core of the Umbraco backoffice is a customised version of <a rel="noopener" href="https://getbootstrap.com/" target="_blank">Bootstrap</a>. Further bespoke CSS is added on top of the framework to add extra features and functionality that don't already exist. In addition, the backoffice will load any CSS files and assets that might be requested by:</p>
+<ul>
+<li>Third-party JavaScript plugins (e.g. <a rel="noopener" href="https://jqueryui.com/" target="_blank">jQuery UI</a>)</li>
+<li>Installed packages from the Umbraco community (e.g. <a rel="noopener" href="https://our.umbraco.com/packages/website-utilities/vendr/" target="_blank">Vendr</a> or <a rel="noopener" href="https://our.umbraco.com/packages/backoffice-extensions/contentment/" target="_blank">Contentment</a>)</li>
+<li>Installed packages from Umbraco HQ (e.g. <a rel="noopener" href="https://umbraco.com/products/umbraco-forms/" target="_blank">Umbraco Forms</a>)</li>
+</ul>
+<h2>What are the current CSS architecture problems?</h2>
+<h3>No documentation</h3>
+<p>I could not find any documentation for Bootstrap or the CSS used in Umbraco. Lack of documentation means there is no guidance for file locations, coding standards, naming conventions, or what existing classes are available.</p>
+<p>The class naming standards vary throughout the Umbraco backoffice. Some are based on Bootstrap, others use <a rel="noopener" href="http://getbem.com/" target="_blank">Block Element Modifier (BEM)</a> naming conventions, and many are either somewhere in-between or completely bespoke.</p>
+<p>Without documentation, a <strong>backoffice contributor</strong> could:</p>
+<ul>
+<li>Create unique naming conventions</li>
+<li>Ignore existing standards already used by Umbraco or Bootstrap</li>
+<li>Introduce new colours, sizes, spacing, fonts, and more</li>
+<li>Duplicate existing styles, rather than reuse existing classes</li>
+<li>Edit a class that has an adverse effect elsewhere</li>
+</ul>
+<p>A <strong>package developer</strong> could:</p>
+<ul>
+<li>Include new stylesheets</li>
+<li>Introduce new colours, sizes, spacing, fonts, and more</li>
+<li>Duplicate existing styles instead of reusing existing classes</li>
+</ul>
+<h3>High risk CSS changes</h3>
+<p>There is a higher risk when adding, editing, and deleting backoffice CSS classes. Each change could have unknown, adverse effects elsewhere in the backoffice or on installed packages.</p>
+<p><strong>Adding a new class</strong> could conflict with CSS for installed packages using the same class name. Depending on the <a rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/CSS/Specificity" target="_blank">specificity</a>, the new class could override package styles, causing broken design or layout. Or the package could override the backoffice styles, causing unexpected bugs elsewhere in Umbraco.</p>
+<p><strong>Editing an existing class</strong> could cause broken designs or layouts if reused by installed packages. Other areas of the backoffice could also break. The backoffice is a large application and often only displays parts of the user interface (UI) using conditional rules. If there are no members in Umbraco, for example, a contributor will not see how their change affects the members UI as it is hidden.</p>
+<p><strong>Deleting an existing class</strong> is a massive worry for any UI that relies on that class. Deleting or renaming a class has the same issues as editing an existing class, except it will completely remove any styles associated with it.</p>
+<h3>CSS changes aren't breaking changes</h3>
+<p>For Umbraco, changes to the CSS aren’t considered to be <a rel="noopener" href="https://en.wiktionary.org/wiki/breaking_change" target="_blank">breaking changes</a>. Changing or deleting a class in the backoffice can cause a broken design or layout for installed packages that reuse the modified classes. Without breaking changes for CSS, it is harder for package developers to trust the existing CSS, and a safer approach is to add their own CSS regardless of duplication.</p>
+<h3>Class name misuse</h3>
+<p>Class names are <a rel="noopener" href="https://developer.mozilla.org/en-US/docs/Glossary/Semantics#Semantics_in_CSS" target="_blank" data-anchor="#Semantics_in_CSS">semantic</a> in most frameworks and methodologies. Semantic CSS describes the content rather than the HTML structure or styles being applied:</p>
+<pre><code class="language-markup">&lt;article class="article"&gt;
+    &lt;img class="article-image" src="..." alt="..." /&gt;
+    &lt;h2 class="article-title"&gt;...&lt;/h2&gt;
+    &lt;p class="article-text"&gt;...&lt;/p&gt;
+    &lt;small class="article-date"&gt;...&lt;/small&gt;
+&lt;/article&gt;</code></pre>
+      <p class="snippet-caption">Example of using semantic classes in HTML</p>
+<pre><code class="language-css">.article {
+    background-color: white;
+    padding: 1rem;
+}
+.article-image {
+    display: block;
+}
+.article-title {
+    font-size: 1.5rem;
+    margin-top: 1rem;
+}
+.article-text {
+    margin-top: 1rem;
+}
+.article-date {
+    color: gray;
+    margin-top: 1rem;
+}</code></pre>
+      <p class="snippet-caption">Example of styling semantic classes in CSS</p>
+<p>Naming classes based on content increases the risk of <strong>class name misuse</strong>.</p>
+<p>Imagine a tweet that also has an image, title, text, and date. It should also have the same styles as the article. To avoid duplicating styles, the article classes could be reused for the tweet to achieve the same styling. This is class name misuse because the tweet is not an article. Using a class name that describes specific content and applying it to different content will eventually lead to loss of meaningful class names.</p>
+<h3>Harder to reuse classes</h3>
+<p>To avoid class name misuse, and promote reusability, Bootstrap and other methodologies implement generic naming for class names. Generic naming results in class names like:</p>
+<ul>
+<li><span class="code">.card</span></li>
+<li><span class="code">.modal</span></li>
+<li><span class="code">.nav</span></li>
+<li><em>And so on...</em></li>
+</ul>
+<p>But this makes classes harder to reuse.</p>
+<p>Imagine using a generic class, because we want to share styles, called <span class="code">card</span> for articles and tweets:</p>
+<pre><code class="language-markup">&lt;!-- article --&gt;
+&lt;article class="card"&gt;
+    &lt;img class="card-image" src="..." alt="..." /&gt;
+    &lt;h2 class="card-title"&gt;...&lt;/h2&gt;
+    &lt;p class="card-body"&gt;...&lt;/p&gt;
+    &lt;small class="card-date"&gt;...&lt;/small&gt;
+&lt;/article&gt;
+
+&lt;!-- tweet --&gt;
+&lt;article class="card"&gt;
+    &lt;p class="card-body"&gt;...&lt;/p&gt;
+    &lt;small class="card-username"&gt;...&lt;/small&gt;
+&lt;/article&gt;</code></pre>
+      <p class="snippet-caption">Example of using generic class names for articles and tweets in HTML</p>
+<p>Unlike an article, the <span class="code">card-image</span> and <span class="code">card-title</span> aren't required for tweets:</p>
+<ul>
+<li>Would it still look as expected without these elements?</li>
+<li>Should the CSS have modifiers to style spacing differently when there isn’t a title or image?</li>
+</ul>
+<p>There is also a new <span class="code">card-username</span> class used to display a Twitter username:</p>
+<ul>
+<li>Should a new class and styles be added to the CSS?</li>
+<li>Other cards, such as articles, don’t need a username. Does the username styling even belong here anymore? Or should it be moved out somehow?</li>
+<li>Should the card-date be reused? If so, does it need renaming as the meaning has changed?</li>
+</ul>
+<p>Suddenly, the CSS has started mutating from its original usage, and it might need modifier classes for cards with or without titles, images, usernames, and more:</p>
+<pre><code class="language-css">.card-title {
+    margin-top: 1rem;
+}
+.card-title--no-image {
+    margin-top: 0;
+}</code></pre>
+      <p class="snippet-caption">Example of adding modifier classes to generic classes in CSS</p>
+<h3>Harder to name new classes</h3>
+<p>As Umbraco grows with each new feature or improvement, naming classes becomes difficult and time consuming. Semantic naming is hard and generic naming is even harder. A class name needs to make sense for it to be used appropriately, ideally without class name misuse.</p>
+<p>Eventually, it is going to become almost impossible to come up with a good, unique name for a class for new Umbraco features, without being too specific or too generic.</p>
+<h3>Ever-growing CSS codebase</h3>
+<p>An ever-growing CSS codebase adds bloat to file sizes, and larger file sizes affect the perceived performance of the Umbraco backoffice. There are many reasons why the CSS codebase could grow and become harder to maintain:</p>
+<ul>
+<li>New features that require new CSS and styling</li>
+<li>Changing features that introduce new or duplicate existing styles</li>
+<li>Redundant styles from features that have been removed or changed</li>
+<li>Legacy styles from older versions of Umbraco</li>
+</ul>
+<p>Without CSS documentation to guide contributors through what styles exist and where they are used in the backoffice, the CSS codebase could continue to grow. <strong>There is far less risk to adding new styles in Umbraco than editing or deleting existing styles</strong>, leading to possible duplication or identical classes with different names.</p>
+<h2>What are the options for improving the CSS architecture?</h2>
+<p>There are several options available for consideration:</p>
+<ol>
+<li><strong>Continue using Bootstrap:</strong> Ensure there is documentation and guidelines with style guides, coding standards, existing classes, and code examples. However, the codebase will continue to grow with new features and functionality</li>
+<li><strong>Compare alternative frameworks:</strong> Research different frameworks, including <a rel="noopener" href="https://bulma.io/" target="_blank">Bulma</a>, <a rel="noopener" href="https://get.foundation/" target="_blank">Foundation</a>, and more. Identify better candidates to be used in the Umbraco backoffice. The new framework will most likely share the same problems as using Bootstrap</li>
+<li><strong>Create a bespoke CSS framework:</strong> Create custom CSS rules and coding standards to tailor the solution specifically for Umbraco. Building a custom framework could be time consuming, especially upfront, with documentation a vital requirement for release. The codebase will continue to grow with new features and functionality</li>
+<li><strong>Use a utility CSS library:</strong> Nothing is imposed with no predefined components, restrictions, or design decisions. A utility CSS library can be setup like a framework and can remain smaller in size, even as new features are added. But it will require a different way of thinking when making CSS changes</li>
+</ol>
+<p>Regardless of which option is used for Umbraco, documentation must be created to give contributors defined guidance, rules, standards, and examples for making CSS changes.</p>
+<h2>Switching to a utility CSS library</h2>
+<p>There are lots of different utility CSS libraries and frameworks available. One of the most <a rel="noopener" href="https://www.npmjs.com/package/tailwindcss" target="_blank">popular</a> libraries is <a rel="noopener" href="https://tailwindcss.com/" target="_blank">Tailwind CSS</a>, a <strong>utility-first CSS framework</strong> that generates utility classes that "<em>can be composed to build any design, directly in your markup</em>".</p>
+<blockquote>Tailwind CSS is a utility-first CSS framework packed with classes like <span class="code">flex</span>, <span class="code">pt-4</span>, <span class="code">text-center</span> and <span class="code">rotate-90</span> that can be composed to build any design, directly in your markup...</blockquote>
+<p>I first heard about Tailwind from <a rel="noopener" href="https://twitter.com/mattbrailsford" target="_blank">Matt Brailsford</a> during a <a rel="noopener" href="https://codecab.in/" target="_blank">CODECABIN</a> event a few years ago. Ever since then, I have been an <a rel="noopener" href="https://www.rocksolidknowledge.com/articles/switching-to-tailwind-css" target="_blank">advocate for Tailwind</a>, using the framework on multiple production websites and web apps at <a rel="noopener" href="https://www.rocksolidknowledge.com/" target="_blank">Rock Solid Knowledge</a>. I have even seen previously sceptical colleagues <a rel="noopener" href="https://www.scottbrady91.com/General/Adding-Tailwind-Utility-Classes-to-your-Bootstrap-Website" target="_blank">adopt Tailwind for their own projects</a>, as they have realised the benefits of having utility classes readily available to them.</p>
+<p>Let's look at using Tailwind, answering some of the most common concerns, reservations, and questions that I get asked about using utility classes.</p>
+<h3>What are utility classes?</h3>
+<p>Tailwind uses your configuration setup to generate many classes that are named based on their (usually) single style. These classes can then be applied directly to your HTML. Most CSS frameworks, including <a rel="noopener" href="https://getbootstrap.com/docs/4.5/utilities/" target="_blank">Bootstrap</a>, already use some utility classes for borders, colours, spacing, and more. For example, Bootstrap and Tailwind both have <span class="code">margin-bottom</span> classes in the format <span class="code">mb-{x}</span>:</p>
+<pre><code class="language-css">.mb-4 {
+    margin-bottom: 1rem;
+}</code></pre>
+      <p class="snippet-caption">Example of a margin utility class in Tailwind CSS</p>
+<h3>Do I have to learn <em>another</em> framework?</h3>
+<p>Bootstrap, like many other CSS frameworks, is an <strong>opinionated</strong> CSS framework. It provides a large library of predefined components regardless of whether you need them or not, including:</p>
+<ul>
+<li>Alerts</li>
+<li>Breadcrumbs</li>
+<li>Buttons</li>
+<li>Cards</li>
+<li>Forms</li>
+<li>Modals</li>
+</ul>
+<p>Tailwind is an <strong>unopinionated</strong> CSS framework and does not generate any classes for components. Instead, it provides you with classes to add to your HTML to create your own components. In some regards, Tailwind can be considered a library of classes rather than a typical framework of components.</p>
+<p>You don't have to learn a framework, but you will learn <strong>patterns</strong> for Tailwind class names, as found in the excellent <a rel="noopener" href="https://tailwindcss.com/docs" target="_blank">Tailwind documentation</a>. Class names are usually a single letter (or short, descriptive word), followed by a configurable value that mimics the output class style(s):</p>
+<pre><code class="language-css">.mb-6 {
+    margin-bottom: 1.5rem;
+}
+.-mt-4 {
+    margin-top: -1rem;
+}
+.px-4 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+.text-red {
+    color: red;
+}
+.flex {
+    display: flex;
+}
+.grid {
+    display: grid;
+}
+.w-1/2 {
+    width: 50%;
+}
+.max-w-sm {
+    max-width: 24rem;
+}
+.z-10 {
+    z-index: 10;
+}</code></pre>
+      <p class="snippet-caption">Example of different utility class patterns in Tailwind CSS</p>
+<h3>Isn't it just inline styles?</h3>
+<p>There is a common misconception that using Tailwind is the same as using inline styles. While you are applying styles directly to your HTML elements, you are not creating your own rules and styles.</p>
+<p>Tailwind also has many other advantages over inline styles:</p>
+<ul>
+<li><strong>Constrained styles:</strong> Inline styles allow any valid CSS styles and values. Tailwind is constrained to a set of predefined classes generated by your <a rel="noopener" href="https://tailwindcss.com/docs/theme" target="_blank">configuration setup</a>. Restricted styles make it easier to build and control consistent UIs, removing the ability to introduce new rules and styles</li>
+<li><strong>Responsive styles:</strong> Inline styles can't use media queries. Tailwind classes can be <a rel="noopener" href="https://tailwindcss.com/docs/responsive-design" target="_blank">used responsively</a> to react to different screen sizes, media types (e.g. print), and even <a rel="noopener" href="https://tailwindcss.com/docs/dark-mode" target="_blank">dark mode</a></li>
+<li><strong>Hover, focus, and other stateful styles:</strong> Inline styles can't be used to style states like <span class="code">:hover</span> or <span class="code">:focus</span>. Tailwind uses <a rel="noopener" href="https://tailwindcss.com/docs/hover-focus-and-other-states" target="_blank">state variant styles</a> to change styles based on state</li>
+</ul>
+<p>The example below shows how the <span class="code">background-color</span> can change on the <span class="code">:hover</span> state, and how the <span class="code">padding</span> can change on the responsive state:</p>
+<pre><code class="language-markup">&lt;p class="bg-white p-2 hover:bg-gray md:p-4"&gt;...&lt;/p&gt;</code></pre>
+      <p class="snippet-caption">Example of responsive and :hover state classes in Tailwind CSS</p>
+<h3>It looks ugly and unreadable</h3>
+<p>At first glance, Tailwind can seem intense and I have heard it called "<em>class soup</em>" (due to the number of classes added to HTML elements). But once you are aware of the Tailwind syntax, the class names become intuitive, very readable, and explicitly define what styles are being added to a HTML element.</p>
+<p>Below is an example of using semantic or generic class names to style a button component:</p>
+<pre><code class="language-markup">&lt;button class="btn btn-blue"&gt;...&lt;/button&gt;</code></pre>
+      <p class="snippet-caption">Example of using semantic classes for a blue button in HTML</p>
+<pre><code class="language-css">.btn {
+    padding: 0.75rem 1rem;
+}
+.btn-blue {
+    background-color: blue; color: white;
+}</code></pre>
+      <p class="snippet-caption">Example of styling semantic classes for a blue button in CSS</p>
+<p>And here is an example of using Tailwind class names to style the <em>same</em> button component:</p>
+<pre><code class="language-markup">&lt;button class="bg-blue text-white px-4 py-3"&gt;...&lt;/button&gt;</code></pre>
+      <p class="snippet-caption">Example of using Tailwind CSS classes for a blue button in HTML</p>
+<p>Both examples are applying the same styles, but you would only need to open the HTML file to make changes to the Tailwind version of the button component.</p>
+<h3>How can I peer review all those classes?</h3>
+<p>One major benefit of using utility classes is the readability of a pull request (PR). In a typical PR, an assigned peer reviewer of design changes would need to do one (or many) of the following:</p>
+<ul>
+<li>Checkout the repository code changes to review locally</li>
+<li>Review the code changes on a shared screen</li>
+<li>Review screenshots (or animated GIFs) attached to the PR</li>
+</ul>
+<p>Umbraco <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/blob/v8/contrib/.github/CONTRIBUTING.md#pull-requests" target="_blank" data-anchor="#pull-requests">recommends adding screenshots</a> to PRs "<em>whenever possible</em>" to assist with the design review process. The example below shows how difficult it is to visualise the design change impact the <span class="code">card</span> class has on the <span class="code">link-list</span>:</p>
+<pre><code class="language-markup">&lt;div class="card"&gt;...&lt;/div&gt;
+&lt;ul class="link-list"&gt;...&lt;/ul&gt;</code></pre>
+      <p class="snippet-caption">Example of lack of meaning in semantic or generic class names in HTML</p>
+<pre><code class="language-css">.card {
+    margin-bottom: 0; /* was 2rem; */
+}</code></pre>
+      <p class="snippet-caption">Example of semantic or generic class style changes in CSS</p>
+<p>It is very unlikely that the styles for the <span class="code">link-list</span> will be visible in the PR, so it is not clear if removing <span class="code">margin-bottom</span> from the <span class="code">card</span> has any impact on <span class="code">link-list</span>.</p>
+<p>With Tailwind, the reviewer will be able to read that removing the margin class will not impact on the list spacing below:</p>
+<pre><code class="language-markup">&lt;div class="mb-0"&gt;...&lt;/div&gt;
+&lt;ul class="mt-4"&gt;...&lt;/ul&gt;</code></pre>
+      <p class="snippet-caption">Example of how Tailwind CSS adds extra understanding to class changes in HTML</p>
+<p>Tailwind improves the PR process by adding an extra failsafe review point, reducing the risk of broken designs and layouts once approved.</p>
+<h3>Aren't all those classes bad for performance?</h3>
+<p>File compression, such as <a rel="noopener" href="https://en.wikipedia.org/wiki/Gzip" target="_blank">gzip</a> and <a rel="noopener" href="https://en.wikipedia.org/wiki/Brotli" target="_blank">Brotli</a>, can be used when transferring files between web servers and browsers. gzip replaces repeating strings with pointers to the first instance of that string, using a lot less space. More simply: <strong>the more repetition that exists in a file, the smaller the file size will be</strong>.</p>
+<p>HTML files contain lots of repeating elements (such as <span class="code">div</span>, <span class="code">p</span>, and <span class="code">span</span>), making them ideal gzip compression candidates. And because Tailwind class names also involve a lot of repetition, the compression algorithm works incredibly effectively on those class names too:</p>
+<pre><code class="language-markup">&lt;p class="mb-4 text-red text-lg"&gt;...&lt;/p&gt;
+&lt;ul class="mb-4 text-red text-lg"&gt;...&lt;/ul&gt;</code></pre>
+      <p class="snippet-caption">Example of repetition in Tailwind CSS classes that will be compressed in gzip</p>
+<p>In comparison, the following semantic or generic CSS class names are unlikely to be compressed:</p>
+<pre><code class="language-markup">&lt;p class="greeting"&gt;...&lt;/p&gt;
+&lt;ul class="user-list"&gt;...&lt;/ul&gt;</code></pre>
+      <p class="snippet-caption">Example of semantic or generic classes that are not likely to be compressed in gzip</p>
+<p>It is also best practice to <strong>remove unused CSS</strong> using a tool like <a rel="noopener" href="https://purgecss.com/" target="_blank">PurgeCSS</a> as part of the development workflow. Removing unused styles keeps file sizes as small as possible before they are minified by the existing <a rel="noopener" href="https://github.com/Shazwazza/ClientDependency" target="_blank">ClientDependency Framework</a> in Umbraco. Tailwind <a rel="noopener" href="https://tailwindcss.com/docs/optimizing-for-production" target="_blank">optimises CSS for production</a> to maximise performance with <a rel="noopener" href="https://tailwindcss.com/docs/optimizing-for-production#removing-unused-css" target="_blank" data-anchor="#removing-unused-css">built in PurgeCSS options</a> that can be managed in your configuration setup.</p>
+<h3>It will take ages to swap out Bootstrap</h3>
+<p>It could take a while to swap Bootstrap for <em>any</em> CSS framework. There might be several new features and hundreds of bug fixes in Umbraco between starting the swap and releasing the finished product.</p>
+<p>In 2018, Simon Vrachliotis <a rel="noopener" href="https://vimeo.com/294976504" target="_blank">demonstrated</a> how he rebuilt an entire website using utility classes during a Christmas holiday break. He and I both agree that utility classes are "ridiculously fast" and use simpler workflows, in comparison to traditional methods.</p>
+<p>Tailwind can help with an option to configure a <a rel="noopener" href="https://tailwindcss.com/docs/configuration#prefix" target="_blank" data-anchor="#prefix">custom prefix</a> for all generated utility classes. This is useful in the interim of having Tailwind alongside Bootstrap, where there might be naming conflicts between the two frameworks.</p>
+<h3>Won't it be hard to maintain?</h3>
+<p>There is general concern that Tailwind classes would be hard to maintain. Managing many repeated classes and combinations could quickly become a large task in an application like Umbraco. There are two suggested solutions for maintaining utility classes and reducing duplication:</p>
+<ol>
+<li><a rel="noopener" href="https://tailwindcss.com/docs/extracting-components#extracting-component-classes-with-apply" target="_blank" data-anchor="#extracting-component-classes-with-apply">Extract component classes</a></li>
+<li><a rel="noopener" href="https://tailwindcss.com/docs/extracting-components#extracting-template-components" target="_blank" data-anchor="#extracting-template-components">Extract template components</a></li>
+</ol>
+<p>For smaller components, like form elements and buttons, Tailwind provides an <span class="code">@apply</span> directive to <strong>extract component classes</strong> for common utility patterns:</p>
+<pre><code class="language-markup">&lt;button class="btn btn-red"&gt;...&lt;/button&gt;</code></pre>
+      <p class="snippet-caption">Example of Tailwind CSS extracted component classes in HTML</p>
+<pre><code class="language-css">.btn {
+    @apply block text-center px-4 py-3;
+}
+.btn-red {
+    @apply bg-red text-white;
+}</code></pre>
+      <p class="snippet-caption">Example of Tailwind CSS extracted component classes using the @apply directive in CSS</p>
+<p>Tailwind automatically replaces <span class="code">@apply</span> statements with the exact styles as specified in the configuration setup.</p>
+<p>In general, and to reduce larger component repetition, it is not recommended to extract component classes, as this is equivalent to writing custom CSS on top of Tailwind. Instead, it is better to <strong>extract template components</strong> using reusable partials and JavaScript components:</p>
+<pre><code class="language-markup">&lt;promo 
+    title="..." 
+    img="..." 
+    imgAlt="..."&gt;
+&lt;/promo&gt;</code></pre>
+      <p class="snippet-caption">Example of reusing partials and JavaScript components in HTML</p>
+<pre><code class="language-markup">&lt;template&gt;    
+    &lt;article class="bg-white shadow mb-4 p-4"&gt;
+        &lt;h2 class="text-blue text-lg mb-2"&gt;{{title}}&lt;/h2&gt;
+        &lt;img class="block border-2 border-gray" src="{{img}}" alt="{{imgAlt}}" /&gt;
+    &lt;/article&gt;
+&lt;/template&gt;</code></pre>
+      <p class="snippet-caption">Example of a reusable partial or JavaScript component template</p>
+<p>In Umbraco this is ideal. AngularJS (and other JavaScript frameworks) use components to extract repetitive HTML, meaning class names are also extracted.</p>
+<h3>Will it go out of date?</h3>
+<p>If the CSS specification is updated with new features, such as CSS grid, it would be difficult for Bootstrap to add or convert components to use the new styles. It might even be a much later version of the framework that has the new capabilities.</p>
+<p>Tailwind regularly releases utility classes in incremental upgrades. Because these utility classes are in addition to existing classes, they are not breaking changes. The new classes are available immediately after upgrade. And you don't have to use any new classes at all if you don't need them!</p>
+<p>But if it is not possible to upgrade Tailwind for any reason, you can still <a rel="noopener" href="https://tailwindcss.com/docs/adding-new-utilities" target="_blank">create your own utility classes</a>. For example, you may want to add filter grayscale styling. You can create your own utility classes that can be included with Tailwind:</p>
+<pre><code class="language-css">@responsive {
+    .filter-none {
+        filter: none;
+    }
+    .filter-grayscale {
+        filter: grayscale(100%);
+    }
+}</code></pre>
+      <p class="snippet-caption">Example of a custom Tailwind CSS utility class for filter in CSS</p>
+<p>By using the <span class="code">@responsive</span> code block, Tailwind also <a rel="noopener" href="https://tailwindcss.com/docs/functions-and-directives#responsive" target="_blank" data-anchor="#responsive">generates responsive variants</a> for the filter classes:</p>
+<pre><code class="language-markup">&lt;p class="filter-grayscale md:filter-none"&gt;...&lt;/p&gt;</code></pre>
+      <p class="snippet-caption">Example of using custom Tailwind CSS utility classes with a responsive state in HTML</p>
+<h3>But I like writing CSS!</h3>
+<p>You are still writing CSS… in theory.</p>
+<p>Unlike Bootstrap, where component styles are pre-generated, Tailwind makes you think in the same way as writing traditional CSS.</p>
+<p>Think of Tailwind classes as <strong>shorthand for CSS styles</strong> and rules. If you wanted to create a white container with a shadow and equal padding in traditional CSS, you must understand what CSS values are needed to achieve the design:</p>
+<pre><code class="language-css">.promo-block {
+    background: white;
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, .1);
+    padding: 1rem;
+}</code></pre>
+      <p class="snippet-caption">Example of understanding what values are needed to style a promo block traditionally in CSS</p>
+<p>In Tailwind, you solve the problem with the same approach. You must first understand what CSS values are needed, then apply the styles using utility classes instead of writing CSS:</p>
+<pre><code class="language-markup">&lt;article class="bg-white shadow p-4"&gt;...&lt;/article&gt;</code></pre>
+      <p class="snippet-caption">Example of applying the same logic for styling by applying Tailwind CSS classes in HTML</p>
+<h2>In summary</h2>
+<p>Bootstrap has served Umbraco well. But lack of documentation, inconsistent standards, and other problems discussed have led to a growing and unmaintainable CSS codebase.</p>
+<p>Utility CSS is a different approach to UI development. It is different to traditional methods. Yet it is important not to discount it straight away. When I was first introduced to Tailwind, I was also sceptical. After setting some time aside to try Tailwind on a new website, I fell in love with the speed and simpler workflow that it delivers. And it continues to deliver many months later in production too!</p>
+<p>There will always be a need for CSS frameworks like Bootstrap. But as Umbraco <a rel="noopener" href="https://community.umbraco.com/community-teams/the-unicore-team/" target="_blank">transitions to .NET Core</a>, and contributors begin to discuss the next viable backoffice JavaScript framework, it is now time to deliver a modern approach to CSS and UI development for Umbraco.</p>
+<p><strong>Please reach out to me, <a rel="noopener" href="https://twitter.com/karltynan" target="_blank">@karltynan</a> on Twitter, if you'd like to chat about utility-first or Tailwind CSS.</strong></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/contribution/" title="See all articles tagged with Contribution">Contribution</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Karl Tynan"><img src="//gravatar.com/avatar/9dccf2a751c11554bada76aca483892b.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/9dccf2a751c11554bada76aca483892b.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Karl Tynan</h1>
+        <p>Karl is on Twitter as <a href="//twitter.com/karltynan" title="Karl Tynan on Twitter" rel="author">@karltynan</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

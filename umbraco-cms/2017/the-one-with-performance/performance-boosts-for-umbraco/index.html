@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Performance Boosts for Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Performance Boosts for Umbraco</h1>
+      <p class="byline"> by Lukas Schuhmacher, <span class="pubdate">posted on <time datetime="2017-12-20">Dec 20, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><strong>Performance Boosts for Umbraco</strong></p>
+<p class="intro"> </p>
+<p>Performance is the essence of your website. A slow website has several disadvantages. To improve the performance of your Umbraco site, there are many things you can do. And they won’t even cost you a lot of time. If you want to get a good search engine ranking and not scare away your users, read on for tips and methods.</p>
+<p>In this article, I don’t want to write about how to push your site’s performance to the maximum, I will rather tell you about methods you can use on the fly without investing a lot of extra time on your site. If you apply these methods successfully, you will spend close to no extra time on optimising your performance.</p>
+<p> </p>
+<p><strong>Caching</strong></p>
+<p>“Caching is for sites with performance problems or for people who have too much time.” – Chances are, some of you have heard a phrase like this on your way to become developer. I’m not entirely sure anymore where I heard it but that’s not why I’m telling you this anyway. I’m telling you because of its message. And the message is – as you probably know – complete nonsense. Caching is essential to boost your site and to get the most out of it. “But what if the site runs quickly already?” – My answer to this question: You can <em>always</em> make it quicker. Plus, caching barely takes any time.</p>
+<p> </p>
+<p><strong>CachedPartials</strong></p>
+<p>What can be written almost as quickly as @Html.Partial? You’re right, it’s <strong>@Html.CachedPartial</strong>! If you have already spent some development time thinking about where it makes sense to use CachedPartials instead of regular Partials, this procedure does not take a lot of time. You can also set further parameters, such as cachedByPage which allows you to get a separate cache per each type of site using the Partial, or cachedByMember with which you can cache for members.</p>
+<pre><code class="language-csharp">IHtmlString CachedPartial(
+    string partialViewName,
+    object model,
+    int cachedSeconds,
+    bool cacheByPage = false,
+    bool cacheByMember = false,
+    ViewDataDictionary viewData = null,
+    Func&lt;object, ViewDataDictionary, string&gt; contextualKeyBuilder = null)
+</code></pre>
+<p>While developing, CachedPartials won’t get in your way as they only cache with the debug mode set on false. Another thing to keep in mind is that the Partials cache is emptied by Umbraco publish events.</p>
+<p><strong>WebApi.OutputCache</strong></p>
+<p> </p>
+<p>How often do we make queries where we know beforehand that they will always provide the same data? Like when we use an WebApi to get settings from the backend. Why should you wait longer than necessary for an answer – especially when <strong>WebApi.OutputCache</strong> is working in one line? WebApi.OutputCache.V2 is a Nuget package. After the installation, you can apply an attribute to your methods and thereby cache them. See the following example:</p>
+<p> </p>
+<pre><code class="language-csharp">public class MyController : UmbracoApiController
+{
+    [WebApi.OutputCache.V2.CacheOutput(ClientTimeSpan = 60, ServerTimeSpan = 60)]
+    public string cachedFunction(string parameter)
+    {
+        // do something
+
+        return something;
+    }
+}
+</code></pre>
+<p> </p>
+<p>The following properties are available:</p>
+<ul>
+<li><em>ClientTimeSpan</em> (corresponds to CacheControl MaxAge HTTP header)</li>
+<li><em>MustRevalidate</em> (corresponds to MustRevalidate HTTP header)</li>
+<li><em>ExcludeQueryStringFromCacheKey</em> (querystrings get ignored while caching)</li>
+<li><em>ServerTimeSpan</em> (cache period on the server site)</li>
+<li><em>AnonymousOnly</em> (cache enabled only for requests when Thread.CurrentPrincipal is not set)</li>
+</ul>
+<p>There are a handful of variations of the output cache: CacheOutputUntil, CacheOutputUntilToday, CacheOutputUntilThisMonth and CacheOutputUntilThisYear. These serve the purpose of setting a specific time at which the site is supposed to be cached.</p>
+<p> </p>
+<p><strong>LeBlender</strong></p>
+<p>LeBlender is a free Umbraco package. It lets you build complex grid editors effortlessly. I, for one, could not imagine working without it anymore.</p>
+<p>Just build your new grid editor in the developer section as you always do. In the “select a grid editor” section, choose LeBlender Editor.</p>
+<p><img style="width: 477.10622710622715px; height: 500px;" src="/archive/media/2017/leblender_1.png?width=477.10622710622715&amp;height=500" alt="" data-udi="umb://media/14229c5adcd04b48bb01b4ee3ec21782"> </p>
+<p>Now you can simply add properties. You can also use your own datatypes. LeBlender has a built-in cache. You only need to type in the cache period et voilà. You have already done a lot for your site, if you appropriately use the cache period in all editors.</p>
+<p><img style="width: 385px; height: 450px;" src="/archive/media/2017/leblender_2.png?width=385&amp;height=450" alt="" data-udi="umb://media/7a945654781d409480873080716fa2cb"></p>
+<p><img style="width: 456px; height: 332px;" src="/archive/media/2017/leblender_3.png?width=456&amp;height=332" alt="" data-udi="umb://media/67ab80032bdf48c7acc1569bf7832e26"></p>
+<p>Those of you who don’t know LeBlender yet, should definitely read this: <a href="https://our.umbraco.org/projects/backoffice-extensions/leblender/">https://our.umbraco.org/projects/backoffice-extensions/leblender/</a></p>
+<p> </p>
+<p><strong>Further advantages of caching</strong></p>
+<p>The most important thing, no matter which kind of caching you’re planning on doing, is to do some thinking about how often data changes in your project and how important it is to have the latest data available at all times – either while you’re developing or even better: before you start. Does it make a difference whether the new data is updated right away or in two hours? If the answer to that question is “no”, you should definitely cache. </p>
+<p>Some of you probably work with third-party systems which your client pays for per call. If you cache the result of a call, instead of having thousands of calls you might only have one. Your client will be pleased.</p>
+<p>Another advantage is the way of working caching entails. By thinking about data flow from an early point onwards, you avoid errors causing more problems the later they are found. Your team leaders will be grateful.</p>
+<p>“Quicker load time or not, if the users of the site don’t need to wait for too long, it’s all the same, isn’t it? After all, they won’t notice one hundred milliseconds more or less.” – The user might not, but the search engines certainly will! Caching has a positive influence on the speed of indexing a site which can help you get a better ranking.</p>
+<p> </p>
+<p><strong>Typed content</strong></p>
+<p>Additionally, you should always pay attention to using typed content. As a general rule, typed content is more performant than Dynamics and less prone to errors. If you still work with Dynamics, now would be a good time to change since support for Dynamics <span>for access to</span> IPublishedContent will cease with the introduction of Umbraco version 8.</p>
+<p> </p>
+<p><strong>Common pitfalls and anti-patterns</strong></p>
+<p>If you’re new to Umbraco, there are a handful of rules which you should pay attention to in order to avoid errors. I want to send you off with a related our.umbraco article I highly recommend: <a href="https://our.umbraco.org/documentation/Reference/Common-Pitfalls/">https://our.umbraco.org/documentation/Reference/Common-Pitfalls/</a></p>
+<p> </p>
+<p> </p>
+<p>This article was translated from German. Read the original article on <a rel="noopener noreferrer" href="http://www.byte5.de/news/" target="_blank">http://www.byte5.de/news/</a>.</p>
+<p> </p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/caching/" title="See all articles tagged with Caching">Caching</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/seo/" title="See all articles tagged with SEO">SEO</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Lukas Schuhmacher"><img src="//gravatar.com/avatar/89cfb30de32bf43a91b02033a594bc21.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/89cfb30de32bf43a91b02033a594bc21.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Lukas Schuhmacher</h1>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

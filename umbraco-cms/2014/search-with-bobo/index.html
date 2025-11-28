@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Faceted Search with Bobo</title>
+<meta name="description" content="Learn to use Bobo for faceted search in your Umbraco sites.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Faceted Search with Bobo</h1>
+      <p class="byline"> by Antony Briggs, <span class="pubdate">posted on <time datetime="2014-12-22">Dec 22, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Introduction</h2>
+<p>Who hasn't had a client say "build me a search function like eBay (or Amazon, Ebuyer etc.)"?</p>
+<p class="intro">Usually the client has no idea of the scale of the request they've just made but as we'll find out, Bobo does a pretty good job of handling it all.</p>
+<h2>Why facet with Bobo?</h2>
+<p>Good question! The core Lucene project (that powers Examine) comes with built-in faceting <strong>but</strong> that's written in Java. The .net port is a little behind the times (version 3.0.3 to be precise and we don't see true Faceting until version 3.4 or so)</p>
+<p>Examine also has its own implementation of faceting but it's in an experimental branch and so requires re-compiling Examine (and potentially keeping it up to date with future Umbraco releases)</p>
+<p>As we'll see, <a href="http://senseidb.github.io/bobo/" target="_blank">Bobo</a> is not just a Faceting engine. It basically provides everything you need to create a browse-driven web experience.</p>
+<p>In their own words:</p>
+<blockquote>
+<p>"Bobo Browse is an information retrieval technology that provides navigational browsing into a semi-structured dataset. Beyond the result set from queries and selections, Bobo Browse also provides the facets from this point of browsing."</p>
+</blockquote>
+<p>Features:</p>
+<ol>
+<li><em>No need for cache warm-up for the system to perform:</em> Good for low-traffic sites</li>
+<li><em>multi value sort - sort documents on fields that have multiple values per doc, .e.g tokenized fields:</em> This is only useful if you implement your own LuceneIndexer.DocumentWriting Event Handler.</li>
+<li><em>fast field value retrieval:</em> You can fetch the search results directly from Bobo, avoiding an Umbraco Content lookup if you need maximum speed (I don't personally do this - assuming you've implemented pagination Umbraco will barely feel a tickle)</li>
+<li><em>facet count distribution analysis: </em> Erm? Answers on a postcard?</li>
+<li><em>stable and small memory footprint:</em> Good.</li>
+<li><em>support for runtime faceting:</em> See point 4.</li>
+</ol>
+<p>As an aside: A discussion of faceting wouldn't be complete without touching upon <a href="http://www.eduserv.org.uk/blog/2011/09/26/faceted-search-using-solr-what-it-is-and-what-benefits-does-it-provide/" target="_blank">Solr</a>.  Similar to Bobo, Solr imposes a structure on your data via a Schema and allows you to search sort and facet all kinds of document-orientated data. But this requires a not-insignificant investment of time to keep the Solr index in-sync with your Umbraco content - something that Examine handles for free.</p>
+<h2>Build Bobo</h2>
+<p>Now this may look like a lot of effort, but stick with me, it'll be worth it in the end.</p>
+<p>Until Umbraco Examine is updated to use version 3.0.3 of Lucene, we need to use the old, and slightly un-loved, version of Bobo. This requires a little work but I've detailed the steps below:</p>
+<ul>
+<li><a href="https://bobo.codeplex.com/SourceControl/latest%20-%20for%20Lucene%202">https://bobo.codeplex.com/SourceControl/latest</a> - for Lucene 2.9</li>
+<li><a href="https://github.com/zhengchun/Bobo-Browse.Net">https://github.com/zhengchun/Bobo-Browse.Net</a> - for Lucene 3.0.3</li>
+</ul>
+<p>Download a zip of the source code. Don't open the solution in visual studio yet!  We need to replace the log4net.dll in \DllReferences with the one from the Umbraco distribution first. This done, open the solution in visual studio (I used vs2010, if you have a newer version it will likely want to update the project) then right-click properties on each of the three projects in the solution in turn (BoboBrowse.Net, BoboBrowse.Tests &amp; LuceneExt.Net) and change:</p>
+<ol>
+<li>The Target Framework to (at least) version 4 (not client profile)</li>
+<li>Uncheck the "Sign the assembly" check box on the "Signing" tab - The version of log4net that ships with Umbraco isn't signed so in turn, Bobo can't be signed.</li>
+</ol>
+<p>Finally, build the solution and you will have a shiny BoboBrowse.Net.dll (&amp; friends) in the \Deployment folder.</p>
+<p>Copy the contents of this folder to the \bin folder of Umbraco and reload the admin area.</p>
+<h2>The Demo</h2>
+<p>I've put together a little demo based on the TXT starter Kit for Umbraco (this demo was written for u7.1.9 but the version of Lucene shipped with Umbraco has been stable for ages so the core concepts will work on any version of Umbraco 4.7+)</p>
+<p>Let's start with adding some content that we can facet on. I've added a property to the News Item Document Type called Category:</p>
+<p><img src="/archive/media/2014/Add_Property_498x335.jpg" width="498" height="335" alt="Add Property"></p>
+<p>And then populated each news article with some sample categories:</p>
+<p><img src="/archive/media/2014/Populate_Property_498x149.jpg" width="498" height="149" alt="Populate Property"></p>
+<p>What we're aiming for is a search page with a keyword search plus our Category facet a little like this:</p>
+<p><img src="/archive/media/2014/NoQuery_500x280.jpg" width="500" height="280" alt="Noquery"></p>
+<p>I sincerely hope yours will be prettier!</p>
+<h2>The Code</h2>
+<p>Most of the following is just a re-spun version of the usage sample from the projects' home page at <a href="https://bobo.codeplex.com/">https://bobo.codeplex.com/</a> with a sprinkling of configuration from my last project.</p>
+<p>Let's start by building a BrowseRequest.</p>
+<pre class="language-csharp"><code>// creating a browse request
+var browseRequest = new BrowseRequest
+{
+    Count = 10, // Page size
+    Offset = 0, // Page size * Page Number
+    FetchStoredFields = true, // Fetch data from stored fields
+    Sort = new[] { new SortField("updateDate", 3, true) }
+};
+</code></pre>
+<p>As you can see, Bobo handles all the logic efficiently paging through your result set, all you need to do it specify a page size and build a pagination UI (Not covered in this demo)</p>
+<p>Next, we'll add in the keyword search provided by the user. This will be interpreted as a raw <a href="http://lucene.apache.org/core/2_9_4/queryparsersyntax.html" target="_blank">Lucene Query</a> so you may want to sanitise the user's input a little. <a href="https://gist.github.com/abriggs-eduserv/01673d2f847b30395c0d" target="_blank">Here's one I created earlier</a>.</p>
+<pre class="language-csharp"><code>// parse a query
+var query = Request["q"];
+if(!string.IsNullOrEmpty(query)) {
+    var parser = new Lucene.Net.QueryParsers.QueryParser(Lucene.Net.Util.Version.LUCENE_29, "bodyText", new Lucene.Net.Analysis.KeywordAnalyzer());
+    Query q = parser.Parse(query);
+    browseRequest.Query = q;
+}
+</code></pre>
+<p>Here's where I deviate from the Bobo sample usage - Each facet requires two entities in Bobo, a FacetHandler and a FacetSpec. I chose to initialise them both at the same time as follows:</p>
+<pre class="language-csharp"><code>ICollection&lt;FacetHandler&gt; handlerList = new List&lt;FacetHandler&gt;();
+
+// define the facet output spec used for all facets
+var facetSpec = new FacetSpec { OrderBy = FacetSpec.FacetSortSpec.OrderHitsDesc, ExpandSelection = true };
+
+// Add a facet
+var fieldName = "category";
+handlerList.Add(new SimpleFacetHandler(fieldName));
+browseRequest.SetFacetSpec(fieldName, facetSpec);
+</code></pre>
+<p>The chosen FacetHandler specifies the general behaviour of the Facet. For example you can use a RangeFacetHandler() to facet on pre-defined ranges e.g. price ranges or date ranges. Here we're using the SimpleFacetHandler which expects a single value per document (a category in this example). If you were able to select multiple categories then you would need to upgrade to the MultiValueFacetHandler.</p>
+<p>Now we stick it all together by:</p>
+<ol>
+<li>Grabbing an Examine Searcher for the built-in 'External' index.</li>
+<li>Then grabbing the underlying Lucene IndexSearcher.</li>
+<li>Extracting the IndexReader which is what Bobo will operate on. </li>
+<li><span>Wrapping the vanilla IndexReader with a BoboIndexReader.</span></li>
+<li><span>Executing the browse request we've built up.</span></li>
+</ol>
+<pre class="language-csharp"><code>var searchProvider = ExamineManager.Instance.SearchProviderCollection["ExternalSearcher"] as LuceneSearcher;
+var searcher = (IndexSearcher) searchProvider.GetSearcher();
+var reader = searcher.GetIndexReader();
+
+// decorate lucene reader with a bobo index reader
+BoboIndexReader boboReader = BoboIndexReader.GetInstance(reader, handlerList);
+
+// perform browse
+IBrowsable browser = new BoboBrowser(boboReader);
+var results = browser.Browse(browseRequest);
+</code></pre>
+<p>This will result in a list of Lucene documents that matches your query.</p>
+<p>As lucene documents consist of Key-Value pairs of string data, they're not the nicest things to work with, especially when we have the awesome Umbraco at our fingertips. So the following step will extract the NodeIds of the matching documents (only for the current page if there are a lot of matches) and fetch lovely Umbraco Dynamic content items for us to razor all over!</p>
+<pre class="language-csharp"><code>// create collection of Umbraco NodeIds from Hits.
+var resultNodeIds = results.Hits.Select(x =&gt; x.StoredFields.Get("id")).ToList();
+</code></pre>
+<h2>HTML</h2>
+<p>I suspect most people reading this will have a fair idea of how they want their search results to look so I'll keep this brief.</p>
+<pre class="language-markup"><code>&lt;form method="post"&gt;
+    &lt;div class="row"&gt;
+        &lt;div class="9u"&gt;
+            &lt;label for="q"&gt;Search&lt;/label&gt;
+            &lt;input name="q" id="q" value="@Request["q"]" /&gt;
+            &lt;input type="submit" value="Search" /&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class="row"&gt;
+        &lt;div class="3u"&gt;
+            @foreach (var facet in results.FacetMap)
+            {
+                &lt;h4&gt;@facet.Key&lt;/h4&gt;
+                &lt;ul&gt;
+                    @foreach (var facetValue in facet.Value.GetFacets())
+                    {
+                        var chck = (Request["facet_" + facet.Key] ?? string.Empty).Contains(@facetValue.Value.ToString()) ? "selected" : null;
+                        &lt;li&gt;&lt;label&gt;&lt;input type="checkbox" name="facet_@facet.Key" value="@facetValue.Value" checked="@chck" /&gt;@facetValue.Value&lt;/label&gt;: @facetValue.HitCount&lt;/li&gt;
+                    }
+                &lt;/ul&gt;
+            }
+            &lt;input type="submit" value="Update" /&gt;
+        &lt;/div&gt;
+        &lt;div class="6u"&gt;
+            &lt;ul&gt;
+            @foreach (var resultNodeId in resultNodeIds)
+            {
+                var node = Umbraco.Content(resultNodeId);
+                &lt;li&gt;&lt;a href="@node.Url"&gt;@node.Name&lt;/a&gt;&lt;/li&gt;
+            }
+            &lt;/ul&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/form&gt;
+
+</code></pre>
+<p>In this snippet, I've:</p>
+<ol>
+<li>Iterated over the available facets, generating a checkbox for each and then,</li>
+<li>Iterated over the search results, outputting a link to the page.</li>
+</ol>
+<p>It isn't pretty, it's not even clever. OK, there's no need to laugh!</p>
+<figure>
+  <a href="/archive/media/2014/loremquery.png">
+    <img src="/archive/media/2014/loremquery.png" width="454" alt="Searching the demo for keyword 'Lorem'">
+  </a>
+  <figcaption>Searching the demo for keyword 'Lorem'</figcaption>
+</figure>
+<h2>Filtering</h2>
+<p>Now that we have checkboxes to let the user filter by the available facets, we need to pass their selections on to Bobo. </p>
+<pre class="language-csharp"><code>// read facet selections from the form post
+foreach(string key in Request.Form) {
+    if(!key.StartsWith("facet_")) {
+        continue;
+    }
+    var facet = key.Substring(6);
+    // add a selection
+    BrowseSelection sel = new BrowseSelection(facet);
+    sel.AddValue(Request.Form[key]);
+    browseRequest.AddSelection(sel);
+}
+</code></pre>
+<p>Here we're simply:</p>
+<ol>
+<li>Iterating over the Form collection</li>
+<li>Picking out the facet selections and</li>
+<li>Dumping them straight into the BrowseRequest.</li>
+</ol>
+<p>It really couldn't be simpler!</p>
+<figure>
+  <a href="/archive/media/2014/loremqueryplusfilter.png">
+    <img src="/archive/media/2014/loremqueryplusfilter.png" width="465" alt="Filtering the news articles by category. As if you needed proof!">
+  </a>
+  <figcaption>Filtering the news articles by category. As if you needed proof!</figcaption>
+</figure>
+<p><a href="https://gist.github.com/abriggs-eduserv/c23f4a0ffc28b5afebd5" target="_blank">You can find the complete demo macro partial here</a>.</p>
+<h2>Wrapping Up</h2>
+<p>Whilst this has been a whistle stop tour of bobo, we have built up a fully-functional search page with faceting. However, there are some subtleties that we haven't touched upon, such as how the Analyser used to build the Index has a big impact on the behaviour of the faceting (e.g. the External index uses a StandardAnalyser by default and that is the reason that the facets appear in lowercase in the screenshots above).</p>
+<p>Hopefully I've whetted your appetite enough to want to continue reading about Bobo and/or Lucene, the technology that underpins Examine. Enjoy!</p>
+<ul>
+<li><a href="https://code.google.com/p/bobo-browse/">https://code.google.com/p/bobo-browse/</a></li>
+<li><a href="https://bobo.codeplex.com/">https://bobo.codeplex.com/</a></li>
+<li><a href="https://github.com/zhengchun/Bobo-Browse.Net">https://github.com/zhengchun/Bobo-Browse.Net</a></li>
+<li><a href="https://gist.github.com/abriggs-eduserv/c23f4a0ffc28b5afebd5">https://gist.github.com/abriggs-eduserv/c23f4a0ffc28b5afebd5</a></li>
+</ul>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/search/" title="See all articles tagged with Search">Search</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Antony Briggs"><img src="//gravatar.com/avatar/592ae36b9bd2f14ec37223d479eb897b.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/592ae36b9bd2f14ec37223d479eb897b.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Antony Briggs</h1>
+        <p>Antony is on Twitter as <a href="//twitter.com/antonybriggs" title="Antony Briggs on Twitter" rel="author">@antonybriggs</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li class="selected"><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

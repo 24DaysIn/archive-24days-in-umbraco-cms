@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Upgrading a thousand Umbraco sites in the Cloud</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Upgrading 1000 sites</h1>
+      <p class="byline"> by Mikkel Madsen, <span class="pubdate">posted on <time datetime="2021-12-10">Dec 10, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <div><span>Part of the Umbraco Cloud offering is that you get automatic patch upgrades for the products included in your project. This includes the Umbraco CMS, Umbraco Deploy and Umbraco Forms, </span>but also a variety of addons that are included, like the Blob storage provider (for storing media on Azure Blob storage), and Umbraco Id (Single Sign-On).</div>
+<div><span>This means that every time one of the products or components </span>are upgraded, we want to add the new files to all eligible Umbraco Cloud projects. In this article, I’ll try to touch on a few important aspects</div>
+<ul>
+<li><span> Finding eligible projects for the upgrade</span></li>
+<li><span>Upgrading one project to the latest version - (Azure Web Apps, NuGet upgrades and Unattended Upgrades)</span></li>
+<li><span>Executing and scaling the upgrades - (Azure functions and Azure Container Instances)</span></li>
+</ul>
+<p><span>In short, I'll try to explain what happens when you see a tweet like this:</span></p>
+<p class="intro"><span><img style="width: 500px; height: 130px;" src="/archive/media/2021/tweet.png?width=500&amp;height=130" alt="" data-udi="umb://media/8a56cf41000b45198d420260bcbf57d7"></span></p>
+<h2><span> Finding eligible projects for Upgrade</span></h2>
+<div><span>On Umbraco Cloud we have lots of different projects running, figuring out which projects should get the latest patch, requires us to know exactly what version a project is running.</span></div>
+<div><span>This might seem straightforward - We install Umbraco, and we manage upgrades, so just keep track of it, right? Unfortunately, Umbraco Cloud is structured in a way, where the code repository is owned by the users, and they are not forced to only upgrade through the automatic upgrade process. This means that some might upgrade manually, and then we would not know about it in our systems. Therefore, we need to ensure and synchronize the versions a project is running before we can find out who gets an upgrade.</span></div>
+<div></div>
+<div><span>The Umbraco Cloud currently holds a wide range of different versioned Umbraco solutions, and we recently changed the underlying platform infrastructure to Azure Web Apps, as well as introduced Umbraco 9. The infrastructure change meant we needed to develop a new way of upgrading sites, and from Umbraco 8.12 and up we utilize the Unattended Upgrades feature in Umbraco CMS, when running the upgrades.</span></div>
+<div><span><img style="width: 500px; height: 190px;" src="/archive/media/2021/cloud.png?width=500&amp;height=190" alt="Umbraco Cloud" data-udi="umb://media/cc1b0db4355442448d40acc64ca3bbb3"></span></div>
+<div><span>So, to sort everything out, we run a nightly batch run, which will figure out what version any project is running, and what version of which components are installed</span></div>
+<ol>
+<li><span>What platform are you running? </span><span>-</span><span> We have two platforms - the old platform, and Azure Web Apps</span></li>
+<li><span>What Umbraco CMS version are you running? </span><span>-</span><span> We run Umbraco projects ranging back to 7.2.8(Please upgrade if this is you ;-) and until the very latest released version (9.1.1 as of this writing)</span></li>
+<li><span>What type of project are you? </span><span>-</span><span> The Umbraco Cloud platform supports all of our cloud offerings, meaning regular Umbraco Cloud projects, Umbraco Uno and Umbraco Heartcore</span></li>
+<li><span>What versions of components do you have installed? </span><span>-</span><span> Each Umbraco project has a range of components installed, like Umbraco Forms, Umbraco Deploy, Umbraco Courier, StorageProvider, Umbraco Id, various Contrib packages etc.</span></li>
+</ol>
+<div><span>With that information we can sort out which projects should receive the new upgrade.</span></div>
+<h2><span> Upgrading one project to the latest version</span></h2>
+<div><span>When you would upgrade an on-premises Umbraco site the process would look something like this</span></div>
+<ol>
+<li><span>Open your project in your IDE.</span></li>
+<li><span>Update the Umbraco package via NuGet.</span></li>
+<li><span>Rebuild your solution.</span></li>
+<li><span>Make sure it can boot.</span></li>
+<li><span>Run the upgrade wizard to ensure the latest patch and migrations are applied.</span></li>
+<li><span>Validate that your site still runs as expected.</span></li>
+<li><span>Deploy the change to your development environment and run step 5+6 again.</span></li>
+<li><span>Deploy to the next environments you would have and run step 5+6 again.</span></li>
+</ol>
+<div><span>The process of upgrading a site on Umbraco Cloud is similar, but to scale the process to thousands of sites, everything needs to be automated.</span></div>
+<div><span></span> </div>
+<div><em>Let me start by taking you through a little de-tour, talking about some of the challenges we had with the old platform and older versions of Umbraco</em></div>
+<div><span>In previous versions of Umbraco CMS, prior to Umbraco 9 and early versions of Umbraco 8, the upgrade process was more complex. We did it by downloading the .zip package we always provide of Umbraco - Then we would compare each file in it with the files a project had, and then overwrite the existing files with the newer ones.</span></div>
+<div><span>Once that copying the files was done, we needed to commit the changes to the git repository, and afterwards copy the changes to wwwroot, where the site would boot. Once the site had booted, we needed to run the upgrader. </span></div>
+<div><span>This caused yet more issues, as Umbraco did not have a way to automate running the upgrade, so we had to implement custom code to manage that process. Without it, the site would end up in a state called AuthorizeUpgrade where you as an Admin would have to log in to finalize the upgrade. </span></div>
+<div><span>Once the upgrader had finished, we would verify that the site was running as expected. This last step is also the first time we would notice if the site's code was compatible with the upgraded Umbraco files, if not the site would throw a YSOD, and we would have to revert.</span></div>
+<h3><span>Current upgrades</span></h3>
+<div><span>The current upgrade process has been simplified a lot compared to previously. Three major changes have helped with this</span></div>
+<ol>
+<li><span>Moving to Azure Web Apps</span></li>
+<li><span> Unattended Upgrades</span></li>
+<li><span> Umbraco 9 and NuGet upgrades</span></li>
+</ol>
+<div><strong>1. Moving to Azure Web Apps</strong></div>
+<div><span>The move to Azure Web Apps gave us a challenge, but also fixed some of the complexity we had seen previously. In the old setup, we had direct access to the fileservers via a UNC share. This made it easy to just go to the file share, modify some files and commit them. No git cloning or pushing was needed. The drawback was that the fileserver was shared among all customers, meaning that writing to the fileserver took resources away from everyone else having their files on that fileserver. Furthermore, we had to maintain the fileservers ourselves, with all that follows in terms of monitoring and maintenance, and if that fileserver broke, many sites on Umbraco Cloud would stop working. </span></div>
+<div><span> </span></div>
+<div><span>While moving to Azure Web Apps we had to change that process. We no longer have access to the file share, so rather than doing the git operations directly on a fileserver, we changed the flow. Now we "just" do regular git operations against the git repository that lies behind the Azure Web App. This means the process of updating files has been boiled down to this:</span></div>
+<div><span><img style="width: 500px; height: 155px;" src="/archive/media/2021/git-commands-clean.png?width=500&amp;height=155" alt="git commands" data-udi="umb://media/5cf44885712f42a8aa07a3df3bd6a3fb"></span></div>
+<div><span>Once the files have been pushed, Azure Web Apps handles copying files from the git repository and to the wwwroot, and we are ready to check if the site runs as expected.</span></div>
+<div> </div>
+<div><strong>2. Unattended Upgrades</strong></div>
+<div><span>In Umbraco 8.12 we introduced <a rel="noopener" href="https://our.umbraco.com/Documentation/Fundamentals/Setup/Upgrading/general-v8#run-an-unattended-upgrade" target="_blank" title="Unattendd upgrades" data-anchor="#run-an-unattended-upgrade">Unattended Upgrades</a>. This change allowed us to no longer have our custom code that would run the Umbraco Upgrader whenever an upgrade was detected. Instead, we make sure that Unattended Upgrades is enabled on the site, and then we just have to boot the site. This will automatically apply whatever migrations is needed for the upgrade.</span></div>
+<div> </div>
+<div><strong>3. Umbraco 9 and NuGet upgrades</strong></div>
+<div><span>With the introduction of Umbraco 9 and .NET 5, we started changing the way we run projects on Umbraco Cloud. Previously the git repository would contain everything needed to boot a site. This would include all files from Umbraco, and the custom code that was implemented, compiled to dll’s. </span></div>
+<div><span>In the new format, we do a build on the servers, so the files that need to be in the git repository are just raw source files, like .csproj and .cs files. If the dependencies are reachable via NuGet, nothing else is needed. For upgrades this makes the upgrade step super simple, we just update the NuGet reference in the .csproj file(s) and run a build. This ensures that the customer's code is compatible with the latest version of Umbraco. Then we commit that change.</span><span></span></div>
+<div><span> </span></div>
+<div><strong>Running the upgrade</strong></div>
+<div><span>With those three points in place the process can be simplified to</span></div>
+<ul>
+<li>For each environment
+<ul>
+<li>Clone down the repository</li>
+<li>Update package references to the latest version</li>
+<li>Build the project</li>
+</ul>
+</li>
+</ul>
+<div><span><img style="width: 500px; height: 267.7029360967185px;" src="/archive/media/2021/upgradeprojectprocess.gif?width=500&amp;height=267.7029360967185" alt="UpgradeProcess" data-udi="umb://media/37e080afa63b483bb1c980f24c0a318d"></span></div>
+<p> </p>
+<h2><span> Executing and scaling the Upgrades</span></h2>
+<div><span>Now we know what it takes to upgrade one project on Umbraco Cloud, then how does it scale? This is where we utilize the power of Azure and Serverless computing. We did package all the code for upgrading one project into one single docker image, called the UpgradeExecutor - We have one image pr. product type we run on Umbraco Cloud, so an Umbraco 9+, Umbraco 8, Umbraco 7, Heartcore and Uno. Then we send a list of eligible environments onto a queue, which in turn will trigger a Durable Azure Function Orchestrator to start processing the environments. We tell it about how many we want to run concurrently. Then the Azure Function Orchestrator is in charge of keeping that amount of UpgradeExecutors alive until there are no more environments to upgrade. </span></div>
+<div><span>The UpgradeExecutor is executed via Azure Container Instances – This is an Azure service for running docker images - a Container instance will take a docker image, run it to completion, and then destroy the container instance again.</span></div>
+<div><span></span></div>
+<div><span>We can try to visualize what happens in this short gif</span></div>
+<div><img style="width: 500px; height: 274.80916030534354px;" src="/archive/media/2021/upgradeexecutors-azurefunctions.gif?width=500&amp;height=274.80916030534354" alt="UpgradeExecutors running" data-udi="umb://media/5b3715909c7a4a67acc1e26ca01f6571"><span></span></div>
+<div><span></span></div>
+<div><span>We currently run between 15 and 25 UpgradeExecutors simunltaneously - this image is from a recent upgrade, showing the Container instances cracking away at UpgradeExecutors</span></div>
+<div><span><img style="width: 500px; height: 170px;" src="/archive/media/2021/acis-running.png?width=500&amp;height=170" alt="Azure Container Instances running" data-udi="umb://media/31502199933d4715bc008c6f9a5008f3"></span></div>
+<div><span>This architecture is perfect for us running upgrades, it ensures that we do not have UpgradeExecutors' resources lying idle around and that we only spend money on resources that are actually utilized. Usually, upgrades are mainly run on Tuesdays, so these UpgradeExecutors should only be active during that time. Also, a bugfix or new feature added to one of these UpgradeExecutors will automatically be applied the next time we run an upgrade, if only the Docker image is updated, we just take the latest one.</span></div>
+<h2>Final words</h2>
+<div><span>In the above I do try to explain a lot, in a fairly short article - It’s also only scratching the surface of some of the super exciting services (according to me at least) we have running on Umbraco Cloud. I tried to keep it at a level it is easy to follow if you're interested but haven't been part of the whole journey. I hope I succeeded 🙂 I also hope you can see there has been tremendous development on the inner workings of Umbraco Cloud. We're constantly improving all parts of the experience based on experience and on feedback. This year has seen some of the biggest changes yet with the introduction of a new and improved infrastructure, Umbraco 9 with better project structure and build process and finally more efficient and reliable upgrade services - just to name a few - and we'll continue to add improvements and new features in 2022 and beyond.</span></div>
+<div><span></span></div>
+<div><span>If you have questions about the process or would like to learn more - do not hesitate to reach out to me or anyone from my team. We love to talk about the tech we develop and implement daily.</span></div>
+<div><span>Speaking of the team, I'd like to give a huge thanks to the Umbraco Cloud Platform Team's proof reading and comments for this article, and coming up with this amazing solution, and many more - credit goes to <a rel="noopener" href="https://twitter.com/dan_lister" target="_blank" title="Dan on Twitter">Dan Lister</a> (for amazing visuals), <a rel="noopener" href="https://twitter.com/sitereactor" target="_blank" title="Morten on Twitter">Morten Christensen</a>, <a rel="noopener" href="https://twitter.com/Martinhc" target="_blank" title="Martin on Twitter">Martin Clausen</a>, <a rel="noopener" href="https://twitter.com/mi_kulas" target="_blank" title="Mikulas on Twitter">Mikulas Tomanka</a> and <a rel="noopener" href="https://twitter.com/rasmusjp" target="_blank" title="Rasmus on Twitter">Rasmus Pedersen</a></span></div>
+<p><br><br></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v9/" title="See all articles tagged with v9">v9</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/azure/" title="See all articles tagged with Azure">Azure</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/git/" title="See all articles tagged with Git">Git</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/net-5/" title="See all articles tagged with .NET 5">.NET 5</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/umbraco-cloud/" title="See all articles tagged with Umbraco Cloud">Umbraco Cloud</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Mikkel H. Madsen"><img src="//gravatar.com/avatar/b7b72c3f22620e9251c5b598194a6d99.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/b7b72c3f22620e9251c5b598194a6d99.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Mikkel H. Madsen</h1>
+        <p>Mikkel is on Twitter as <a href="//twitter.com/mikkelhm" title="Mikkel H. Madsen on Twitter" rel="author">@mikkelhm</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

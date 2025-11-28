@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>The Strange Case of the Missing Controller</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">The Missing Controller</h1>
+      <p class="byline"> by Mario Lopez, <span class="pubdate">posted on <time datetime="2017-12-11">Dec 11, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Our story starts some years ago. When I started with Umbraco I was coming from using just the plain MVC patterns and techniques. So, you know, you create a controller with your action methods, you create your route handler to point to these controllers and the controllers will display your templates.</p>
+<p class="intro">These controllers will also get the required data that you want to display on your view. I was using Entity Framework for this, retrieving a bunch of data and creating a View Model for my view.</p>
+<blockquote><span>Something told me there should be a controller somewhere, that I could use controllers somehow, so I started chasing </span><em>the Missing Controller</em><span>.</span></blockquote>
+<p>But when I first jumped into Umbraco I was quite lost. You don’t have to create controllers so how are your views displayed? Displaying page content is fine but what if you want to send some custom data to the templates?  If I don’t have controllers, how can I use my old friends the View Models?.</p>
+<p>And because we don’t have controllers (this is not true, more about this to come) I was just throwing all possible logic into the templates as it seems to be the only place where we can put our code right?. Wrong.</p>
+<p>Something told me there should be a controller somewhere, that I could use controllers somehow, so I started chasing <em>the Missing Controller</em>.</p>
+<h2>Our Case Scene</h2>
+<p>So, you finally understood how to create your document type, your template and a page with some content.</p>
+<p>And your content tree looks like this:</p>
+<p> <img src="/archive/media/2017/case-scene.png?width=181&amp;height=221" alt="" data-udi="umb://media/7132ba4c030b4f109e259e830893a71f"></p>
+<p> The root of your Blog will display this:</p>
+<p> <img style="width: 500px; height: 322.7749708511465px;" src="/archive/media/2017/case-scene2.png?width=500&amp;height=322.7749708511465" alt="" data-udi="umb://media/0bcb19b633934c3781b1c4d1a14a9c16"></p>
+<p> </p>
+<p> The code for this template looks like:</p>
+<pre><code class="language-javascript">﻿
+@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@using ContentModels = Umbraco.Web.PublishedContentModels;
+
+@{ 
+    Layout = "Master.cshtml";
+}
+
+@Html.Partial("~/Views/Partials/SectionHeader.cshtml")
+
+&lt;section class="section"&gt;
+    &lt;div class="container"&gt;
+        @Umbraco.Field("bodyText")
+    &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<p>So you managed to display the intro for your blog but no articles are being displayed!. No articles, no blog.</p>
+<p>There is only one place you can think of where to put your code and retrieve your articles: your view. And you do something like this:</p>
+<pre><code class="language-javascript">﻿@inherits Umbraco.Web.Mvc.UmbracoViewPage&lt;BlogViewModel&gt;
+@using ContentModels = Umbraco.Web.PublishedContentModels;
+@{
+    Layout = "Master.cshtml";
+}
+@Html.Partial("~/Views/Partials/SectionHeader.cshtml")
+@{
+
+    var articles = Model.Content.Children;
+
+}
+
+&lt;section class="section"&gt;
+    &lt;div class="container"&gt;
+        @Umbraco.Field("bodyText")
+
+        &lt;h2&gt;Posts&lt;/h2&gt;
+        &lt;ul&gt;
+            @foreach (var article in articles)
+            {
+                &lt;li&gt;
+                    &lt;p&gt;
+                        &lt;strong&gt;@article.Name&lt;/strong&gt;&lt;br /&gt;
+                        @(article.GetPropertyValue&lt;string&gt;("excerpt"))
+                    &lt;/p&gt;
+                &lt;/li&gt;
+            }
+        &lt;/ul&gt;
+    &lt;/div&gt;
+&lt;/section&gt;
+</code></pre>
+<p>That doesn’t look too bad actually. Easy and simple. Job done.</p>
+<p>This technique might be easy for simple tasks, everybody using Umbraco does it this way when the data to retrieve is simple, but it can lead you to the worst scenarios. When you have several sources and start applying complex logic to your data the thing gets messy.</p>
+<p>The next example is from an actual site, I’ll paste here for the sake of demonstration of how your template should never look like:</p>
+<p> <img style="width: 500px; height: 281.6399286987522px;" src="/archive/media/2017/example1.png?width=500&amp;height=281.6399286987522" alt="" data-udi="umb://media/a20ccaee0cad4ad5829aaac6f0779165"></p>
+<blockquote><span>Well, it turns out that there are several techniques in Umbraco to move your logic away from your views. </span></blockquote>
+<p>Yes, this works, but at the bottom of your heart you know this looks terrible. They are basically using the view as a controller to gather all the data and then a view model is created to be sent to a partial view.</p>
+<p>When you work on a plain MVC project you know is good practice to separate your logic from your views, but you don’t know where <em>The Missing Controllers</em> are so you can do that.</p>
+<p>Well, it turns out that there are several techniques in Umbraco to move your logic away from your views. Let’s start with the simpler one: Partial Actions.</p>
+<p> </p>
+<h2>Your first clue: The Partial Action</h2>
+<p>Have you heard about <a href="https://our.umbraco.org/documentation/reference/routing/surface-controllers">Surface Controllers</a>? They will be one of your best friends in this apparent controller-less Umbraco world. They are easy to create, to use and you don’t have to worry about routing.</p>
+<h3>Preparing the scene</h3>
+<p>To make the case a bit more interesting, I have added a new News branch and we will use our Users list to display info about who wrote the posts:</p>
+<p> </p>
+<p> <img style="width: 163px; height: 307px;" src="/archive/media/2017/preparing-scene1.png?width=163&amp;height=307" alt="" data-udi="umb://media/93a14b604af8456a92f9816b567c4cd6"></p>
+<p> </p>
+<p>And added some users:</p>
+<p><img style="width: 462px; height: 310px;" src="/archive/media/2017/2017-11-16-11_51_57-users-localhost.png?width=462&amp;height=310" alt="" data-udi="umb://media/7a02b7fdbf9a4751929bc16ccd5bd8ac"> </p>
+<p>So Posts, News and Users will have to live together in the same template and, as we saw, putting our logic in the view can make things confusing.</p>
+<p> </p>
+<h2>Moving the logic</h2>
+<p>One way of moving your logic off the templates is using a technique that involves Surface Controllers and Partial Actions. We will create our action methods to retrieve all the data and then return a partial view with it. We will also use a custom view model to merge posts and writers’ details and make things even easier.</p>
+<p><strong>Our Models</strong></p>
+<p>These will be the view models of our partial views.</p>
+<pre><code class="language-csharp">﻿public class PostViewModel
+{
+    public string Title { get; set; }
+    public string Excerpt { get; set; }
+    public WriterViewModel Writer { get; set; }
+}
+
+public class WriterViewModel
+{
+    public string Image { get; set; }
+    public string Name { get; set; }
+}</code></pre>
+<p><strong> </strong></p>
+<p><strong>Our Controller</strong></p>
+<pre><code class="language-csharp">﻿
+    public class AwesomeSiteController : SurfaceController
+    {
+        public PartialViewResult LatestPosts()
+        {
+            var posts = new List&lt;PostViewModel&gt;();
+            var blog = Umbraco.TypedContentAtRoot().First().Children.FirstOrDefault(x =&gt; x.DocumentTypeAlias == "blog");
+            if (blog != null)
+            {
+                var children = blog.Children;
+
+                foreach (var c in children)
+                {
+                    posts.Add(new PostViewModel
+                    {
+                        Title = c.Name,
+                        Excerpt = c.GetPropertyValue("excerpt").ToString(),
+                        Writer = new WriterViewModel
+                        {
+                            Name = c.CreatorName,
+                            Image = ApplicationContext.Services.UserService.GetUserById(c.CreatorId).Avatar
+                        }
+                    });
+                }
+
+
+            }
+            return PartialView(posts);
+        }
+
+        public PartialViewResult LatestNews()
+        {
+            IEnumerable&lt;IPublishedContent&gt; articles = Enumerable.Empty&lt;IPublishedContent&gt;();
+            var news = Umbraco.TypedContentAtRoot().First().Children.FirstOrDefault(x =&gt; x.DocumentTypeAlias == "news");
+            if (news != null)
+            {
+                articles = news.Children;
+            }
+            return PartialView(articles);
+        }
+    }</code></pre>
+<p><strong> </strong></p>
+<p><strong>Our template</strong></p>
+<div>
+<pre><code class="language-javascript">﻿@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@using ContentModels = Umbraco.Web.PublishedContentModels;
+@{
+    Layout = "Master.cshtml";
+}
+@Html.Partial("~/Views/Partials/SectionHeader.cshtml")
+
+&lt;section class="section"&gt;
+    &lt;div class="container"&gt;
+        @Umbraco.Field("bodyText")
+
+        &lt;div class="row"&gt;
+            &lt;div class="col-md-6"&gt;
+                @Html.Action("LatestPosts", "AwesomeSite")
+            &lt;/div&gt;
+            &lt;div class="col-md-6"&gt;
+                @Html.Action("LatestNews", "AwesomeSite")
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+</div>
+<h3>Our Partial Views</h3>
+<p><strong>LastestPost.cshtml</strong></p>
+<pre><code class="language-javascript">﻿@inherits UmbracoViewPage&lt;IEnumerable&lt;PostViewModel&gt;&gt;
+&lt;h2&gt;Latest Posts&lt;/h2&gt;
+
+@foreach (var post in Model)
+{
+    &lt;div class="post row"&gt;
+        &lt;div class="col-md-2"&gt;
+            &lt;figure&gt;
+                &lt;img class="avatar" src="/media/@post.Writer.Image?width=90&amp;height=90&amp;mode=crop"&gt;
+                &lt;figcaption&gt;&lt;i&gt;@post.Writer.Name&lt;/i&gt;&lt;/figcaption&gt;
+            &lt;/figure&gt;
+
+        &lt;/div&gt;
+        &lt;div class="col-md-8"&gt;
+            &lt;h4&gt;@post.Title&lt;/h4&gt;
+            &lt;p&gt;@post.Excerpt&lt;/p&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+}
+
+
+</code></pre>
+<p><strong>LatestNews.cstml</strong></p>
+<pre><code class="language-javascript">﻿@inherits UmbracoViewPage&lt;IEnumerable&lt;IPublishedContent&gt;&gt;
+
+&lt;h2&gt;Latest News&lt;/h2&gt;
+&lt;ul&gt;
+    @foreach (var article in Model)
+    {
+        &lt;li&gt;
+            &lt;p&gt;
+                &lt;strong&gt;@article.Name&lt;/strong&gt;&lt;br /&gt;                
+            &lt;/p&gt;
+        &lt;/li&gt;
+    }
+&lt;/ul&gt;
+
+</code></pre>
+<p> </p>
+<h3>Analysing the details</h3>
+<p><strong>The Latest Posts view</strong></p>
+<p>As you can see we have modified our Blog template, so we use:</p>
+<p><span class="code"> <span style="background-color: #dddfe2; color: #880000; font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;">@Html.Action("LatestPosts", "AwesomeSite")</span></span></p>
+<p>This will call our Action method, we will query Umbraco to give us our Posts and we will create a custom view model to merge data from our posts and writers. Then we’ll pass our view model to the partial view:</p>
+<p><span class="code"> <span style="background-color: #dddfe2; color: #880000; font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;">return PartialView(posts);</span></span></p>
+<p>On our partial view we are using the handy <em>UmbracoViewPage</em> class. This class will give us all the good Umbraco helpers and services and at the same time we can specify our custom view model as the model for the view so we get a strongly typed view.</p>
+<p>In this case, the Model of the view will be a <em>IEnumerable&lt;PostViewModel&gt;</em>. Remember this is the type of model we are getting from our action method.</p>
+<h3>The Latest News view</h3>
+<p>The LatestNews view is slightly different but it uses the same concept. Our LatestsNews action method retrieves all the pages of type ‘news’ but in this case, we are not creating a custom view model, we are just creating a list with the <em>IPublishedContent</em> that Umbraco gives us by default.</p>
+<p><strong>Our result</strong></p>
+<p> <img style="width: 364px; height: 259px;" src="/archive/media/2017/result.png?width=364&amp;height=259" alt="" data-udi="umb://media/4c5724c82ce447c6963bc071b12b89c5"></p>
+<p> </p>
+<h3>Wrapping the Partial Action clue</h3>
+<p>As we saw, we could use partial views, controllers, view models the same way we would do in a vanilla MVC project! We just had to load all the goodness using the Action helper.</p>
+<p> </p>
+<h2>Your second clue: Hijacking routes</h2>
+<p>Previously we have been able to move our logic from the template to controllers and use view models in partial views. All this allows us to separate concerns in logic chunks instead putting all together in the same template. This will make the site much more maintainable and easier to extend and support.</p>
+<p>Sometimes, though, this still feels like a hack. You must create a template just to host the rest of your partial views. To be fair you still haven’t seen the Missing Controller that loads the main template.</p>
+<p> </p>
+<h3>Hijacking routes </h3>
+<p>There is something called <a href="https://our.umbraco.org/documentation/reference/routing/custom-controllers">route hijacking</a>. With this technique we can create our ‘first level’ controller that will load our main template. I’m not going to say what the docs explain well.</p>
+<p>In our case we want to use route hijacking to have one controller and one view model, no partial views, no action helpers. It can’t be that difficult, right?!</p>
+<h4>Our view model</h4>
+<div>
+<pre><code class="language-csharp">﻿public class BlogViewModel : RenderModel
+{
+    public BlogViewModel(IPublishedContent content) : base(content) { }
+
+    public IEnumerable&lt;PostViewModel&gt; LatestPosts { get; set; }
+    public IEnumerable&lt;IPublishedContent&gt; LatestNews { get; set; }
+
+}</code></pre>
+</div>
+<h4>Our Controller</h4>
+<div>
+<pre><code class="language-csharp">﻿public class BlogController : Umbraco.Web.Mvc.RenderMvcController
+{
+
+    public override ActionResult Index(RenderModel model)
+    {
+        var viewModel = new BlogViewModel(model.Content);
+
+        viewModel.LatestPosts = GetLatestPosts();
+        viewModel.LatestNews = GetLatestNews();
+
+
+        return base.Index(viewModel);
+    }
+
+    private IEnumerable&lt;PostViewModel&gt; GetLatestPosts()
+    {
+        var posts = new List&lt;PostViewModel&gt;();
+        var blog = Umbraco.TypedContentAtRoot().First().Children.FirstOrDefault(x =&gt; x.DocumentTypeAlias == "blog");
+        if (blog != null)
+        {
+            var children = blog.Children;
+
+            foreach (var c in children)
+            {
+                posts.Add(new PostViewModel
+                {
+                    Title = c.Name,
+                    Excerpt = c.GetPropertyValue("excerpt").ToString(),
+                    Writer = new WriterViewModel
+                    {
+                        Name = c.CreatorName,
+                        Image = ApplicationContext.Services.UserService.GetUserById(c.CreatorId).Avatar
+                    }
+                });
+            }
+        }
+
+        return posts;
+    }
+
+    public IEnumerable&lt;IPublishedContent&gt; GetLatestNews()
+    {
+        IEnumerable&lt;IPublishedContent&gt; articles = Enumerable.Empty&lt;IPublishedContent&gt;();
+        var news = Umbraco.TypedContentAtRoot().First().Children.FirstOrDefault(x =&gt; x.DocumentTypeAlias == "news");
+        if (news != null)
+        {
+            articles = news.Children;
+        }
+
+        return articles;
+    }
+}</code></pre>
+</div>
+<h4>Our View</h4>
+<pre><code class="language-javascript">﻿@inherits Umbraco.Web.Mvc.UmbracoViewPage&lt;BlogViewModel&gt;
+@using ContentModels = Umbraco.Web.PublishedContentModels;
+@{
+    Layout = "Master.cshtml";
+}
+@Html.Partial("~/Views/Partials/SectionHeader.cshtml")
+
+&lt;section class="section"&gt;
+    &lt;div class="container"&gt;
+        @Umbraco.Field("bodyText")
+
+        &lt;div class="row"&gt;
+            &lt;div class="col-md-6"&gt;
+                &lt;h2&gt;Latest Posts&lt;/h2&gt;
+               @foreach (var post in Model.LatestPosts)
+               {
+                &lt;div class="post row"&gt;
+                    &lt;div class="col-md-2"&gt;
+                        &lt;figure&gt;
+                            &lt;img class="avatar" src="/media/@post.Writer.Image?width=90&amp;height=90&amp;mode=crop"&gt;
+                            &lt;figcaption&gt;&lt;i&gt;@post.Writer.Name&lt;/i&gt;&lt;/figcaption&gt;
+                        &lt;/figure&gt;
+
+                    &lt;/div&gt;
+                    &lt;div class="col-md-8"&gt;
+                        &lt;h4&gt;@post.Title&lt;/h4&gt;
+                        &lt;p&gt;@post.Excerpt&lt;/p&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+               }
+            &lt;/div&gt;
+            &lt;div class="col-md-6"&gt;
+                &lt;h2&gt;Latest News&lt;/h2&gt;
+                &lt;ul&gt;
+                    @foreach (var article in Model.LatestNews)
+                    {
+                        &lt;li&gt;
+                            &lt;p&gt;
+                                &lt;strong&gt;@article.Name&lt;/strong&gt;&lt;br /&gt;
+                            &lt;/p&gt;
+                        &lt;/li&gt;
+                    }
+                &lt;/ul&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<p>As you can see, we are just creating a controller that inherits from RenderMvcController. We are giving it the name BlogController so it’s used by the pages that implement the Blog DocType.</p>
+<p>Because we are not using different action methods for different templates, we just override the Index method. In that method we create our view model, and we get our data using two private methods.</p>
+<p>These methods are just our old partial Action methods but instead returning a Partial View they return the IEnumerables for our view model.</p>
+<p>Once we have our view model hydrated we just pass it to our base controller, that will send it to the template: return base.Index(model);</p>
+<p><strong>TIP: If you check the code for RenderMvcController you will see that it’s just doing this: <em>return CurrentTemplate(model);</em></strong></p>
+<p> </p>
+<p>On our view, we have replaced UmbracoTemplatePage by <em>UmbracoViewPage&lt;T&gt;</em> This change allows us, as we saw with the partial views before, to specify our model so we have a strongly typed view.</p>
+<p>Now our Model will be BlogViewModel. Awesome! So we can access our view model properties to render our data as we please.</p>
+<p><strong>Note: I’m not using partial views here but it would be good if you separate each piece of your template into more task-specific chunks. You can of course use Html.RenderPartial for this.</strong> </p>
+<p> </p>
+<h3>Wrapping the Hijacking Routes clue</h3>
+<p>So, there you go! We managed to use a controller and view model to send our stuff to the template, very similar to our old MVC way of doing things.</p>
+<p>We just had to create our controller inheriting from RenderMvcController and render our template using CurrentTemplate. This is a bit different than vanilla MVC, of course, instead returning a ViewResult, that CurrentTemplate method will know what template our page has been assigned from the Umbraco backoffice and will pass our model to it. Apart of that, everything else is pretty straight forward.</p>
+<p> </p>
+<h2>Closing the case</h2>
+<p>As we have seen on our investigations, we started with a nasty situation. The only place we could put our code on was the templates. This worked but eventually got messy when things got more complex and, because we love to do things right (we do, don’t we?, don’t we?), we wanted to separate our presentation layer from our logic layer.</p>
+<p>We had a clue that threw some light. This was using Action helpers to call our Action methods from a custom controller that inherits from a Surface Controller. This allowed us to send our data to a partial view that is then rendered into our main template.</p>
+<p>Our second clue was using Route Hijacking. This allowed us to ‘intercept’ Umbraco default behaviour so we could create a custom controller, a view model and pass it to the main template.</p>
+<p> </p>
+<p>Case closed.</p>
+<p> </p>
+<h2>Hmmm, but you didn’t find the Missing Controller!</h2>
+<p>We did, didn’t you realise? Our missing controller is RenderMvcController!. That is the controller that Umbraco uses as default to render every single page on your site. The normal Umbraco routing process will create a RenderModel that is passed to the Index of RenderMvcController and this will send it to the CurrentTemplate method we saw before.</p>
+<p>If you check the core code for CurrentTemplate you will see this:</p>
+<pre><code class="language-csharp">﻿protected ActionResult CurrentTemplate&lt;T&gt;(T model)
+{
+    var template = ControllerContext.RouteData.Values["action"].ToString();
+    if (EnsurePhsyicalViewExists(template) == false)
+        throw new Exception("No physical template file was found for template " + template);
+    return View(template, model);
+}
+
+</code></pre>
+<p>There you go! It’s returning a normal ActionResult using return View(template, model);. Exactly as you would do in a normal MVC project.</p>
+<p>Case Closed. For Good.</p>
+<p> </p>
+<h2>Moving further</h2>
+<p>There are some more techniques that involve controllers and you can use for more complex scenarios:</p>
+<ul>
+<li>One is <a href="https://our.umbraco.org/documentation/reference/routing/custom-routes">creating your own routes</a> so you can use completely customize controllers. For instance, you can pass more properties to your controller from the Url instead just using the RenderModel that Umbraco send to the controllers by defaut.</li>
+<li>You can also <a href="https://our.umbraco.org/documentation/reference/routing/custom-routes">modify your base controller</a> so you don’t even need to hijack your routes.</li>
+</ul>
+<p> </p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/templates/" title="See all articles tagged with Templates">Templates</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Mario Lopez"><img src="//gravatar.com/avatar/28c062e5ef2e27aa30918b86274daf9f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/28c062e5ef2e27aa30918b86274daf9f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Mario Lopez</h1>
+        <p>Mario is on Twitter as <a href="//twitter.com/skartknet" title="Mario Lopez on Twitter" rel="author">@skartknet</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

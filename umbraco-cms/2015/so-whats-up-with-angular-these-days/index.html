@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>So whats up with Angular these days..?</title>
+<meta name="description" content="Angular have evolved into something very promising. This article shares the excitment about Angular 2.0 and why it's probably worth your time.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">So whats up with Angular these days...</h1>
+      <p class="byline"> by Filip Bech, <span class="pubdate">posted on <time datetime="2015-12-16">Dec 16, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Last year the Angular-team announced the next major version of Angular. With a much discussed keynote at ngEurope they scared everybody into thinking that the end had come. Over the past year not only the communication efforts, but also the new framework, have evolved and turned into something very promising. In this blogpost I'll share my excitment about Angular 2.0 and why I think it's worth my (and your) time.</p>
+<h3 id="toc_1">So what's all the fuzz about?</h3>
+<p class="intro">Angular2 is a complete rewrite of our well-known framework. The team and lots of other contributors have simplified the awesome stuff we love, taken out unnessecary clutter, streamlined the approach and added some new primitives and features, that I'm convinced we will all come to love. Of course it will take some getting used to, and upgrading won't be as easy as with an incremental update. </p>
+<p>The focus of the rewrite has been on performance and about using new primitives that are coming to JavaSript. Even though Angular2 is already comparable to React in terms of speed, these changes mean that over time the framework will be lighter to download and faster to execute as these new primitives are supported instead of polyfilled. This also means we can use functional reactive programming (RxJS-style) with observables. </p>
+<p>Like in React the "rendering" (which is really template parsing, right?) is in its own module. This means you can swap this module out and render to native UI-components if you are building a mobile app. There is already a demo of moving all the hard work of Angular into a webworker so the rendering thread of the browser can focus on the rendering, giving even more performance to lower end multi-core devices (like phones).</p>
+<p>Angular2 is built on typescript, which means that all you Visual Studio people out there can have real intellisense on the entire framework - just like you would expect from your backend code. You can also write your own components this way and use types, interfaces and even Classes. All of this is only for dev-time, and is compiled down to JavaScript that will run in (wait for it...) IE9+.</p>
+<p>Currently, in Angular 1, we are forced to manually handle async actions and run $scope.$apply() when any non-angular library runs asynchronously. In Angular2 this is no longer necessary, which will make dealing with the framework a lot easier and more understandable for outsiders and the occasional fiddler.</p>
+<p>Another great feature from the current Angular that has evolved to be amazing in Angular2 is Dependency Injection. No longer do we have to deal with naming conventions to make sure we don't overwrite other people's services and directives. In Angular2 every node has its own injector where we explicitly define what we want. This is really powerful, especially when using third party libraries, and of course for unit testing. </p>
+<h3><span style="font-size: 1.17em;">What will it be like?</span></h3>
+<p>Since this blogpost is a 30.000 foot view of Angular2 it won't be a tutorial per se, but it helps visualize the new framework, when you can see examples of the kind of code you're going to be writing. </p>
+<p>It's worth noting that even though you CAN write your code in typescript with Classes and other not yet supported features, you DON'T HAVE TO. But since this post is about the new and shiny stuff, I will. If you want to see what it would look like in plain old javascript, reach out to me on twitter (<a href="https://twitter.com/filipbech">@filipbech</a>) and I'll provide an example.</p>
+<p>An Angular2 app is really a tree of components (think of it like a DOM-tree of E-directives) where data flows down towards the leafs, and events flow back up. Any node in this tree can also have directives to add functionality (almost like A-directives, but with any* css-selector and never with a template). </p>
+<p>Nobody knows how (when, or even if) the Umbraco backoffice will embrace Angular2. But since the audience of this blogpost is familiar with Umbraco, let's do an example of what it probably would be like in Angular2.</p>
+<p>In the current Angular you might be used to instantiaing a controller on a DOM-node with ng-controller - like <code>&lt;div ng-controller="PersonEditController"&gt; ... &lt;/div&gt;</code>. In Angular2 this would be a component and have its own elementName like <code>&lt;person-edit&gt; ... &lt;/person-edit&gt;</code>. Instead of assigning values and methods to the $scope so the template can interact with them, we now assign them to the instance of the controller (almost like the controllerAs syntax that was added in Angular 1.2). </p>
+<pre class="language-markup"><code>Class PersonEdit {
+    myValue;
+    myMethod(inVal) {
+        // magic here...
+        return outVal;
+    }
+    // constructor goes here...
+}</code></pre>
+<p>In order for Angular2 to know that this Class is a component and to configure options like what template to use, we decorate the Class by putting something like this just before the Class-definition.</p>
+<pre class="language-markup"><code>@Component({
+    selector: 'person-edit',
+    templateUrl: 'myTemplate.html'
+})</code></pre>
+<p>The templating language is similar to the current in Angular1, but has some slight changes that makes it more powerful and expressive. Let's make a form input bound to <code>myValue</code>, a div that shows this value and has a conditional class and a button that invokes <code>myMethod</code> when clicked.</p>
+<p>In Angular1 this would look like:</p>
+<pre class="language-markup"><code>&lt;input type="text" ng-model="myValue"/&gt;
+&lt;div ng-class="{valid:myValue.length &gt; 0}"&gt;{{myValue}}&lt;/div&gt;
+&lt;button ng-click="myMethod()"&gt;Click&lt;/button&gt;</code></pre>
+<p>In Angular2 it will be like this:</p>
+<pre class="language-markup"><code>&lt;input type="text" [(ng-model)]="myValue"/&gt;
+&lt;div [class.valid]="myValue.length &gt; 0"&gt;{{myValue}}&lt;/div&gt;
+&lt;button (click)="myMethod()"&gt;Click&lt;/button&gt;
+</code></pre>
+<p>There are very good reasons behind the changes to the syntax, but that's a longer story (again, reach out to me if you're interested).</p>
+<p>Of course there are many other things to note about Angular2 - head over to <a href="https://angular.io">angular.io</a> and read more or try the tutorial. If you have problems getting set up, I'm happy to help.</p>
+<h3 id="toc_3">When??</h3>
+<p>Of course the big question on everybody's lips now is "when?"... and while I can't say for sure, the number of <a href="https://github.com/angular/angular/issues?q=is%3Aopen+is%3Aissue+milestone%3Abeta.0">issues that needs fixing before the beta-release</a> is closing in. My personal guess is January. </p>
+<p>But you can play with the alphas today and get your head around the concepts. Google has already rolled out its first public facing website running Angular2, so I think the framework is ready and stable enough for us too...</p>
+<p>Upgrading to Angular2 is getting easier and more well-documented every day. If you are interested in that you should take a look at <a href="https://github.com/ngUpgraders/ng-forward/blob/master/README.md">ng-forward</a>, and if you aren't already you should follow the best practices of current angular (avoid $scope, use controllerAs, etc.).</p>
+<p>I hope this has piqued your interested and convinced you that the upgrade is not so bad and definitely worth it.</p>
+<p>Let's continue building great stuff!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/typescript/" title="See all articles tagged with TypeScript">TypeScript</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Filip Bech"><img src="//gravatar.com/avatar/ec91ba762dd37fdce7727895fb029f7d.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/ec91ba762dd37fdce7727895fb029f7d.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Filip Bech</h1>
+        <p>Filip is on Twitter as <a href="//twitter.com/Filipbech" title="Filip Bech on Twitter" rel="author">@Filipbech</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li class="selected"><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

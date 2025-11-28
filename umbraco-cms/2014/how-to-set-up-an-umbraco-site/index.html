@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Newbie's Guide to Setting Up an Umbraco Website</title>
+<meta name="description" content="A newbie's guide to setting up a website in Umbraco by Blake Smith.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Newbie's Guide to Setting Up an Umbraco Website</h1>
+      <p class="byline"> by Blake Smith, <span class="pubdate">posted on <time datetime="2014-12-11">Dec 11, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">So you've got Umbraco installed. Now what? It's not far from the truth to say that newcomers to Umbraco first take a look and think "what do I do next?" If this sounds familiar then this tutorial is for you!</p>
+<p class="intro">Let's assume you have a shiny new instance of Umbraco setup and you are given a design and just need to "hook it up". For demonstration purposes I've gone to startbootstrap.com and downloaded the <a href="http://startbootstrap.com/template-overviews/freelancer/" target="_blank">freelancer template</a>. We are going to hook up this template and the accompanying files in Umbraco and make it easy for content editors to manage.</p>
+<h2>Step 1: Evaluate your design</h2>
+<p>We want to determine how to set up this design in Umbraco so that it can be easily managed by our content editors. In order to do this, we need to evaluate our design and break it up into different sections. The editable items in our sections are properties, and the sections will be our Document Types.</p>
+<blockquote>
+<p><strong>Tip: When building your Document Types in Umbraco, assume your content editor is not familiar with code and setup your properties in such a way that the editor will not have to write any markup.</strong></p>
+</blockquote>
+<figure>
+  <a href="/archive/media/2014/freelancer_start_bootstrap_theme.jpg">
+    <img src="/archive/media/2014/freelancer_start_bootstrap_theme.jpg" alt="Design Evaluation" width="810">
+  </a>
+  <figcaption>Design Evaluation</figcaption>
+</figure>
+<p>Once you have a better understanding of the <a href="http://our.umbraco.org/wiki/reference/default-datatypes" target="_blank">Data Types</a> available in Umbraco this initial design evaluation will become easier.</p>
+<p>Take a look at the example design evaluation. You will see that we have set up five sections. For the Home Section we can set this up as a Home Document Type and combine our Footer Section into the same document type. Our Folio Section is going to be a simple document type, with just a textstring for the header property. The Portfolio Items themselves will be different document types that are child nodes of the Folio Section in the content tree. These portfolio items will have their own properties filled out in order to populate the details that popup on click. The About Section will be its own document type as well as the Content Section. </p>
+<h2>Step 2: Create a Custom Data Type</h2>
+<p>Since Umbraco 7 no longer includes the simple editor data type we are going to create our own. This will be used when we setup our document types. Head to the Developer section and right click on Data Types and click Create. Name your new data type Simple Editor and choose Richtext Editor from the Property editor drop down list and then click Save. You will see that you can now customize this Richtext Editor. Select only simple properties including bold, italic, link, styles and unlink. Once you have selected these checkboxes click Save.</p>
+<p><img src="/archive/media/2014/data_type_simple_editor.png" width="554" height="837" alt="create data type"></p>
+<h2>Step 3: Set up your Document Types</h2>
+<p>Setting up your Document Types in Umbraco is a critical part of keeping your website organized and easy to manage for your content editors. Looking at our design evaluation, we can determine that every section has a header textstring. Let's take these common properties and put this on our master document type, that way every document type that we create underneath of the Master will inherit these properties. Login and head over to the Settings, right click on Document Types and click Create.</p>
+<p><img src="/archive/media/2014/create_doc_type.png" width="680" height="419" alt="create doc type"></p>
+<p>Name your new document type Master and uncheck the Create matching template checkbox. Since we are only using this document type to only setup common items for our future document types we only need a couple things. First let's setup a new tab to put all our properties on for our document types. Click the Tabs tab and create a new tab called Content.</p>
+<p><img src="/archive/media/2014/master_doctype_new_tabs.png" width="637" height="230" alt="Master Doctype New Tabs"></p>
+<p>Click New tab. You can see that your tab has been added to your document type. Now let's go over to the Generic properties tab and setup our common properties.</p>
+<p>On the Generic properties tab we want to setup a header textstring so that when we create our new document types they will start off already having this property and we won't need to add it every time. Start by clicking Click here to add a new property and fill out the information as follows.</p>
+<ul>
+<li>Name: Header</li>
+<li>Alias: header</li>
+<li>Type: Textstring</li>
+<li>Tab: Content</li>
+</ul>
+<p>You will notice that the alias will populate automatically using camel casing based on the name you entered.</p>
+<blockquote>
+<p><strong>Tip: For long names, you can manually shorten your alias by entering a new one that will be easier to use later in your code.</strong></p>
+</blockquote>
+<p>Click Save to save your new property. Your Master document type generic properties tab should look like this now.</p>
+<p><img src="/archive/media/2014/master_doctype_generic_props.png" width="635" height="319" alt="Master Doctype Generic Props"></p>
+<p>Now that we have setup our common properties, let's set up our Home document type. Right click on Master and create a new document type.</p>
+<p>Name our new doc type Home and click Create matching template. Since this is a one page site, we are not going to need more than one template so when you create the rest of your document types make sure to uncheck that checkbox.</p>
+<p>Now that we have our Home document type made, let's configure it. We can start by choosing a new icon, I'm going to pick a home icon for my homepage document type.</p>
+<p><img src="/archive/media/2014/home_doctype_icon.png" width="867" height="351" alt="Home Doctype Icon"></p>
+<p>Next let's look at the Structure tab. We want the homepage to be the only thing at our root level so select the checkbox for Allow at root. We don't need the list view and we don't have any other child node types setup to allow just yet.</p>
+<p><img src="/archive/media/2014/home_doctype_structure.png" width="355" height="311" alt="Home Doctype Structure"></p>
+<p>Click Save to save your changes and let's add new tabs to our homepage doc type. Go to the Tabs tab and add a new tab called Footer and another one called SEO. Next let's look at the Generic properties tab. You can see on here that there is the tab named Content that has been inherited from the Master. Since we setup the header property on our master, our homepage is already going to have that property on it. Based on our design evaluation we need the image and description properties setup on our Content tab. Click Click here to add a new property and fill out the information as follows.</p>
+<blockquote>
+<p><em>Note: For the Image property you could you the image cropper or upload options here based on your needs.</em></p>
+</blockquote>
+<ul>
+<li>Name: Image</li>
+<li>Alias: image</li>
+<li>Type: Media Picker</li>
+<li>Tab: Content</li>
+</ul>
+<p>Click Save to save your new property. We will need to repeat this same process whenever we add new properties to document types in Umbraco. Now add the description to our home doc type to the Content tab. Next let's add the footer section properties to our document type on the Footer tab. Create a new property as follows:</p>
+<ul>
+<li>Name: Column 1</li>
+<li>Alias: column1</li>
+<li>Type: Simple Editor</li>
+<li>Tab: Footer</li>
+</ul>
+<p>Click Save to save your changes and create the remaining 2 properties for the footer in the same way.</p>
+<p>Lastly, create a textstring property for the page title tag and a textbox multiple to put on the SEO tab for our homepage. Your SEO tab should like this.</p>
+<p><img src="/archive/media/2014/home_doctype_seo_prop.png" width="547" height="101" alt="Home Doctype Seo Prop"></p>
+<p>Use these steps to setup the rest of your document types using the name and type we determined in the Design Evaluation.</p>
+<p>Remember:</p>
+<ul>
+<li>The header property is inherited by child document types of the Master (you won't need to add this again)</li>
+<li>Uncheck the Create matching template checkbox (since this is a one page site, we don't need templates for all our nodes)</li>
+<li>Ignore the Structure tab for now</li>
+</ul>
+<p>Once you have created all your document types your Settings menu in Umbraco should look like this:</p>
+<p><img src="/archive/media/2014/settings_menu_with_doc_types.png" width="245" height="522" alt="Settings Menu With Doc Types"></p>
+<p>Now let's go back to our home doc type and view the structure tab. Now you will see that the Allowed child node types list has the list of document types that we have created. From our homepage we want to be able to create a new about, contact and folio child nodes in our Contact section. In order to do this, check these checkboxes and click Save.</p>
+<p><img src="/archive/media/2014/home_doctype_structure_checked.png" width="416" height="416" alt="Home Doctype Structure Checked"></p>
+<p>The Folio document type will also need the Folio Item document type allowed. Navigate to the Structure tab and allow this child node type and click Save.</p>
+<p><img src="/archive/media/2014/folio_doctype_structure.png" width="434" height="427" alt="Folio Doctype Structure"></p>
+<h2>Step 4: Import your design files</h2>
+<p>The template files you are given include things like the css, web fonts, images, and javascript. Let's copy these to the proper areas in Umbraco's file system and make sure that our URL's are updated accordingly to the new file locations. Move the css and javascripts file into the css and scripts files located in our Umbraco file system. I moved the fonts into a fonts folder located in the css folder and update the links to these fonts in their corresponding css files. The img folder contains images that we are going to let our editor pick so these will need to be uploaded into our Media section. In order to upload images into our media let's go to the Media section in Umbraco and right click on Media, click Create, click Folder, and name your Folder.</p>
+<blockquote>
+<p><strong>Tip: Use folders to keep your media section organized.</strong></p>
+</blockquote>
+<p>Now that we have our new Images folder we want to drag and drop our images into this new folder. We can use Images for our profile.png and create a new folder for Portfolio Images and drag and drop the rest of our portfolio images there.</p>
+<p><img src="/archive/media/2014/media_images.png" width="260" height="368" alt="Media Images"></p>
+<p>Our static index.html file that is used for our website will need to be broken out into different views but for now, we can add this HTML markup onto our Home Template in the Settings section. Make sure you don't delete the inherits and layout statements in the top of your template and remember to update the links to the new location for our css, script, and webfont files.</p>
+<p>If you reload your Stylesheets and Scripts folder in the Settings menu you will see the files have been added in Umbraco.</p>
+<p><img src="/archive/media/2014/settings_menu_with_files.png" width="266" height="721" alt="Settings Menu With Files"></p>
+<h2>Step 5: Setup your Templates and Partial Views</h2>
+<p>In the markup that we copied to our home template you will see that they have comments where each section begins. We are basically going to take these sections out of the homepage template and create partial views out of them. This area will require some knowledge of razor to setup functionality of the different sections. Writing the razor itself is beyond the scope of this article, but you can check out how I did this over on <a href="https://github.com/bkclerke/Freelancer/" target="_blank">github</a> in the Views folder. The portfolio grid partial also includes the "for-each" loop that will go through each folio item to put them in the grid. The portfolio modals partial generates the content of each portfolio items modal.</p>
+<p>Once you have broken out your Partial Views from your home template you should have a structure similar to this.</p>
+<p><img src="/archive/media/2014/settings_menu_with_views.png" width="355" height="545" alt="Settings Menu With Views"></p>
+<blockquote>
+<p><strong>Tip: For more information on templating in Umbraco check out the <a href="http://umbraco.tv/videos/umbraco-v7/implementor/fundamentals/templating/introduction/" target="_blank">templating videos on Umbraco.TV</a>.</strong></p>
+</blockquote>
+<h2>Step 6: Create your Content</h2>
+<p>Now that we have our template and views setup, let's head over to our Content section and start creating our nodes. Right click on Content, click Create, and click Home. Name your new home page and begin adding in your content. Your home page will have the properties on it that you setup on your home doc type. </p>
+<p>Creating Content is pretty straight forward, it is the initial setup of the document types, their structure, and getting the templates sorted that is where the focus of your Umbraco setup should be. Setting up your document types properly will help you keep your website organized and make it easier for your content editors to manage. Go ahead and create the rest of your content. Your structure should look like this when you are finished.</p>
+<p><img src="/archive/media/2014/content_menu.png" width="356" height="423" alt="Content Menu"></p>
+<p>After you have your content in your site, you can preview it by going to the homepage properties tab and clicking the link to document.</p>
+<h2>Wrap up</h2>
+<p>You should have a working site if you setup your template and partial views correctly. Your content editors will easily be able to manage the content within Umbraco. The form itself will take a developer's time to setup the model and controller to make it work but you could look into form packages that let you build your own forms in Umbraco such as <a href="http://umbraco.com/products/more-add-ons/contour" target="_blank">Contour</a>. It is a very user friendly package that can get your forms up and running in no time without a developer.</p>
+<p>Hopefully this tutorial was helpful for Umbraco newbies and can get you started with setting up your next Umbraco site. There are many different ways that you can setup your Umbraco site so just try to keep things organized and good luck in future endeavors!</p>
+<h2>Download it from GitHub</h2>
+<p>You can <a href="https://github.com/bkclerke/Freelancer" target="_blank">checkout the files</a> I used for this project on github.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Blake Smith"><img src="//gravatar.com/avatar/30c2ce593a0929f96f94ca0fd48a1d26.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/30c2ce593a0929f96f94ca0fd48a1d26.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Blake Smith</h1>
+        <p>Blake is on Twitter as <a href="//twitter.com/designwithpink" title="Blake Smith on Twitter" rel="author">@designwithpink</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li class="selected"><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

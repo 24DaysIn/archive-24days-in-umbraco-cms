@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Integrating Umbraco 8 with Azure Active Directory B2C</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco8 AADB2C</h1>
+      <p class="byline"> by Davy Lowyck, <span class="pubdate">posted on <time datetime="2019-12-20">Dec 20, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>The setup</h2>
+<h3>First things first, an introduction</h3>
+<p>Hello everyone, I'm Davy and I'm a Solution Architect at The Reference. I love my job because it allows me to translate customer needs into solid solution designs. It's a mix of technical expertise, vision and presentation/convincing skills. Since 2017 I became more familiar with Umbraco, and it's a great fit with some of the projects we do at The Reference. I have come to appreciate Umbraco as a pretty good CMS but especially for its great community. Some of you might have noticed me at the last 2 Codegardens, probably near the hammerschlagen logs.</p>
+<p class="intro">Now, being a solution architect also means I get less time near actual code than I'd want. (Though I'm sure some of my colleagues are quite happy about that fact...) But it just happened that I had some spare time on my hands so I ventured to fabricate this technical article. Since you're reading it right now, I guess I finished it in time!</p>
+<h3>The objective</h3>
+<p>At The Reference we've been using Azure Active Directory B2C for a couple of projects, and have integrated it with Umbraco 7. The initial idea of this article was to share how we did that - were it not that our integration needed an update to Umbraco 8.  Finally, we never really went as far as making sure that B2C users were members, so we'll go into that as well in this article.</p>
+<h3>Why Azure AD B2C?</h3>
+<p>But it's at least as interesting to explain why you'd want to combine Umbraco with Azure Active Directory B2C.  After all, you could use Umbraco itself as a modern identity provider, and include features like social login and 2-factor authentication yourself.  This is where <a href="https://github.com/Shazwazza/UmbracoIdentity">https://github.com/Shazwazza/UmbracoIdentity</a> definitely shines.</p>
+<p>But we use Azure Active Directory B2C because it is an identity as a service (IDAAS) offering, which allows us to defer security concerns. In our best-of-breed philosophy it makes sense to use a specific system to handle identity.  And hence features like social login, 2 factor authentication etc, are handled in AADB2C.</p>
+<p>There are others IDAAS vendors to be sure (Okta, LoginRadius, ..), but the obvious advantage of using Microsoft technology is the low threshold and the alignment with the technology stack we already know.</p>
+<h3>A word about my approach : "The good, the bad and the ugly"</h3>
+<p>Most of you will probably have taken code samples from the internet to get started, and I don't want to <a href="https://blog.codinghorror.com/a-modest-proposal-for-the-copy-and-paste-school-of-code-reuse/">open a debate on that</a>.  But just saying, I like to take this approach to a whole new level. I'll mix and match stuff from various sources (blogs, articles, discussions, manuals, github, ..) - heck even stuff that doesn't work - and then spend a lot of energy fitting pieces together.  Like Tuco does in "The good, the bad and the ugly". Tuco - the ugly - creates a gun with the best parts of several guns. Maybe it's a wonky comparison which probably only proves I'm old. Also why am I comparing myself to the Ugly guy.  The alternative comparison I would've used was Frankenstein. We can all agree that would've been even worse.</p>
+<p>
+        <iframe width="320" height="240" src="https://www.youtube.com/embed/PPYL8EGOWok?feature=oembed" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>
+      </p>
+<p>Now when my idea ends up working, I fully realize I'm probably not the first who did this. Heck I probably reinvented hot water, but I believe the journey is about as important as the destination.</p>
+<p>In this particular case I looked at the <a href="https://docs.microsoft.com/en-us/azure/active-directory/develop/msal-net-aad-b2c-considerations">Azure documentation for AADB2C and MSAL</a> (watch out though, there's different versions of ADAL/MSAL, .. , and code samples are mostly .net core, so owin variations apply), then I looked at how <a href="https://github.com/Shazwazza/UmbracoIdentity">Umbraco Identity</a> was adjusted for Umbraco 8 and finally mixed it with what I learned from the courses on <a href="https://umbraco.tv/videos/umbraco-v8/content-editor/administrative-content/members">Umbraco.TV on Umbraco and Members</a>.  Not to mention countless visits to stack overflow.</p>
+<h2>Step by step approach</h2>
+<h3>Set up a new Umbraco 8.x project</h3>
+<p>Note, this is nothing new to most of you, but we might as well start easy.</p>
+<ol>
+<li>Create an empty ASP.Net Web Application (.net framework 4.7.2)</li>
+<li>Install UmbracoCms 8.2.0 (latest at the time) with NuGet</li>
+<li>Build</li>
+<li>Run (ctrl-f5) so Umbraco can be set up (set up an empty Umbraco via advanced)</li>
+</ol>
+<h3><br>Set up an Azure AD B2C tenant and some policies</h3>
+<p>Okay now, this is going to be a bit more work - and by the way, I'll assume you know your way around Azure Portal and Azure B2C Tenants.  You'll have to create a new Azure AD B2C Tenant or reuse an existing one.</p>
+<p>Once there, you need to define an application in the Azure B2C tenant.</p>
+<p><img style="width: 500px; height: 375.1214771622935px;" src="/archive/media/2019/b2c-applications-overview.png?width=500&amp;height=375.1214771622935" alt="AADB2C Applications Overview" data-udi="umb://media/ec7330a4f2194d71ae57b5696861aa11"></p>
+<p>As you can see I created 2 separate applications, one for my local environment and one for the azure environment I set up (more about that later).</p>
+<p>In the application, you need to make sure web app and implicit flow options are turned on - we are going to use it here.  Furthermore, it's important the redirect url is set up correctly.</p>
+<p><img style="width: 500px; height: 396.38318670576734px;" src="/archive/media/2019/b2c-application-detail.png?width=500&amp;height=396.38318670576734" alt="AADB2C Application detail screen" data-udi="umb://media/e13c99e2d4f745fd91e73a9976fe52e6"></p>
+<p>We're also going to generate a secret key for the application, in the keys section.  Just keep generating keys until it doesn't contain characters that will break your web.config xml, because we're putting them there.  Also, take heed.  The key is only visible at creation, after saving you won't be able to view it again.  Although this is common for keys in Azure.</p>
+<p><img style="width: 500px; height: 397.1596474045054px;" src="/archive/media/2019/b2c-application-detail-keys.png?width=500&amp;height=397.1596474045054" alt="AADB2C Application Secret Keys" data-udi="umb://media/7dc81242c7234a14a923e224ae1d5485"></p>
+<p>Next up are the user flows aka the policies.  For the purpose of this demo I set up the bare minimum, a sign in/sign up flow, a password reset and a profile edit flow.</p>
+<p>Here's the sign in sign up:</p>
+<p><img style="width: 500px; height: 397.1596474045054px;" src="/archive/media/2019/b2c-userflows-detail.png?width=500&amp;height=397.1596474045054" alt="" data-udi="umb://media/3768772b8fa4426e953c30aaa75693f9"></p>
+<p>Make sure you select the user attributes and application claims you need.  This is where you select the identity providers you want to use.  You can also customize the UI and even localize it.</p>
+<p>In the other two flows (password reset &amp; profile edit) I selected the same user attributes and claims, and also kept default options. </p>
+<h3>Integrate it Umbraco 8 style : the component</h3>
+<p>First, install Microsoft.Owin.Security.OpenIdConnect and Microsoft.Identity.Client via NuGet.</p>
+<p>Then, we need to add some code : a composer and a component, and then 2 classes we use in the component.</p>
+<p>Let's start with the composer:</p>
+<pre><code class="language-csharp">﻿using Umbraco.Core;
+using Umbraco.Core.Composing;
+
+namespace Umbraco8_AADB2C_2.Components
+{
+    public class AadB2CComposer : IUserComposer
+    {
+        public void Compose(Composition composition)
+        {
+            composition.Components()
+                .Append&lt;AadB2CComponent&gt;();
+
+            composition.RegisterUnique&lt;FrontEndCookieManager&gt;();
+            composition.Register&lt;FrontEndCookieAuthenticationOptions&gt;();
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">A composer that adds the AddB2CComponent and necessary classes</p>
+<p>As you can see the composer adds the component, but also registers 2 classes that are going to be used by the AddB2CComponent.  Attentive viewers will notice that the FrontEndCookieManager and FrondEndCookieAuthenticationOptions classes sound familiar.  These are indeed classes that exist in UmbracoIdentity.  Instead of including that entire package I just used (and slightly modified) those 2 classes.</p>
+<p>Here's the FrontEndCookieAuthenticationOptions cs :</p>
+<pre><code class="language-csharp">﻿using Microsoft.AspNet.Identity;
+using Microsoft.Owin.Security.Cookies;
+
+namespace Umbraco8_AADB2C_2.Components
+{
+    public class FrontEndCookieAuthenticationOptions : CookieAuthenticationOptions
+    {
+        public FrontEndCookieAuthenticationOptions(FrontEndCookieManager frontEndCookieManager)
+        {
+            CookieManager = frontEndCookieManager;
+            AuthenticationType = DefaultAuthenticationTypes.ApplicationCookie;
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Class from UmbracoIdentity</p>
+<p>Kept as is actually.</p>
+<p>Here's the FrontEndCookieManager code:</p>
+<pre><code class="language-csharp">﻿using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Web;
+using Microsoft.Owin;
+using Microsoft.Owin.Infrastructure;
+using Umbraco.Core;
+using Umbraco.Core.Configuration;
+using Umbraco.Web;
+
+namespace Umbraco8_AADB2C_2.Components
+{
+    public class FrontEndCookieManager : ChunkingCookieManager, ICookieManager
+    {
+        private readonly IUmbracoContextAccessor _umbracoContextAccessor;
+        private readonly IRuntimeState _runtime;
+        private readonly IGlobalSettings _globalSettings;
+
+        public FrontEndCookieManager(IUmbracoContextAccessor umbracoContextAccessor, IRuntimeState runtime, IGlobalSettings globalSettings)
+        {
+            _umbracoContextAccessor = umbracoContextAccessor ?? throw new ArgumentNullException(nameof(umbracoContextAccessor));
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _globalSettings = globalSettings ?? throw new ArgumentNullException(nameof(globalSettings));
+        }
+
+        /// &lt;summary&gt;
+        /// Explicitly implement this so that we filter the request
+        /// &lt;/summary&gt;
+        /// &lt;param name="context"&gt;&lt;/param&gt;
+        /// &lt;param name="key"&gt;&lt;/param&gt;
+        /// &lt;returns&gt;&lt;/returns&gt;
+        string ICookieManager.GetRequestCookie(IOwinContext context, string key)
+        {
+            if (_umbracoContextAccessor.UmbracoContext == null || IsClientSideRequest(context.Request.Uri))
+            {
+                return null;
+            }
+
+            var authForBackOffice = ShouldAuthForBackOfficeRequest(context);
+
+            return authForBackOffice
+                //Don't auth request since this is for the back office, don't return a cookie
+                ? null
+                //Return the default implementation
+                : base.GetRequestCookie(context, key);
+        }
+
+        private static bool IsClientSideRequest(Uri url)
+        {
+            var ext = Path.GetExtension(url.LocalPath);
+            if (ext.IsNullOrWhiteSpace()) return false;
+            var toInclude = new[] { ".aspx", ".ashx", ".asmx", ".axd", ".svc" };
+            return toInclude.Any(ext.InvariantEquals) == false;
+        }
+
+        private static bool IsBackOfficeRequest(IOwinRequest request, IGlobalSettings globalSettings)
+        {
+            return (bool)InvokeUriExtensionStaticMethod("IsBackOfficeRequest", request.Uri, HttpRuntime.AppDomainAppVirtualPath, globalSettings);
+        }
+
+        private static bool IsInstallerRequest(IOwinRequest request)
+        {
+            return (bool)InvokeUriExtensionStaticMethod("IsInstallerRequest", request.Uri);
+        }
+
+
+        private static object InvokeUriExtensionStaticMethod(string staticMethodName, params object[] parameters)
+        {
+            var UriExtensionStaticMethod = typeof(UriExtensions).GetMethod(staticMethodName, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+            if (UriExtensionStaticMethod == null)
+            {
+                return null;
+            }
+
+            return UriExtensionStaticMethod.Invoke(null, parameters);
+        }
+
+        /// &lt;summary&gt;
+        /// Determines if the request should be authenticated for the back office
+        /// &lt;/summary&gt;
+        /// &lt;param name="ctx"&gt;&lt;/param&gt;
+        /// &lt;returns&gt;&lt;/returns&gt;
+        /// &lt;remarks&gt;
+        /// We auth the request when:
+        /// * it is a back office request
+        /// * it is an installer request
+        /// * it is a preview request
+        /// &lt;/remarks&gt;
+        private bool ShouldAuthForBackOfficeRequest(IOwinContext ctx)
+        {
+            if (_runtime.Level == RuntimeLevel.Install)
+                return false;
+
+            var request = ctx.Request;
+
+            if (//check back office
+                IsBackOfficeRequest(request, _globalSettings)
+                //check installer
+                || IsInstallerRequest(request))
+            {
+                return true;
+            }
+            return false;
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Slightly adapted class from UmbracoIdentity</p>
+<p>The only thing I tweaked was directly doing reflection instead of using a big file with generic extension methods as is done in UmbracoIdentity.  Just to save on lines of code really.</p>
+<p>Now the Component - this is where the meat is! First of all the main outline:</p>
+<pre><code class="language-csharp">﻿using Owin;
+using System.Linq;
+using Umbraco.Core.Composing;
+using Umbraco.Web;
+using Umbraco.Core;
+using Umbraco.Core.Configuration;
+using Umbraco.Core.Configuration.UmbracoSettings;
+using Umbraco.Core.Logging;
+using Umbraco.Core.Services;
+using Umbraco.Web.Security;
+using Microsoft.Owin.Security;
+using Microsoft.Owin.Security.OpenIdConnect;
+using System.Configuration;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.Owin.Security.Notifications;
+using System.Threading.Tasks;
+using System;
+using Microsoft.AspNet.Identity;
+using System.Security.Claims;
+
+namespace Umbraco8_AADB2C_2.Components
+{
+    public class AadB2CComponent : IComponent
+    {
+        private readonly ILogger _logger;
+        private readonly IUmbracoContextAccessor _umbracoContextAccessor;
+        private readonly IRuntimeState _runtimeState;
+        private readonly IUserService _userService;
+        private readonly IGlobalSettings _globalSettings;
+        private readonly ISecuritySection _securitySection;
+        private readonly IMemberService _memberService;
+
+        public AadB2CComponent (
+            ILogger logger,
+            IUmbracoContextAccessor umbracoContextAccessor,
+            IRuntimeState runtimeState,
+            IUserService userService,
+            IGlobalSettings globalSettings,
+            ISecuritySection securitySection,
+            IMemberService memberService)
+        {
+            _logger = logger;
+            _umbracoContextAccessor = umbracoContextAccessor;
+            _runtimeState = runtimeState;
+            _userService = userService;
+            _globalSettings = globalSettings;
+            _securitySection = securitySection;
+            _memberService = memberService;
+        }
+
+        public void Initialize()
+        {
+            UmbracoDefaultOwinStartup.MiddlewareConfigured += ConfigureAadB2CAuthentication;
+        }
+
+        public void Terminate()
+        {
+        }
+
+        private void ConfigureAadB2CAuthentication(object sender, OwinMiddlewareConfiguredEventArgs args)
+        {
+			//..
+		}
+	}
+}</code></pre>
+      <p class="snippet-caption">The main outline of the AadB2CComponent class</p>
+<p>Notice the beauty of Umbraco 8 here, we adapt the Owin middleware very elegantly, no more need for Owin startup classes!</p>
+<p>The main method that adds AADB2C in the middleware is this:</p>
+<pre><code class="language-csharp">﻿		private void ConfigureAadB2CAuthentication(object sender, OwinMiddlewareConfiguredEventArgs args)
+        {
+            //get appbuilder
+            var app = args.AppBuilder;
+            
+            //configure aadb2c step 1
+            app.SetDefaultSignInAsAuthenticationType(DefaultAuthenticationTypes.ApplicationCookie);
+
+            //configure aadb2c step 2
+            app.UseCookieAuthentication(Current.Factory.GetInstance&lt;FrontEndCookieAuthenticationOptions&gt;(), PipelineStage.Authenticate);
+
+            //configure aadb2c step 3
+            app.UseOpenIdConnectAuthentication(
+                new OpenIdConnectAuthenticationOptions
+                {
+                    MetadataAddress = string.Format(
+                        ConfigurationManager.AppSettings["ida:AadInstance"],
+                        ConfigurationManager.AppSettings["ida:Tenant"],
+                        ConfigurationManager.AppSettings["ida:SignUpSignInPolicyId"]),
+                    ClientId = ConfigurationManager.AppSettings["ida:ClientId"],
+                    RedirectUri = ConfigurationManager.AppSettings["ida:RedirectUri"],
+                    PostLogoutRedirectUri = ConfigurationManager.AppSettings["ida:RedirectUri"],
+                    Notifications = new OpenIdConnectAuthenticationNotifications
+                    {
+                        RedirectToIdentityProvider = OnRedirectToIdentityProvider,
+                        AuthorizationCodeReceived = OnAuthorizationCodeReceived,
+                        AuthenticationFailed = OnAuthenticationFailed
+                    },
+                    TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                    {
+                        NameClaimType = "name"
+                    },
+                    //TODO: Scope is still a hardcoded string
+                    //In the scope we define the OAuth flow we want to use, here we request openid connect
+                    Scope = $"openid profile offline_access"
+                });
+
+            //reafirm backoffice and preview authentication
+            app
+                .UseUmbracoBackOfficeCookieAuthentication(_umbracoContextAccessor, _runtimeState, _userService, _globalSettings, _securitySection, PipelineStage.Authenticate)
+                .UseUmbracoBackOfficeExternalCookieAuthentication(_umbracoContextAccessor, _runtimeState, _globalSettings, PipelineStage.Authenticate);
+
+            app.UseUmbracoPreviewAuthentication(_umbracoContextAccessor, _runtimeState, _globalSettings, _securitySection, PipelineStage.PostAuthenticate);
+        }
+        </code></pre>
+      <p class="snippet-caption">Part of the component with the main method to enable AADB2C with Owin</p>
+<p>This method relies on some more private methods, here's the rest:</p>
+<pre><code class="language-csharp">﻿		private Task OnAuthenticationFailed(AuthenticationFailedNotification&lt;OpenIdConnectMessage, OpenIdConnectAuthenticationOptions&gt; notification)
+        {
+            // All errorhandling by AADB2C is done via this event/notification
+            // Right now we just log and /or redirect, but this can be a lot more intricate by checking exactly what AAD B2C returns
+
+            notification.HandleResponse();  //announce we will handle the response ourselves
+
+            var errorMessage = notification.ProtocolMessage.ErrorDescription != null
+                ? $"Authentication Failed: {notification.ProtocolMessage.ErrorDescription}"
+                : "Authentication Failed";
+            _logger.Warn(typeof(AadB2CComponent), errorMessage);
+
+			//redirect here
+            notification.Response.Redirect("/Error");
+			
+			//finally
+			return Task.FromResult(0);
+        }
+
+        private Task OnAuthorizationCodeReceived(AuthorizationCodeReceivedNotification notification)
+        {
+            // This is where we reappear after a successfull login, since we use AADB2C Open ID Connect, we already get a lot with the initial authorization code
+            var signedInUserID = notification.AuthenticationTicket.Identity.GetUserId();
+            var emailAddress = notification.AuthenticationTicket.Identity.Claims.FirstOrDefault(c =&gt; c.Type.Equals("emails")).Value;
+            _logger.Info(typeof(AadB2CComponent), $"Signed in user email : [{emailAddress}]");
+
+            //// Here's how we can trade in the authorization code for an access token.
+            //var cca =
+            //    ConfidentialClientApplicationBuilder
+            //    .Create(ConfigurationManager.AppSettings["ida:ClientId"])
+            //    .WithB2CAuthority(ConfigurationManager.AppSettings["ida:Authority"])
+            //    .WithRedirectUri(ConfigurationManager.AppSettings["ida:RedirectUri"])
+            //    .WithClientSecret(ConfigurationManager.AppSettings["ida:ClientSecret"])
+            //    .Build();
+
+            //AuthenticationResult result = cca.AcquireTokenByAuthorizationCode(new string[] { "openid profile offline_access" }, notification.Code).ExecuteAsync().Result;
+            //_logger.Info(typeof(AadB2CComponent), $"Access Token: [{result.AccessToken}]");
+
+            //Now, make sure a membership user is in sync with the currently logged in user
+            var memberName = UpsertMembershipMember(notification.AuthenticationTicket.Identity);
+
+            return Task.FromResult(0);
+        }
+		
+		private Task OnRedirectToIdentityProvider(RedirectToIdentityProviderNotification&lt;OpenIdConnectMessage, OpenIdConnectAuthenticationOptions&gt; notification)
+        {
+			//Apparently the SignUpSignInPolicyId is part of the IssuerAddress:
+            //In case we need to redirect to AADB2C with another policy we need to adjust the IssuerAddress
+            var policy = notification.OwinContext.Get&lt;string&gt;("Policy");
+            if (!string.IsNullOrEmpty(policy) &amp;&amp; !policy.Equals(ConfigurationManager.AppSettings["ida:SignUpSignInPolicyId"]))
+            {
+                notification.ProtocolMessage.IssuerAddress = 
+                    notification.ProtocolMessage.IssuerAddress.ToLower().Replace(
+                            ConfigurationManager.AppSettings["ida:SignUpSignInPolicyId"].ToLower(), 
+                            policy.ToLower());
+            }
+
+            return Task.FromResult(0);
+        }
+		
+        private string UpsertMembershipMember(ClaimsIdentity identity)
+        {
+            var email = identity.Claims.FirstOrDefault(c =&gt; c.Type.Equals("emails")).Value;
+
+            var existingMember = _memberService.GetByEmail(email);
+            if (existingMember != null)
+            {
+                existingMember.Username = identity.Name;
+                existingMember.Name = identity.Name;
+                existingMember.LastLoginDate = DateTime.Now;
+                _memberService.Save(existingMember);
+            } else
+            {
+                existingMember = _memberService.CreateMember(identity.Name, email, identity.Name, "azureActiveDirectoryB2CMember");
+                existingMember.LastLoginDate = DateTime.Now;
+                _memberService.Save(existingMember);
+
+                //After the user was created add it to the New role.
+                //In this example, this role was specifically created for new users, whom the umbraco administrator doesn't necessarily know
+                //In our example, to grant a user access to the 'closed section' area, the umbraco administrator needs to add new users to the approved group
+                _memberService.AssignRole(identity.Name, "AADB2C New");
+            }
+
+            return identity.Name;
+        }</code></pre>
+      <p class="snippet-caption">Other private methods in 
+AadB2CComponent</p>
+<p>As you can see the Authentication notifications handle what happens when the user comes from AADB2C and gets redirected to AADB2C.  Furthermore OnAuthorizationCodeReceived will make sure a member gets upserted in Umbraco with the same name (this is important otherwise the member will not be linked).</p>
+<p>You'll also notice some code I left in comment.  We often also use API's which we then secure with bearer tokens, and for those we like to use the access tokens.  The code in comment will trade the authorization code we got for an access token.  This is a bit more complicated so I won't go into further detail, maybe in a later article we can pick that up.</p>
+<p>Finally everything relies on application settings in web.config, also note that forms authentication needs to be set to none:</p>
+<pre><code class="language-markup">﻿&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;configuration&gt;
+  &lt;!-- ... snip ... --&gt;
+  &lt;appSettings&gt;
+	  &lt;!-- ... snip ... --&gt;
+    &lt;!-- Azure Ad B2C--&gt;
+    &lt;add key="ida:Domain" value="https://login.microsoftonline.com" /&gt;
+    &lt;add key="ida:DomainGraph" value="https://graph.windows.net" /&gt;
+    &lt;add key="ida:Tenant" value="Umbraco8AADB2CMembersPOC.onmicrosoft.com" /&gt;
+    &lt;add key="ida:ClientId" value="9d4e2e85-4c93-4ce5-a953-7edb443f29a1" /&gt;
+    &lt;add key="ida:ClientSecret" value="" /&gt;  &lt;!-- ... use your own secret, btw mind funny characters that break the config file ... --&gt;
+    &lt;add key="ida:AadInstance" value="https://login.microsoftonline.com/tfp/{0}/{1}/v2.0/.well-known/openid-configuration" /&gt;
+    &lt;add key="ida:RedirectUri" value="http://localhost:52975/" /&gt;
+    &lt;add key="ida:RedirectUriSignOut" value="http://localhost:52975/" /&gt;
+    &lt;add key="ida:SignUpSignInPolicyId" value="B2C_1_SignUpSignIn" /&gt;
+    &lt;add key="ida:EditProfilePolicyId" value="B2C_1_Edit_Profile" /&gt;
+    &lt;add key="ida:ResetPasswordPolicyId" value="B2C_1_Reset" /&gt;
+    &lt;add key="ida:Authority" value="https://login.microsoftonline.com/tfp/Umbraco8AADB2CMembersPOC.onmicrosoft.com/B2C_1_SignUpSignIn" /&gt;
+  &lt;/appSettings&gt;
+  &lt;!-- ... snip ... --&gt;
+  &lt;system.web&gt;
+    &lt;!-- ... snip ... --&gt;
+    &lt;authentication mode="None"&gt;
+      &lt;!--&lt;forms name="yourAuthCookie" loginUrl="login.aspx" protection="All" path="/" /&gt;--&gt;
+    &lt;/authentication&gt;
+    &lt;!-- ... snip ... --&gt;
+  &lt;/system.web&gt;
+  &lt;!-- ... snip ... --&gt;
+&lt;/configuration&gt;</code></pre>
+<h3><br>Now, make a site that uses all this</h3>
+<p>I chose to install the "Clean starter kit" package from the Umbraco Backoffice to get a quick start and so my obvious lack of creative skills wouldn't show.<br>I remove some sections from the navigation to make room for some extra links there.<br>I added a loginstatus partial view to add some login/log off links,..  Here it is:</p>
+<pre><code class="language-javascript">﻿@inherits UmbracoViewPage
+
+
+@if (HttpContext.Current.User.Identity.IsAuthenticated)
+{
+    &lt;li class="nav-item"&gt;
+        &lt;a class="nav-link" href=""&gt;[User:@HttpContext.Current.GetOwinContext().Authentication.User.Identity.Name]&lt;/a&gt;
+    &lt;/li&gt;
+    &lt;li class="nav-item"&gt;
+        &lt;a class="nav-link" href="@Url.Action("SignOut","HomeSurface")"&gt;Log off&lt;/a&gt;
+    &lt;/li&gt;
+    &lt;li class="nav-item"&gt;
+        &lt;a class="nav-link" href="@Url.Action("EditProfile","HomeSurface")"&gt;Edit Profile&lt;/a&gt;
+    &lt;/li&gt;
+}
+else
+{
+    &lt;li class="nav-item"&gt;
+        &lt;a class="nav-link" href="@Url.Action("LogIn","HomeSurface")"&gt;Log in/sign up&lt;/a&gt;
+    &lt;/li&gt;
+    &lt;li class="nav-item"&gt;
+        &lt;a class="nav-link" href="@Url.Action("ResetPassword","HomeSurface")"&gt;Forgot password&lt;/a&gt;
+    &lt;/li&gt;
+}
+</code></pre>
+      <p class="snippet-caption">A loginstatus partial view that will show who is logged on and provides links to log on/off, etc</p>
+<p>This relies on some actions in a surface controller for the login, logoff and edit profile links:</p>
+<pre><code class="language-csharp">﻿using Microsoft.Owin.Security;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Linq;
+using System.Web;
+using Umbraco.Web.Mvc;
+
+namespace Umbraco8_AADB2C_2.Controllers
+{
+    public class HomeSurfaceController : SurfaceController
+    {
+        public void LogIn()
+        {
+            // Let the middleware know you are trying to use the edit profile policy (see OnRedirectToIdentityProvider in AadB2CComposer)
+            HttpContext.GetOwinContext().Set("Policy", ConfigurationManager.AppSettings["ida:SignUpSignInPolicyId"]);
+
+            // Set the page to redirect to after editing the profile
+            var authenticationProperties = new AuthenticationProperties { RedirectUri = "/" };
+            HttpContext.GetOwinContext().Authentication.Challenge(authenticationProperties);
+
+            return;
+        }
+
+        public void EditProfile()
+        {
+            if (Request.IsAuthenticated)
+            {
+                // Let the middleware know you are trying to use the edit profile policy (see OnRedirectToIdentityProvider in AadB2CComposer)
+                HttpContext.GetOwinContext().Set("Policy", ConfigurationManager.AppSettings["ida:EditProfilePolicyId"]);
+
+                // Set the page to redirect to after editing the profile
+                var authenticationProperties = new AuthenticationProperties { RedirectUri = "/" };
+                HttpContext.GetOwinContext().Authentication.Challenge(authenticationProperties);
+
+                return;
+            }
+
+            Response.Redirect("/");
+        }
+
+        /*
+         *  Called when requesting to reset a password
+         */
+        public void ResetPassword()
+        {
+            // Let the middleware know you are trying to use the reset password policy (see OnRedirectToIdentityProvider in AadB2CComposer)
+            HttpContext.GetOwinContext().Set("Policy", ConfigurationManager.AppSettings["ida:ResetPasswordPolicyId"]);
+
+            // Set the page to redirect to after changing passwords
+            var authenticationProperties = new AuthenticationProperties { RedirectUri = "/" };
+            HttpContext.GetOwinContext().Authentication.Challenge(authenticationProperties);
+
+            return;
+        }
+
+        /*
+         *  Called when requesting to sign out
+         */
+        public void SignOut()
+        {
+            // To sign out the user, you should issue an OpenIDConnect sign out request.
+            if (Request.IsAuthenticated)
+            {
+                IEnumerable&lt;AuthenticationDescription&gt; authTypes = HttpContext.GetOwinContext().Authentication.GetAuthenticationTypes();
+                HttpContext.GetOwinContext().Authentication.SignOut(authTypes.Select(t =&gt; t.AuthenticationType).ToArray());
+            }
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">The home surface controller that supports actions on the loginstatus partial view</p>
+<h3><br>Add member types and groups</h3>
+<p>As you'll see in the code samples above I upsert a member in Umbraco when a user returns from AADB2C and decided that all members created that way ought to be of a specific type (azureActiveDirectoryB2CMember).  Make sure that member type is also created in Umbraco.</p>
+<p>Next, I created two member groups.   Since a standard AADB2C flow suggests anyone can register and sign in, I created two groups.  One for new users, which should not have many intranet rights since - well - anyone can join.  Another group would be for users that are 'premium'/'acknowledged'.  The idea is that an Umbraco backoffice user actually needs to promote members from the new group to the premium group.</p>
+<p>Here are the member groups:</p>
+<p><img style="width: 500px; height: 223.2620320855615px;" src="/archive/media/2019/umbraco-member-groups.png?width=500&amp;height=223.2620320855615" alt="" data-udi="umb://media/84b366a1dd004c26855211fe55582a08"></p>
+<h3><br>Add some pages with public access configured</h3>
+<p>Finally to test these groups, I set up some pages with public access.  There's an excellent <a href="https://umbraco.tv/videos/umbraco-v8/content-editor/administrative-content/members">Umbraco.tv series</a> on this.</p>
+<p>Here's the config for the new users section:</p>
+<p><img style="width: 500px; height: 328.125px;" src="/archive/media/2019/umbraco-setup-public-access.png?width=500&amp;height=328.125" alt="" data-udi="umb://media/6141a20161eb4ad4b70cab39ddb69cf8"></p>
+<p>Here's the config for the acknowledged users section:</p>
+<p><img style="width: 500px; height: 328.125px;" src="/archive/media/2019/umbraco-setup-public-access-2.png?width=500&amp;height=328.125" alt="" data-udi="umb://media/9c933cccda034b2ebfb207653439a93b"></p>
+<h2>Wrapping up</h2>
+<h3>Test it!</h3>
+<p>Just so you guys and gals can see how it works, here's a working deployment : <a rel="noopener" href="http://umbraco8-aadb2c-2.azurewebsites.net/" target="_blank" title="http://umbraco8-aadb2c-2.azurewebsites.net/">https://umbraco8-aadb2c-2.azurewebsites.net/</a>. You should be able to register and log in, and afterwards, you should have access to the "new member section" page. To get access to the "closed section" page, I need to add your member to another member group.  But go ahead and try to surf to the page.</p>
+<p>I'll probably tear the deployment down in a while though because of hosting costs.</p>
+<h3>What's next?</h3>
+<p>I have some ideas beyond the scope of this article.</p>
+<ul>
+<li>Synchronization<br>My example did not include a lot of member properties being copied over into Umbraco. If it would, a synchronization job is probably needed. <br>Azure AD B2C also has groups, just like Umbraco members do. In my sample I chose to handle group management entirely in Umbraco. You could decide otherwise, again a synchronization will surely be needed.<br>Also, it would be best to prevent updates/saves on members of the AD member type from the Umbraco Back office. Or alternatively, on save we could push the data to Azure AD B2C.</li>
+<li>Tweaking the sample<br>The error handling is not entirely finished in my examples. This could be more elaborate.<br>Customising the policies. In our projects we spent quite some time and succeeded in customizing the look and feel of the policies. For this sample this wasn't done as it wasn't the focus.<br>Switch from openid to auth code flow</li>
+<li>Member group content app?<br>Handling which members are in which member group is tedious. If it weren't that content apps are probably not meant for the member section, I feel a content app that allows you to drag and drop members into or out of the group would be great.</li>
+</ul>
+<h3>Conclusion</h3>
+<p>Congratulations if you made it here without either scroll-skipping everything or hitting ctrl-end. I hope you enjoyed it. I am also honored and thankful to have been able to contribute to 24 days.  Finally, I'm on Twitter, but just can't keep up with it - so if you have questions you'll have to DM me or whatever it's called, or I guess comments here will work too!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/members/" title="See all articles tagged with Members">Members</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/security/" title="See all articles tagged with Security">Security</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/source/" title="See all articles tagged with Source">Source</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Davy Lowyck"><img src="//gravatar.com/avatar/59bf353b79cdf6cb9ad7e747e32fe19f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/59bf353b79cdf6cb9ad7e747e32fe19f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Davy Lowyck</h1>
+        <p>Davy is on Twitter as <a href="//twitter.com/El_SlowMo" title="Davy Lowyck on Twitter" rel="author">@El_SlowMo</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>All your logs are belong to log4net</title>
+<meta name="description" content="Custom usage of log4net in Umbraco">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">All your logs are belong to log4net</h1>
+      <p class="byline"> by Ismail Mayat, <span class="pubdate">posted on <time datetime="2013-12-02">Dec 2, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>History lesson</h2>
+<p>As you may or may not be aware since Umbraco 4.10 all internal logging by Umbraco is now done by the awesome <a href="http://logging.apache.org/log4net/" target="_blank" title="log4net site">log4net</a> logging framework.  The log4net framework is a port from the equally excellent log4j.  I have used log4net in the past on non Umbraco projects and love it, so I was really excited when it was announced that Umbraco would make use of it.</p>
+<h2>Log4net in Umbraco</h2>
+<p class="intro">Log4net is configured using an XML config file. In Umbraco this file lives in the config directory and is called log4net.config. Out of the box you get one appender already setup for you. This is the AsynchronousLog4NetAppender, this writes all log statements to a log file that lives in App_Data\Logs\UmbracoTraceLog.txt.</p>
+<p>Here is where it gets interesting; log4net is a highly customisable logging framework, you can make use of any number of standard out of the box <a href="http://logging.apache.org/log4net/release/config-examples.html" target="_blank" title="appenders">appenders</a> or you can write your own.</p>
+<h3>Other appenders</h3>
+<p>I am just going to cover one of the standard appenders - the SMTP appender and how I make use of it regularly in my code.</p>
+<p>When I am writing code for macros or for Umbraco events like document publish or Examine GatheringNodeData I will for critical sections always wrap with a try catch block and in the exception block add a log4net statement.</p>
+<pre class="language-csharp"><code>public MyClass{
+	public void SomeCriticalMethod(){
+		try{
+		 //some critical code here
+		}
+		catch(Exception ex){
+			LogHelper.Error(typeof(MyClass), "Error exceuting task”, ex);
+		}
+	}
+}
+
+</code></pre>
+      <p class="snippet-caption">Code with critical section</p>
+<p>In my log4net config file I add entry for the SMTP appender which looks something like</p>
+<pre class="language-markup"><code>&lt;appender name="SmtpAppender" type="log4net.Appender.SmtpAppender"&gt;
+	&lt;to value="jo@site.com" /&gt;
+	&lt;from value="me@site.com" /&gt;
+	&lt;subject value="Info graphic error" /&gt;
+	&lt;smtpHost value="localhost" /&gt;
+	&lt;bufferSize value="512" /&gt;
+	&lt;lossy value="true" /&gt;
+	&lt;evaluator type="log4net.Core.LevelEvaluator"&gt;
+		&lt;threshold value="ERROR"/&gt;
+	&lt;/evaluator&gt;
+	&lt;layout type="log4net.Layout.PatternLayout"&gt;
+		&lt;conversionPattern value="%newline%date [%thread] %-5level %logger [%property{NDC}] - %message%newline%newline%newline" /&gt;
+	&lt;/layout&gt;
+&lt;/appender&gt;
+</code></pre>
+      <p class="snippet-caption">SMTP appender config</p>
+<p>Additionally I also setup a filter. If this was not done then anytime there is an error I will receive emails it can get a bit spamtastic! I am only interested in receiving emails when my critical section fails. The filter looks like</p>
+<pre class="language-markup"><code>&lt;filter type="log4net.Filter.LoggerMatchFilter"&gt;
+	&lt;loggerToMatch value=" MyClass" /&gt;
+&lt;/filter&gt;
+&lt;filter type="log4net.Filter.DenyAllFilter" /&gt;
+</code></pre>
+      <p class="snippet-caption">filter config</p>
+<p>Now I will only receive emails when my method fails in MyClass class.</p>
+<p>You could even set up an Error500 page in your web.config, this page will not be an umbraco page but a stand-alone aspx page (You will need to add it to the reserved urls settings in your web.config so that Umbraco request pipeline does not try to handle it)</p>
+<pre class="language-markup"><code>    &lt;customErrors mode="RemoteOnly" redirectMode="ResponseRewrite"&gt;
+      &lt;error statusCode="500" redirect="/Error500.aspx" /&gt;
+    &lt;/customErrors&gt;</code></pre>
+      <p class="snippet-caption">Error 500 config</p>
+<p>and in the aspx page log any unhandled exceptions,</p>
+<pre class="language-csharp"><code>    public partial class Error500 : System.Web.UI.Page
+    {
+        private static readonly ILog log = LogManager.GetLogger(typeof(Error500));
+
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            LogError();
+        }
+
+        private void LogError()
+        {
+            Exception objErr = Server.GetLastError().GetBaseException();
+            log.Error("Error500 page",objErr);
+        }
+    }</code></pre>
+      <p class="snippet-caption">Error 500 code behind</p>
+<p>so the user gets a friendly error message and you get an email telling you its hit the fan, no more nasty YSODs. </p>
+<h3>Custom appenders - LiveLogger</h3>
+<p>As well as standard out of the box appenders you can also easily create your own appender and in the <a href="http://our.umbraco.org/projects/backoffice-extensions/live-logger" target="_blank" title="Livelogger">LiveLogger</a> project I made use of a SignalR appender for log4net.</p>
+<pre class="language-csharp"><code>using System;
+using log4net.Appender;
+using log4net.Core;
+
+namespace LiveLogger
+{
+    public class LogAppender : AppenderSkeleton
+    {
+        private FixFlags _fixFlags = FixFlags.All;
+
+        public Action&lt;LogEntry&gt; MessageLogged;
+
+        public static LogAppender Instance { get; private set; }
+
+        public LogAppender()
+        {
+            Instance = this;
+        }
+
+        virtual public FixFlags Fix
+        {
+            get { return _fixFlags; }
+            set { _fixFlags = value; }
+        }
+
+        override protected void Append(LoggingEvent loggingEvent)
+        {
+            // LoggingEvent may be used beyond the lifetime of the Append()
+            // so we must fix any volatile data in the event
+            loggingEvent.Fix = Fix;
+
+            var formattedEvent = RenderLoggingEvent(loggingEvent);
+
+
+            var handler = MessageLogged;
+            if (handler != null)
+            {
+                handler(new LogEntry(formattedEvent, loggingEvent));
+            }
+        }
+    }
+
+
+    public class LogEntry
+    {
+        public string FormattedEvent { get; private set; }
+        public LoggingEvent LoggingEvent { get; private set; }
+
+        public LogEntry(string formttedEvent, LoggingEvent loggingEvent)
+        {
+            FormattedEvent = formttedEvent;
+            LoggingEvent = loggingEvent;
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Live logger appender</p>
+<p>When you install the package it will insert the appender configuration into your log4net config file,</p>
+<pre class="language-markup"><code>  &lt;appender name="LiveLoggerAppender" type="LiveLogger.LogAppender"&gt;
+    &lt;layout type="log4net.Layout.PatternLayout"&gt;
+      &lt;conversionPattern value="%date %-5level - %message%newline" /&gt;
+    &lt;/layout&gt;
+  &lt;/appender&gt;
+</code></pre>
+      <p class="snippet-caption">Livelogger config entry</p>
+<p>I find this to be very useful during development. So I will in appropriate places insert logging statements into my code and again make use of try catch blocks and also log exceptions.  </p>
+<p>Then if something I am working on is failing. I will open livelogger then re run the action and look at the log statements, it is also very useful on a live site and a lot easier than constantly pulling down the log file from the app_data directory.</p>
+<p>This is only touching the surface of some of the log4net capabilities; You can really go to town with a wide mixture of appenders and filters to fine tune your logging to a number of different sinks, files, databases, SMTP servers and even custom sinks you write yourself.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Ismail Mayat"><img src="//gravatar.com/avatar/6495743815f2137983c9d19ad4746edb.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/6495743815f2137983c9d19ad4746edb.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Ismail Mayat</h1>
+        <p>Ismail is on Twitter as <a href="//twitter.com/ismailmayat" title="Ismail Mayat on Twitter" rel="author">@ismailmayat</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li class="selected"><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Getting More Out of the Block List Editor</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Advanced BlockList Editor</h1>
+      <p class="byline"> by Dave Woestenborghs, <span class="pubdate">posted on <time datetime="2021-12-18">Dec 18, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">This is not a tutorial on the Block List Editor itself. So if you are unfamiliar with it, it might be worth to do some additional reading first:</p>
+<ul data-mark="-">
+<li>
+<p><a rel="noopener" href="https://our.umbraco.com/Documentation/Fundamentals/Backoffice/Property-Editors/Built-in-Property-Editors/Block-List-Editor/" target="_blank">Official documentation</a></p>
+</li>
+<li>
+<p><a rel="noopener" href="https://umbraco.com/blog/deep-dive-the-block-list-editor/" target="_blank">Deep Dive: The Block List editor</a></p>
+</li>
+</ul>
+<h2>Block based content historically</h2>
+<p class="intro">Way back in the days of Umbraco 6 and lower we did not have a lot of options to create block based content. The most common way to solve this, was to create the blocks that needed to be displayed on the page as child nodes of that page (or maybe in a folder called "blocks" below the page). Although this worked fine there were a lot of things you needed to handle:</p>
+<ul>
+<li>Make sure blocks get indexed with the page (and update the page in the index when blocks are changed)</li>
+<li>Because the blocks are created as content items they can be previewed from the CMS and accessed directly by their URL; this had to be handled correctly.</li>
+</ul>
+<p>A side effect of this setup was that your tree got cluttered with a lot of items that were not pages.</p>
+<p>With the release of Umbraco 7 and the backoffice being built in AngularJS this opened the door for a whole new set of editors that allowed for a new way of doing block-based content. All of these editors store the block-based content with the page itself.</p>
+<ul>
+<li><a rel="noopener" href="https://github.com/kgiszewski/Archetype" target="_blank">Archetype</a>: this open source property editor gave us the option to have block-based content by defining the structure in the datatype configuration. You could reuse existing datatypes as input fields.</li>
+<li><a rel="noopener" href="https://our.umbraco.com/Documentation/Fundamentals/Backoffice/Property-Editors/Built-in-Property-Editors/Grid-Layout/" target="_blank">Grid Layout</a>: this core property editor gives editors the ability to insert different types of content in a predefined layout.<a rel="noopener" href="https://our.umbraco.com/Documentation/Fundamentals/Backoffice/Property-Editors/Built-in-Property-Editors/Nested-Content/" target="_blank"></a></li>
+<li><a rel="noopener" href="https://our.umbraco.com/Documentation/Fundamentals/Backoffice/Property-Editors/Built-in-Property-Editors/Nested-Content/" target="_blank">Nested Content</a>: started out as an open source editor that made its way into the Umbraco core project. It works similar to Archetype, but instead of defining your block structure as part of the datatype configuration, you can (re)use document types  for the structure.</li>
+</ul>
+<p>This is a just a handful of options, but there are many others available. Peter Gregory wrote an <a href="https://24days.in/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders">article</a> comparing four block editors in last year's edition of 24 Days In Umbraco.</p>
+<p>But for the remainder of this article we will focus on the new Block List Editor in Umbraco. I will walk you through some useful tips and techniques that will make your solutions more user-friendly.</p>
+<h2>Reusable content blocks</h2>
+<p>Often editors want to reuse a piece of content on several pages. For example a Call to action component that allows users to sign up for a newsletter.</p>
+<p>Out of the box the Block List Editor has no support for reusing content. It supports copying and pasting of blocks from one page to another. But when the content of the block needs to change, the editor still needs to update all the instances across the website. When you have a large site this will require them to go by all the pages to make sure that they don't miss one. So it would make more sense that they can create the component somewhere in the content tree and reuse that on pages where they want to show it.</p>
+<p>So let's have a look on how to achieve this.</p>
+<p>Like nested content, the structure of a content block is defined by an Umbraco Content Type. This needs to be an Element Type, otherwise it can not be used in the content editor. But because it is an element type we can't create items of that type in the tree. And what we want is a way to create items in the tree with the same fields as the element type we use in the Block List Editor.</p>
+<p>Here document type <em>compositions</em> come to our rescue.</p>
+<p>So you need to create a document type (that is not an element type) and then select your block element type you want to reuse as composition.</p>
+<p><img src="/archive/media/2021/reusable-block-doctype.jpg?width=1000&amp;mode=max" alt="Reusable block doctype configuration" data-udi="umb://media/959428152dab409aacc20f54dced304c"></p>
+<p>Now you can create content nodes using this document type in the tree with the exact same properties as the block you use directly in the block list editor. Because you are using a composition you only need to update the element type to add/remove/change properties.</p>
+<p><strong>Tip:</strong> If you are building a multi-language site don't forget to set <em>Allow vary by culture</em> on your element type and its properties.</p>
+<p>The next thing we need to do is create a document type editor where editors can pick a reusable content block and configure it to be used in the Block List Editor.</p>
+<p>Once that is in place we only need to setup the view for "Reusable content block". We want the selected block to be rendered with the same view as a block we place directly in the Block List Editor.</p>
+<p> </p>
+<pre><code class="language-markup">@using Umbraco.Cms.Core.Composing
+@using Umbraco.Cms.Core.Models.Blocks
+@using Umbraco.Cms.Core
+@inherits UmbracoViewPage&lt;Umbraco.Cms.Core.Models.Blocks.BlockListItem&lt;_Days.Models.Content.ReusableContentBlock&gt;&gt;
+@inject ITypeFinder _typeFinder
+@inject IPublishedValueFallback _publishedValueFallback
+@{
+    var blockContent = Model.Content.Block;
+}
+@if (blockContent != null)
+{
+    // we assume the picked content is always composed of one document type, so we get the first composition alias
+    var compositionAlias = blockContent.ContentType.CompositionAliases.FirstOrDefault();
+
+    // get the models builder type based on composition alias
+    // so this is the type of the strongly typed model of the composition document type.
+    var compositionType = _typeFinder.FindClassesWithAttribute&lt;PublishedModelAttribute&gt;().SingleOrDefault(x =&gt; x.GetCustomAttribute&lt;PublishedModelAttribute&gt;(false).ContentTypeAlias == compositionAlias);
+
+    // create instance of the composition type using the picked content
+    var compositionInstance = Activator.CreateInstance(compositionType, blockContent, _publishedValueFallback);
+
+    // get a generic block list item type based on the composition type
+    var blockListItemType = typeof(BlockListItem&lt;&gt;).MakeGenericType(compositionType);
+
+    // create instance of the block list item
+    var blockListItem = (BlockListItem)Activator.CreateInstance(blockListItemType, new GuidUdi("document", blockContent.Key), compositionInstance, null, null);
+
+    // and render it using the same view as normally.
+    @await Html.PartialAsync("blocklist/Components/" + compositionAlias, blockListItem)
+}   </code></pre>
+<p>It requires some "reflection magic" to get it working, but the end result is that we can render the selected block from the tree using the same view as if it was added directly to the Block List Editor.</p>
+<h2>Scheduled "publication"</h2>
+<p>Out of the box the Block List Editor does not support hiding a block or having it displayed for certain time on the website. While this is often a requirement when we build websites, the only option is that editor actually removes the block from the Block List Editor.</p>
+<p>So the first thing we need to do is create a element type called "Publication restrictions" for example with the following properties:</p>
+<ul>
+<li><strong>Hide block</strong>: when toggled the block will be hidden on the page</li>
+<li><strong>Start date</strong>: a datetime from which the block will be visible on the page</li>
+<li><strong>End date</strong>: a datetime from which the block will be hidden on the page</li>
+</ul>
+<p><img src="/archive/media/2021/publication-restrictions.jpg?width=1000&amp;mode=max" alt="Publication restrictions doctype" data-udi="umb://media/1f0189048bea4b6ab4815719acc9a1cf"></p>
+<p><span>The next thing is to update all our content blocks in our Block List Editor datatype by selecting our newly created element type as a "Settings model".</span></p>
+<p><span><img src="/archive/media/2021/publication-restrictions-datatype.jpg?width=1000" alt="" data-udi="umb://media/280f859755bd4f7b9c487b9d4446ff54"></span></p>
+<p><span>After that your editors have access to these settings when editing the content block.</span></p>
+<p><span><img src="/archive/media/2021/publication-editor.jpg?width=1000" alt="Publication restrictions in the block editor" data-udi="umb://media/544e9bb85e8641d28f504a17a4df6b45"></span></p>
+<p><span>With the configuration in place we only need to update the rendering of the block list to check these settings if the block should be shown. For that I created service that does the checks to see if a block should be displayed.</span></p>
+<pre><code class="language-csharp">using System;
+using _24Days.Core.Ranges;
+using _Days.Models.Content;
+using Umbraco.Cms.Core.Models.Blocks;
+using Umbraco.Extensions;
+
+namespace _24Days.Core.Services
+{
+    internal class BlockPublicationCheckService : IBlockPublicationCheckService
+    {
+        public bool IsBlockPublished(BlockListItem block)
+        {
+            if (block == null)
+            {
+                return false;
+            }
+
+            if (block.Settings == null)
+            {
+                return true;
+            }
+
+            if (block.Settings.ContentType.Alias == PublicationRestrictions.ModelTypeAlias ||
+                block.Settings.IsComposedOf(PublicationRestrictions.ModelTypeAlias))
+            {
+                var settings = (PublicationRestrictions)block.Settings;
+
+                if (settings.HideBlock)
+                {
+                    return false;
+                }
+
+                var dateRange =
+                    new DateRange(
+                        settings.StartDate == default ? DateTime.MinValue : settings.StartDate,
+                        settings.EndDate == default ? DateTime.MaxValue : settings.EndDate);
+
+                return dateRange.Includes(DateTime.Now);
+            }
+
+            return true;
+        }
+    }
+}</code></pre>
+<p class="md-end-block md-p"><span class="md-pair-s "><em><span class="md-plain">The interface definition and registration are omitted but can be found in the </span><span class="md-meta-i-c  md-link"><a rel="noopener" href="https://github.com/dawoe/24-days-block-list-article" target="_blank"><span class="md-plain">git repo</span></a></span><span class="md-plain"> with the full example</span></em></span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain">With this service in place I can inject it in to the view and check if a block needs to be shown.</span></p>
+<pre><code class="language-markup">@using _24Days.Core.Services
+@inherits Umbraco.Cms.Web.Common.Views.UmbracoViewPage&lt;Umbraco.Cms.Core.Models.Blocks.BlockListModel&gt;
+@inject IBlockPublicationCheckService publicationCheckService;
+@{
+    if (!Model.Any()) { return; }
+}
+&lt;div class="umb-block-list"&gt;
+    @foreach (var block in Model)
+    {
+        if (block?.ContentUdi == null) { continue; }
+        var data = block.Content;
+
+        var isBlockPublished = publicationCheckService.IsBlockPublished(block);
+        
+        if (isBlockPublished)
+        {
+            @await Html.PartialAsync("blocklist/Components/" + data.ContentType.Alias, block)
+        }
+
+    }
+&lt;/div&gt;</code></pre>
+<p class="md-end-block md-p"><span class="md-plain">There you go. You can now hide blocks or schedule displaying blocks on your webpage.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-pair-s "><em><span class="md-plain">Disclaimer: Keep in mind that the hidden content will be in the content cache and Examine indexes. So if you have a search function on your website you will need to handle this.</span></em></span></p>
+<h2 class="md-end-block md-p md-focus"><span class="md-pair-s "><span class="md-plain">Preview</span></span></h2>
+<p><span>Out of the box what your editors get to see when using the block list editor is not very user-friendly.</span></p>
+<p><span><img src="/archive/media/2021/block-editor-default.jpg?width=1000" alt="Default block list editor view" data-udi="umb://media/874ebc4f89a44c9fbfd7c90a510d948a"></span></p>
+<p class="md-end-block md-p"><span class="md-plain">They can see what type of block is placed in the block editor but that's it. To see what content is being used they need to open up the block.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain">But by setting a </span><span class="md-meta-i-c  md-link"><a rel="noopener" href="https://our.umbraco.com/Documentation/Fundamentals/Backoffice/Property-Editors/Built-in-Property-Editors/Block-List-Editor/#editor-appearance" target="_blank" data-anchor="#editor-appearance"><span class="md-plain">custom label</span></a></span><span class="md-plain"> for the block we can make it a bit more user friendly.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain"><img src="/archive/media/2021/block-editor-with-label.jpg?width=1000" alt="Block list editor with custom label" data-udi="umb://media/b88040eab17c4729ba90cca2831fc9ca"></span></p>
+<p class="md-end-block md-p"><span class="md-plain">This improves the editor experience a bit because they can see a piece of the content inside the block without going in to the edit mode.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">But to get the most out of the Block List Editor you can create a </span><span class="md-meta-i-c  md-link"><a rel="noopener" href="https://our.umbraco.com/Documentation/Fundamentals/Backoffice/Property-Editors/Built-in-Property-Editors/Block-List-Editor/#build-a-custom-backoffice-view" target="_blank" data-anchor="#build-a-custom-backoffice-view"><span class="md-plain">custom preview</span></a></span><span class="md-plain"> so editors can see in the backoffice how a block will look on the web page. Tim Payne wrote an excellent </span><span class="md-meta-i-c  md-link"><a rel="noopener" href="https://www.skrift.io/issues/supercharging-your-block-list-editors/" target="_blank"><span class="md-plain">skrift article</span></a></span><span class="md-plain"> on how to build custom previews in AngularJS.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain">Configuring a custom view is done in the datatype for each element type.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain"><img src="/archive/media/2021/custom-preview-configuration.jpg?width=1000" alt="Custom preview confuration" data-udi="umb://media/67e905c8e74344a49ad48e0e5cd5df04"></span></p>
+<p class="md-end-block md-p"><span class="md-plain">And then your Block List Editor could look like this in the backoffice :</span></p>
+<p class="md-end-block md-p"><span class="md-plain"><img src="/archive/media/2021/custom-preview.jpg?width=1000" alt="Block list with custom preview" data-udi="umb://media/ad0a9150120444e0ae2dc8868b76f528"></span></p>
+<p class="md-end-block md-p"><span class="md-plain">Because the custom preview is rendered in a shadow DOM you can use the same CSS file as the one on your website without interfering with the backoffice styling.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">But creating a angular view (and maybe a controller) for each block can be a lot of work if you have a lot of different content blocks. Especially if you see in the article written by Tim, as well as the example in the official documentation, you already need a controller and a API call to display an image. Imagine you have a block where you display the latest x number of news articles. You probably need to write your own API controller to retrieve that data. You could also opt to render fake data for complex blocks, but then I don't see any benefit of having a custom preview. </span></p>
+<p class="md-end-block md-p"><span class="md-plain">You also have to maintain your rendering in two places, the angular view and your razor view.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">So when I was working on big projects with a lot of different blocks, this took a lot of time to create new previews and update the existing previews when the design changed, especially because I also needed to do the same work in the razor views. To limit the time spending on creating previews I spent some time investigating if I could reuse the razor views for the back office preview. Turned out I could.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">What I did is create an API controller with a method where I pass in the block data, the page id and culture. </span></p>
+<p class="md-end-block md-p"><span class="md-plain">This method does the following :</span></p>
+<ul class="ul-list" data-mark="-">
+<li class="md-list-item">
+<p class="md-end-block md-p"><span class="md-plain">Get the Umbraco content item for the page id from the cache or preview cache</span></p>
+</li>
+<li class="md-list-item">
+<p class="md-end-block md-p"><span class="md-plain"></span>Configure an Umbraco published request based on the page and culture</p>
+</li>
+<li class="md-list-item">
+<p class="md-end-block md-p"><span class="md-plain">Construct an IPublishedElement type from the passed in block data and render the correct view to a string</span></p>
+</li>
+<li class="md-list-item">
+<p class="md-end-block md-p"><span class="md-plain">And finally returns the cleaned up markup </span></p>
+</li>
+</ul>
+<p class="md-end-block md-p"><span class="md-plain">You can see the full code of the API </span><span class="md-meta-i-c  md-link"><a rel="noopener" href="https://github.com/dawoe/24-days-block-list-article/blob/1cfd05e30e18b324c8e38dafcb95d529f61e05a5/24Days.Core/Controllers/BlockPreviewApiController.cs#L72" target="_blank" data-anchor="#L72"><span class="md-plain">here</span></a></span><span class="md-plain">.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">Then I created an angular view and controller to call the API. All the code needed for that can be found </span><span class="md-meta-i-c  md-link"><a rel="noopener" href="https://github.com/dawoe/24-days-block-list-article/tree/develop/24Days.Web/App_Plugins/BlockListViews" target="_blank"><span class="md-plain">here</span></a></span><span class="md-plain">.</span></p>
+<p class="md-end-block md-p"><span class="md-plain">So now I never need to create a another angular preview anymore and just reuse the razor rendering.</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain">As a bonus I have a directive that checks the publication settings and changes the look of blocks that will not be visible on the frontend in the preview :</span></p>
+<p class="md-end-block md-p md-focus"><span class="md-plain"><img src="/archive/media/2021/disabled-preview.jpg?width=1000" alt="Block preview with disabled block" data-udi="umb://media/afa85a23473e4be688fd004241ec1cf9"></span></p>
+<p>So editors can see this as well without going into the settings to check this.</p>
+<h2>Wrap up</h2>
+<p>I hope you will use some or all of these tips in your next or current Umbraco projects.</p>
+<p>If you want to get your hands dirty, I have a fully working Umbraco 9 site available that you can <a rel="noopener" href="https://github.com/dawoe/24-days-block-list-article" target="_blank">download</a> and run locally to play around with this yourself. But don't forget to wash your hands afterwards 🧼🧼🧼</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v9/" title="See all articles tagged with v9">v9</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/block-builder/" title="See all articles tagged with Block Builder">Block Builder</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backend/" title="See all articles tagged with Backend">Backend</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Dave Woestenborghs"><img src="//gravatar.com/avatar/c6c76510af08bcb2896f4e9e887074fd.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c6c76510af08bcb2896f4e9e887074fd.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Dave Woestenborghs</h1>
+        <p>Dave is on Twitter as <a href="//twitter.com/dawoe21" title="Dave Woestenborghs on Twitter" rel="author">@dawoe21</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

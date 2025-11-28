@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Custom Dashboards and Sections in Umbraco V8</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Dashboards and Sections</h1>
+      <p class="byline"> by Poornima Nayar, <span class="pubdate">posted on <time datetime="2019-12-23">Dec 23, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">The ability to create custom sections and dashboards have always been one of my favourite features about Umbraco. I see the Umbraco backoffice as an eco system, a very rich one, where I like to give my content editors the friendly editor experience, information about any third party integrations, any information in context to their editorial experience etc. I have always felt that the back-office should be a one-stop shop for my editors. This way they don’t have multiple interfaces to be trained upon, change between various browser tabs while they are editing content, but have everything(or almost everything!!!) they need in the backoffice.</p>
+<p class="intro">Now, some of you might have heard about Content Apps in Umbraco v8 and might be wondering what is the difference between dashboards and content apps. Or what could be the use cases and how to choose between one or the other? Content apps are companions to your editing experience. These apps can provide insight and feedback about the content you are editing. The idea is you don’t need to jump browser tabs or visit other sites to gain this information but you have it in hand alongside the content you are currently editing. You can read more about content apps <a rel="noopener" href="https://umbraco.com/blog/umbraco-8-content-apps/" target="_blank">here</a>. An example of content app in the Umbraco backoffice is the <strong><em>Info</em> </strong>content app which replaces the info tab in V7. You can also extend and create your own content apps and even control permissions on your content apps, more information on it is available <a rel="noopener" href="https://our.umbraco.com/documentation/extending/Content-Apps/" target="_blank">here</a>. Some examples of Content Apps are Nathan Woulfe’s award-winning <a rel="noopener" href="https://github.com/nathanwoulfe/preflight" target="_blank">Preflight</a>, Anders Bjerner’s <a rel="noopener" href="https://github.com/abjerner/Skybrud.Umbraco.Analytics" target="_blank">Google Analytics Integration</a> etc. Sections and dashboards, as I see it, is a level higher. It can be used to show site-wide information – status of your third party integrations, side wide analytics are some examples of what you could do. There could also be examples where content apps and section/dashboards could cross paths. For eg, you could show analytics information about a page as a content app, but you can still show site-wide analytics and behaviour as a dashboard or a section of its own.</p>
+<p>Before we start talking about the v8 situation around sections and dashboards, lets rewind a bit and talk about v7. The starting point for creating and configuring custom sections and dashboards were config files.</p>
+<p><em><strong>Applications.config</strong></em> - configure CMS “sections”</p>
+<p><em><strong>Dashboards.config</strong></em> - configure CMS “dashboards”</p>
+<p><strong><em>Trees.config</em> – </strong>configure section trees</p>
+<p>Fast forward and talking about v8, none of the above config files exist and this is one of the big difference between v7 and v8. So how do you go about creating dashboards and custom sections? Lets have a look.. I will first talk about creating a dashboard, followed by a custom section with a custom tree and then finally, the bonus Treeless Section.</p>
+<h2>Creating a Dashboard</h2>
+<p>In Umbraco, each section has a set of default dashboards. For eg, the content section has a <em>Getting Started</em> and the <em>Redirect URL Management </em>dashboards. I am going to add a custom dashboard to the content section to welcome my editors. This dashboard will show my editors a personalised welcome message followed by a picture. I am using the <em><strong>getCurrentUser</strong>() </em>method to show the personalised welcome message, for the picture I am using <em><strong>NASA’s Astronomy Picture of the Day (APOD) API</strong></em>. Each day, this API shows a picture or a video from the Universe together with some information about it.</p>
+<h3>The NASA APOD API</h3>
+<p>NASA exposes some cool APIs to give access to their astronomy data. The picture of the day can be retrieved from NASA’s APOD API by performing a HTTPGET request to the Url <a rel="noopener" href="https://api.nasa.gov/planetary/apod" target="_blank">https://api.nasa.gov/planetary/apod</a>. There is no need to authenticate in order to explore the data but you need an API key that you have to sign up for. You can get your api key and also know about the rate limits <a rel="noopener" href="https://api.nasa.gov/" target="_blank">here</a>.</p>
+<p>The parameters to perform the get request are the following</p>
+<p><em><strong>Date</strong> </em>-<em> Date in YYYY-MM-DD format. The date for which you wish to retrieve the APOD image. The default is today</em></p>
+<p><strong><em>Hd</em> - </strong><em>Boolean value to denote whether to retrieve the URL for the high res image</em></p>
+<p><em><strong>Api_key</strong></em> - <em>Your API key</em></p>
+<h3>Your Custom Dashboard</h3>
+<p>To begin with, I create a folder in the <strong><em>App_Plugins</em> </strong>folder called <em><strong>CustomDashboards</strong>.</em> I am going to organise all the custom dashboards I have created for this demo into this folder. But you can decide what is the best approach to organise them in your solution. In my <strong><em>App_Plugins/CustomDashboards</em></strong> folder I now create a folder called <strong><em>PictureOfTheDay</em></strong>. All my files for this particular dashboard will be in this folder.</p>
+<p>The first step in creating your own dashboard is to register it. There are two ways to do it – registering using with <strong><em>package.manifest</em></strong> and registering with a C# class as mentioned <a rel="noopener" href="https://our.umbraco.com/documentation/Extending/Dashboards/#registering-with-c-type" target="_blank" data-anchor="#registering-with-c-type">here</a>. I have used <em><strong>package.manifest</strong></em> to register my dashboard. The <em><strong>package.manifest</strong></em> file is a JSON file and can be used to describe your dashboards and sections. You can read more about it <a rel="noopener" href="https://our.umbraco.com/Documentation/Extending/Property-Editors/package-manifest" target="_blank">here</a>.</p>
+<p>In my<strong><em> App_Plugins/CustomDashboards/PictureOfTheDay</em></strong> folder I add the <strong><em>package.manifest</em></strong> file. I use Visual Studio to work on my Umbraco Projects so I usually add a new <em><strong>Application Manifest</strong></em> file into my folder and rename it. I have mapped <strong><em>.manifest</em></strong> extension to the hosted <a rel="noopener" href="http://json.schemastore.org/package.manifest" target="_blank">JSON schema</a> in my Visual Studio so it gives me autocomplete and IntelliSense support. You can find information on how to do it <a rel="noopener" href="https://our.umbraco.com/Documentation/Extending/Property-Editors/package-manifest#json-schema" target="_blank" data-anchor="#json-schema">here</a>.</p>
+<p>I can now start registering my custom dashboard by adding the following code in to my <strong><em>package.manifest.</em></strong></p>
+<pre><code class="language-json">﻿{
+  "dashboards": [
+    {
+      "alias": "pictureOfTheDay",
+      "view": "~/App_Plugins/CustomDashboards/PictureOfTheDay/pictureoftheday.html",
+      "sections": [ "content" ],
+      "weight": -10
+    }
+  ],
+  "javascript": [
+    "~/App_Plugins/CustomDashboards/PictureOfTheDay/pictureoftheday.controller.js"
+  ],
+  "css": [
+    "~/App_Plugins/CustomDashboards/PictureOfTheDay/pictureoftheday.css"
+  ]
+}</code></pre>
+      <p class="snippet-caption">Package.manifest for the custom dashboard</p>
+<p> <strong><em>Tip</em>: </strong><em>Any changes to package.manifest will be picked up by the backoffice only upon recycle of the app pool.</em></p>
+<p>The <em><strong>dashboards</strong> </em>array can be used to specify an array of dashboards. Each dashboard has an alias which is the unique alias for the dashboard. The <strong><em>View</em> </strong>configuration option is to specify the path to the HTML file which renders the dashboard. The <em><strong>sections</strong> </em>option is again an array where I can specify which sections must display my dashboard. I am displaying mine in the content section, but multiple sections may be specified using comma separated values. The <em><strong>weight</strong> </em>option is used to specify the order in which the dashboard appears, the dashboard with lower weight values appear first. The Content section in Umbraco already has two dashboards Getting Started with a weight of 10 and Redirect URL Management which has a weight of 20. I want my dashboard to appear first so I have chosen -10 as the weight for my dashboard. More information about weights and re-ordering can be found <a rel="noopener" href="https://our.umbraco.com/Documentation/Extending/Dashboards/#re-ordering--weighting" target="_blank" data-anchor="#re-ordering--weighting">here</a>. </p>
+<p>The <strong><em>javascript </em></strong>configuration option to specify paths to any angular controllers/ resource files etc which provides functionality to my dashboard. I also specify css files to support my dashboard and make it look pretty using the <em><strong>css</strong> </em>option.</p>
+<p>Time to bring the dashboard to life now. This is what the code in my view is.</p>
+<pre><code class="language-markup">﻿&lt;div class="pictureoftheday" ng-controller="PictureOfTheDayController as vm"&gt;
+  &lt;umb-box&gt;
+    &lt;umb-box-header title="{{vm.title}}"&gt;&lt;/umb-box-header&gt;
+    &lt;umb-box-content&gt;
+      &lt;div ng-if="vm.pictureOfTheDay &amp;&amp; vm.pictureOfTheDay.media_type=='image'"&gt;
+        &lt;figure&gt;
+          &lt;figcaption&gt;{{vm.pictureOfTheDay.explanation}}&lt;/figcaption&gt;
+
+          &lt;img src="{{vm.pictureOfTheDay.hdurl}}" alt="{{vm.pictureOfTheDay.title}}" /&gt;
+
+        &lt;/figure&gt;
+      &lt;/div&gt;
+      &lt;div ng-if="vm.pictureOfTheDay &amp;&amp; vm.pictureOfTheDay.media_type=='video'"&gt;
+        &lt;iframe width="640" height="385" ng-src="{{vm.trustSrc(vm.pictureOfTheDay.url)}}" frameborder="0"&gt;&lt;/iframe&gt;
+      &lt;/div&gt;
+    &lt;/umb-box-content&gt;
+  &lt;/umb-box&gt;
+&lt;/div&gt;
+</code></pre>
+      <p class="snippet-caption">Picture of the Day View</p>
+<p>I am using some of the directives in the core to make it more consistent with the backoffice, you can learn more about it <a rel="noopener" href="https://our.umbraco.com/apidocs/v8/ui/#/api/umbraco.directives.directive:umbBox" target="_blank" data-anchor="#/api/umbraco.directives.directive:umbBox">here</a>.</p>
+<p>In my controller I inject <em><strong>userService, <a rel="noopener" href="https://docs.angularjs.org/api/ng/service/$sce#overview" target="_blank" data-anchor="#overview">$sce</a></strong> </em>and <a rel="noopener" href="https://docs.angularjs.org/api/ng/service/$http" target="_blank"><em><strong>$http</strong></em></a> service. I use the <em><strong>getCurrentUser()</strong></em> method to retrieve the name of the current logged in user. I use <strong>$http</strong> to perform an HTTPGET request to the <strong>NASA APOD API</strong>. The<strong> $sce</strong> provider helps me load any videos from external sources like YouTube, Vimeo.</p>
+<pre><code class="language-javascript">﻿angular.module("umbraco").controller("PictureOfTheDayController", function (userService, $http, $sce) {
+    var vm = this;
+    vm.title = "Hello, here is an umbazing picture for you!!!";
+
+    userService.getCurrentUser().then(function (user) {
+        vm.title = "Welcome " + user.name + ", here is an umbazing picture for you!!!";
+    });
+
+    $http.get("https://api.nasa.gov/planetary/apod?api_key=&lt;your-api-key&gt;&amp;hd=true")
+        .then(function (response) {
+            vm.pictureOfTheDay = response.data;
+        });
+
+    vm.trustSrc = function (src) {
+        return $sce.trustAsResourceUrl(src);
+    }
+
+});</code></pre>
+      <p class="snippet-caption">Picture of the Day AngularJS Controller</p>
+<p>I also have added some additional styles in my css stylesheet</p>
+<pre><code class="language-css">﻿.pictureoftheday .umb-box-header-title span {
+    color: darkmagenta;
+}
+figure {
+    margin: 0;
+}
+
+figcaption {
+    margin: 10px 0;
+}</code></pre>
+      <p class="snippet-caption">Picture of the Day Stylesheet</p>
+<p>Build the solution and log into the backoffice. My dashboard welcomes me, but the name of the dashboard does not look right. The name appears like <em><strong>[pictureOfTheDay]</strong></em>.</p>
+<p><img style="width: 500px; height: 54.5691906005222px;" src="/archive/media/2019/name-in-sq-brackets.png?width=500&amp;height=54.5691906005222" alt="" data-udi="umb://media/28aa80d87ce542bcb9fa049fe3b6e62b"></p>
+<p>This can be fixed using language files. I create a folder called <em><strong>lang</strong> </em>in <strong><em>App_Plugins/CustomDashboards/PictureOfTheDay/</em></strong> folder and add a language xml file,<strong> <em>en-US.xml</em></strong>. The code inside my XML file looks like below. Note that the key alias matches the alias of the dashboard which I specified in the <em><strong>package.manifest</strong></em>.</p>
+<pre><code class="language-markup">﻿&lt;?xml version="1.0" encoding="utf-8" standalone="yes"?&gt;
+&lt;language&gt;
+  &lt;area alias="dashboardTabs"&gt;
+    &lt;key alias="pictureOfTheDay"&gt;Picture Of The Day&lt;/key&gt;
+  &lt;/area&gt;
+&lt;/language&gt;</code></pre>
+      <p class="snippet-caption">Language File for Custom Dashboard</p>
+<p>Multiple language files can be specified if you want the name to be translated depending upon the language setting for the logged in user. In my example, my login to backoffice is set to use English(United States) hence I am using <em><strong>en-US.xml</strong></em>. You can specify multiple language files according to the language set up for your backoffice users. The XML files must be named using the convention <em><strong>language-country code.xml</strong></em></p>
+<p>Note that the area alias does not change. It is a keyword.</p>
+<p><em><strong>Tip</strong>: What I noticed during the course of developing this demo is that the lang folder should always be at the root of the Section/Dashboard folder</em></p>
+<p><em><strong>Tip</strong>: If the language files do not get picked up, save and recycle the app pool and refresh your browser.</em></p>
+<p>And putting it all together this is what my dashboard looks like</p>
+<p> <img style="width: 500px; height: 231.73935890698897px;" src="/archive/media/2019/customdashboard.png?width=500&amp;height=231.73935890698897" alt="" data-udi="umb://media/bbcd1cba59c8442399784f34b3603d13"></p>
+<p><em><strong>Tip:</strong> Whenever you make changes to your angular controller, view or stylesheet, update the version number in <strong>config/ClientDependency.config</strong> file and recycle your app pool. Else your changes won’t get picked up.</em></p>
+<h2>Creating Custom Section With Trees</h2>
+<p>Another fantastic feature in the backoffice is the ability to create custom sections(also called as application) with custom trees. In my example,I am creating a new section called Ipsum Section where I can generate some Ipsum content. I also have a custom tree with two nodes in my custom section – Bacon Ipsum and Dino Ipsum to generate Bacon Ipsum and Dino Ipsum. Both these ipsums have an API and I am making use of that to generate the content.</p>
+<h3>The Bacon Ipsum API</h3>
+<p>You can generate bacon ipsum by performing an HTTPS GET request to <a href="https://baconipsum.com/api/?type=meat-and-filler">https://baconipsum.com/api. </a>I am using the following parameters.</p>
+<p><em><strong>type</strong> </em>- '<em>all-meat' for meat only or 'meat-and-filler' for meat mixed with miscellaneous ‘lorem ipsum’ filler.</em></p>
+<p><em><strong>paras</strong> </em>- <em>optional number of paragraphs, defaults to 5.</em></p>
+<p><strong>format</strong> - <em>‘json’ (default), ‘text’, or ‘html’ , I am using html</em></p>
+<p>You can read more about the API <a rel="noopener" href="https://baconipsum.com/json-api/" target="_blank">here</a>.</p>
+<h3>The DINO Ipsum API</h3>
+<p>You can generate bacon ipsum by performing an HTTPS GET request to <a href="http://dinoipsum.herokuapp.com/api">http://dinoipsum.herokuapp.com/api. </a>I am using the following parameters.</p>
+<p><em><strong>format</strong> - json, html, text output format (defaults to html)</em></p>
+<p><em><strong>words</strong> - the number of words per paragraph (defaults to 30)</em></p>
+<p><em><strong>paragraphs</strong> - the number of paragraphs (defaults to 10)</em></p>
+<p>You can read more about the API <a rel="noopener" href="http://dinoipsum.herokuapp.com/" target="_blank">here</a>.</p>
+<h3>Your custom section</h3>
+<p>To create a custom section, I start off with a folder <strong><em>CustomSections</em></strong> in my <strong><em>App_Plugins</em></strong> folder. I add a <em><strong>package.manifest</strong></em> file into this folder to register my custom section and add the following code.</p>
+<pre><code class="language-json">{
+  "sections": [         
+    {
+      "alias": "ipsumSection",
+      "name": "Ipsum Section"
+    }
+  ]
+}
+</code></pre>
+      <p class="snippet-caption">Custom Section Registration using package.manifest</p>
+<p>I will also need to assign my custom section to the correct user group before I can see my section in the top navigation ribbon.</p>
+<p> <img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/3e937dcfe48043b5a5fe51f71513696a"></p>
+<p>As with the custom dashboards, the name appears to be in square brackets and this can be addressed using language files. Create a <strong><em>lang</em> </strong>folder in <strong><em>App_Plugins/CustomSections</em></strong> and add an <strong>en-US.xml</strong> file with the following code. Again note that the key alias matches with the alias of the section specified in the <em><strong>package.manifest.</strong></em></p>
+<pre><code class="language-markup">﻿&lt;?xml version="1.0" encoding="utf-8" standalone="yes"?&gt;
+&lt;language alias="en" intName="English (US)" localName="English (US)" lcid="" culture="en-US"&gt;
+  &lt;area alias="sections"&gt;
+    &lt;key alias="giphySection"&gt;Giphy Section&lt;/key&gt;
+  &lt;/area&gt;
+&lt;/language&gt;</code></pre>
+      <p class="snippet-caption">Language File for Custom Section</p>
+<p>After an app pool recycle I can now see my changes.</p>
+<p><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/2897bd6a95d14ea7bada1a5ab6e50cce"></p>
+<p>You may provide translated values for your section names with multiple language files as I explained in the custom dashboards section.</p>
+<p>I have my custom section now, I now want an overview page to show some welcome content and my custom tree nodes. For this I need to create a controller that inherits from a <em><strong>TreeController</strong></em>.</p>
+<p><span class="code">[Tree("ipsumSection", "ipsumTreeAlias", TreeGroup = "ipSumsGroup" , SortOrder = 1)]</span></p>
+<p><span class="code">    [PluginController("Ipsums")]</span></p>
+<p><span class="code">    public class IpsumDashboardTreeController : TreeController</span></p>
+<p><span class="code">    {</span></p>
+<p><span class="code">}</span></p>
+<p>I have my custom section now, I now want an overview page to show some welcome content and my custom tree nodes. For this I need to create a controller which inherits from a TreeController.</p>
+<p>I decorate my controller with the <em><strong>Tree</strong></em> Attribute, with the alias of the section it should load and an alias for the tree itself. The section alias is same as the alias I specified in my <em><strong>package.manifest</strong></em>. I have also specified a <em><strong>TreeGroup</strong> </em>which can help me group your tree within a section. An existing example of this is the Settings section where you have the settings group tree and the templating group. I have also specified a <em><strong>SortOrder</strong> </em>which defines the sort order of the tree within the tree group.</p>
+<p>By default any views for the sections will be loaded from a folder <em><strong>Views/sectionalias/</strong>. </em>I want to change it and load it from the <em><strong>App_Plugins</strong></em> folder. For this I make use of <strong><em>PluginController</em> </strong>attribute passing in an <em><strong>areaName</strong></em>. The <em><strong>PluginController</strong> </em>attribute makes sure that the controller is routed to its own area. Now I can load my views for each of my tree nodes from a folder <strong><em>App_Plugins/areaName/backoffice/treealias/</em></strong>. This is all achieved by MVC routing. In my example the view will be loaded from<strong> <em>App_Plugins/Ipsums/backoffice/ipsumTreeAlias/ </em></strong>folder.</p>
+<p>I am now ready to implement two abstract methods <strong><em>GetTreeNodes</em></strong> and <strong><em>GetMenuForNode</em></strong>. The <strong><em>GetTreeNodes</em> </strong>method is used to build the tree. The <strong><em>GetMenuForNode</em> </strong>is used to specify the actions available for each tree node, like delete, reload etc.. You can have dynamically built trees from a database or an api or you can have hardcoded values if you are using the section for a very specific set of tasks. I also want to customise the root node by showing an overview dashboard with some content so I am overriding the <strong><em>CreateRootNode</em> </strong>method as well. Putting this all together this is what my code looks like.</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using System.Net.Http.Formatting;
+using Umbraco.Core;
+using Umbraco.Web.Models.Trees;
+using Umbraco.Web.Mvc;
+using Umbraco.Web.Trees;
+
+namespace Umbraco.V8.Dashboard.Controllers
+{
+    [Tree("ipsumSection", "ipsumTreeAlias", TreeGroup = "ipsumsGroup" , SortOrder = 1)]
+    [PluginController("Ipsums")]
+    public class IpsumDashboardTreeController : TreeController
+    {
+        protected override TreeNodeCollection GetTreeNodes(string id, FormDataCollection queryStrings)
+        {
+            // check if we're rendering the root node's children
+            if (id == Constants.System.Root.ToInvariantString())
+            {
+                //hardcoding a set of ipsum nodes
+                Dictionary&lt;int, string&gt; ipsums = new Dictionary&lt;int, string&gt;();
+                ipsums.Add(1, "Bacon Ipsum");
+                ipsums.Add(2, "Dino Ipsum");
+               
+                var nodes = new TreeNodeCollection();
+
+                 foreach (var ipsum in ipsums)
+                {
+                    // add each node to the tree collection using the base CreateTreeNode method
+                    //the code will look for a view in the App_Plugins/Ipsums/backoffice/ipsumTreeAlias
+                    //the view name is set to be the node name with the space removed eg for Bacon Ipsum the view name will be baconipsum
+                    var node = this.CreateTreeNode(ipsum.Key.ToString(), "-1", queryStrings, ipsum.Value,
+                        "icon-presentation", false, 
+                        routePath: string.Format("{0}/{1}/{2}", "ipsumSection", "ipsumTreeAlias", 
+                            ipsum.Value.Replace(" ","")));
+                    nodes.Add(node);
+                }
+
+                return nodes;
+            }
+
+            throw new NotSupportedException();
+        }
+
+        protected override MenuItemCollection GetMenuForNode(string id, FormDataCollection queryStrings)
+        {
+           //no actions for each menu item
+            return null;
+        }
+
+        protected override TreeNode CreateRootNode(FormDataCollection queryStrings)
+        {
+            var root = base.CreateRootNode(queryStrings);
+
+            //the code will look for a view in the App_Plugins/Ipsums/backoffice/ipsumTreeAlias
+            root.RoutePath = string.Format("{0}/{1}/{2}", "ipsumSection", "ipsumTreeAlias", "overview");
+
+            // set the icon
+            root.Icon = "icon-hearts";
+            // could be set to false for a custom tree with a single node.
+            root.HasChildren = true;
+
+            return root;
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Custom Section Tree Controller</p>
+<p>Let us now look at the views and angular controllers for the section. As with the custom dasboards, I start off with the <em><strong>package.manifest</strong></em>. We already have the views specified in the above class. So all I have in my <em><strong>package.manifest</strong></em> is the angular controllers and stylesheets. And the <em><strong>package.manifest</strong></em> goes in the folder<em><strong> App_Plugins/Ipsums.</strong></em></p>
+<pre><code class="language-json">﻿{
+  "javascript": [
+    "~/App_Plugins/Ipsums/backoffice/js/baconipsum.controller.js",
+    "~/App_Plugins/Ipsums/backoffice/js/dinoipsum.controller.js"
+  ],
+  "css": [
+    "~/App_Plugins/Ipsums/backoffice/css/ipsum.css"
+  ]
+}</code></pre>
+      <p class="snippet-caption">Packahe.manifest for the custom dashboard in the custom section</p>
+<p>I need an <em><strong>Overview.html</strong></em> view as the welcome dashboard when my editor goes into the Ipsum Section. I also need a<em><strong> baconipsum.html</strong> </em>view for my bacon ipsum tree node and <em><strong>dinoipsum.html</strong> </em>for my dino ipsum tree node.</p>
+<pre><code class="language-markup">﻿&lt;umb-box&gt;
+  &lt;umb-box-header title-key="treeHeaders_ipsumTreeAlias"&gt;&lt;/umb-box-header&gt;
+  &lt;umb-box-content&gt;
+    &lt;p&gt;&lt;localize key="ipsumsTree_intro"&gt;Generate your favourite ipsum here..&lt;/localize&gt;&lt;/p&gt;
+  &lt;/umb-box-content&gt;
+&lt;/umb-box&gt;</code></pre>
+      <p class="snippet-caption">Overview</p>
+<pre><code class="language-markup">﻿&lt;umb-box&gt;
+  &lt;umb-box-header title-key="ipsumsTree_generatebaconipsum"&gt;
+  &lt;/umb-box-header&gt;
+  &lt;umb-box-content&gt;
+   &lt;div class="ipsum" ng-controller="BaconIpsumController as vm"&gt;
+      &lt;div class="ipsum-search"&gt;
+        &lt;label for="paragraphs"&gt;Number of paragraphs&lt;/label&gt;
+        &lt;input type="number" name="paragraphs" ng-model="vm.paragraphs" placeholder="5" required/&gt;
+
+      &lt;/div&gt;
+      &lt;umb-button action="vm.getBaconIpsum()" type="button"
+                  button-style="success"
+                  label-key="ipsumsTree_generatebaconipsum"&gt;&lt;/umb-button&gt;
+      &lt;div class="umb-panel-group__details-check-description" id="baconipsum"&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/umb-box-content&gt;
+&lt;/umb-box&gt;</code></pre>
+      <p class="snippet-caption">Bacon Ipsum View</p>
+<pre><code class="language-markup">﻿&lt;umb-box&gt;
+  &lt;umb-box-header title-key="ipsumsTree_generatedinoipsum"&gt;
+  &lt;/umb-box-header&gt;
+  &lt;umb-box-content&gt;
+    &lt;div class="ipsum" ng-controller="DinoIpsumController as vm"&gt;
+      &lt;div class="ipsum-search"&gt;
+        &lt;label for="paragraphs"&gt;Number of paragraphs&lt;/label&gt;
+        &lt;input type="number" name="paragraphs" ng-model="vm.paragraphs" placeholder="5" required/&gt;
+        &lt;br/&gt;
+        &lt;label for="words"&gt;Words per paragraph&lt;/label&gt;
+        &lt;input type="number" name="words" ng-model="vm.words" placeholder="100" required/&gt;
+      &lt;/div&gt;
+      &lt;umb-button action="vm.getDinoIpsum()" type="button"
+                  button-style="success"
+                  label-key="ipsumsTree_generatedinoipsum"&gt;&lt;/umb-button&gt;
+      &lt;div class="umb-panel-group__details-check-description" id="dinoipsum"&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/umb-box-content&gt;
+&lt;/umb-box&gt;</code></pre>
+      <p class="snippet-caption">Dino Ipsum View</p>
+<p>As you have rightly noticed there are some localization keys which I have used to help me translate my dashboard to other languages if needed. Enter the language files again. I have set up a lang folder inside App_Plugins/Ipsums and have an en-US.xml and en-GB.xml.</p>
+<pre><code class="language-markup">﻿&lt;?xml version="1.0" encoding="utf-8" standalone="yes"?&gt;
+&lt;language alias="en" intName="English (US)" localName="English (US)" lcid="" culture="en-US"&gt;
+  &lt;area alias="treeHeaders"&gt;
+    &lt;key alias="ipsumTreeAlias"&gt;Meet the funny ipsums!&lt;/key&gt;
+  &lt;/area&gt;
+  &lt;area alias="ipsumsTree"&gt;
+    &lt;key alias="intro"&gt;You can generate some ipsum content here.&lt;/key&gt;
+    &lt;key alias="generatebaconipsum"&gt;Generate Bacon Ipsum&lt;/key&gt;
+    &lt;key alias="generatedinoipsum"&gt;Generate Dino Ipsum&lt;/key&gt;
+  &lt;/area&gt;
+&lt;/language&gt;
+</code></pre>
+      <p class="snippet-caption">Language file for custom dashboard in the custom section</p>
+<p>The area alias <em><strong>treeHeaders</strong></em> is a keyword and I am using the treealias I specified in my TreeController attribute, <em><strong>ipsumsTree</strong> </em>as the translation key for my tree heading. In addition, I also have some localization keys in my dashboard view and also specified fall back values for them as a best practice. If you have missing translations in your XML files and no fallback content is specified it shows the key in square brackets as content which can be quite unhelpful to your editors.</p>
+<p>In both my controllers, I inject the <a rel="noopener" href="https://docs.angularjs.org/api/ng/service/$http" target="_blank"><em><strong>$http</strong></em></a> service to perform get requests to the ipsum apis by passing the relevant parameters as I mentioned about and bind the response to an element.</p>
+<pre><code class="language-javascript">﻿angular.module("umbraco").controller("BaconIpsumController", function ($http) {
+    var vm = this;
+    vm.paragraphs = 5;
+    vm.words = 100;
+    vm.format = "html";
+    vm.getBaconIpsum = function() {
+        $http({
+            url: "https://baconipsum.com/api/",
+            method: "GET",
+            params: {
+                format: vm.format,
+                type: "meat-and-filler",
+                paras: vm.paragraphs
+            }
+        }).then(function (response) {
+            angular.element('#baconipsum').html(response.data);
+        });
+    };
+
+    vm.getBaconIpsum();
+});</code></pre>
+      <p class="snippet-caption">Bacon Ipsum AngualrJS Controller</p>
+<pre><code class="language-javascript">﻿angular.module("umbraco").controller("DinoIpsumController", function ($http) {
+    var vm = this;
+    vm.paragraphs = 5;
+    vm.words = 100;
+    vm.format = "html";
+    vm.getDinoIpsum = function() {
+        $http({
+            url: "http://dinoipsum.herokuapp.com/api/",
+            method: "GET",
+            params: {
+                format: vm.format,
+                words: vm.words,
+                paragraphs: vm.paragraphs
+            }
+        }).then(function (response) {
+            angular.element('#dinoipsum').html(response.data);
+        });
+    };
+
+    vm.getDinoIpsum();
+});</code></pre>
+      <p class="snippet-caption">Dino Ipsum AngualrJS Controller</p>
+<p>The CSS stylesheet.</p>
+<pre><code class="language-css">﻿.ipsum {
+    margin: 10px 0;
+}
+
+.ipsum-search {
+    margin: 10px 0;
+}
+
+.umb-panel-group__details-check-description {
+    overflow-y: auto;
+}
+
+.sub-view-column-left {
+    margin-right: 5px;
+}</code></pre>
+      <p class="snippet-caption">CSS Stylesheet</p>
+<p>Putting all of the above together this is what we have in my custom Ipsum Section.</p>
+<p><img style="width: 500px; height: 232.03125000000003px;" src="/archive/media/2019/overview.png?width=500&amp;height=232.03125000000003" alt="" data-udi="umb://media/692dd2657b3440bba44e745372004c1c"></p>
+<p><img style="width: 500px; height: 245.57291666666669px;" src="/archive/media/2019/baconipsum.png?width=500&amp;height=245.57291666666669" alt="" data-udi="umb://media/47d617d7f49a464a81b33260294e66a5"></p>
+<p><img style="width: 500px; height: 245.17978113600836px;" src="/archive/media/2019/dinoipsum.png?width=500&amp;height=245.17978113600836" alt="" data-udi="umb://media/00f9ef7ac37b4f81bcfbe9c1661a6670"></p>
+<h2>Treeless Sections</h2>
+<p>We can also have custom sections in Umbraco which span across the entire width of the application and does not have a tree navigation. This is a new feature in v8. In my example of treeless section, I am going to load a dashboard into my section which can help my editors search for a GIPHY using the GIPHY API.</p>
+<h3>The GIPHY API</h3>
+<p>GIPHY exposes a few endpoints for developers. You can read all about it <a rel="noopener" href="https://developers.giphy.com/docs/api#quick-start-guide" target="_blank" data-anchor="#quick-start-guide">here</a>. I am going to use the search endpoint for GIF search. You can perform a GIF search by performing an HTTPGET request to api.giphy.com/v1/gifs/search. I a using the following parameters.</p>
+<p><em><strong>api_key</strong> - string YOUR_API_KEY   GIPHY API Key.</em></p>
+<p><em><strong>q</strong> - string Search query term or phrase.</em></p>
+<p><em><strong>limit</strong> - integer The maximum number of objects to return. (Default: “25”)</em></p>
+<p><em><strong>offset</strong> - integer  Specifies the starting position of the results. Defaults to 0.</em></p>
+<p><em><strong>rating</strong> - string    Filters results by specified rating. If you do not specify a rating, you will receive results from all possible ratings.</em></p>
+<p>You can sign up for an api key from the dashboard <a rel="noopener" href="https://developers.giphy.com/" target="_blank">https://developers.giphy.com/.</a></p>
+<h3>Your treeless section</h3>
+<p>As with the custom section, I start off by registering my custom section using a package.manifest file. I am going to use the same file I used for my custom sections.</p>
+<pre><code class="language-json">﻿{
+  "sections": [
+    {
+      "alias": "giphySection",
+      "name": "Giphy Section"
+    },
+    {
+      "alias": "ipsumSection",
+      "name": "Ipsum Section"
+    }
+  ]
+}</code></pre>
+      <p class="snippet-caption">package.manifest for the section</p>
+<p>As with the custom section above, I grant the correct user group access to the section. I am extending the xml files I used for my custom section above to show the section name without square brackets in the top navigation ribbon. So now my xml file for the custom sections looks like below.</p>
+<pre><code class="language-markup">﻿&lt;?xml version="1.0" encoding="utf-8" standalone="yes"?&gt;
+&lt;language&gt;
+  &lt;area alias="dashboardTabs"&gt;
+    &lt;key alias="giphyDashboard"&gt;Giphy Dashboard&lt;/key&gt;
+  &lt;/area&gt;
+  &lt;area alias="giphyDashboard"&gt;
+    &lt;key alias="search"&gt;Search for gifs&lt;/key&gt;
+    &lt;key alias="showMore"&gt;Show me more..&lt;/key&gt;
+    &lt;key alias="intro"&gt;Lets search for some gifs...&lt;/key&gt;
+  &lt;/area&gt;
+&lt;/language&gt;</code></pre>
+      <p class="snippet-caption">Language file for the section</p>
+<p>I now create my <em><strong>TreeController</strong> </em>and add the attribute <em><strong>IsSingleNodeTree </strong></em>to the Tree attribute of my controller. Setting the attribute value to <em><strong>true</strong> </em>makes my section full width without the tree navigation on the left.</p>
+<pre><code class="language-csharp">﻿using System.Net.Http.Formatting;
+using Umbraco.Web.Models.Trees;
+using Umbraco.Web.Mvc;
+using Umbraco.Web.Trees;
+
+namespace Umbraco.V8.Dashboard.Controllers
+{
+    [Tree("giphySection", "giphySectionTreeAlias", IsSingleNodeTree = true)]
+    [PluginController("giphySectionArea")]
+    public class GiphySectionTreeController : TreeController
+    {
+        protected override TreeNodeCollection GetTreeNodes(string id, FormDataCollection queryStrings)
+        {
+            //full screen app without tree nodes
+            return TreeNodeCollection.Empty;
+        }
+
+        protected override MenuItemCollection GetMenuForNode(string id, FormDataCollection queryStrings)
+        {
+            //doesn't have a menu, this is a full screen app without tree nodes
+            return MenuItemCollection.Empty;
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Tree Controller</p>
+<p>I still implement the abstract methods but I am returning an empty <em><strong>TreeCollection</strong> </em>and <em><strong>MenuItemCollection</strong> </em>in this instance.</p>
+<p>Once this is in place, showing a dashboard in the section follows the same process as creating a custom dashboard in any section. I start off with the <em><strong>package.manifest</strong></em>. I am going to organise all my dashboards into my <em><strong>App_Plugins/CustomDashboards</strong></em> folder. So I create another folder called <em><strong>GiphyDashboard</strong> </em>and add a <em><strong>package.manifest</strong></em> file into the folder. I also organise my views, css stylesheets and angular controllers into this folder.</p>
+<pre><code class="language-markup">﻿&lt;umb-box&gt;
+  &lt;umb-box-header title-key="giphyDashboard_intro"&gt;&lt;/umb-box-header&gt;
+  &lt;umb-box-content&gt;
+    &lt;div class="giphyDashboard" ng-controller="GiphyDashboardController as vm"&gt;
+      &lt;div class="gif-search"&gt;
+        &lt;input class="-full-width-input" type="text" ng-model="vm.searchText" placeholder="Search for your gif..." required/&gt;
+      &lt;/div&gt;
+      &lt;umb-button disabled="vm.searchText ===''" type="button"
+                  action="vm.searchGifs()"
+                  button-style="success"
+                  label-key="giphyDashboard_search"&gt;
+      &lt;/umb-button&gt;
+      &lt;div class="umb-panel-group__details-checks" ng-if="vm.gifs.length != 0"&gt;
+        &lt;div class="umb-panel-group__details-check"&gt;
+          &lt;div class="umb-panel-group__details-check-title"&gt;
+            &lt;div class="umb-panel-group__details-check-description" ng-repeat="gif in vm.gifs"&gt;
+              &lt;p&gt;{{gif.title}}&lt;/p&gt;
+              &lt;a ng-href="{{gif.bitly_gif_url}}" target="_blank"&gt;&lt;img src="{{gif.images.downsized.url}}" alt="{{gif.title}}" ng-if="gif.images.downsized"/&gt;&lt;/a&gt;
+
+            &lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class="umb-panel-group__details-status-content"&gt;
+
+            &lt;div class="umb-panel-group__details-status-actions"&gt;
+              &lt;div class="umb-panel-group__details-status-action"&gt;
+                &lt;umb-button type="button" action="vm.searchGifs()"
+                            button-style="action" size="xl"
+                            label-key="giphyDashboard_showMore"&gt;&lt;/umb-button&gt;
+              &lt;/div&gt;
+            &lt;/div&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/umb-box-content&gt;
+&lt;/umb-box&gt;</code></pre>
+      <p class="snippet-caption">View</p>
+<pre><code class="language-javascript">﻿angular.module("umbraco").controller("GiphyDashboardController", function ($scope, $http) {
+    var vm = this;
+    vm.searchText = '';
+    vm.pageNumber = 0;
+    vm.gifs = [];
+
+    vm.searchGifs = function () {
+        vm.pageNumber = 0;
+        vm.gifs = [];
+        loadGifs();
+    };
+
+    vm.showMore = function() {
+        loadGifs();
+    };
+
+    function loadGifs() {
+        $http({
+            url: "https://api.giphy.com/v1/gifs/search",
+            method: "GET",
+            params: {
+                api_key: "&lt;your-api-key&gt;",
+                q: vm.searchText,
+                limit: 25,
+                offset: (vm.pageNumber * 25),
+                rating: "G",
+                lang: "en"
+            }
+        }).then(function (response) {
+            if (response.data.meta.msg === "OK") {
+                angular.forEach(response.data.data,
+                    function (item) {
+                        vm.gifs.push(item);
+                    });
+            }
+            vm.pageNumber = vm.pageNumber + 1;
+        });
+    }
+});</code></pre>
+      <p class="snippet-caption">AngularJS Controller</p>
+<p>You might have noticed some localization keys. Enter the language files again. I have set up a <em><strong>lang</strong> </em>folder inside <em><strong>App_Plugins/CustomDashboards/GiphySection</strong></em> and have an <em><strong>en-US.xml </strong></em>file.</p>
+<pre><code class="language-markup">﻿&lt;?xml version="1.0" encoding="utf-8" standalone="yes"?&gt;
+&lt;language&gt;
+  &lt;area alias="dashboardTabs"&gt;
+    &lt;key alias="giphyDashboard"&gt;Giphy Dashboard 1&lt;/key&gt;
+  &lt;/area&gt;
+  &lt;area alias="giphyDashboard"&gt;
+    &lt;key alias="search"&gt;Search for gifs&lt;/key&gt;
+    &lt;key alias="showMore"&gt;Show me more..&lt;/key&gt;
+    &lt;key alias="intro"&gt;Lets search for some gifs...&lt;/key&gt;
+  &lt;/area&gt;
+&lt;/language&gt;</code></pre>
+      <p class="snippet-caption">Language file for the dashboard</p>
+<p>The CSS Stylesheet</p>
+<pre><code class="language-css">﻿.gif-search {
+    margin: 10px 0;
+}
+
+.gif-url {
+    width: 35%;
+}
+
+.gif-image {
+    width: 45%;
+    float: left;
+}
+
+.gif-details {
+    width: 45%;
+    float: left;
+    margin-left: 10px;
+}
+
+
+.umb-panel-group__details-check-description {
+    display: inline-block;
+    max-height: 500px;
+    margin: 10px;
+    width: 45%;
+}
+
+.umb-panel-group__details-check-description p {
+    font-size: 16px;
+}
+
+.umb-panel-group__details-check {
+    padding-bottom: 10px;
+    margin-top: 10px;
+}
+
+.umb-panel-group__details-status-action {
+    text-align: center;
+}
+</code></pre>
+      <p class="snippet-caption">CSS Stylesheet</p>
+<p>Putting all of the above together this is how my Giphy Section looks like below.</p>
+<p><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/441f09b5216a4f9aa3333545036462a8"></p>
+<p>So that’s it! Go give it a shot yourself and let me know. The code is in <a rel="noopener" href="https://github.com/poornimanayar/Umbraco.V8.Dashboard.Demo" target="_blank">Github</a>.</p>
+<p>Some points to be noted</p>
+<ul>
+<li>I am calling the various API from angular controller itself but in real world scenario you might want to use an <a rel="noopener" href="https://our.umbraco.com/documentation/reference/routing/Authorized/" target="_blank">UmbracoAuthorizedAPIController</a>.</li>
+<li>I have not covered permissions for dashboards but that’s also achievable. Please see <a rel="noopener" href="https://our.umbraco.com/documentation/Extending/Dashboards/#specifying-permissions" target="_blank" data-anchor="#specifying-permissions">here</a> on how to control access to your dashboard.</li>
+<li>Finally, the core code is your best friend in this instance. The documentation was of massive help but there are code examples for this in the back office itself and it proved mega useful while I was clarifying my code. Some good examples are the <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/blob/v8/dev/src/Umbraco.Web/Trees/PackagesTreeController.cs" target="_blank">PackagesTreeController</a> for a treeless section and <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/blob/v8/dev/src/Umbraco.Web/Trees/ContentTypeTreeController.cs" target="_blank">ContentTypeTreeController</a> for a normal tree.</li>
+</ul>
+<p>Wish you all a very Merry X'mas and a very Happy New Year in advance!!!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Poornima Nayar"><img src="//gravatar.com/avatar/dd8b418389638867552cb41af1b9a727.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/dd8b418389638867552cb41af1b9a727.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Poornima Nayar</h1>
+        <p>Poornima is on Twitter as <a href="//twitter.com/PoornimaNayar" title="Poornima Nayar on Twitter" rel="author">@PoornimaNayar</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

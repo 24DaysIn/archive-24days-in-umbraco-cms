@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Testing Umbraco backend extensions with Jasmine</title>
+<meta name="description" content="Learn how to use Jasmine to unit test your Umbraco extensions.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Testing Umbraco backend extensions with Jasmine</h1>
+      <p class="byline"> by Bert Loedeman &amp; Marcel Verweij, <span class="pubdate">posted on <time datetime="2014-12-20">Dec 20, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Introduction</h2>
+<p>This article is the second part in a series of two articles about extending the Umbraco 7 backend. Our previous article covered some vital aspects about using AngularJS in combination with TypeScript. The current article introduces testing the client-side application using Jasmine unit tests. We assume some basic AngularJS knowledge, there is no room to explain basic AngularJS concepts. Of course, we are more than happy to answer (almost) all of your questions.</p>
+<h2>Tooling: Visual Studio, Jasmine and Chutzpah</h2>
+<p class="intro">At Seven Stars HQ, we are used to have Visual Studio as our IDE. Besides developing front-end code, we also write lots of .NET code. Although Visual Studio might not be the most efficient IDE to use for client-side development, being accustomed to an IDE and assisting development tools does also count for us. Combined with some extensions, the client-side testing experience using Visual Studio is very impressive.</p>
+<p>We are using Jasmine (version 2.0) as our unit test framework for client-side development. Jasmine (<a href="http://b.ldmn.nl/jasmine-20" target="_blank" title="Jasmine 2.0 documentation"><span>http://b.ldmn.nl/jasmine-20</span></a>) is a very powerful behavior-driven unit test framework for testing JavaScript code. Although we will cover some basics about Jasmine, we suggest you to follow the link to the official documentation to discover all the possibilities Jasmine has to offer.</p>
+<p>Visual Studio does not offer 'out-of-the-box' support for Jasmine. Therefore, we use a tool called Chutzpah (<a href="http://b.ldmn.nl/chutzpah-20" title="Chutzpah on GitHub"><span>http://b.ldmn.nl/chutzpah-20</span></a>). You enable Chutzpah by installing two small Visual Studio extensions.</p>
+<figure>
+  <a href="/archive/media/2014/extension___chutzpah.png">
+    <img src="/archive/media/2014/extension___chutzpah.png" width="668" alt="Chutzpah extensions">
+  </a>
+  <figcaption>Chutzpah extensions</figcaption>
+</figure>
+<p>After installation, you can use the Visual Studio Test Explorer or right-click any test file to fire your tests or get code coverage results for your tests.<br>Currently, we are still writing most Jasmine unit tests in plain old JavaScript. It would be very nice to have them written in TypeScript. At the moment, the added complexity (learning curve, since almost no examples exist using Jasmine and TypeScript) and the fact that test code is no production code has until now resulted in our decision not to focus much on TypeScript for Jasmine unit tests.</p>
+<p>In this article, we will cover some Jasmine basics first. After that, we combine those basics with some Jasmine basics for testing an AngularJS application. Since the proof of the pudding is in the eating, we finally show a Jasmine test suite testing the AppointmentsService class from our previous article.</p>
+<h2>Testing with Jasmine</h2>
+<h3>Suites (describe, beforeEach, afterEach)</h3>
+<p>To start unit testing with Jasmine, you always start creating a suite. A suite is declared by the describe function, which has two parameters: a name and a body function. The suite combines tests which belong together.</p>
+<p>A suite contains a set of test specifications, but is primarily responsible for test environment setup (using the beforeEach function) and teardown (using the afterEach function). As their function names imply, those functions are respectively called before and after each test specification. The beforeEach function is the right place to mock the boundaries of your system under test.<br>For better granularity, you can nest suites to compose trees of tests, for instance grouped by methods under test. Setup and teardown is performed in order, which makes it very convenient to prepare and clean up the test environment on different levels with their own concerns.</p>
+<h3>Test specifications (it)</h3>
+<p>When testing code, the best practice is to test all public functions for your TypeScript classes. Of course, it is possible to test private functions as well, but it should not be necessary, because public functions should call all private functions. If reaching 100% code coverage on your file is not possible when testing all possible code paths, you probably developed some unused code.<br>A test specification is declared by the it function, looking pretty much the same as the describe function with a name and body function parameter. Inside a test specification, expectations are crucial to verify the code behaves like you expect it to.</p>
+<p>At Seven Stars, we like to keep our test specifications as predictable as possible. Therefore, we always follow the Arrange (set up some test prerequisites you cannot setup in the suite's beforeEach function), Act (the actual call to the system under test), Assert (verify expactations) structure inside each test specification.</p>
+<h3>Expectations</h3>
+<p>Roughly divided, there are two types of expectations:</p>
+<ul>
+<li>expectations on the results from the system under test</li>
+<li>expectations on the behavior of the system under test</li>
+</ul>
+<p>It is quite easy to assert results using the expect function. Jasmine provides us with lots of asserting function calls like toBe, toEqual and toBeNull. <br>The real power of Jasmine, however, lies in testing the behavior of our system under test. For instance, if your service calls a resource, you probably like to assert the resource is called exactly one time and using the expected parameters. Jasmine provides us with spies to assert behavior. Spies are described using the spyOn function (when spying on existing objects/functions) or the createSpy function (to create a new spy, especially handy when mocking system boundaries).</p>
+<h2>Testing an AngularJS application</h2>
+<h3>System under test</h3>
+<p>By default, Jasmine provides us with a lot of test supporting functions. In order to get a running test, we have to reference the system under test. This is taken care of by <span class="code">/// &lt;reference&gt;</span> comments, which Jasmine uses to load test dependencies.</p>
+<p>The system under test is the Javascript file you are going to test. When using a complex environment like AngularJS, only referencing the system under test will not suffice. You should also reference every component the system under test depends on (which cannot be mocked). Sometimes, you could reach success by just referencing AngularJS and the ngMock module (more about that one below). If you use extension libraries to make life easier (we often use libraries like underscore.js and moment.js), you have to reference those as well.</p>
+<h3>AngularJS dependency injection</h3>
+<p>AngularJS heavily depends on dependency injection and asynchronous function calls (using promises). Therefore, you would expect testing AngularJS code to be difficult. Fortunately, it is not, because AngularJS is built with testing in mind. AngularJS provides the ngMock module (<a href="https://docs.angularjs.org/api/ngMock" target="_blank" title="ngMock documentation">https://docs.angularjs.org/api/ngMock</a>), which provides support to inject and mock Angular services into your Jasmine tests. A lot of AngularJS's core modules are covered by default. For example, think of the root scope ($rootScope) and the queuing service ($q).</p>
+<p>If you need AngularJS dependency injection for your system under test, you have to use the inject function (provided by the ngMock module) in the beforeEach function. The beforeEach function only takes one parameter, the body function. The inject function also takes a body function and provides a chaining mechanism to ensure proper test operation. The inject body function can take any number of parameters. The real power of the inject function is that those parameters are injected with AngularJS module mocks (if recognized by ngMock). Thus, specifying the $rootScope parameter actually gives access to a working AngularJS $rootScope object.</p>
+<p>Of course, you need the injected objects (and the other mocks you create in beforeEach) in your test specifications. You can reach this goal in two ways: either by specifying global variables in your describe function or placing variables in the 'this' scope. We prefer the latter, because this way there is no need to specify variables and assigning them later on. Of course, this is a matter of taste.</p>
+<h3>Testing</h3>
+<p>Testing AngularJS applications is pretty straightforward. There are a few tricky parts in testing, though:</p>
+<p>Testing promises requires some extra mocking skills. Luckily, the ngMock module takes care of AngularJS's asynchronous nature. When testing, it is important to keep in mind that ngMock does not always do all its magic by itself: we found out that it is necessary to understand AngularJS heavily uses digestion cycles. In order to get your promises to resolve, you have to kick off the digestion process. This is done by the following command: $rootScope.$apply().</p>
+<p>Another thing to keep in mind is that Jasmine is not aware of asynchronicity: when the test reaches the last line of the test specification, success is celebrated, although your promise is not reached yet (and so aren't the expectations inside). Luckily, Jasmine provides us with a done callback function which can be used to notify Jasmine when testing is done. When using the done callback function, Jasmine will wait until the function is called (or the test times out).</p>
+<h2>Testing the Umbraco backend plugin</h2>
+<h3>Setup</h3>
+<p>Alright, are you feeling ready for the real deal? We are almost there, after we cover some setup basics first.</p>
+<p>We consider separating test and production code to be crucial. Therefore, our Jasmine unit tests are in a separate (web) project. This project should include the Jasmine test framework. You can download the source code from the Jasmine website, or use the 'Jasmine Test Framework' NuGet package. When testing the DOM interaction (preferably in directives), you probably face test exceptions because JQuery is not recognized by default. Referencing JQuery and the Jasmine-JQuery (<a href="http://b.ldmn.nl/jasmine-jq" target="_blank" title="Jasmine-JQuery on GitHub">http://b.ldmn.nl/jasmine-jq</a>) libraries helps.</p>
+<p>Finally, you need a Chutzpah.json file when using Chutzpah inside Visual Studio. This file should be somewhere in the folder tree between the tests and the project's root (suggestion: place one in root, provide differentiation in subfolders if needed). Here is an example of the Chutzpah.json file</p>
+<pre class="language-javascript"><code>{
+    "Framework": "jasmine",
+    
+    "TestFileTimeout": 10000,
+    
+    "TestHarnessLocationMode": "TestFileAdjacent",
+    
+    "TestHarnessDirectory": "Tests/",
+
+    "TypeScriptCodeGenTarget" : "ES5",
+    
+    "RootReferencePathMode":"DriveRoot",
+    
+    "CodeCoverageIncludes": ["*.js"],
+    
+    "CodeCoverageExcludes": ["*\\&lt;Your Jasmine Test Project Name&gt;\\*"]
+}</code></pre>
+      <p class="snippet-caption">Chutzpah.json</p>
+<h3>Testing AppointmentsService.ts</h3>
+<p>For this article, showing off a fully tested solution would be a bridge too far. Below you can see the test suite for the appointments service. Let's walk through some particularities:</p>
+<ul>
+<li>Jasmine (and the browser) is a JavaScript test framework. We are not testing our TypeScript class, but the resulting Javascript file. Notice that we therefore include a reference to the Javascript file.</li>
+<li>Notice the arrange, act, assert structure in each test.</li>
+<li>It is not very easy to equal objects which are no real memory references. Instead of walking all properties by hand, we use a so-called custom matcher, toEqualData. This custom matcher is in the <a href="/archive/media/2014/utils.js" target="_blank" title="utils.js">utils.js</a> file and is registered in the Jasmine test framework in beforeEach.</li>
+<li>Notice dependency injection is used in beforeEach for $rootScope, $location, $filter and $q.</li>
+<li>Since we are testing the appointments service, we mock the boundaries of our system under test. One of those boundaries is the appointmentsResource. As you can see, we create all public resource functions using Jasmine spies, which call a fake method returning data like the actual resource would do normally. This mocking structure is a typical example of mocking calls which result in promises.</li>
+<li>Inside the overall test suite (the describe function named 'appointmentsService') we use nested test suites for each public function of the appointments service. This results in a clearly organized test suite.</li>
+<li>Notice that for the AppointmentsService.getAppointments function both the result (using toEqualData) and the service behavior is asserted. Regarding asserting the behavior: appointmentsResource.get is one of the spies we created. A spy offers several tracking capabilities, including parameter tracking and tracking how many times the spy has been called.</li>
+<li>The call to this.$rootScope.$apply makes sure the promise is resolved by AngularJS, causing the then() callback function to be called. In order to be able to test the results of the service function call, expectations have to be inside the then() callback function.</li>
+<li>Since all tests are dealing with asynchronous behavior, all tests do specify and use the done callback function.</li>
+<li>The AppointmentsService.saveAppointment function has some business logic inside to either create or update an appointment based on the id value being more than zero (in that case, we are dealing with an existing appointment). Since we are using a REST API which uses POST for creation en PUT for updates, we have to assert if both routes are covered by our function. This is why four (!) tests exist to ensure proper test coverage is reached.</li>
+</ul>
+<p>Here is the appointments-service-specs.js test suite file:</p>
+<pre class="language-javascript"><code>/// &lt;reference path="../../../Scripts/typings/jasmine/jasmine.d.ts" /&gt;
+/// &lt;reference path="../../../Scripts/utils.js" /&gt;
+
+/// &lt;reference path="../../../scripts/angular/1.1.5/angular.min.js" /&gt;
+/// &lt;reference path="../../../Scripts/angular/1.1.5/angular-mocks.js" /&gt;
+/// &lt;reference path="../../../Scripts/underscore.min.js" /&gt;
+
+/// &lt;reference path="../../../../GerGemEmmeloord.Web.UI/App_Plugins/CalendarSection/Backoffice/AngularJS/Services/AppointmentsService.js" /&gt;
+
+'use strict';
+
+describe('appointmentsService', function () {
+
+    beforeEach(inject(function ($rootScope, $location, $filter, $q) {
+        utils.registerCustomMatchers(this);
+        var that = this;
+
+        this.$rootScope = $rootScope;
+        this.$location = $location;
+        this.$filter = $filter;
+        this.$q = $q;
+
+        this.dateMock = new Date();
+        this.appointmentsMock = [{ id: 1, start: this.dateMock, end: this.dateMock, title: 'Test Appointment' }];
+
+        this.appointmentsResourceMockMock = {
+            get: jasmine.createSpy('get').and.callFake(function (userType, start, end) {
+                return { then: function (callback) { return callback(that.appointmentsMock); } };
+            }),
+            post: jasmine.createSpy('post').and.callFake(function (event) {
+                return { then: function (callback) { return callback(event); } };
+            }),
+            put: jasmine.createSpy('put').and.callFake(function (event) {
+                return { then: function (callback) { return callback(event); } };
+            })
+        };
+
+        this.appointmentsService = new CalendarModule.Services.AppointmentsService(this.$location, this.$filter, this.$q, this.appointmentsResourceMock);
+    }));
+
+    describe('getAppointments', function () {
+        it('Should get the expected items', function (done) {
+            // arrange
+            var expected = { events: [{ id: 1, start: this.dateMock, end: this.dateMock, title: 'Test Appointment', location: '' }] };
+
+            // act
+            this.appointmentsService.getAppointments('test').then(function (response) {
+                // assert
+                expect(response).toEqualData(expected);
+                done();
+            });
+
+            this.$rootScope.$apply();
+        });
+
+        it('Should call appointmentsResourceMock.get once', function (done) {
+            // arrange
+            var that = this;
+
+            // act
+            this.appointmentsService.getAppointments('test').then(function (response) {
+                // assert
+                expect(that.appointmentsResourceMock.get).toHaveBeenCalledWith('test', undefined, undefined);
+                expect(that.appointmentsResourceMock.get.calls.count()).toBe(1);
+                done();
+            });
+
+            this.$rootScope.$apply();
+        });
+    });
+
+    describe('saveAppointments', function() {
+        it('Should save a new appointment (no id) and return the saved appointment', function (done) {
+            // arrange
+            var saved = { id: undefined, start: this.dateMock, end: this.dateMock, title: 'Test Appointment', location: '' };
+
+            // act
+            this.appointmentsService.saveAppointment(saved).then(function (response) {
+                // assert
+                expect(response).toEqualData(saved);
+                done();
+            });
+
+            this.$rootScope.$apply();
+        });
+
+        it('Should save a new appointment (no id) using appointmentsResourceMock.post (once)', function (done) {
+            // arrange
+            var that = this;
+            var saved = { id: undefined, start: this.dateMock, end: this.dateMock, title: 'Test Appointment', location: '' };
+
+            // act
+            this.appointmentsService.saveAppointment(saved).then(function (response) {
+                // assert
+                expect(that.appointmentsResourceMock.post).toHaveBeenCalled();
+                expect(that.appointmentsResourceMock.post.calls.count()).toBe(1);
+                done();
+            });
+
+            this.$rootScope.$apply();
+        });
+
+        it('Should save an existing appointment (id &gt; 0) and return the saved appointment', function (done) {
+            // arrange
+            var saved = { id: 1, start: this.dateMock, end: this.dateMock, title: 'Test Appointment', location: '' };
+
+            // act
+            this.appointmentsService.saveAppointment(saved).then(function (response) {
+                // assert
+                expect(response).toEqualData(saved);
+                done();
+            });
+
+            this.$rootScope.$apply();
+        });
+
+        it('Should save an existing appointment (id &gt; 0) using appointmentsResourceMock.put (once)', function (done) {
+            // arrange
+            var that = this;
+            var saved = { id: 1, start: this.dateMock, end: this.dateMock, title: 'Test Appointment', location: '' };
+
+            // act
+            this.appointmentsService.saveAppointment(saved).then(function (response) {
+                // assert
+                expect(that.appointmentsResourceMock.put).toHaveBeenCalled();
+                expect(that.appointmentsResourceMock.put.calls.count()).toBe(1);
+                done();
+            });
+
+            this.$rootScope.$apply();
+        });
+    });
+});</code></pre>
+      <p class="snippet-caption">appointments-service-specs.js</p>
+<h2>Considerations</h2>
+<p>Testing AngularJS code using Jasmine is relatively easy and fun. However, there are some tricky parts you should know about:</p>
+<ul>
+<li>Testing DOM integration is doable, but difficult. You should never mix business logic and DOM logic (for instance, JQuery) in controllers, services, etc. This quickly makes testing an impossible operation. If you look at the CalendarController.ts file showed in our previous article, you probably see the bad thing happen ;) ... Instead, move DOM integration you cannot mitigate entirely into a directive. This takes care of as much clean, testable classes as possible. Please notice that you can even split a directive into the directive itself and an accompanying directive controller.</li>
+<li>When possible, try not to use $scope inside controllers. Testing $scope is a bit hairy. Instead, try to use the 'controller as' syntax. One caveat: the current version of Umbraco 7 uses AngularJS v1.1.x, which means the 'controller as' syntax is not in there (it has seen birth since AngularJS v1.2.x). Luckily, the Umbraco core team is considering to upgrade AngularJS someday soon, so stay informed ;) .</li>
+</ul>
+<h2>Wrapping up</h2>
+<p>We hope we have got you excited about AngularJS and Jasmine unit testing. As said before, we love to get feedback. You can react below or send us an email. Should you have an opinion on how to get even better unit test code, we would love to learn from you as well ;) ! Happy coding!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Bert Loedeman"><img src="//gravatar.com/avatar/aaacc8a6668232a6251bbb436887d6a6.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/aaacc8a6668232a6251bbb436887d6a6.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Bert Loedeman</h1>
+        <p>Bert is on Twitter as <a href="//twitter.com/loedeman" title="Bert Loedeman on Twitter" rel="author">@loedeman</a></p>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="Marcel Verweij"><img src="//gravatar.com/avatar/95b0c4a050e5036e0450bc25edccc8d9.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/95b0c4a050e5036e0450bc25edccc8d9.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Marcel Verweij</h1>
+        <p>Marcel is on Twitter as <a href="//twitter.com/marcelvwe" title="Marcel Verweij on Twitter" rel="author">@marcelvwe</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li class="selected"><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Get a grip on your translations in Umbraco!</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Novaware Multilingual Tools</h1>
+      <p class="byline"> by Leonard Plas, <span class="pubdate">posted on <time datetime="2017-12-08">Dec 8, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span>Some time ago a customer approached us with a problem they had with a very extensive Umbraco website in different languages which was managed by several editors. They had lost complete track of which pages were translated into the different languages and which were not. It turned out to be an almost endless task to check all pages in every language for a translation, because the content tree was so extensive. When a new website had to be added in a new language, it gave the necessary challenge and of course effort. We were asked to come up with a suitable solution.</span></p>
+<p class="intro"><span>In short, the problem came down to the following points:</span></p>
+<ul>
+<li><span>In Umbraco translations have no relationship with each other</span></li>
+<li><span>It is not visible which translations are available per page</span></li>
+<li><span>There is no insight into which pages have (not) been translated.</span></li>
+</ul>
+<blockquote>George Herbert: "<span>The eyes have one language everywhere"</span><br>Eyes maybe, but websites don't!</blockquote>
+<h2><span>Solution</span></h2>
+<p><span>After hard work we present a solution, which we return to the community in the form of a package: the Novaware Multilingual Tools. <img src="/archive/media/2017/logo-novaware-multilingual-tools.jpg?width=321&amp;height=91" alt="Novaware Multilingual Tools" width="321" height="91" align="right" data-udi="umb://media/c9c0729cb82d44be93f48a13ec829e17"></span></p>
+<p><span>The Multilingual Tools package in short, lets you get a grip on your translations in Umbraco. It allows users to get an overview of the translation status of Umbraco websites. The package not only provides an overview, but also offers possibilities to:</span></p>
+<ul>
+<li><span>establish relationships between translations on a multilingual website</span></li>
+<li><span>give the user (partly) automated suggestions for possible translations</span></li>
+<li><span>easily manage these relationships or translations</span></li>
+<li><span>quickly navigate to translations</span></li>
+<li><span>create new translations</span></li>
+</ul>
+<p>Novaware Multilingual Tools is built in several layers for optimal overview, reusability and extensibility of the code. The code itself is written with the SOLID principles in mind and the key elements of the code have been extensively tested for performance. For example, the package contains a nice solution for establishing relations between pages in multiple languages. When establishing such a relationship, it is important that it is stored in an efficient manner. Retrieving and manipulating it should have a low algorithmic complexity. It is also important that the package uses as much as possible of the possibilities that Umbraco already offers.</p>
+<p>In order to store relations, we chose to use the 'Relation Service' Umbraco makes available through the API code. This service offers possibilities to save a relationship between 2 pages and to retrieve them as well. However, with that service it is difficult to link and read more than 2 pages. In order to offer this functionality, we created a data structure where 1 translation of a page is designated as 'master'. 'Master' is nothing more than a nameplate on a content page with which it is said that all translations are connected with this 'master' and therefore not mutually.</p>
+<p><img style="width: 700px; height: 287px;" src="/archive/media/2017/bxa53-1.gif?width=700&amp;height=287" alt="" data-udi="umb://media/34b9add04dc94ac691e5e3fba6e278a5"></p>
+<p>A stored procedure was used for reading this data structure. This stored procedure contains logic to retrieve all translations from any given page. This is also possible with the service of Umbraco, but it is too slow to use for the purpose of retrieving translations. In addition, a stored procedure can contain logic to retrieve a whole set of translations from each page.<br>Thanks to this efficient way of saving, the package is always quick to retrieve and store translations. The use of an Umbraco service for storing relationships also guarantees better compatibility.</p>
+<h2>Tools</h2>
+<p><span>Novaware Multilingual Tools consist of a <strong>Dashboard</strong> and an <strong>Actionbar</strong>. The Actionbar is for quick action. It shows in a minimalist overview which translations of a page are available and allows you to quickly add translations. The Dashboard is to provide more insight. This is done in an extensive full-screen overview that shows the translations of all the pages under the selected node/page where you view the Dashboard. This way you can see the translation status of your entire content tree in one go. </span></p>
+<p><span>In a few cases you can skip the whole process of adding translations. In such cases it is possible to connect translated pages with each other and capture this. That can save you a lot of work, especially in an environment with an existing multilingual website. Just use the 'Relate copied nodes' option.</span></p>
+<p><img style="width: 500px; height: 84.78605388272584px;" src="/archive/media/2017/relate-copied-nodes.png?width=500&amp;height=84.78605388272584" border="1" alt="" data-udi="umb://media/5134b19398d44a4fb07f7500f50c642c"></p>
+<p> </p>
+<h2><span>Actionbar</span></h2>
+<p><span>One of the handy components of the package is the Actionbar. This allows you to quickly add translations and navigate back and forth between the linked websites.</span></p>
+<p><img style="width: 500px; height: 61.241610738255034px;" src="/archive/media/2017/actionbar2.png?width=500&amp;height=61.241610738255034" border="1" alt="action bar" data-udi="umb://media/ec61afe6927f4b8d86191a4f9d0b4c34"></p>
+<p><span>It is also possible to link pages in different languages ​​via the Actionbar. Don't you like to select all that manually? Fine, the system gives you a helping hand by giving you suggestions for possible translations of the page you have opened. By ticking the suggestions you can then accept them and add them as a translation.</span></p>
+<p><span>Of course you can also add translated pages manually. This can be useful when the system cannot find a translation while it is there. In such case you simply designate a page as a translation of the currently opened page.</span></p>
+<p><span><img style="width: 500px; height: 336.89024390243907px;" src="/archive/media/2017/actionbar3.png?width=500&amp;height=336.89024390243907" border="1" alt="add translations through the action bar" data-udi="umb://media/04a6e7f1941c46e09ae44dc8a2e2235f"></span></p>
+<p><span>Does the page not exist yet? If this is the case, you can also create a new page directly as a translation via the “add” option.  This page will then be created in the content tree of the chosen language.<img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" border="1" alt="" data-udi="umb://media/fa801cdc79ae47479e2a26c1362026c5"> </span></p>
+<p><span>It is also possible to unlink translations. This can be useful if you have accidentally added a wrong page as a translation.</span></p>
+<h2><span>Dashboard</span></h2>
+<p><span>The Dashboard is perfectly suited for the bigger picture. Once a website has translations, you can open the Dashboard. Add this Dashboard to a Document Type on which you want to have access to the Dashboard. On the Dashboard you will find all pages and the translations are shown per page. On the left you always see the pages of the opened website. The translations of these pages are shown in the columns on the right.</span></p>
+<p><span><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/f4a22003958a4881aaaa1d3e7aa3bae0"></span></p>
+<p><span>If a page has been translated and the translation is stored in the system, it is represented by black text. When a page cannot be found, three dots are displayed (...). Consequently you have the option to manually select a page by hovering over the dots and then clicking on the link icon.</span></p>
+<h2><span>Suggestions </span></h2>
+<p><span>The system gives suggestions about possible and present translations that can be linked. These suggestions are shown in blue, just like on the action bar. A suggestion can be linked by hovering the cursor over the page name and clicking the accept icon. If the suggestion is not correct, another page can be added manually as a translation.</span></p>
+<p><img style="width: 500px; height: 118.1959564541213px;" src="/archive/media/2017/dashboard-suggestions.png?width=500&amp;height=118.1959564541213" alt="dashboard suggestions" data-udi="umb://media/7e4693b6ae164e76a1d9a84c92966884"></p>
+<h2><span>Filters</span></h2>
+<p><span>Another option available on the Dashboard is the filter. It can be used on pages that are already linked or on pages where actions have to be taken.</span></p>
+<p><span>The “Todo” filter filters the Dashboard on pages where one or more translations are missing. It is easy to create translations from this overview.</span></p>
+<p><span>The “Done” filter only shows pages where all translations are present. Columns can be made visible or invisible with the language filter options. This is useful when there are many languages. </span></p>
+<p><span><img src="/archive/media/2017/dashboard-filters.png?width=500&amp;height=339.3700787401575" alt="dashboard-filters" data-udi="umb://media/bda347654e4f4237bda630e3ee980566"></span></p>
+<h3>Alternatives </h3>
+<p>The great thing about our community is that we all try to make Umbraco great. So, off course there are other packages that will help you with translations and multilingual websites. But it's difficult to compare packages, because each package has its own way of working and providing solutions for specific parts of the language spectrum. For example <a href="https://our.umbraco.org/projects/backoffice-extensions/translation-manager/">Translation Manager</a> by Kevin Jump. Translation manager is more focused on providing a workflow for content translation. Multilingual Tools on the other hand is solely made to provide insight and handy tools for content editors to manage multilingual content pages. Do you have good alternatives? Please, share them below in the comments!</p>
+<h2><span>Where to go from here?</span></h2>
+<p><span>All in all our client was very happy with the result: a great tool to manage their multilingual website. The package was also valued during DUUGFest, the annual festival of the Dutch Umbraco User Group. We received the third prize in the competition for new packages. That makes it even more interesting to continue with its development! In the near future we will be happy to further develop the Novaware Multilingual Tools. </span></p>
+<p><span>For now, we offer a first bèta release at Our Umbraco. Try it, test it, vote for it. Whatever you do or think about te package, we are very open for your feedback. So please, do let us know what you think about it!</span></p>
+<p><span>The package can be downloaded from <a rel="noopener noreferrer" href="https://our.umbraco.org/projects/backoffice-extensions/novaware-multilingual-tools/" target="_blank">our.umbraco.org</a>. </span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/translation/" title="See all articles tagged with Translation">Translation</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Leonard van Plas"><img src="//gravatar.com/avatar/1b25a84402f35a3e0f4df7f6a47948fc.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/1b25a84402f35a3e0f4df7f6a47948fc.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Leonard van Plas</h1>
+        <p>Leonard is on Twitter as <a href="//twitter.com/leonardvdplas" title="Leonard van Plas on Twitter" rel="author">@leonardvdplas</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

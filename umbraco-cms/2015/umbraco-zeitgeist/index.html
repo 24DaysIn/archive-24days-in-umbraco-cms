@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco Zeitgeist</title>
+<meta name="description" content="A comprehensive guide to contemporary Umbraco web development in 2016.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco Zeitgeist: Effective Umbraco Development in 2016</h1>
+      <p class="byline"> by Nicholas Westby, <span class="pubdate">posted on <time datetime="2015-12-01">Dec 1, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><em><strong>How you should build Umbraco sites, how you shouldn't build Umbraco sites, and how Umbraco sites will be built in the future.</strong></em></p>
+<p class="intro">In the beginning, there was nothing. And then, suddenly and without warning, Umbraco was formed. It expanded rapidly, engulfing everything in a plasma of XSLT and Web Forms. As time went on, that plasma evolved into the basic building blocks of our lives today, Razor and MVC. By random chance, those building blocks started to form the basis of more complex entities in the Umbraco universe.</p>
+<p>Those complex entities further subdivided and recombined into various taxonomies: macros, packages, approaches, systems, and so on. Some were the most fit in their era, though all are subject to changing times and so may become supplanted or go extinct.</p>
+<p>This article will go over those that are no longer fit (<a href="#bygones">bygones</a>), those that are the most fit (<a href="#zeitgeist">zeitgeist</a>), and those that promise to become the most fit (<a href="#horizon">horizon</a>) given a little more time to evolve.</p>
+<h2 id="zeitgeist">Umbraco Zeitgeist (Today's Umbraco)</h2>
+<figure>
+  <a href="/archive/media/2015/earth.jpg">
+    <img src="/archive/media/2015/earth.jpg" alt="We must utilize our resources to keep pace with an ever evolving world." width="800">
+  </a>
+  <figcaption>We must utilize our resources to keep pace with an ever evolving world.</figcaption>
+</figure>
+<p>There are a lot of different ways to build Umbraco websites. Some of those techniques are now considered outdated, and some of the effective techniques are slowly being replaced by more effective ones. Before getting into the older or newer ways, I'll cover a few of the more effective ways that Umbraco developers build sites today, which will include:</p>
+<ul>
+<li><a href="#aspnet-mvc-razor">ASP.NET MVC / Razor</a></li>
+<li><a href="#archetype">Archetype</a></li>
+<li><a href="#widgets">Widgets</a></li>
+<li><a href="#picked-widgets">Picked Widgets</a></li>
+<li><a href="#umbraco-forms">Contour / Umbraco Forms</a></li>
+<li><a href="#angularjs">AngularJS</a></li>
+<li><a href="#new-relic">New Relic</a></li>
+<li><a href="#dot-trace">dotTrace / dotMemory</a></li>
+<li><a href="#slimmage">Slimsy / Slimmage</a></li>
+<li><a href="#image-processor">ImageProcessor</a></li>
+<li><a href="#compositions">Document Type Compositions</a></li>
+<li><a href="#bookshelf">Bookshelf</a></li>
+</ul>
+<h3 id="aspnet-mvc-razor"><span style="text-decoration: underline;">ASP.NET MVC / Razor</span></h3>
+<p>Coming from a developer who has worked a lot with ASP.NET Web Forms, ASP.NET MVC (and most especially Razor views) is really nice. The syntax is super concise, there aren't a lot of opinionated controls built in, and it allows developers to more easily create webpages that use a variety of new technologies. MVC is also a great way of separating business logic from the view and formalizing a model of the data.</p>
+<h3 id="archetype"><span style="text-decoration: underline;">Archetype</span></h3>
+<p>Each version of Umbraco has had some answer to create complex content (think lists and nested content). The current best solution to that need is Archetype. It's a package that installs a property editor with a very advanced configuration page. Essentially, you can create a list of any type of content, and those lists can in turn contain lists of Archetype content.</p>
+<h3>Pros</h3>
+<ul>
+<li><strong>Inline Content.</strong> Inline complex content makes editing quicker and more intuitive.</li>
+<li><strong>Robust Feature Set.</strong> Contains all the features it ought to (sorting, cloning, deleting, restrictions, and so on).</li>
+</ul>
+<h3>Cons</h3>
+<ul>
+<li><strong>Scales Poorly.</strong> Slow when you have dozens of Archetype fieldsets on a property. When they get into the hundreds of fieldsets containing things like media pickers, pages (in the Umbraco interface) can take minutes to load. Based on <a href="https://github.com/imulus/Archetype/commit/f5f4e80800945604a32e5c8ea23d14585afbe9c5" target="_blank">this commit</a>, this may have been fixed in the latest release (curently, 1.12.0).</li>
+</ul>
+<h3>Recommendation</h3>
+<ul>
+<li><strong>Use It.</strong> You won't regret it. So long as you allow for spreading bulk content across multiple nodes, it is great to work with for content editors and developers.</li>
+</ul>
+<h3 id="widgets"><span style="text-decoration: underline;">Widgets</span></h3>
+<p>There are a bunch of ways you can allow content to be entered on a website. One way is to make a bunch of document types corresponding to very specific variations of pages (each variation having a different set of properties). Another way is to have a very small number of document types, and allow for any variation of layout by using the widget concept. Basically, you create a single property based on an Archetype that contains a bunch of fieldsets. Each of those fieldsets is a "widget" (e.g., rich text, image, slideshow, layout grid, and so on). This allows content editors to create any element on the page in any order.</p>
+<h3>Pros</h3>
+<ul>
+<li><strong>Flexible.</strong> Content editors can create most any type of layout on any page.</li>
+<li><strong>Faster Development.</strong> Because you are developing a series of widgets rather than a bunch of pages, development can go faster.</li>
+</ul>
+<h3>Cons</h3>
+<ul>
+<li><strong>Too Flexible.</strong> Content editors can create most any type of layout on any page, including layouts that don't necessarily make sense on those pages.</li>
+</ul>
+<h3>Recommendation</h3>
+<ul>
+<li><strong>Curate Content.</strong> Form a relationship with the content editor to give them guidance on the types of content (widgets) that should appear on various pages.</li>
+<li><strong>Create Presets.</strong> I haven't tried this yet, but I'm thinking of giving it a try. For different content types, create an "example" page. When somebody tries to create a node of that content type, intercept that and copy over the widgets from the example page. An easier solution is to just create sample pages and allow editors to copy those nodes.</li>
+<li><strong>Documentation.</strong> Use packages like uEditorNotes to add documentation to document types that indicate the ideal widgets for particulare page types.</li>
+</ul>
+<h3 id="picked-widgets"><span style="text-decoration: underline;">Picked Widgets</span></h3>
+<p>When using Archetype to create widgets, you'll find that some widgets appear on a number of pages without any variations (especially common with sidebar elements). Rather than force that content to be entered over and over, I recommend creating what I call "picked widgets". Essentially, you create an Archetype fieldset that has a content picker to some part of the content tree that contains widgets that can be reused. Then, instead of recreating the widget over and over, the content editor just creates a picked widget and selects the existing widget. If you are having trouble visualizing what this looks like, here's an example (click to enlarge):</p>
+<p><a href="/archive/media/2015/picked_widget.png" target="_blank"><img src="/archive/media/2015/picked_widget_199x63.jpg" width="199" height="63" alt="Picked Widget"></a></p>
+<h3>Pros</h3>
+<ul>
+<li><strong>Faster.</strong> Content can be created and changed faster.</li>
+</ul>
+<h3>Cons</h3>
+<ul>
+<li><strong>Confusing.</strong> Because the content doesn't exist in one place, it is not always obvious where to edit the picked widget to non-experts.</li>
+</ul>
+<h3>Recommendation</h3>
+<ul>
+<li><strong>Facilitate, Don't Force.</strong> Allow for widgets to be picked, but allow each picked widget to also exist as a local widget. If an editor finds picked widgets to be confusing, they can create a local widget.</li>
+</ul>
+<h3 id="umbraco-forms"><span style="text-decoration: underline;">Contour / Umbraco Forms</span></h3>
+<p>If you want to build a few forms (say, some contact forms and feedback forms), Umbraco Forms is your best bet. While not the same, Umbraco Forms is intended to be a replacement for Contour. It seems as if the Umbraco core team would like a fresh start, and so they are building Umbraco Forms using a different codebase from Contour. There are some differences, though many of them are superficial. For example, while Umbraco Forms doesn't support code-first forms like Contour, Umbraco Forms does store forms as JSON files, which means they can be source controlled. And Umbraco Forms has a built-in means of creating grid layouts.</p>
+<h3>Pros</h3>
+<ul>
+<li><strong>Dynamic.</strong> Allows non-technical users to modify forms (e.g., change fields, send emails on submission).</li>
+<li><strong>Extensible.</strong> Parts of Contour are extensible (e.g., you can add custom field types). Umbraco Forms is likely similarly extensible (haven't looked into it much yet).</li>
+</ul>
+<h3>Cons</h3>
+<ul>
+<li><strong>Buggy.</strong> Fairly significant bugs sometimes take years to fix, and <a href="http://issues.umbraco.org/issues/CON?q=by%3A+Knickerbocker+State%3A+-Closed+-Fixed+sort+by%3A+Priority+asc" target="_blank">others</a> haven't been fixed.</li>
+<li><strong>Closed Source.</strong> Given <a href="https://our.umbraco.org/forum/umbraco-7/developing-umbraco-7-packages/69933-replacing-contour-umbraco-forms-with-something-better" target="_blank">the limitations</a> of Contour / Umbraco Forms, it would be nice to submit some pull requests. However, since it is closed source, that is not possible.</li>
+<li><strong>Not Free.</strong> It's not expensive, but it's not free, so keep that in mind when considering using it.</li>
+</ul>
+<h3>Recommendation</h3>
+<ul>
+<li><strong>Be Wary.</strong> Use Contour or Umbraco Forms, but be wary of their limitations. They may cause you to invest extra time implementing workarounds.</li>
+<li><strong>Use Either.</strong> If you are already familiar with Contour, keep using it. If you are building a new site, it may be time to look into Umbraco Forms.</li>
+</ul>
+<h3 id="angularjs"><span style="text-decoration: underline;">AngularJS</span></h3>
+<p>AngularJS is the framework used by the Umbraco back office. The Umbraco team have also mentioned they will be building Umbraco 8 with the next version of AngularJS. You can think of AngularJS as a way of building reusable components in HTML/JavaScript. It is used to build all of the UI elements you see in the Umbraco back office (e.g., property editors, trees, dialogs, dashboards, and so on). If you haven't invested time learning AngularJS, there is no better time to begin doing so. Not only can you use AngularJS to customize Umbraco, but you can use it when building the frontend of your websites too.</p>
+<h3 id="new-relic"><span style="text-decoration: underline;">New Relic</span></h3>
+<p>New Relic is a monitoring tool. You can install it on your server and in your website to enable monitoring, then you log into the New Relic website to get information about your site. It has a ton of useful features, such as graphs showing resource usage (i.e., RAM, CPU, drive space) and information about errors occurring on your sites. You can even configure alerts (emails) to be sent to you based on configurable conditions (e.g., if a site is unresponsive for a few minutes or if a hard drive is filling up).</p>
+<h3>Pros</h3>
+<ul>
+<li><strong>Easy.</strong> You just create an account, run some executables, and you are up and running.</li>
+</ul>
+<h3>Cons</h3>
+<ul>
+<li><strong>Expensive.</strong> They offer a free tier, but that has some limitations. Their pro tier is relatively expensive (hundreds of dollars a month).</li>
+</ul>
+<h3>Recommendation</h3>
+<ul>
+<li><strong>Try It.</strong> Try the free version. If you run into problems and you need the pro version, you can always pay for just a single month.</li>
+</ul>
+<h3 id="dot-trace"><span style="text-decoration: underline;">dotTrace / dotMemory</span></h3>
+<p>dotTrace and dotMemory are profiling tools that allow you to figure out where CPU and memory are being used. I have found them useful when troubleshooting an issue on a production server in which the CPU would periodically spike, and another time when memory would increase over several hours. They are more detailed than New Relic for those times when you really need to dig into a performance issue.</p>
+<h3>Pros</h3>
+<ul>
+<li><strong>Detailed Stack Traces.</strong> The traces you get (e.g., for CPU usage) are extremely detailed. You can usually see exactly which function or stack is causing high CPU usage.</li>
+</ul>
+<h3>Cons</h3>
+<ul>
+<li><strong>Expensive.</strong> You can no longer purchase these tools individually. You have to purchase ReSharper to get them.</li>
+<li><strong>Resource Intensive / Invasive.</strong> If your production server is having CPU/memory issues, these tools can exacerbate the situation. One of these tools messed up an app pool once so that even a server restart didn't fix it (I had to fiddle with some configuration).</li>
+</ul>
+<h3>Recommendation</h3>
+<ul>
+<li><strong>Trial.</strong> If you are having a production issue, try these tools during the trial period to see if you like them.</li>
+</ul>
+<h3 id="slimmage"><span style="text-decoration: underline;">Slimsy / Slimmage</span></h3>
+<p>Slimmage is a JavaScript library that facilitates serving up responsive images regardless of the user's browser size or the pixel density of their screen (e.g., retina displays). It works with a server-side image processor to ensure images are served to a user in exactly the correct size (which reduces bandwidth without sacrificing quality). Slimsy is an Umbraco package that coordinates between Slimmage and ImageProcessor (Umbraco's aptly named server-side image processor). You can read more about the relationship between Slimmage and Slimsy <a href="http://umbraco.com/follow-us/blog-archive/2014/5/30/developing-a-website-with-responsive-images-using-the-umbraco-v714-image-cropper/" target="_blank">here</a>.</p>
+<h3>Pros</h3>
+<ul>
+<li><strong>Easy Responsive Images.</strong> You no longer have to create picture elements and manually code the markup for the mobile / tablet / desktop versions of an image.</li>
+</ul>
+<h3>Cons</h3>
+<ul>
+<li><strong>Malformed Markup.</strong> Slimsy apparently processes and adjusts the markup for the entire page so it can output the correct markup for images. It seems to do it in an invasive way that can cause HTML tags to become self-closed (e.g., &lt;div&gt;&lt;/div&gt; might be converted to &lt;div/&gt;), which can break some layouts.</li>
+<li><strong>IMG Only.</strong> If you intend to use a &lt;picture&gt; element for different images at different breakpoints or if you need a CSS background image, Slimsy can't be used. It is for use with &lt;img&gt; tags only.</li>
+</ul>
+<h3>Recommendation</h3>
+<ul>
+<li><strong>Use Slimmage.</strong> To avoid broken markup, just use Slimmage and manually code what Slimsy does (basically, it adds some markup where your images appear in the HTML).</li>
+</ul>
+<h3 id="image-processor"><span style="text-decoration: underline;">ImageProcessor</span></h3>
+<p>ImageProcessor is the server-side image manipulator that now comes with Umbraco. It allows you to make a request (such as with the src attribute of an &lt;img&gt; tag) to the server for an image, including various query string parameters to manipulate the image (e.g., resize, change compression quality).</p>
+<h3>Pros</h3>
+<ul>
+<li><strong>Built-in and Free.</strong> ImageProcessor comes built into Umbraco and is entirely free.</li>
+<li><strong>Chained Processing.</strong> You can chain multiple operations for complex image manipulations.</li>
+</ul>
+<h3>Cons</h3>
+<ul>
+<li><strong>New.</strong> It only comes with newer versions of Umbraco (7.1+), so it may not be included with your older installs. Luckily, you can install it manually in older versions.</li>
+</ul>
+<h3>Recommendation</h3>
+<ul>
+<li><strong>Use It.</strong> You can't go wrong with ImageProcessor. As mentioned above, you may even be able to use it with Slimsy for more seamless responsive images.</li>
+</ul>
+<h3 id="compositions"><span style="text-decoration: underline;">Document Type Compositions</span></h3>
+<p>It used to be that if you wanted a property to exist on a bunch of pages, you'd create it in a parent document type, then you'd have each page be a child of that document type. However, there would always be some exception (e.g., if you have a secured extranet, there is no use having a property for the meta description, as search engines can't access those pages anyway). Those exceptions meant a more complex document type configuration, or you'd have garbage properties. With document type compositions, you can essentially have multiple parent document types, which allows you to split properties into logical groups (document type compositions) and selectively include them on other document types.</p>
+<h3>Recommendation</h3>
+<ul>
+<li><strong>Prefer Compositions.</strong> Only nest document types for organization purposes (e.g., put all the components under a "Components" document type). Use document type compositions instead of nesting to associate common properties to multiple document types. A later version of Umbraco is even promising actual folders so you don't need to nest document types for better organization.</li>
+</ul>
+<h3 id="bookshelf"><span style="text-decoration: underline;">Bookshelf</span></h3>
+<p>Bookshelf adds a section to Umbraco that allows users to read markdown-based "books" (essentially, a hierarchy of markdown files). It includes a markdown editor and renders markdown to HTML.</p>
+<h3>Pros</h3>
+<ul>
+<li><strong>Robust Documentation.</strong> This is documentation that is more robust than you'd be able to fit inline on a content page, for example.</li>
+<li><strong>Searchable.</strong> It uses Examine to make the books searchable.</li>
+</ul>
+<h3>Cons</h3>
+<ul>
+<li><strong>Permissions.</strong> I didn't see a way to restrict who can edit books. So, anybody who can read a book, can edit one.</li>
+<li><strong>Images.</strong> Images must exist on the server before they can be inserted into a book (i.e., there is no upload button).</li>
+</ul>
+<h3>Recommendation</h3>
+<ul>
+<li><strong>Explain Problematic Scenarios.</strong> If editors of your Umbraco implementation are having issues figuring certain things out, explain them in the Bookshelf.</li>
+</ul>
+<h2 id="bygones">Umbraco Bygones (Yesterday's Umbraco)</h2>
+<figure>
+  <a href="/archive/media/2015/buzz.jpg">
+    <img src="/archive/media/2015/buzz.jpg" alt="The buzz used to be all about the moon landing, but we've learned since those first steps." width="800">
+  </a>
+  <figcaption>The buzz used to be all about the moon landing, but we've learned since those first steps.</figcaption>
+</figure>
+<p>These tools and techniques all had their time, but for reasons I will explain, they are no longer recommended. This list of misfits includes:</p>
+<ul>
+<li><a href="#child-node-widgets">Child Node Widgets</a></li>
+<li><a href="#repeatable-custom-content">Repeatable Custom Content</a></li>
+<li><a href="#ucomponents">uComponents</a></li>
+<li><a href="#xslt-web-forms">XSLT / Web Forms</a></li>
+<li><a href="#macros">Macros</a></li>
+<li><a href="#complex-rich-text">Complex Rich Text</a></li>
+<li><a href="#highly-structured-document-types">Highly Structured Document Types</a></li>
+<li><a href="#contour">Contour</a></li>
+<li><a href="#image-gen">ImageGen</a></li>
+</ul>
+<h3 id="child-node-widgets"><span style="text-decoration: underline;">Child Node Widgets</span></h3>
+<p>It used to be that the only built-in way to create a list of content of an arbitrary length was to create that content as child nodes of the page the content was to be added to. For example, a homepage node might have a slideshow node under it, and that node might have a number of slide nodes under it. This has the problem that the content can't all be seen and edited at once (i.e., you must navigate between nodes to edit each slide).</p>
+<h3>Alternatives</h3>
+<ul>
+<li><strong>Archetype.</strong> As discussed previously, Archetype is great at handling lists of content (especially widgets).</li>
+</ul>
+<h3 id="repeatable-custom-content"><span style="text-decoration: underline;">Repeatable Custom Content</span></h3>
+<p>Many moons ago, a package surfaced that allowed you to edit lists of content. It was called Repeatable Custom Content (and later Repeatable Custom Content v2). It was a useful solution in Umbraco 4 if you wanted to avoid child node widgets. However, it hasn't been updated in 6 years and the author was hesitant to publish the source code (he seemed to just email it to people who were interested), so by now it is antiquated and unsupported. There are better options.</p>
+<h3>Alternatives</h3>
+<ul>
+<li><strong>Archetype.</strong> Archetype is almost a direct (if fancier) replacement for Repeatable Custom Content.</li>
+</ul>
+<h3 id="ucomponents"><span style="text-decoration: underline;">uComponents</span></h3>
+<p>uComponents was a really awesome package that contained everything that seemed to be missing from Umbraco. However, much of what was contained within uComponents eventually got integrated into the Umbraco core. uComponents is also incompatible with Umbraco 7.</p>
+<h3>Alternatives</h3>
+<ul>
+<li><strong>Umbraco.</strong> Since much of uComponents became integrated into Umbraco, a plain Umbraco install will give you much of what uComponents offered.</li>
+<li><strong>nuPickers.</strong> A collection of property editors, much like the ones available in uComponents.</li>
+<li><strong>Archetype.</strong> Think of this as a replacement for the uComponents datatype grid.</li>
+<li><strong>uEditorNotes.</strong> Great for adding rich text notes to content nodes (e.g., editor instructions).</li>
+</ul>
+<h3 id="xslt-web-forms"><span style="text-decoration: underline;">XSLT / Web Forms</span></h3>
+<p>The two dominant ways of building sites in Umbraco used to be XSLT and ASP.NET Web Forms. XSLT made some sense, as Umbraco stores a cache of the website's data in XML. However, it makes little sense now, considering the varied types of data Umbraco now stores (hint: lots of JSON as of late), and the limitations of this declarative language. Web Forms was another common way of developing Umbraco websites. While it's still possible to develop Umbraco sites in Web Forms, the default is now ASP.NET MVC.</p>
+<h3>Alternatives</h3>
+<ul>
+<li><strong>ASP.NET MVC.</strong> Razor syntax alone is enough to prefer this.</li>
+</ul>
+<h3 id="macros"><span style="text-decoration: underline;">Macros</span></h3>
+<p>Macros are an Umbraco-centric concept that is really a combination of a number of technologies: XSLT, ASP.NET user controls, and Razor views. You can embed macros either in a template (read: ASP.NET master page or Razor view) or a rich text editor (and, from what I've been reading lately, they can also be added to the Umbraco grid). They can be nice if you are combining a number of technologies, but for new installations there are very few uses for them. They are also somewhat inflexible in the type of data that you can pass to them. By avoiding macros now, you can avoiding running into their limitations later.</p>
+<h3>Alternatives</h3>
+<ul>
+<li><strong>Archetype.</strong> Rather than embed macros in a rich text editor, create widgets using Archetype (some being rich text widgets, and some being what you might have created as macros).</li>
+<li><strong>Partial Views.</strong> Rather than build a macro to insert into a template, just build a Razor partial view and render it from that template.</li>
+</ul>
+<h3 id="complex-rich-text"><span style="text-decoration: underline;">Complex Rich Text</span></h3>
+<p>If an editor wants to do something "custom" on a page, they might try to modify the rich text to add some inline styles and markup. They may also insert some macros to embed some complex functionality that is surrounded by text. However, there are better ways, and you shouldn't expect your content editors to be HTML/CSS gurus.</p>
+<h3>Alternatives</h3>
+<ul>
+<li><strong>Archetype.</strong> You can create fieldsets that allow editors to build any type of responsive layout they could want.</li>
+<li><strong>Widgets.</strong> If you are using Archetype, building arbitrary widgets is trivial. They can be as simple as rich text or as complex as custom forms.</li>
+</ul>
+<h3 id="highly-structured-document-types"><span style="text-decoration: underline;">Highly Structured Document Types</span></h3>
+<p>It is usually the case that you have a set of properties common to most pages (think meta description, page title, header image, and so on). One way of adding those properties to every page is to create a parent document type. Trouble is, not every page has those properties, so you end up with complex document type hierarchies that are hard to change (e.g., base page, public page, extranet page, headerless page, and so on).</p>
+<h3>Alternatives</h3>
+<ul>
+<li><strong>Compositions.</strong> Now that Umbraco has document type compositions, you can inherit selectively from multiple document types. You might have a composition for SEO page properties and another for the properties used by pages with a header.</li>
+</ul>
+<h3 id="contour"><span style="text-decoration: underline;">Contour</span></h3>
+<p>Contour is the typical way you would create forms in Umbraco. However, Contour has a number of <a href="https://our.umbraco.org/forum/umbraco-7/developing-umbraco-7-packages/69933-replacing-contour-umbraco-forms-with-something-better" target="_blank">issues</a>, such as no built-in way to do AJAX forms, a clumsy method of customizing form Razor views, hard to troubleshoot bugs, and form fields that are hard to identify programmatically (to name a few).</p>
+<h3>Alternatives</h3>
+<ul>
+<li><strong>Umbraco Forms.</strong> This is replacing Contour. Since the Umbraco core team has shown more of an interest in Umbraco Forms as of late, I expect it will become of higher quality than Contour was.</li>
+<li><strong>Formulate.</strong> I'm in the process of building a free, open source form builder that will solve many of the problems that have been around for years in Contour. If all goes according to plan, you should see some information about it here in early 2016: <a href="http://www.formulate.rocks/" target="_blank">http://www.formulate.rocks/</a></li>
+</ul>
+<h3 id="image-gen"><span style="text-decoration: underline;">ImageGen</span></h3>
+<p>In its day, ImageGen was the lead image manipulation package. It allowed you to do things like resize images and apply effects. It was really useful if you wanted to resize images automatically to be served up to different devices (e.g., smaller images for mobile). It started free, but cost a small fee if you wanted more control over the configuration.</p>
+<h3>Alternatives</h3>
+<ul>
+<li><strong>ImageProcessor.</strong> ImageProcessor now comes built into Umbraco and does all ImageGen did and more. It's also free.</li>
+</ul>
+<h2 id="horizon">Umbraco Horizon (Tomorrow's Umbraco)</h2>
+<figure>
+  <a href="/archive/media/2015/launch.jpg">
+    <img src="/archive/media/2015/launch.jpg" alt="If we dream big enough, we can expand our own horizons." width="800">
+  </a>
+  <figcaption>If we dream big enough, we can expand our own horizons.</figcaption>
+</figure>
+<p>For one reason or another, these aspects of Umbraco development are either not ready, or are somewhat risky, so they may need some refinements before I'd recommend their use in a production environment. Still, they have enough to offer that they are worth considering. Here's what the future of Umbraco will look like:</p>
+<ul>
+<li><a href="#grid">Grid</a></li>
+<li><a href="#doc-type-grid-editor">Doc Type Grid Editor</a></li>
+<li><a href="#nu-pickers">nuPickers</a></li>
+<li><a href="#formulate">Umbraco Forms / Formulate</a></li>
+<li><a href="#list-view">List View</a></li>
+<li><a href="#variants">Variants / Segments</a></li>
+<li><a href="#starter-kits">Starter Kits</a></li>
+<li><a href="#baseline">Umbraco as a Service / Baseline</a></li>
+<li><a href="#articulate">Articulate</a></li>
+</ul>
+<h3 id="grid"><span style="text-decoration: underline;">Grid</span></h3>
+<p>The grid is an attempt to make the back office look a bit more like the grid you'd see on a Bootstrap (or Foundation, or other grid-capable framework) site. It helps make it more clear to editors that their content will appear in multiple rows and columns.</p>
+<h3>Potential</h3>
+<ul>
+<li><strong>WYSIWYG.</strong> This makes the back office look a bit more like the website.</li>
+<li><strong>Repeatable Content.</strong> The grid may be the only current property editor that allows editors to create repeatable content in a single property.</li>
+<li><strong>Galleries.</strong> One interesting use case I have seen is to create a media gallery using the grid (gives the editor more control over the layout of the images).</li>
+</ul>
+<h3>Caveats</h3>
+<ul>
+<li><strong>Blob of JSON.</strong> Right now, the grid just stores the data as a blob of JSON, which causes all sorts of problems (think: Courier, Examine). You can watch a video about it <a href="https://www.youtube.com/watch?v=QvzwilqYOp4" target="_blank">here</a>.</li>
+<li><strong>Beta Feature.</strong> This feature is really more of an experimental feature. There are plans to release an updated version, which you can read about <a href="http://umbraco.com/follow-us/blog-archive/2015/11/17/the-future-of-grid-layouts/" target="_blank">here</a>.</li>
+<li><strong>Minimal Core Support.</strong> If you want a property editor (or, as they are apparently called, grid editors), you will probably have to build it yourself.</li>
+</ul>
+<h3 id="doc-type-grid-editor"><span style="text-decoration: underline;">Doc Type Grid Editor</span></h3>
+<p>This is a package that extends the capabilities of the grid. It allows you to insert cells that have properties based on document types. So, you click a cell and it opens a dialog to allow you to edit the fields.</p>
+<h3>Potential</h3>
+<ul>
+<li><strong>Sophisticated Layouts.</strong> You can use this to create what are essentially widgets in interesting layouts.</li>
+</ul>
+<h3>Caveats</h3>
+<ul>
+<li><strong>Temporary.</strong> My guess is something like this package may become integrated into the grid at some point, so this may become redundant eventually. In other words, it's too useful.</li>
+</ul>
+<h3 id="nu-pickers"><span style="text-decoration: underline;">nuPickers</span></h3>
+<p>This is a collection of property editors that allow you to use a number of data sources to pick data in a variety of ways. While I haven't used nuPickers, it seems like it could be really useful for picking data in ways not built into Umbraco. Really the only reason it is in this section is because of my lack of in-depth familiarity with it.</p>
+<h3>Potential</h3>
+<ul>
+<li><strong>Custom Display.</strong> Most (or all) of the pickers allow you to render whatever you want for picked items in the back office so the content editor has more information (e.g., a sample rendering of a slideshow slide).</li>
+</ul>
+<h3>Caveats</h3>
+<ul>
+<li><strong>Missing Hierarchy.</strong> One common type of picker would be one that allows items from a hierarchy to be selected. Think a multinode treepicker that could accept any data source.</li>
+<li><strong>Missing Structure.</strong> Wouldn't it be neat if you could pick a node, then pick some related nodes, then pick nodes related to each of those nodes (to build, for example, a menu or a product finder)?</li>
+</ul>
+<h3 id="formulate"><span style="text-decoration: underline;">Umbraco Forms / Formulate</span></h3>
+<p>Umbraco Forms is the latest incarnation of Contour, the original Umbraco form builder. Formulate is a free, open source builder that is currently being developed. Both are likely to become the dominant form builders for Umbraco websites. Form builders like this make it very easy for content editors to create forms (e.g., contact forms, feedback forms, newsletter subscription forms, and so on) themselves, and attach custom actions (e.g., emails) based on submissions to those forms.</p>
+<h3>Potential</h3>
+<ul>
+<li><strong>Formulate: Free.</strong> While Umbraco Forms is not very expensive, free is always nice.</li>
+<li><strong>Formulate: Open Source.</strong> Particularly useful if you run into an issue you need to fix. Also, the community can contribute, which gives us more of a say in what is important to us.</li>
+<li><strong>UF: Core Support.</strong> It may be easier to convince manager types to adopt the use of Umbraco Forms, as it has official support by the Umbraco team.</li>
+<li><strong>UF: Supports Umbraco.</strong> Money paid for Umbraco Forms supports the Umbraco core team.</li>
+</ul>
+<h3>Caveats</h3>
+<ul>
+<li><strong>Formulate: No Official Support.</strong> With no official support planned (yet), you may have to figure out some things yourself.</li>
+<li><strong>Formulate: Incomplete.</strong> While it is definitely planned for release in early 2016, it is not yet complete. You can follow the progress here: http://www.formulate.rocks/</li>
+<li><strong>UF: Closed Source.</strong> That means all development is done by the core team, and so development is less driven by community guidance. Additionally, bugs are that much more difficult to fix and work around.</li>
+<li><strong>UF: Historically Problematic.</strong> There are too many to list, but you can read about the issues <a href="https://our.umbraco.org/forum/umbraco-7/developing-umbraco-7-packages/69933-replacing-contour-umbraco-forms-with-something-better" target="_blank">here</a> (TLDR: buggy, poorly architected, limited customizability, not HIPAA compliant, not AJAX-friendly).</li>
+</ul>
+<h3 id="list-view"><span style="text-decoration: underline;">List View</span></h3>
+<p>List View is a great new way of accessing nodes in the content tree (or, rather, accessing nodes without the content tree). Essentially, it replaces a subtree of content nodes with a paged table of content nodes. If you are aware of its limitations, it is usable as is. However, it can be clumsy to use in some situations.</p>
+<h3>Potential</h3>
+<ul>
+<li><strong>Catalogs.</strong> List View really shines when it comes to large catalogs of items (e.g., a product catalog with thousands of products). Expanding a full tree of items is slow, so List View offers a fast way of finding something you are looking for.</li>
+</ul>
+<h3>Caveats</h3>
+<ul>
+<li><strong>Grandchildren.</strong> List View doesn't handle grandchildren well. See <a href="https://our.umbraco.org/forum/umbraco-7/using-umbraco-7/49882-List-View-Accessing-Grandchildren" target="_blank">here</a> for a discussion. Basically, you must enable List View on children of a node with List View enabled; otherwise, you can't access the children of the children.</li>
+</ul>
+<h3 id="variants"><span style="text-decoration: underline;">Variants / Segments</span></h3>
+<p>These are probably the coolest features that don't exist yet. In simple terms, variants allow you to create alternative versions of your content, and segments allow content to be personalized for different audiences (i.e., show different people different things). You can watch <a href="https://www.youtube.com/watch?v=EuFNtQd4L14" target="_blank">this video</a> for more information.</p>
+<h3>Potential</h3>
+<ul>
+<li><strong>Translation.</strong> Variants would make it really easy to create translations for content nodes.</li>
+<li><strong>Optimized Marketing.</strong> Segments would make it really easy to optimize content for different types of visitors, which would facilitate more relevant marketing.</li>
+</ul>
+<h3>Caveats</h3>
+<ul>
+<li><strong>Not Available.</strong> Neither of these features are actually built yet, but they're planned for Umbraco 8 (if all goes according to plan, before 2017).</li>
+</ul>
+<h3 id="starter-kits"><span style="text-decoration: underline;">Starter Kits</span></h3>
+<p>Starter kits aren't just for getting simple sites up and running quickly. If you are an agency, why not create a starter kit using the functionality common to most of the websites you build, then start your new builds with most of the boring and common stuff already done? Yes, you can create starter kits yourself. It's as simple as creating a package and selecting pretty much everything in one of your websites. Once you have a package created from one of your sites, you can then install it into a new empty site and hit the ground running.</p>
+<h3>Potential</h3>
+<ul>
+<li><strong>Time Savings.</strong> Imagine all the cool extra stuff you could do if you could avoid doing the things common to most sites; the time savings in percent would likely be in the double digits (say, 30%).</li>
+<li><strong>Common Code Base.</strong> If you build lots of sites from a common code base, you get the benefits of shared code (e.g., greater stability and easier updates).</li>
+<li><strong>Subtractive Construction.</strong> Rather than spend months upon months adding features, you can start with a full suite of features, then spend hours or days deleting the ones that aren't appropriate for your use case.</li>
+</ul>
+<h3>Caveats</h3>
+<ul>
+<li><strong>Entrenchment.</strong> The downside to using something that can save you a ton of time is that you may become overly reliant upon it. If you don't keep your starter kit up to date, it may eventually lead you to use outdated techniques.</li>
+<li><strong>Unproven.</strong> Having not tried this myself, I can't be sure there won't be some complications (e.g., I don't think third party packages are well supported without very custom code). However, that is just my experience; others may be using this extensively.</li>
+<li><strong>Better Alternatives.</strong> I've heard of some interesting approaches, such as storing a starter website in source control, including a scripted version of the database (i.e., you'd just clone that to create a new site). Another alternative might be Umbraco.com's new feature, Baseline (see below).</li>
+</ul>
+<h3 id="baseline"><span style="text-decoration: underline;">Umbraco as a Service / Baseline</span></h3>
+<p>Umbraco as a Service is still very new, so use it at your own risk. However, the potential is immense. It essentially gives you hosting, setup, source control, and Courier out of the box for a relatively small monthly fee. Baseline is a feature built into UaaS that allows you to create multiple websites based off of a starter (or "baseline") website. From what I understand, it uses Git under the hood, so any changes made to the baseline website can be merged into forked websites.</p>
+<h3>Potential</h3>
+<ul>
+<li><strong>Ease of Use.</strong> This has the potential to make Umbraco vastly easier to setup and begin using for novices.</li>
+<li><strong>Improved Courier.</strong> Since Courier is used with UaaS, and the Umbraco core team will be partially supported by proceeds from UaaS, it is in their best interest to improve the quality of the Courier code base, which has historically been lacking. They seem to be calling this initiative "Umbraco Deploy".</li>
+<li><strong>Change Management.</strong> By spawning many websites from a few baselines, it should be much easier to manage change (e.g., deploy updates from one baseline to all derived websites).</li>
+<li><strong>Automatic Upgrades.</strong> Umbraco upgrades can be a pain, so the fact that they are done automatically is awesome.</li>
+</ul>
+<h3>Caveats</h3>
+<ul>
+<li><strong>Less Control.</strong> With UaaS, you are essentially tied to Azure and the way the Umbraco team does deployments, though you could probably export the site if you decided to host elsewhere.</li>
+<li><strong>Troubleshooting.</strong> Speaking from experience, Azure sites can be a real pain to troubleshoot. While their staging capability is nice, it can be slower than molasses at times. And depending on the type of Azure instance (e.g., cloud services), gaining access to the server itself can be troublesome.</li>
+<li><strong>Expensive Upgrades.</strong> If you need a staging server (rather than just dev/prod), you will need to upgrade from the 89 EUR/month plan to the 359 EUR/month plan (those are the current rates shown <a href="http://umbraco.com/cloud/features-and-pricing/" target="_blank">here</a>).</li>
+</ul>
+<h3 id="articulate"><span style="text-decoration: underline;">Articulate</span></h3>
+<p>If you are in need of a blog, this seems like the most active and promising package available for Umbraco. After having worked with uBlogsy and uCommentsy and reviewed the code for Articulate, it seems to be hand over fist an improvement over the former two.</p>
+<h3>Potential</h3>
+<ul>
+<li><strong>Well Engineered.</strong> Unlike comparable packages, Articulate seems to be very well engineered. I wouldn't expect many issues to crop up in terms of bugs and limitations.</li>
+<li><strong>Theming.</strong> The swappable theming system used by Articulate is really interesting. This is what many people expect out of a blogging engine. What's also exciting about this is that it gives Articulate room to grow to a more out of the box solution (i.e., usable instantly), in addition to it being usable as an integral part of an existing website.</li>
+</ul>
+<h3>Caveats</h3>
+<ul>
+<li><strong>Difficult to Integrate.</strong> I recently looked what it would take to integrate Articulate into an existing website I built, and it was mostly straightforward, with one exception. It seems Articulate makes use of a custom model, and I'm unsure if I could make use of my existing templates with that model. An article <a href="http://uditty.com/articles/archive/using-common-site-views-with-theme-based-packages/" target="_blank">here</a> claims it is possible, but I've yet to try it myself.</li>
+</ul>
+<h2>Appendix</h2>
+<h3>Photo Credits</h3>
+<ul>
+<li><a href="http://www.nasa.gov/50th/favpic/index.html" target="_blank">http://www.nasa.gov/50th/favpic/index.html</a> (<a href="http://www.nasa.gov/images/content/260989main_01_BuzzAldrinMoon_full.jpg">direct link</a>)</li>
+<li><a href="https://www.dvidshub.net/image/742056/earth-observations" target="_blank">https://www.dvidshub.net/image/742056/earth-observations</a></li>
+<li><a href="http://www.spacex.com/media-gallery/detail/118081/4046" target="_blank">http://www.spacex.com/media-gallery/detail/118081/4046</a></li>
+</ul>
+<h3>Resources</h3>
+<p>Here are some resources you can refer to if you'd like to do your own research:</p>
+<ul>
+<li><a href="https://our.umbraco.org/documentation/Reference/Templating/Mvc/" target="_blank">Working with MVC in Umbraco</a></li>
+<li><a href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/" target="_blank">Getting Data In and Out of Complex Archetype Data Types</a></li>
+<li><a href="https://our.umbraco.org/forum/umbraco-7/developing-umbraco-7-packages/69933-replacing-contour-umbraco-forms-with-something-better" target="_blank">Replacing Contour (Umbraco Forms) with Something Better</a></li>
+<li><a href="http://www.formulate.rocks/" target="_blank">Formulate</a></li>
+<li><a href="https://our.umbraco.org/Documentation/Add-ons/UmbracoForms/" target="_blank">Umbraco Forms</a></li>
+<li><a href="http://umbraco.github.io/Belle/#/api" target="_blank">Umbraco Belle (AngularJS in Umbraco)</a></li>
+<li><a href="https://blog.newrelic.com/2013/03/29/a-quick-guide-to-getting-started-with-new-relic/" target="_blank">A Quick Guide to Getting Started with New Relic</a></li>
+<li><a href="https://www.jetbrains.com/profiler/" target="_blank">dotTrace</a></li>
+<li><a href="https://www.jetbrains.com/dotmemory/" target="_blank">dotMemory</a></li>
+<li><a href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/" target="_blank">Slimsy</a></li>
+<li><a href="https://our.umbraco.org/projects/collaboration/imageprocessor/" target="_blank">ImageProcessor</a></li>
+<li><a href="http://www.wiliam.com.au/wiliam-blog/umbraco-7-2-compositions" target="_blank">Document Type Compositions</a></li>
+<li><a href="http://uditty.com/articles/archive/using-common-site-views-with-theme-based-packages/" target="_blank">Using Common Site Views with Theme Based Packages (Namely, Articulate)</a></li>
+<li><a href="https://our.umbraco.org/projects/backoffice-extensions/bookshelf/" target="_blank">Bookshelf</a></li>
+<li><a href="http://umbraco.com/follow-us/blog-archive/2015/11/17/the-future-of-grid-layouts/" target="_blank">The Future of Grid Layouts</a></li>
+<li><a href="https://our.umbraco.org/projects/backoffice-extensions/doc-type-grid-editor/" target="_blank">Doc Type Grid Editor</a></li>
+<li><a href="http://skrift.io/articles/archive/the-king-is-dead-long-live-the-king/" target="_blank">The King is Dead... Long Live the King (nuPickers)</a></li>
+<li><a href="http://www.robertgray.net.au/posts/a-first-look-at-umbraco-container-content-types" target="_blank">A First Look at Umbraco List View Types</a></li>
+<li><a href="https://github.com/umbraco/Starterkits" target="_blank">Starter Kits (GitHub)</a></li>
+<li><a href="http://umbraco.com/cloud/features-and-pricing/" target="_blank">Umbraco as a Service</a></li>
+<li><a href="https://our.umbraco.org/projects/starter-kits/articulate/" target="_blank">Articulate</a></li>
+</ul>
+<p>Of course, you can use the comments section below for any specific questions you may have.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/templates/" title="See all articles tagged with Templates">Templates</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/xslt/" title="See all articles tagged with XSLT">XSLT</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Nicholas Westby"><img src="//gravatar.com/avatar/2922ca179a3b0fa7155dd8cd569ca9cb.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/2922ca179a3b0fa7155dd8cd569ca9cb.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Nicholas Westby</h1>
+        <p>Nicholas is on Twitter as <a href="//twitter.com/MrMarsRed" title="Nicholas Westby on Twitter" rel="author">@MrMarsRed</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li class="selected"><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

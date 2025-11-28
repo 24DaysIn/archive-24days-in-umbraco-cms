@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Continuous Deployment in Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Continuous Deployment of Umbraco</h1>
+      <p class="byline"> by Paul Gower, <span class="pubdate">posted on <time datetime="2016-12-15">Dec 15, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I realize some of you might wonder why you would want to do continuous deployment with <a href="//umbraco.com" target="_blank" title="Umbraco">Umbraco</a> yourself when they offer <a href="//umbraco.com/cloud" target="_blank" title="Umbraco Cloud">Umbraco Cloud</a> which does it for you.  I would like for you to consider that there are instances where Umbraco Cloud does not meet your business needs.  The good news is as the Umbraco team has gained knowledge around working with Umbraco in Azure, they have been sharing their knowledge with the community.  Using this information and my knowledge around <a href="//www.visualstudio.com/vso/" target="_blank" title="Visual Studio Online">Visual Studio Online</a> (VSTS) this article will describe the steps you can take to implement Continuous Deployment in Umbraco.</p>
+<p class="intro">My goal is to share what I have learned while continuously deploying Umbraco with <a href="//azure.microsoft.com/en-us/" target="_blank" title="Azure">Azure</a> and VSTS so if you find yourself in the situation where Umbraco Cloud does not meet your business needs you can refer back to this article to get started.  I am always looking for ways to improve things that I develop so please hit me up <a href="//twitter.com/paulmgower" target="_blank" title="paulmgower">on twitter</a> (@paulmgower) to help me improve this process or share your ideas about ways to make this solution better.</p>
+<p>Here are 5 steps to setup Continuous Deployment of Umbraco using Azure and VSTS:</p>
+<h3>1. Create a VSTS project</h3>
+<p>First if you don't already have a VSTS account, you should create one so you have a place to put your source control. We will also use it to build and deploy to Azure.  Plus the account is free for the first five users so it's no cost to setup.  Once you have your account setup login and create a new project. For this example I am going to create an Agile process template but feel free to use whichever one makes the most sense for your project.</p>
+<p><img style="width: 416.54021244309564px; height: 500px;" src="/archive/media/2016/24daysin-01-vsts-team-project.png?width=416.54021244309564&amp;height=500" alt="Create team project" rel="1435" data-id="1435"></p>
+<h3>2. Use <a href="//shermandigital.com/blog/set-up-umbraco-in-visual-studio-with-localdb-and-deploy-to-azure/" target="_blank" title="Chris Sherman's Guide">Chris Sherman's Guide</a> to Set Up Umbraco in Azure</h3>
+<p>Chris's guide should help you setup Umbraco for local development and also deployment to Azure.  <strong><span style="text-decoration: underline;">Note:</span></strong> <span style="text-decoration: underline;"></span> I had to do a few things differently than described since this guide is about a year old.</p>
+<ul>
+<li>I used the &lt;period&gt; symbol (e.g. <strong>.</strong>) to represent my local database server instead of <strong>(localdb)\v11.0</strong>. You might be able to use the value recommended of <strong>(localdb)\v11.0 </strong>but it depends on how you set up your local SQL Server instance.</li>
+<li>The Azure Portal has changed quite a bit since this article was written including the URL which is now <a href="//azure.portal.com" target="_blank" title="Azure Portal">portal.azure.com</a>.</li>
+<li>I used a SQL Server I had already created and just created a new database on that server; however, the steps to create a SQL Database in Azure SQL is very similar to the steps described in the article.</li>
+<li>Azure Websites have been renamed to Azure Web Apps and the steps to create a Web App have changed.  Now you need to click on the "+ New" link to view all the items you can create.  Then choose the "Web + Mobile" link under the Marketplace to see all of the options.  Find the "Web App" item and click on it.  Now finish filling out the form to kick off the deployment of a new Web App.  It might take a few minutes to finish the deployment in Azure.</li>
+<li>Although the article sets up deployment via Visual Studio, you do not need to do these steps since we will be setting up deployment in VSTS in the next few steps.</li>
+</ul>
+<h3>3. Check-in your Umbraco Website into VSTS</h3>
+<p>Once you have your VSTS project created you can check-in your source control into the repository created in Step 1.  By default VSTS will create a Git repo for you; however, if you prefer TFVC you could create a TFVC repo because VSTS supports both. If you are going to use Git be sure to create a <strong>.gitignore</strong> file so you only check in what you need.</p>
+<p><img style="width: 500px; height: 275.4442649434572px;" src="/archive/media/2016/24daysin-02-git-repo.png?width=500&amp;height=275.4442649434572" alt="Git Repo" rel="1437" data-id="1437"></p>
+<h3>4. Create a VSTS Build</h3>
+<p>In order to do automated deployments you first need to create a build.  One of the benefits of building you Umbraco website from source control is you can cut down on the "it works on my machine" issue.  Also just know that I had to add several files to the Visual Studio project so they would be deployed during the build/deployment step we are creating now so <strong>be sure to include all necessary files into the Visual Studio project</strong> as it will be used (you should not have to include the umbraco or umbraco_client folders because they will be included when the nuget package is restored).</p>
+<p>Here are the steps I took to create a simple build for the VSTS project I created in step 1.</p>
+<ol>
+<li>Create a new build definition<br><img style="width: 500px; height: 153.21888412017168px;" src="/archive/media/2016/24daysin-03-new-build-def.png?width=500&amp;height=153.21888412017168" alt="VSTS Build Definition" rel="1438" data-id="1438"><br><br></li>
+<li>Choose the Visual Studio Build Definition<br><img style="width: 454.81927710843377px; height: 500px;" src="/archive/media/2016/24daysin-04-vs-build-def.png?width=454.81927710843377&amp;height=500" alt="Visual Studio Build Definition" rel="1439" data-id="1439"><br><br></li>
+<li>Choose the Repo and Branch (be sure to click Continuous integration option)<br><img style="width: 450.81967213114757px; height: 500px;" src="/archive/media/2016/24daysin-05-vs-build-def.png?width=450.81967213114757&amp;height=500" alt="VS Build Setup" rel="1489" data-id="1489"><br><br></li>
+<li>Configure the Build Solution Step<br><img style="width: 500px; height: 194.5300462249615px;" src="/archive/media/2016/24daysin-07-config-build-def.png?width=500&amp;height=194.5300462249615" alt="Config Build Solution" rel="1490" data-id="1490"><br><strong>Add these MSBuild Arguments:<br></strong>/p:OutDir=$(build.sourcesfolder) /p:DeployOnBuild=true /p:WebPublishMethod=Package /p:PackageAsSingleFile=true<br><br></li>
+<li>Configure the Copy Files Step<br><img style="width: 500px; height: 153.13225058004642px;" src="/archive/media/2016/24daysin-08-config-build-def.png?width=500&amp;height=153.13225058004642" alt="Config Copy Files" rel="1491" data-id="1491"><br><strong>Change the Contents to:<br></strong>**\*.zip<br><br></li>
+<li>Save Build<br><img style="width: 500px; height: 384.92063492063494px;" src="/archive/media/2016/24daysin-09-save-build-def.png?width=500&amp;height=384.92063492063494" alt="Save Build" rel="1492" data-id="1492"><br><br></li>
+<li>Click Queue new build... button after Save is complete<br><img style="width: 500px; height: 95.6043956043956px;" src="/archive/media/2016/24daysin-10-click-queue-build.png?width=500&amp;height=95.6043956043956" alt="Click Queue new build... button" rel="1493" data-id="1493"><br><br></li>
+<li>Queue build for master Build<br><img style="width: 500px; height: 435.8974358974359px;" src="/archive/media/2016/24daysin-11-queue-new-build.png?width=500&amp;height=435.8974358974359" alt="Queue build for master Build" rel="1494" data-id="1494"><br><br></li>
+</ol>
+<h3>5. Create a VSTS Release</h3>
+<p>Now that we have a build created we need to create a release.  Here are the steps I took to create a release:</p>
+<ol>
+<li>Click + New definition button to Add a release<br><img style="width: 500px; height: 141.50943396226415px;" src="/archive/media/2016/24daysin-12-add-new-release-def.png?width=500&amp;height=141.50943396226415" alt="Click + New definition" rel="1495" data-id="1495"><br><br></li>
+<li>Choose the Azure App Service Deployment release definition<br><img style="width: 449.62406015037595px; height: 500px;" src="/archive/media/2016/24daysin-13-azure-app-service-deployment-release-definition.png?width=449.62406015037595&amp;height=500" alt="Choose Azure App Service Deployment" rel="1496" data-id="1496"><br><br></li>
+<li>Choose the Build information (I used the Build info I created in Step 4 up above)<br><img style="width: 455.5722891566265px; height: 500px;" src="/archive/media/2016/24daysin-14-choose-build-to-use-for-release-def.png?width=455.5722891566265&amp;height=500" alt="Choose Build info for Release" rel="1497" data-id="1497"><br><br></li>
+<li>Choose your AzureRM Subscription from the list (if you do not have one setup, look at the pre-requisites for this task section of this <a href="//github.com/Microsoft/vsts-tasks/tree/master/Tasks/AzureRmWebAppDeployment" target="_blank" title="AzureRM Web App Deployment Task">readme file</a> for more information)<br><img style="width: 500px; height: 240.42553191489364px;" src="/archive/media/2016/24daysin-15-setup-azure-app-service-deploy.png?width=500&amp;height=240.42553191489364" alt="Setup Azure App Service Deploy" rel="1498" data-id="1498"><br><br></li>
+<li>Click the Authorize button to Authorize your AzureRM Subscription<br><img style="width: 500px; height: 378.47222222222223px;" src="/archive/media/2016/24daysin-16-choose-azurerm-sub.png?width=500&amp;height=378.47222222222223" alt="Choose AzureRM Sub and Authorize" rel="1499" data-id="1499"><br><br></li>
+<li>Select App Service Name<br><img style="width: 500px; height: 375.515818431912px;" src="/archive/media/2016/24daysin-17-choose-app-service-name.png?width=500&amp;height=375.515818431912" alt="Select App Service Name" rel="1500" data-id="1500"><br><br></li>
+<li>Click the Save button (you might want to change the environment name and release name before saving. notice I changed mine to DEV and 24days.in Release)<br><img style="width: 500px; height: 227.01754385964912px;" src="/archive/media/2016/24daysin-18-click-save-button-for-release.png?width=500&amp;height=227.01754385964912" alt="Click Save button" rel="1501" data-id="1501"><br><br></li>
+<li>Click OK to save (you can enter a comment so you know what you changed later but it is not required)<br><img style="width: 500px; height: 254.45544554455446px;" src="/archive/media/2016/24daysin-19-save-release.png?width=500&amp;height=254.45544554455446" alt="Click OK to save" rel="1502" data-id="1502"><br><br></li>
+<li>Click + Release dropdown then Click Create Release button<br><img style="width: 500px; height: 414.7286821705426px;" src="/archive/media/2016/24daysin-20-click-create-release.png?width=500&amp;height=414.7286821705426" alt="Create release" rel="1503" data-id="1503"><br><br></li>
+<li>Click Create button<br><img style="width: 500px; height: 371.49187592319055px;" src="/archive/media/2016/24daysin-20-create-release.png?width=500&amp;height=371.49187592319055" alt="Create release" rel="1504" data-id="1504"><br><br></li>
+</ol>
+<h2>Now what?</h2>
+<p>If you choose the <strong>Continuous integration</strong> and <strong>Continuous deployment</strong> check boxes when setting up the build and release definitions then you will now continuously build and release upon every checkin to the branch you associated with the build. However the current setup is only building the code and not moving any of your database changes or media files between environments. As you continue to improve upon your continuous deployment steps, here are a few other things to consider and also a good article on how to make sure you have your Umbraco website optimized to run efficiently in the cloud:</p>
+<ul>
+<li>Consider using Jeavon Leopold's plugins for Azure<br>
+<ul>
+<li><a href="//our.umbraco.org/projects/developer-tools/azure-cdn-toolkit-for-umbraco/" target="_blank" title="Azure CDN Toolkit for Umbraco">Azure CDN Toolkit for Umbraco</a></li>
+<li><a href="//our.umbraco.org/projects/developer-tools/azure-logger-for-umbraco/" target="_blank" title="Azure Logger for Umbraco">Azure Logger for Umbraco</a></li>
+</ul>
+</li>
+<li>Read <a href="//cultiv.nl/blog/making-sure-your-umbraco-site-performs-on-azure/" target="_blank" title="Making sure your Umbraco site performs on Azure">Sebastiaan Janssen's Article</a> on making sure your Umbraco website is configured to perform on Azure.</li>
+<li>Consider using <a href="//sendgrid.com" target="_blank" title="SendGrid">SendGrid</a> or another email service for your Azure Web App.  You can learn more about using <a href="//sendgrid.com/partners/azure/" target="_blank" title="SendGrid for Azure">SendGrid on Azure here</a>.</li>
+<li>Determine how you are going to move databases changes between environments.  There isn't a great solution for this today but here are a couple of options to consider
+<ul>
+<li><a href="//our.umbraco.org/projects/developer-tools/usync/" target="_blank" title="uSync">uSync</a> - This is a great plugin to keep many of the components of Umbraco in sync between environments.  The main piece missing is content but rumor has it they are working on a solution for that as well.</li>
+<li><a href="//umbraco.com/products-and-support/courier/" target="_blank" title="Umbraco Courier">Umbraco Courier</a> - This is the plugin they use in the Umbraco Cloud SaaS which synchronizes what uSync does but also content. I haven't used it but if you need content synchronized then you might want to try it out.</li>
+</ul>
+</li>
+<li>Consider adding unit tests to your Umbraco website which could also be included in your build process.  This will give you another level of confidence in the code being developed in your Umbraco website.  I would recommend checking out this <a href="http://blog.aabech.no/archive/the-basics-of-unit-testing-umbraco/" target="_blank" title="Basics of Unit Testing Umbraco">great article written by Lars-Erik</a> on how to do unit testing with Umbraco.</li>
+</ul>
+<h2>Stay In Touch</h2>
+<p>As you implement continuous deployment for your Umbraco websites please let me know other tips or tricks you find because I'm always interesting in learning: <a href="//twitter.com/paulmgower" target="_blank" title="Paul Gower's Twitter">@paulmgower</a></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/azure/" title="See all articles tagged with Azure">Azure</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/continuous-deployment/" title="See all articles tagged with Continuous deployment">Continuous deployment</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/devops/" title="See all articles tagged with Devops">Devops</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Paul Gower"><img src="//gravatar.com/avatar/1f2ba19cfc1db4586f4e3aa279adba79.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/1f2ba19cfc1db4586f4e3aa279adba79.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Paul Gower</h1>
+        <p>Paul is on Twitter as <a href="//twitter.com/paulmgower" title="Paul Gower on Twitter" rel="author">@paulmgower</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Christmas Bingo with Umbraco Heartcore</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Heartcore Christmas Bingo</h1>
+      <p class="byline"> by Poornima Nayar, <span class="pubdate">posted on <time datetime="2021-12-05">Dec 5, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span><strong>Bingo</strong> - This is probably a term very familiar to every Umbracian who has attended a CodeGarden in person! Anything can happen at the Bingo! From being electrocuted on the stage to getting a brick wall as a gift (yes, that was a gift!). I am not going to do that here because Umbraco Bingo is on a totally different level. But since its Christmas time, why not build a Christmas Bingo word generator using Umbraco Heartcore, Blazor and Azure Static Web Apps!</span></p>
+<h2 dir="auto">Blazor WebAssembly (WASM)</h2>
+<p class="intro">Blazor is a UI framework from Microsoft. With two hosting models - Blazor Server and Blazor WASM, Blazor lets you create rich, interactive UI experiences. Applications developed using Blazor has the feeling of an app, hence they are called Blazor Apps.</p>
+<p dir="auto">Blazor WASM is regarded as the primary hosting model for Blazor. With Blazor WASM, C# code runs on the browser, in the JavaScript security sandbox, using WebAssembly. This is done by using a .NET Intermediate Language interpreter implemented in WebAssembly. All the dependencies and the .NET runtime are downloaded to your client and runs from the client thereater. This means that Blazor WASM apps can be hosted on a static webserver or any service where .NET is not used to serve the app.</p>
+<h2 dir="auto">Umbraco Heartcore</h2>
+<p dir="auto">Umbraco Heartcore is the headless offering of our favourite CMS! Its termed "headless" in the sense that there is no presentation aspect to the CMS i.e. there is no templates or views which you would expect with an Umbraco install. Instead, the focus is on content storage and delivery. And developers can use a technology of their choice to come up with anything ranging from websites to IOT devices.</p>
+<p dir="auto">Umbraco Heartcore ships with a REST API for content management and delivery for all plans. It also has a GraphQL API for content delivery from the "Starter Plan" onwards. The GraphQL API can be used to read published as well as draft content.</p>
+<h2 dir="auto">Azure Static Web Apps (SWA)</h2>
+<p dir="auto">This is the final piece of the puzzle for the day. Azure Static Web Apps is an offering from Microsoft to host fullstack apps. Announced at Microsoft Build back in 2020, it went into general availability this May. It is a turnkey service for hosting apps with pre-built and pre-rendered static front-ends.</p>
+<p dir="auto">An SWA app has two parts - the static app and an optional API powered by Azure Functions. Azure SWA supports a wide range of front-end frameworks and libraries. Popular JavaScript libraries, static site generators, Blazor WASM - any framework which does not need server-side rendering are perfect candidates for Azure SWA. Any server-side functionality is and must be fulfilled only using the API part of the Azure SWA.</p>
+<p dir="auto">Azure SWA has some fantastic benefits as well which makes it a great service to host static front-ends. Here are some of the advantages</p>
+<ul>
+<li>Globally distributed static content, which means the content is always served from a point closer to the users</li>
+<li>Free SSL certificates</li>
+<li>Custom domain support</li>
+<li>Auto-generated staging environments to preview your changes</li>
+<li>Integrated API support provided by Azure functions</li>
+<li>First-class GitHub and Azure DevOps integration where repository changes triggers builds</li>
+</ul>
+<p dir="auto">Azure SWA has two hosting plans - Free and Standard plans. The Free plan can be used for personal and hobby projects where as production apps must be hosted using the Standard plan. The most important difference between the two plans is around the API support (see API support) and the number of staging environments available (10 v/s 3 for the Free plan). With the Free plan, you have the Managed APIs where the API is the part of the same SWA service. But with the Standard plan, you have the choice of either the Managed API or you can bring in your own Azure Function as the API. You can read more about the differences <a rel="noopener" href="https://docs.microsoft.com/en-us/azure/static-web-apps/plans?WT.mc_id=DT-MVP-5004155" target="_blank" data-anchor="?WT.mc_id=DT-MVP-5004155">here</a>. In my demo, I am using a Free plan which means I only have the Managed API support.</p>
+<h3 dir="auto">API Support in Azure SWA</h3>
+<p dir="auto">With Azure SWA it is not mandatory to have an API. It is totally optional. There are two API configurations available with Azure SWA - Managed functions and the Bring Your Own functions. With Managed functions, the API forms a part of the SWA service and is completely managed and deployed by the SWA. With Bring Your Own functions you can specify an existing Azure Function app as the API of your SWA. Managing and deploying the function app can then be handled separately. In both cases, the function is available at the route<span> </span><em>/api</em>. This is a fixed route that is made available to the web app securely with a reverse proxy thereby getting rid of any CORS issues. This route is fixed and cannot be changed. Both Managed and Bring Your Own functions have access to application settings which can be used to hold any configuration like database connection strings. You can read more about the API Support for SWA <a rel="noopener" href="https://docs.microsoft.com/en-us/azure/static-web-apps/apis?WT.mc_id=DT-MVP-5004155" target="_blank" data-anchor="?WT.mc_id=DT-MVP-5004155">here</a>.</p>
+<h3 dir="auto"><a id="user-content-integrated-developer-workflow" href="https://github.com/poornimanayar/Articles/blob/master/24DaysInUmbraco/2021-Blazor-HC-SWA.md#integrated-developer-workflow" class="anchor" aria-hidden="true"></a>Integrated Developer Workflow</h3>
+<p dir="auto">Azure SWA provides first-class integration with GitHub and Azure DevOps. It is pretty opinionated but there is a workflow that is very close to a developer's daily workflow. The idea is that developers focus on the development of the app while the DevOps part is handled by the platform for you.</p>
+<p> </p>
+<p dir="auto"><img src="/archive/media/2021/azure-static-web-apps-overview.png" alt="" data-udi="umb://media/854a3a6578084a6bafa963e1263e863f"></p>
+<p dir="auto"> </p>
+<p dir="auto">When an Azure SWA is created, the resource interacts with your repo in GitHub or Azure DevOps and monitors a branch that you specify. Every time a change is pushed or a pull request is merged into the branch that is watched by the Azure resource, a build is automatically run and the app and the API (for managed functions) are deployed. When a new pull request is created against the branch that is being monitored, it build the branch into a staging environment. Upon merging the pull request it deploys to the production environment and also cleans up the staging environment.Multiple staging environments can co-exist for the same app. The Free plan comes with a maximum of 3 staging environments where as with the Standard plan, you can have up to 10 staging environments at the same time, all in addition to the production environment. The workflow for PRs and staging environments is only supported by GitHub Actions and not available in Azure DevOps.</p>
+<h3 dir="auto"><a id="user-content-creating-azure-swa-from-github-starter-templates" href="https://github.com/poornimanayar/Articles/blob/master/24DaysInUmbraco/2021-Blazor-HC-SWA.md#creating-azure-swa-from-github-starter-templates" class="anchor" aria-hidden="true"></a>Creating Azure SWA from GitHub Starter Templates</h3>
+<p dir="auto">To help us get started with Aure SWA there are<span> </span><a href="https://github.com/staticwebdev">GitHub Starter Templates</a><span> </span>available. Starter Templates are available for a lot of front end frameworks. I am using the<span> </span><a href="https://github.com/staticwebdev/blazor-starter">Blazor Starter Template</a><span> </span>to create a GitHub repo of my own.</p>
+<p dir="auto"><img src="/archive/media/2021/azure-swa-github-starter-template.png" alt="" data-udi="umb://media/573e0ec27b0a41508490de99aa45d081"></p>
+<p dir="auto">The solution contains few projects so I have removed what I don't need and ended up with the structure as below</p>
+<ul>
+<li><strong><em>Client</em> </strong>- This is the Blazor WASM app</li>
+<li><em><strong>API</strong> </em>- The C# Azure Functions API</li>
+<li><em><strong>SharedLibrary</strong> </em>- A class library project</li>
+</ul>
+<p dir="auto"><img src="/archive/media/2021/solution-structure.png" alt="" data-udi="umb://media/4b49bc2f196a4237b349fbeb970dacb7"></p>
+<p dir="auto">Let us now deploy this into an Azure SWA resource.</p>
+<p dir="auto">Search for "Static Web App" in Azure Portal and hit Create</p>
+<p dir="auto"><img src="/archive/media/2021/create-swa-step-1.png" alt="" data-udi="umb://media/0c79e0915e5f4fd9b5711ea7b2048e97"></p>
+<p dir="auto">Select/Create a resource group, a name and the plan. In the<span> </span><em>Deployment Details</em><span> </span>section I have chosen GitHub as my Source. The portal will now ask to Sign in with GitHub so that I can choose my repo. I choose my repo and the branch. This branch will be monitored by the resource for any changes or open and merged pull requests.</p>
+<p dir="auto"><img src="/archive/media/2021/deployment-details.png" alt="" data-udi="umb://media/df2f12886924458784161d22fd879314"></p>
+<p dir="auto">Next in the Build Details section I get asked for the Build Preset. The option selected here controls the App Location, API Location and the Output location. The App Location and the API location must be the name of the folders in which your app and the api resides. The Output location is the folder containing the build output which is<span> </span><em>wwwroot</em><span> </span>for Blazor. I am leaving all of the options at the defaults as it matches my directory names. This also creates a GitHub actions workflow file in the repo which ties up the resource to the repo and manages deployments.</p>
+<p dir="auto">Hit review and create and that creates my Azure SWA resource and deploys the code to the resource as well. I can monitor the progress of the deploy in my GitHub repo in the Actions tab.</p>
+<p dir="auto"><img src="/archive/media/2021/deploy-progress-monitor.png" alt="" data-udi="umb://media/5995035442004767a04a533f1caf27df"></p>
+<p dir="auto">Once finished, I can go to my resource and it should give me a url. I can also see the source (repo and branch) for my SWA resource in the portal.</p>
+<p dir="auto"><img src="/archive/media/2021/swa_portal.png" alt="" data-udi="umb://media/3777f4d7911642f38a9b6b7fad41738b"></p>
+<p dir="auto">The app is a basic Blazor app that communicates to the Managed function to get some weather data. I did not have to change anything in my code in terms of CORS headers. That is all managed by the platform for you.</p>
+<div class="umb-loader" style="height: 10px; margin: 10px 0px;"></div>
+<h2 dir="auto">The Christmas Bingo Word Generator</h2>
+<p dir="auto">Let us now start looking at some code to implement a Christmas Bingo using Umbraco Heartcore and Azure Static Web Apps. I am using the same GitHub Starter Template for my demo.</p>
+<p dir="auto">The GraphQL endpoint for Umbraco Heartcore is available at<span> </span><a rel="nofollow" href="https://graphql.umbraco.io/">https://graphql.api.io</a>. The endpoint also needs a header called<span> </span><em>umb-project-alias</em><span> </span>to read the content. The value of this header is the project alias of my Heartcore project which can be obtained from the Cloud Portal. Blazor WASM runs completely on the client after the initial download of the dependencies, so secrets like the project alias must never be stored as a part of the project. It is recommended that a API call handles all of this for you. So in my demo, instead of the app reaching out directly to the Heartcore GraphQL endpoint, the Managed function will do that for me. The Managed function has access to app settings locally and on Azure. I can use the .NET Secret Manager or the<span> </span><em>local.settings.json</em><span> </span>file for local development but when it gets to the Azure Resource I can store the project alias in the Application Settings thereby hiding the secret away securely.</p>
+<h3 dir="auto"><a id="user-content-strawberry-shake---strongly-typed-graphql-client" href="https://github.com/poornimanayar/Articles/blob/master/24DaysInUmbraco/2021-Blazor-HC-SWA.md#strawberry-shake---strongly-typed-graphql-client" class="anchor" aria-hidden="true"></a>Strawberry Shake - Strongly Typed GraphQL client</h3>
+<p dir="auto">To communicate with the GraphQL endpoint, I am using a client called Strawberry Shake. The tooling from Strawberry Shake helps you generate a strongly typed GraphQL client for your GraphQL endpoint. I have already blogged about this in the past which you can read<span> </span><a rel="noopener" href="https://poornimanayar.co.uk/blog/using-strawberry-shake-to-communicate-with-umbraco-heartcore-graphql-endpoint/" target="_blank">here</a>. In addition, the tooling also comes with a CLI tool that can help you<span> </span><a rel="nofollow" href="https://chillicream.com/docs/strawberryshake/tooling">achieve the same</a>.</p>
+<p dir="auto">Once the set up is done I can write my graphql queries. And for every GraphQL query that I have, the tooling generates an operation service an<span> </span><span class="code">ExecuteAsync()</span><span> </span>method which reaches out to my endpoint, fetches the data and deserializes it for me. I am using the tooling at a very basic level here.</p>
+<h3 dir="auto">Umbraco Heartcore Set Up</h3>
+<p dir="auto">My Umbraco set up consists of a single document type called Christmas Bingo. All the words are entered into a content node of this document type.</p>
+<p dir="auto"><img src="/archive/media/2021/christmas-bingo-doctype.png" alt="" data-udi="umb://media/2c89a48329ee464da224b3da3a7d167d"></p>
+<p dir="auto"><img src="/archive/media/2021/christmas-bingo-words.png" alt="" data-udi="umb://media/10555816842d428abdda64a9b6e7e0a9"></p>
+<p dir="auto"> </p>
+<p dir="auto">Now I can start thinking about my GraphQL query to retrieve the words.</p>
+<pre><code class="language-markup">query GetChristmasWords($url:String!){
+  christmasBingo(url:$url){
+    bingoTerms
+  }
+}
+</code></pre>
+<p dir="auto">To explain my query, I start off with the<span> </span><span class="code">query </span>keyword and give my operation an arbitrary name<span> </span><span class="code">GetChristmasWords</span>. I now query my Christmas Bingo node using the<span> </span><span class="code">christmasBingo </span>field passing it the url of my node. This query field corresponds to my document type of the same alias.<span> </span><span class="code">$url</span><span> </span>denotes a GraphQL variable. The<span> </span><span class="code">String!</span><span> </span>denotes that it is a non-nullable<span> </span><span class="code">String </span>value. I now assign this variable to the argument<span> </span><span class="code">url </span>for the<span> </span><span class="code">christmasBingo </span>field. I can then start querying for the property in my document type which is<span> </span><span class="code">bingoTerms </span>which returns a list of<span> </span><span class="code">String</span>. The information about this query field and what it returns can be found in the auto-generated docs which is handy. You can also read about GraphQL Schema Generation in Umbraco Heartcore<span> </span><a rel="nofollow" href="https://our.umbraco.com/documentation/Umbraco-Heartcore/API-Documentation/GraphQL/Schema-Generation">here</a>.</p>
+<p dir="auto"><img src="/archive/media/2021/graphql-docs.png" alt="" data-udi="umb://media/ef5a4d41cd2847e7877ddee17ccdf0f4"></p>
+<p dir="auto">I have Strawberry Shake tooling set up in the class library project in my solution. The tooling generates a strongly typed C# client called<span> </span><span class="code">HeartcoreClient </span>based on the set up I have specified and my GraphQL query generates an operation service of the same name<span> </span><span class="code">GetChristmasWords</span>.</p>
+<h3 dir="auto">The API</h3>
+<p dir="auto">The API consists of an Azure Function. As I said before my API will be making the calls to the Heartcore GraphQL endpoint. To begin with I need the GraphQL client registered with my DI container. You can read more about Dependency injection in Azure Functions<span> </span><a rel="nofollow" href="https://docs.microsoft.com/en-us/azure/azure-functions/functions-dotnet-dependency-injection?WT.mc_id=DT-MVP-5004155">here</a>. Once the correct Nuget packages are in place I can create a<span> </span>Startup.cs<span> </span>class for my API as shown below.</p>
+<pre><code class="language-markup">using Microsoft.Azure.Functions.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+
+[assembly: FunctionsStartup(typeof(BlazorApp.Api.Startup))]
+
+namespace BlazorApp.Api
+{
+    public class Startup : FunctionsStartup
+    {
+       
+        public override void Configure(IFunctionsHostBuilder builder)
+        {
+            //get the endpoint value from local.settings.json
+            var endpoint = Environment.GetEnvironmentVariable("HeartcoreEndpoint");
+
+            //get the project alias from local.settings.json
+            var projectAlias = Environment.GetEnvironmentVariable("HeartcoreProjectAlias");
+
+            builder.Services
+            .AddHeartcoreClient() //register the GraphQL client with my DI container
+           .ConfigureHttpClient(client =&gt; { client.BaseAddress = new Uri(endpoint); client.DefaultRequestHeaders.TryAddWithoutValidation("umb-project-alias", projectAlias); });
+
+
+        }
+    }
+}
+</code></pre>
+<p dir="auto">I am storing the GraphQL endpoint details and my project alias as app settings in Azure. While developing locally I can store them in the<span> </span><em>local.settings.json</em><span> </span>file. In both local and Azure environment, I can read the app settings from environment variables. The<span> </span><em>local.settings.json</em><span> </span>file is used for local development only and not tracked by GitHub so it does not get source controlled. I can add these as Application Settings in the portal.</p>
+<p dir="auto">And below is the code for my Azure Function.</p>
+<pre><code class="language-markup">using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+using HeartcoreClient;
+using System.Linq;
+
+
+namespace BlazorApp.Api
+{
+    public class HeartcoreFunction
+    {
+        private readonly IHeartcoreClient _heartcoreClient;
+
+        public HeartcoreFunction(IHeartcoreClient heartcoreClient)
+        {
+            _heartcoreClient = heartcoreClient;
+        }
+
+        [FunctionName("HeartcoreFunction")]
+        public async Task&lt;IActionResult&gt; Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req, ILogger log)
+        {
+            log.LogInformation("C# HTTP trigger function processed a request.");
+
+            var randomWord = "Boo,No cake for you!!";
+
+            Random r = new();
+
+            //use the operation service passing in the url of the node
+            var response = await _heartcoreClient.GetChristmasWords.ExecuteAsync("/christmas-bingo");
+
+            //get the deserialized data
+            var words = response.Data.ChristmasBingo.BingoTerms;
+
+            if (words.Any())           
+            {              
+                //choose a random word
+                randomWord = words.Any() ? words[r.Next(0, words.Count)] : "Boo,No cake for you!!";               
+            }
+
+            return new OkObjectResult(randomWord);
+        }
+    }
+}
+</code></pre>
+<p dir="auto"><span>That is my Managed Function set up. The api can be invoked at </span><span class="code">/api/HeartcoreFunction</span><span>.</span></p>
+<h2 dir="auto">The App</h2>
+<p dir="auto">Let us wire it all up now. In my Blazor WASM app, in the<span> </span><em>Index.razor</em><span> </span>file I replace the existing code with the below. I have used a theme to give my app a Christmassy-feel, hence the extra markup!</p>
+<pre><code class="language-markup">@page "/"
+@inject HttpClient Http
+
+&lt;div id="wish" class="about-box" style="padding-bottom: 0;"&gt;
+    &lt;div class="about-a1"&gt;
+        &lt;div class="container"&gt;
+
+            &lt;div class="row"&gt;
+                &lt;div class="col-lg-12 col-md-12 col-sm-12"&gt;
+                    &lt;div class="row align-items-center about-main-info"&gt;
+
+                        &lt;div class="col-lg-6 col-md-6 col-sm-12 text_align_center"&gt;
+                            &lt;div class="full"&gt;
+                                &lt;img class="img-responsive" src="images/w1.png" alt="#" /&gt;
+                            &lt;/div&gt;
+                        &lt;/div&gt;
+
+                        &lt;div class="col-lg-6 col-md-6 col-sm-12"&gt;
+                            &lt;h2&gt;&lt;img style="width: 60px;" src="images/head_s.png" alt="Picture of Santa Claus" /&gt; Merry Christmas&lt;/h2&gt;
+
+                            @if (!string.IsNullOrWhiteSpace(randomWord))
+                            {
+                                &lt;p&gt;@randomWord&lt;/p&gt;
+                            }
+                            &lt;button @onclick="GetRandomWord" class="btn btn-common" type="submit"&gt;Generate Christmas Bingo!&lt;/button&gt;
+                        &lt;/div&gt;
+
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+
+&lt;/div&gt;
+
+@code {
+    private string randomWord = "Let's Christmas Bingo";
+
+    private async Task GetRandomWord()
+    {
+        try
+        {
+            //the api is available at the route /api/HeartcoreFunction
+            var response = await Http.PostAsync("/api/HeartcoreFunction", null);
+
+            randomWord = await response.Content.ReadAsStringAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+    }
+}</code></pre>
+<p dir="auto">I can now run my solution with multiple start-up projects and should be able to verify my setup locally. To deploy this all I need to do is commit the code into a branch, raise a pull request against the<span> </span>main<span> </span>and merge it in. The GitHub Actions workflow kicks in and will take care of the deployment for me.</p>
+<p dir="auto">I have deployed my app to<span> </span><a rel="nofollow" href="https://witty-mushroom-05cec4703.azurestaticapps.net/">https://witty-mushroom-05cec4703.azurestaticapps.net/</a><span> </span>, so go ahead and have a look at the app.</p>
+<p dir="auto">There you go! That is my Christmas Bingo word generator using a Blazor WASM app deployed on Azure Static Web Apps.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/app/" title="See all articles tagged with App">App</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/azure/" title="See all articles tagged with Azure">Azure</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/azure-static-web-apps/" title="See all articles tagged with Azure Static Web Apps">Azure Static Web Apps</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/blazor/" title="See all articles tagged with Blazor">Blazor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/continuous-deployment/" title="See all articles tagged with Continuous deployment">Continuous deployment</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/git/" title="See all articles tagged with Git">Git</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/graphql/" title="See all articles tagged with GraphQL">GraphQL</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/headless/" title="See all articles tagged with Headless">Headless</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Poornima Nayar"><img src="//gravatar.com/avatar/dd8b418389638867552cb41af1b9a727.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/dd8b418389638867552cb41af1b9a727.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Poornima Nayar</h1>
+        <p>Poornima is on Twitter as <a href="//twitter.com/PoornimaNayar" title="Poornima Nayar on Twitter" rel="author">@PoornimaNayar</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

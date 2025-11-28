@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Increasing Umbraco Performance with webpack</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Increasing Umbraco Performance with webpack</h1>
+      <p class="byline"> by Dennis Zille, <span class="pubdate">posted on <time datetime="2017-12-20">Dec 20, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">While web project standards tend to grow more and more complex, one of the most important challenges for developers – and requests by clients for that matter – is project performance. The site, no matter how complex the data it handles for each visit, has to run smoothly like a sprinter without losing any of its stamina with months and years going by.</p>
+<p class="intro"> </p>
+<p>A basic strategy to achieve this is by bundling and minifying your .js and .css files. At byte5, we have used all sorts of tools for this task over the past years: Microsoft's <a href="https://aspnetoptimization.codeplex.com/">Web Optimization Framework</a> for instance or, more recently, task runner tools such as <a href="https://gulpjs.com/">gulp</a> and <a href="https://gruntjs.com/">grunt</a>.</p>
+<p> </p>
+<p>Over the last months, however, webpack has become our new favourite „weapon of choice“. The tool is a module bundler, not a task runner like gulp or grunt. Due to webpack's versatility, however, you can often go without the combination of various tools and use webpack for any minifying task you want to carry out. It doesn't only bundle Javascript and CSS but also solves a number of other challenges: compiling SCSS to CSS, compiling Typescript, optimising images, and a lot more.</p>
+<p> </p>
+<p>What some might call a disadvantage with webpack is the fact that it's initially not that easy to use, since the configuration can get a little tricky at first. In this article, I'll show you a step-by-step approach to configure the tool for its most important tasks – a basis that you also might like to use for future Umbraco projects.</p>
+<p> </p>
+<h2>Step 1: Installation and configuration</h2>
+<p> </p>
+<p>In order to get webpack running in your project, you first need to install Node.js. On the official <a href="https://nodejs.org/en/">Node.js</a> website you can easily download the latest version. Another useful tool for this step is <a href="https://marketplace.visualstudio.com/items?itemName=MadsKristensen.WebPackTaskRunner">webpack Task Runner</a> for Visual Studio. The extension tool allows you to use webpack directly in your Visual Studio project.</p>
+<p> </p>
+<p>Next thing we need is a package.json file in our Umbraco project's root directory, additionally to the packages.config file that we've already got. The file is required by Node.js package manager (npm) that we will shortly use to install webpack in our project.</p>
+<p> </p>
+<p>You can use Visual Studio or the command line to create the file by executing the following command:</p>
+<p> </p>
+<pre><code class="language-powershell">npm init -f</code></pre>
+<p> </p>
+<p>This creates a standard package.json file for our project which should look something like this:</p>
+<p> </p>
+<pre><code class="language-json">{
+  "name": "UmbracoWebpackExample",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
+</code></pre>
+<p> </p>
+<p>Now we can easily install webpack with the following command:</p>
+<pre><code class="language-powershell">npm install --save-dev webpack</code></pre>
+<p> </p>
+<p>If the installation was successful, you should see the folder node_modules in your root directory, which contains all the packages added by npm.</p>
+<p> </p>
+<h2>Step 2: The First Bundle</h2>
+<p>The next file we have to create in the root directory is webpack.config.js. If you've already added <a href="https://marketplace.visualstudio.com/items?itemName=MadsKristensen.WebPackTaskRunner">webpack Task Runner</a> to your Visual Studio, you can easily use the pre-installed template for webpack.config files.</p>
+<p> </p>
+<p>If you want to use webpack for its core task – bundling .js files –, a simple config file could look something like this:</p>
+<pre><code class="language-javascript">const path = require('path');
+
+module.exports = {
+    entry: {
+        app: [
+            './scripts/script1.js',
+            './scripts/script2.js'
+        ]
+    },
+    output: {
+        filename: '[name].js',
+        path: path.resolve(__dirname, 'dist')
+    }
+};</code></pre>
+<p> </p>
+<p><strong>entry: </strong>This defines the entries for all bundles. In our example, there is only one bundle called app, which consists of two files (script1.js and script2.js). You can, however, define as many bundles and files as you need.</p>
+<p> </p>
+<p><strong>output: </strong>This defines where the files that webpack creates are supposed to be put. In our example, we want to use the “dist” folder using the name scheme [name].js. In this case, name stands for the name of the bundle (app).</p>
+<p> </p>
+<p>Now we can execute webpack (easily by using the webpack Task Runner in Visual Studio) and get the file app.js in the “dist” folder that was automatically created by the tool.</p>
+<p><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/700b6566381b49568e9dd916311f4bfc"></p>
+<p> </p>
+<h2>Step 3: Minifying</h2>
+<p>If you are planning to use the bundle you just created live in production, it makes sense to minify the script after you've bundled it. In order to take care of that, webpack needs the plugin <a href="https://github.com/webpack-contrib/uglifyjs-webpack-plugin">UglifyJs</a>, which can be installed via npm:</p>
+<pre><code class="language-powershell">npm install --save-dev uglifyjs-webpack-plugin</code></pre>
+<p>Now we've got to add UglifyJs to the plugins in our webpack.config and our bundle is getting minified:</p>
+<pre><code class="language-javascript">const path = require('path');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+
+module.exports = {
+    entry: {
+        app: [
+            './scripts/script1.js',
+            './scripts/script2.js'
+        ]
+    },
+    output: {
+        filename: '[name].js',
+        path: path.resolve(__dirname, 'dist')
+    },
+    plugins: [
+        new UglifyJsPlugin()
+    ]
+};</code></pre>
+<p> </p>
+<p>You can easily configure the plugin for various applications. For instance, you can include or exclude certain files or configure compatibility with everyone's favourite browser: IE8, to which the standard UglifyJs minified files are not compatible. Yeah, right? I've got no explanation for that either!</p>
+<p> </p>
+<h2>Step 4: Dev and Prod Build</h2>
+<p>At this point our bundle is always automatically minified, which sounds quite nice but will prove to be unnecessary and irritating while working on the project. We would need a way to make our minifier recognise whether we are in development or production mode, so that the bundle only gets minified for live configuration.</p>
+<p> </p>
+<p>A solution to this problem is to define the mode by an environment variable when executing webpack. Then you can access the variable in webpack.config and depending on the value execute a number of configurations.</p>
+<p> </p>
+<pre><code class="language-javascript">const path = require('path');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+
+const isDev = process.env.NODE_ENV === 'development';
+
+module.exports = {
+    entry: {
+        app: [
+            './scripts/script1.js',
+            './scripts/script2.js'
+        ]
+    },
+    output: {
+        filename: '[name].js',
+        path: path.resolve(__dirname, 'dist')
+    },
+    plugins: [
+        // Plugins which should always be executed
+    ].concat(isDev ?
+        [
+            // Only exectued in dev environment
+        ] :
+        [
+            // Only exectued in prod environment
+            new UglifyJsPlugin()
+        ])
+};</code></pre>
+<p> </p>
+<p>In line 4, we check whether the active environment variable has the value “development”, so that only certain plugins will be executed. In our case, the plugin UglifyJs will only be executed in live mode. For the developer mode, no plugins have been activated.</p>
+<p> </p>
+<p>If you're using the plugin webpack Task Runner for Visual Studio, you've got the advantage that both modes are already pre-configured. In this manner, switching between modes is executed by one mouse click.</p>
+<h2>Step 5: ES6 and Babel</h2>
+<p>Javascript has developed a lot over the past years and new versions such as ES6 offer lots of new functions that improve development tasks with Js. The only problem behind ES6 is, however, that not all browsers support the new features. That’s why there are tools like <a href="https://github.com/babel/babel">Babel</a>, which compiles modern Javascript with ES6 functionalities into ES5 compatible Javascript. Babel makes sure everything runs on older browser versions as well as brand-new ones.</p>
+<p> </p>
+<p><a href="https://github.com/babel/babel-loader">babel-loader</a> for webpack allows us to easily integrate this step right when creating our bundle. But first, we have to install babel-loader via npm.</p>
+<pre><code class="language-powershell">npm install babel-loader babel-core babel-preset-env --save-dev</code></pre>
+<p>Then we just have to adapt our webpack.config. As a result, ES6 Javascript is compiled into fully ES5 compatible Javascript.</p>
+<p> </p>
+<pre><code class="language-javascript">const path = require('path');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+
+const isDev = process.env.NODE_ENV === 'development';
+
+module.exports = {
+    entry: {
+        app: [
+            './scripts/script1.js',
+            './scripts/script2.js'
+        ]
+    },
+    output: {
+        filename: '[name].js',
+        path: path.resolve(__dirname, 'dist')
+    },
+    module: {
+        rules: [
+            {
+                test: /\.js$/,
+                exclude: [/node_modules/],
+                use: {
+                    loader: 'babel-loader',
+                    options: {
+                        presets: ['babel-preset-env']
+                    }
+                }
+            }
+        ]
+    },
+    plugins: [
+        // Plugins which should always be executed
+    ].concat(isDev ?
+        [
+            // Only exectued in dev environment
+        ] :
+        [
+            // Only exectued in prod environment
+            new UglifyJsPlugin()
+        ])
+};</code></pre>
+<p> </p>
+<p>A new addition here is the module object where we can define rules that influence what kind of files the various loaders apply to. In our case, we want to make sure babel-loader is applied on all Javascript files that are located outside of the node_modules folder.</p>
+<h2>Step 6: Compiling SCSS/SASS</h2>
+<p>Another way in which webpack makes our everyday work life easier is when it comes to compiling SASS to normal CSS. For webpack to fulfil this task, we need to install a few extensions via npm.</p>
+<pre><code class="language-powershell">npm install sass-loader node-sass extract-text-webpack-plugin css-loader --save-dev</code></pre>
+<p>When all necessary plugins have been installed, we only adapt our webpack.config.</p>
+<pre><code class="language-javascript">const path = require('path');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+
+const ExtractTextPlugin = require("extract-text-webpack-plugin");
+const extractSass = new ExtractTextPlugin({
+    filename: "styles.css"
+});
+
+const isDev = process.env.NODE_ENV === 'development';
+
+module.exports = {
+    entry: {
+        app: [
+            './scripts/script1.js',
+            './scripts/script2.js',
+            './Scss/main.scss'
+        ]
+    },
+    output: {
+        filename: '[name].js',
+        path: path.resolve(__dirname, 'dist')
+    },
+    module: {
+        rules: [
+            {
+                test: /\.js$/,
+                exclude: [/node_modules/],
+                use: {
+                    loader: 'babel-loader',
+                    options: {
+                        presets: ['babel-preset-env']
+                    }
+                }
+            },
+            {
+                test: /\.scss$/,
+                use: extractSass.extract({
+                    use: [{
+                        loader: 'css-loader'
+                    }, {
+                        loader: 'sass-loader'
+                    }]
+                })
+            }
+        ]
+    },
+    plugins: [
+        // Plugins which should always be executed
+        extractSass
+    ].concat(isDev ?
+        [
+            // Only exectued in dev environment
+        ] :
+        [
+            // Only exectued in prod environment
+            new UglifyJsPlugin()
+        ])
+};</code></pre>
+<p> </p>
+<p>First, we configure the <a href="https://github.com/webpack-contrib/extract-text-webpack-plugin">ExtractTextPlugin</a>. The plugin will later write the compiled SCSS into a new CSS file (styles.css). Additionally, a new rule for the module object was added, which controls that all .scss files will be compiled by the sass-loader and css-loader. Then they will be added to the new file by the ExtractTextPlugin. As a final step, we add the ExtractTextPlugin to the plugins object.</p>
+<p> </p>
+<p>If everything is configured correctly, the new file should be located in the “dist” folder right after you've executed webpack once again.</p>
+<p> </p>
+<h2>Step 7: CI/CD Pipeline</h2>
+<p>And another final tip: If you've configured a CI/CD pipeline for your Umbraco project, it's certainly a great idea to run webpack and create your bundles automatically when building your project. An easier way to do this is expanding the .csproj of your Umbraco project.</p>
+<pre><code class="language-markup">&lt;Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003"&gt;
+  &lt;Target Name="BeforeBuild" Condition="'$(Configuration)' != 'debug'"&gt;
+    &lt;Exec Command="npm install" /&gt;
+    &lt;Exec Command="node node_modules/webpack/bin/webpack.js --env.prod" /&gt;
+  &lt;/Target&gt;
+&lt;/Project&gt;</code></pre>
+<p>Therefore, you just have to add the target element before the closing &lt;/Project&gt; tag. In this way, we add our tasks to the BeforeBuild event of the project. Now every time a project is created the two Exec commands initiate the installation of the npm packages as well as the execution of webpack.</p>
+<p> </p>
+<p>Since you probably don't want webpack to be added to every build – even locally in our dev environment – you add an additional condition to the target element. In this way, the commands will only be triggered, if the build configuration is not set to “Debug”. In order to make this work for automatic builds on your build server, you go back to step one and install Node on the server.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Dennis Zille"><img src="//gravatar.com/avatar/3127932edc67b50a198d9224ff365e2e.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/3127932edc67b50a198d9224ff365e2e.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Dennis Zille</h1>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

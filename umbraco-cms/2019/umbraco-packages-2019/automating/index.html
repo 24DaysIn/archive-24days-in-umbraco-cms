@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Automating Packages With Azure Pipelines</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Automating</h1>
+      <p class="byline"> by Callum Whyte, <span class="pubdate">posted on <time datetime="2019-12-19">Dec 19, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">As we learnt in “<a data-udi="umb://document/869d22bce79f4573b78c03c65e702bfe" href="/umbraco-cms/2019/umbraco-packages-2019/packaging/" title="Building NuGet &amp; Umbraco Packages">Packaging for NuGet &amp; Our Umbraco</a>”, utilising the new .NET SDK project format in Visual Studio 2017 allows us to perform traditionally complicated tasks with ease, such as the generation of NuGet packages and Umbraco zip archives, and can massively help streamline the process for building packages.</p>
+<p class="intro">The nirvana of building and releasing packages could be considered having a fully automated process end-to-end. I'll be using <a rel="noopener" href="https://azure.microsoft.com/en-gb/services/devops/pipelines/" target="_blank">Azure Pipelines</a> in my examples as it seems to be the tool of choice nowadays – with a free private projects and 1800 build minutes per month it’s a winner for open-source projects. In reality <a rel="noopener" href="https://azure.microsoft.com/en-gb/services/devops/pipelines/" target="_blank">Azure Pipelines</a>, <a rel="noopener" href="https://github.com/features/actions" target="_blank">Github Actions</a>, and <a rel="noopener" href="https://www.appveyor.com/" target="_blank">AppVeyor</a> all work in similar ways so this applies broadly – the tool you choose is a matter of preference.</p>
+<h2>Build steps</h2>
+<p>Regardless of the tool you are using the process for compiling and packaging is more-or-less the same. When working locally, Visual Studio runs through the following steps during each build:</p>
+<ol>
+<li>Restore any dependencies (e.g. NuGet)</li>
+<li>Build the solution – <span class="code">dotnet build</span></li>
+<li>Package up the result of the build – <span class="code">dotnet pack</span>
+<ul>
+<li>Generate NuGet package</li>
+<li>Generate Umbraco zip archive</li>
+</ul>
+</li>
+<li>Copy the generated packages to the desired destination (e.g. the <span class="code">bin</span> folder)</li>
+</ol>
+<p>Thankfully all of these steps come pre-configured as part of most CI tools so very little work is needed to successfully build a package.</p>
+<h2>Setup the pipeline</h2>
+<p>If you haven't already, create a new project in the Azure DevOps portal for your package.</p>
+<p>Navigate to the "Pipelines" section and select "New pipeline".</p>
+<p>You will be asked to provide Azure DevOps with access to the version control repository (usually Git) where your package's code lives – it supports most popular cloud providers by default, such as Github and Bitbucket.</p>
+<p><img style="width: 500px; height: 356.41025641025635px;" src="/archive/media/2019/azure-devops-repo.png?width=500&amp;height=356.41025641025635" alt="" data-udi="umb://media/db8a640a474e431790da6b55f7f11403"></p>
+<p>Next you will be prompted to choose a "template" for your build. Alternatively you could choose to create an "Empty job" and create each step yourself. If you already have an existing pipeline setup you wish to reuse there is also the option to provide a YAML file.</p>
+<p>The "ASP.NET" pipeline template includes all the steps needed to compile a .NET Framework application, like an Umbraco package.</p>
+<p><img style="width: 500px; height: 356.41025641025635px;" src="/archive/media/2019/azure-devops-template.png?width=500&amp;height=356.41025641025635" alt="" data-udi="umb://media/2921d941e48d43f3a166fe3d37ddcb8d"></p>
+<p>Each build runs on a different agent / server and there can be slight differences in the configuration or default versions of software installed. As a result, it is essential to specify the version of certain software should be used, such as NuGet.</p>
+<p>Beyond this the steps follow the lines of what we would expect – restoring NuGet packages, building the solution, and "publishing" (copying) the build output to a place it can be easily reached later.</p>
+<p><img style="width: 500px; height: 356.41025641025635px;" src="/archive/media/2019/azure-devops-pipeline.png?width=500&amp;height=356.41025641025635" alt="" data-udi="umb://media/6fe6d48b59f2453f84decf516b6b779c"></p>
+<p>If you would rather configure your pipelines in YAML, the same above pipeline would look something like this:</p>
+<pre><code class="language-yml">pool:
+  name: Our.Umbraco.Package
+  demands:
+  - msbuild
+  - visualstudio
+  - vstest
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- task: NuGetToolInstaller@0
+  displayName: 'Use NuGet 4.4.1'
+  inputs:
+    versionSpec: 4.4.1
+
+- task: NuGetCommand@2
+  displayName: 'NuGet restore'
+  inputs:
+    restoreSolution: '$(Parameters.solution)'
+
+- task: VSBuild@1
+  displayName: 'Build solution'
+  inputs:
+    solution: '$(Parameters.solution)'
+    msbuildArgs: '/p:PackageOutputPath=$(Build.ArtifactStagingDirectory)'
+    platform: '$(BuildPlatform)'
+    configuration: '$(BuildConfiguration)'
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact'
+  inputs:
+    PathtoPublish: '$(build.artifactstagingdirectory)'
+    ArtifactName: '$(Parameters.ArtifactName)'
+  condition: succeededOrFailed()</code></pre>
+<h2>Versioning</h2>
+<p>When releasing libraries / software for public consumption having a strict versioning policy is crucial. Versioning is also an important part of any build process.</p>
+<p>By default Visual Studio assumes you are building v1.0.0 of your library, but we need to be able to pass a version from our build pipeline to ensure the right packages get created.</p>
+<p>Adding a conditional rule to the <span class="code">Version</span> element of a <span class="code">*.csproj</span> file makes it possible to use a variable value when passed in to the build pipeline or to fallback to a value if the variable is unset, such as when building the project locally.</p>
+<pre><code class="language-markup">﻿&lt;Project Sdk="Microsoft.NET.Sdk"&gt;
+	&lt;PropertyGroup&gt;
+		&lt;TargetFramework&gt;net472&lt;/TargetFramework&gt;
+		&lt;Version Condition="'$(BUILD_BUILDNUMBER)' == ''"&gt;1.0.0.0&lt;/Version&gt;
+		&lt;Version Condition="'$(BUILD_BUILDNUMBER)' != ''"&gt;$(BUILD_BUILDNUMBER)&lt;/Version&gt;
+	&lt;/PropertyGroup&gt;
+&lt;/Project&gt;</code></pre>
+<p>The <span class="code">$(BUILD_BUILDNUMBER)</span> variable seen here is native to Azure Pipelines and can be defined in the pipeline options. The current date followed by the build count is the default build number, and while this is great for internal builds this wouldn't be sufficient to expose as a public version number.</p>
+<p>Here I have introduced a custom variable <span class="code">$(Package.Version)</span> to define the desired Semver version number for the package – this has the build count added to it to determine the current build number.</p>
+<p><img style="width: 500px; height: 356.41025641025635px;" src="/archive/media/2019/azure-devops-build-number.png?width=500&amp;height=356.41025641025635" alt="" data-udi="umb://media/8e61fe11de234478b84a4aac0cb06664"></p>
+<p>In order to apply the custom version number to the resulting packages and also the DLLs compiled within some additional parameters must be passed to the MSBuild <span class="code">build</span> task. <span class="code">/p:PackageVersion=$(Package.Version)</span> sets the package version number, while <span class="code">/p:Version=$(Build.BuildNumber)</span> sets the "file version" of the DLLs. The "Build Solution" task in Azure DevOps allows these custom parameters to be passed in.</p>
+<p>If you prefer to configure your pipeline via YAML, the build number property can be set like so:</p>
+<p><span class="code">name: $(Package.Version)$(Rev:.r)</span></p>
+<h2>Triggers</h2>
+<p>In Azure Pipelines the out-the-box behaviour is that builds must be manually triggered, however there are options to trigger when certain events occur; perhaps when a new commit is pushed to a specific branch or at regular intervals.</p>
+<p><img style="width: 500px; height: 356.41025641025635px;" src="/archive/media/2019/azure-devops-triggers.png?width=500&amp;height=356.41025641025635" alt="" data-udi="umb://media/eec1202d2be24641bf02d5fc19b5d56e"></p>
+<p>Navigate to the "Triggers" tab of your pipeline. First, open the "Continuous Integration" settings and ensure "Enable continuous integration" is selected. It should now be possible to define branches you wish for your build to be triggered by. Branches to trigger or ignore should be searchable by name. It is also possible to find branches via pattern using a Git path. I trigger all of my builds from the pushing of a Git tag using the following expression: <span class="code">refs/tags/release-*</span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Callum Whyte"><img src="//gravatar.com/avatar/05c1efd28f84ee7ebe5da188e220a47f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/05c1efd28f84ee7ebe5da188e220a47f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Callum Whyte</h1>
+        <p>Callum is on Twitter as <a href="//twitter.com/callumbwhyte" title="Callum Whyte on Twitter" rel="author">@callumbwhyte</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

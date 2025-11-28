@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>1-1 Multilingual websites with Vorto and Nested Content</title>
+<meta name="description" content="A short article on how you can make 1-1 multilingual websites with the help of Vorto and Nested Content">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">1-1 Multilingual websites with Vorto and Nested Content</h1>
+      <p class="byline"> by Jeroen Breuer, <span class="pubdate">posted on <time datetime="2015-12-10">Dec 10, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Multilingual websites in Umbraco are usually done by making a copy of the content and having 2 separate trees. However it's also possible to do 1-1 multilingual websites. In the article I will explain how this can be done with the help of Vorto and Nested Content.</p>
+<h3>Vorto</h3>
+<p class="intro"><a href="https://our.umbraco.org/projects/backoffice-extensions/vorto" target="_blank">Vorto</a> is a property editor wrapper and converts it into a multilingual property by allowing you to enter multiple values per language enabled on the site. With this package alone you're already able to create great 1-1 translations. </p>
+<h3>Nested Content</h3>
+<p>With <a href="https://our.umbraco.org/projects/backoffice-extensions/nested-content/" target="_blank">Nested Content</a> you can make repeatable fieldsets. These are based on document types and are even returned as an IPublishedContent in the code. However we don't need the repeatable part, but Nested Content also supports a single fieldset.</p>
+<h2>Nested Content document type</h2>
+<p>For this example I've downloaded the <a href="https://our.umbraco.org/projects/starter-kits/txt/" target="_blank">Txt Starter Kit</a> and will make the News Item multilingual. The date and image don't have to change per language so we'll only make the subheader and text multilingual. For Nested Content I've created a document type called NewsDetached with the subheader and text property. I always put document types used for Nested Content in a separate folder called Detached because internal Nested Content works with a class called DetachedPublishedContent.</p>
+<figure>
+  <a href="/archive/media/2015/NewsDetachedDocType.png">
+    <img src="/archive/media/2015/NewsDetachedDocType.png" width="1280" alt="Newsdetacheddoctype">
+  </a>
+</figure>
+<h2>Nested Content data type</h2>
+<p>The Nested Content data type uses the NewsDetached document type. If we wouldn't change anything else this would be repeatable, but Nested Content has a nice little secret. If you set the min and max to 1 it will not be repeatable. So you'll just have a fieldset.</p>
+<figure>
+  <a href="/archive/media/2015/NewsDetachedNestedContent.png">
+    <img src="/archive/media/2015/NewsDetachedNestedContent.png" width="1280" alt="Newsdetachednestedcontent">
+  </a>
+</figure>
+<h2>Vorto data type</h2>
+<p>In the Vorto data type we need to select which datatype we want make multilingual. In this case the data type is actually the Nested Content NewsDetached single fieldset which has the subheader and text properties. So both those properties will become multilingual.</p>
+<figure>
+  <a href="/archive/media/2015/NewsDetachedVorto.png">
+    <img src="/archive/media/2015/NewsDetachedVorto.png" width="1280" alt="Newsdetachedvorto">
+  </a>
+</figure>
+<h2>News Item document type</h2>
+<p>On the News Item document type I've removed the subheader and text properties and replaced them with the Vorto NewsDetached data type.</p>
+<figure>
+  <a href="/archive/media/2015/NewsItemDocType.png">
+    <img src="/archive/media/2015/NewsItemDocType.png" width="1280" alt="Newsitemdoctype">
+  </a>
+</figure>
+<h2>News Item Content</h2>
+<p>A content page with the News Item document type now has the subheader and text property multilingual. You only have 1 language tab for both properties so they look grouped.</p>
+<figure>
+  <a href="/archive/media/2015/NewsItemContent.png">
+    <img src="/archive/media/2015/NewsItemContent.png" width="1280" alt="Newsitemcontent">
+  </a>
+</figure>
+<h2>Rendering the multilingual properties</h2>
+<p>Now that we have a multilingual fieldset we need to render the data. On the News Item document type we have a property called "news" which is the Vorto NewsDetached data type. Vorto has an extension method called GetVortoValue which will check the current culture and returns the property of that culture. Nested Content usually returns an IEnumerable&lt;IPublishedContent&gt;, but because we're using a single fieldset it will return a IPublishedContent. So we can do the following:</p>
+<pre class="language-markup"><code>@using Our.Umbraco.Vorto.Extensions
+@inherits UmbracoTemplatePage
+@{
+    var newsDetached = Model.Content.GetVortoValue&lt;IPublishedContent&gt;("news");
+}
+&lt;p&gt;@(newsDetached.GetPropertyValue&lt;string&gt;("subheader"))&lt;/p&gt;
+&lt;p&gt;@(newsDetached.GetPropertyValue&lt;IHtmlString&gt;("bodyText"))&lt;/p&gt;</code></pre>
+<p>So the newsDetached variable now is a translated IPublishedContent which will have all the properties in the correct language. So you only need to use GetVortoValue once.</p>
+<h2>Using with the Models Builder</h2>
+<p>The <a href="https://our.umbraco.org/projects/developer-tools/zbumodelsbuilder/" target="_blank">Models Builder</a> can generate strongly typed models based on the document type. Because NewsDetached is also a document type we also have a model for that. So it's possible to make the translated IPublishedContent strongly typed. We create a partial class in which we implement the property.</p>
+<pre class="language-markup"><code>public partial class UmbNewsItem
+{
+    [ImplementPropertyType("news")]
+    public Newsdetached News
+    {
+        get
+        {
+            var news = this.GetVortoValue&lt;IPublishedContent&gt;("news");
+
+            return news == null ? null : new Newsdetached(news);
+        }
+    }
+}</code></pre>
+<p>Than in the code we can do this:</p>
+<pre class="language-markup"><code>@using Umbraco.Extensions.Models
+@inherits UmbracoTemplatePage
+
+@{
+    var newsItem = Model.Content as UmbNewsItem;
+    var newsDetached = newsItem.News;
+}
+&lt;p&gt;@newsDetached.Subheader&lt;/p&gt;
+
+&lt;p&gt;@newsDetached.BodyText&lt;/p&gt;</code></pre>
+<p>So the NewsDetached strongly typed model based on the document type now has the translated properties. This way of working is easy for developers and also gives a good experience for content editors.</p>
+<h2>Do's and don'ts</h2>
+<p>Using a Nested Content inside Vorto works pretty well, but there are some issues. You'll probably get into trouble with mandatory fields. Those will not work. It's better to not make any fields mandatory and just put checks in the code so you won't get any errors. Other than that everything should work. <a href="https://twitter.com/j_breuer/status/649243368715849728" target="_blank">I've even put the Grid inside Nested Content which I put inside Vorto and it just works.</a></p>
+<p>You can put Nested Content inside Vorto, but it doesn't work the other way around. If you've created a Nested Content and put a Vorto property on that you'll get errors.</p>
+<h2>Multilingual URL</h2>
+<p>I've explained how you can translate properties with Vorto and Nested Content, but the URL will stay the same. You could use a Vorto textstring and put the URL in there. Than with a UrlProvider you can change the URL. I've blogged about that <a href="/umbraco-cms/2014/urlprovider-and-contentfinder/" target="_blank">last year</a>. <a href="https://our.umbraco.org/projects/backoffice-extensions/vorto/bugs-feedback-suggestions/71457-creating-page-urls-with-vorto" target="_blank">This topic</a> also has some ideas about it.</p>
+<h2>Example project</h2>
+<p>I've created a working example which can be downloaded here: <a href="https://github.com/jbreuer/1-1-multilingual-example" target="_blank">https://github.com/jbreuer/1-1-multilingual-example</a></p>
+<p>It has a Visual Studio project which you can build. After that just start the website and it should work. It comes with a SQL CE database.</p>
+<p>Backoffice credentials:</p>
+<p>Username: admin<br>Password: testtest</p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/translation/" title="See all articles tagged with Translation">Translation</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jeroen Breuer"><img src="//gravatar.com/avatar/093beed29b447cc589b5c1abeb4ff309.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/093beed29b447cc589b5c1abeb4ff309.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jeroen Breuer</h1>
+        <p>Jeroen is on Twitter as <a href="//twitter.com/j_breuer" title="Jeroen Breuer on Twitter" rel="author">@j_breuer</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li class="selected"><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

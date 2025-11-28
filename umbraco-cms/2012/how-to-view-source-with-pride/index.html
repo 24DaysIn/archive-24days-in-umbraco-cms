@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>How to view source in Umbraco with pride</title>
+<meta name="description" content="A few tips for coercing Umbraco to output nicely indented HTML so that you can gain the respect and admiration of all your source-viewing nerd friends.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">How to view source with pride</h1>
+      <p class="byline"> by Dan Brendstrup, <span class="pubdate">posted on <time datetime="2012-12-04">Dec 4, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><em>Or:</em> <strong>How I learned to accept Master Pages, but leave them as quickly as possible</strong></p>
+<p class="intro">Content management systems are good for many things, but outputting nicely indented markup is rarely one of them.</p>
+<p>You know the feeling, don't you? You spend all your time crafting templates full of lean, semantic, <a href="http://futurefriend.ly/">future-friendly</a> markup, only to view source on the final site and discover HTML that appears to have been thrown together by chimps with shovels.</p>
+<p>This happens even with Umbraco, which, unless you do something wrong, gives you complete control over your markup. Alas, this simply appears to be the nature of template-driven content management.</p>
+<p>But as <a href="http://vimeo.com/34017777">proud craftsmen of the web</a> we shouldn't settle for second-rate output from a first-class tool, so let's set out to right this wrong.</p>
+<h2 id="empty-lines-we-dont-need-no-stinkin-empty-lines">Empty lines? We don't need no stinkin' empty lines</h2>
+<p>Do a quick view-source on your latest Umbraco project. I bet you'll find that the page starts with a blank line before the doctype, right? And ends with another blank line at the end of the document. Important? Hardly (though a dangerous step towards <a href="http://en.wikipedia.org/wiki/Quirks_mode#Triggering_different_rendering_modes">triggering quirksmode in IE</a>). Pretty? Not really.</p>
+<p>It's easy to fix, though. A linebreak after the opening or before the closing <code>&lt;asp:Content&gt;</code> tag will output a blank line in your final markup, so you simply need to concatenate the lines in your Master Page file like this:</p>
+<pre class="language-markup"><code>&lt;%@ Master Language="C#" MasterPageFile="~/umbraco/masterpages/default.master" AutoEventWireup="true" %&gt;
+&lt;asp:Content ContentPlaceHolderID="ContentPlaceHolderDefault" runat="server"&gt;&lt;!DOCTYPE html&gt;
+[insert greatness here]
+&lt;/html&gt;&lt;/asp:Content&gt;
+</code></pre>
+      <p class="snippet-caption">How to avoid blank lines in Master Pages</p>
+<p>Yes, you're sacrificing proper indentation of your Master Page file, but you're gaining proper formatting of your site's HTML and the respect of all your source-viewing nerd friends. Worth it, right?</p>
+<h2 id="flush-left-or-flushed-down-the-drain">Flush left or flushed down the drain</h2>
+<p>So let's get out of this Master Page and into some macros, shall we? Easy:</p>
+<pre class="language-markup"><code>&lt;html&gt;
+  &lt;head&gt;
+    &lt;umbraco:Macro Alias="Head" runat="server"/&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;div class="wrapper"&gt;
+      &lt;umbraco:Macro Alias="Header" runat="server"/&gt;
+      &lt;div id="content" role="main"&gt;
+        &lt;asp:ContentPlaceHolder Id="mainContent" runat="server" /&gt;
+    &lt;/div&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+      <p class="snippet-caption">A simple template with macro tags</p>
+<p>Yeah, you wish it were that easy, don't you. View source again, and this is what you get:</p>
+<pre class="language-markup"><code>&lt;html&gt;
+  &lt;head&gt;
+    &lt;title&gt;A content page | Best Website Ever&lt;/title&gt;
+&lt;meta name="description" content="" /&gt;
+&lt;meta name="keywords" content="" /&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;div class="wrapper"&gt;
+      &lt;header role="banner"&gt;
+&lt;a href="/" title="Home" accesskey="1"&gt;Best Website Ever&lt;/a&gt;
+&lt;/header&gt;
+      &lt;div id="content" role="main"&gt;
+        &lt;h1&gt;Here is my content&lt;/h1&gt;
+&lt;p&gt;But oh wait, why is it suddenly indented all wrong?&lt;/p&gt;
+&lt;p&gt;Argh, I fail at teh internets!&lt;/p&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+      <p class="snippet-caption">A simple template... with borked indenting</p>
+<p>Oh the pain. The first line of your macro is indented perfectly, but your Master Page will be damned if it cares about the rest of your content.</p>
+<p>The solution is to keep all tags in your Master Page flush left. Since this is at odds with truly perfect indenting of your markup, you'll do best to have as little markup in your Master Page as possible and keep the rest in your macros:</p>
+<pre class="language-markup"><code>&lt;html&gt;
+&lt;head&gt;
+&lt;umbraco:Macro Alias="Head" runat="server"/&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class="wrapper"&gt;
+&lt;umbraco:Macro Alias="Header" runat="server"/&gt;
+&lt;div id="content" role="main"&gt;
+&lt;asp:ContentPlaceHolder Id="mainContent" runat="server" /&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+      <p class="snippet-caption">Keep all tags flush left in your Master Pages</p>
+<p>Remember that all nested ContentPlaceHolder templates must also concatenate lines to avoid blank lines in the output:</p>
+<pre class="language-markup"><code>&lt;asp:Content ContentPlaceHolderId="mainContent" runat="server"&gt;&lt;umbraco:Macro Alias="SubNavigation" runat="server"/&gt;
+&lt;umbraco:Macro Alias="Article" runat="server"/&gt;&lt;/asp:Content&gt;
+</code></pre>
+      <p class="snippet-caption">Remember to avoid blank lines in nested Master Pages as well</p>
+<h2 id="indent-yes.-how-can-you-even-ask">Indent? Yes. How can you even ask?</h2>
+<p>After having whipped our Master Page into shape, let's not let XSLT ruin the party. Thankfully, XSLT was built to create nicely formatted SGML output, as long as we remember to ask politely. You've probably seen this line at the top of all XSLT files that you create via Umbraco's backend:</p>
+<pre class="language-markup"><code>&lt;xsl:output method="xml" omit-xml-declaration="yes"/&gt;
+</code></pre>
+      <p class="snippet-caption">An XSLT output tag without explicit indenting instructions</p>
+<p>This instructs the XSLT processor to <a href="http://www.w3.org/TR/xslt#output">output well-formed XML</a>, but it is missing a crucial attribute. Change it to this:</p>
+<pre class="language-markup"><code>&lt;xsl:output method="xml" omit-xml-declaration="yes" indent="yes"/&gt;
+</code></pre>
+      <p class="snippet-caption">A simple attribute gets you nicely indented XSLT output</p>
+<p>...and you've told the XSLT processor that it may add additional whitespace to your output, which in most cases will mean that the processor will do what it can to nicely indent your output.</p>
+<p>If we apply these tricks to our page from before, we'll end up with something more pleasing to the eye:</p>
+<pre class="language-markup"><code>&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;A content page | Best Website Ever&lt;/title&gt;
+  &lt;meta name="description" content="" /&gt;
+  &lt;meta name="keywords" content="" /&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div class="wrapper"&gt;
+  &lt;header role="banner"&gt;
+    &lt;a href="/" title="Home" accesskey="1"&gt;Best Website Ever&lt;/a&gt;
+  &lt;/header&gt;
+  &lt;div id="content" role="main"&gt;
+    &lt;h1&gt;Here is my content&lt;/h1&gt;
+    &lt;p&gt;And look, my markup is now nicely indented.&lt;/p&gt;
+    &lt;p&gt;Gee whiz, I might just win at teh internets after all!&lt;/p&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre>
+      <p class="snippet-caption">Behold the final, nicely indented HTML output</p>
+<p>So go forth and indent, and take even more pride in the fruits of your labor.</p>
+<p>And if you have any tricks of your own for fine-tuning markup, we'd love to hear them in the comments!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/masterpages/" title="See all articles tagged with Masterpages">Masterpages</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/webforms/" title="See all articles tagged with Webforms">Webforms</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/xslt/" title="See all articles tagged with XSLT">XSLT</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Dan Okkels Brendstrup"><img src="//gravatar.com/avatar/3dfe7ad03f4da227d9da36f820207220.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/3dfe7ad03f4da227d9da36f820207220.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Dan Okkels Brendstrup</h1>
+        <p>Dan is on Twitter as <a href="//twitter.com/bewildergeist" title="Dan Okkels Brendstrup on Twitter" rel="author">@bewildergeist</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li class="selected"><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

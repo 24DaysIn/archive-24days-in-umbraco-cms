@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco edge case stories</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco edge case stories</h1>
+      <p class="byline"> by Jeroen Breuer, <span class="pubdate">posted on <time datetime="2016-12-16">Dec 16, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Last year I wrote an article about how you can do <a href="http://24days.in/umbraco-cms/2015/multilingual-vorto-nested-content/" target="_blank">1-1 multilingual websites in Umbraco</a>. The example project had Vorto and Nested content, but you couldn't change the URL per language. A few months later I added this feature and discussed it during a <a href="https://www.youtube.com/watch?v=DWjbJiIUQdk" target="_blank">uHangout video</a>. It was also mentioned during this years <a href="https://vimeo.com/183622186" target="_blank">CodeGarden presentation</a> I did with Dave Woestenborghs. For this article the <a href="https://github.com/jbreuer/1-1-multilingual-example/commits/master" target="_blank">example project</a> has been upgraded to the latest Umbraco and it got some new features so I can explain some of the edge case stories. The stories are splitted into 4 parts: the story, the topic, the solution and the code.</p>
+<h2 id="preview">Preview all content</h2>
+<p class="intro"><strong>The story</strong></p>
+<p>When you press the preview button in Umbraco that page will go into preview. Also all subnodes of that node will go into preview. This means not the entire website is in preview. This could cause problems if you want to preview content which is not a subnode. For example if you have some nodes that have a UrlProvider and ContentFinder which are not hierarchical. So we needed a way preview all content.</p>
+<p><strong>The topic</strong></p>
+<p>I already had some ideas, but it's always good to discuss them so I started a topic called <a href="https://our.umbraco.org/forum/extending-umbraco-and-using-the-api/78849-preview-all-content" target="_blank">Preview all content</a>.<br>Some time before that topic I also started a topic <a href="https://our.umbraco.org/forum/developers/api-questions/74724-check-if-node-has-been-saved-and-published-in-property-editor" target="_blank">to move the available URLs to another tab instead of the last one</a>.</p>
+<p><strong>The solution</strong></p>
+<p>After looking at the Umbraco source code I discovered there is an API where you can pass an Id and the website will go into preview with all subnodes. So I fetched the highest node in the tree and always use that when going into preview. To make it a bit more user friendly this is done each time the save button is pressed. Yes this means each time someone saves the website will be in preview, but this is exactly what our content editors wanted.</p>
+<p>A special property editor will show the URL. Even if a node is unpublished. So for the 1-1 multilingual pages you can choose in what language you want to see the preview. Cache also needed to be cleared for the ContentFinders. Since the content editors do their Umbraco work on a separate server only the cache on that server will be cleared for the preview. This preview approach works very well for bigger projects.</p>
+<p><strong>The code</strong></p>
+<p>These commits in the example project show how you can preview all content:</p>
+<ul>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/f82f86953cc9ce29b334bd6fb4ab09f8d721660b" target="_blank">When the save button is pressed the entire website will go into preview. So it becomes easy to see all changes.</a></li>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/733c68ce9dbd1cedaf858d897d7f0baaac8e5ca6" target="_blank">If the save button is pressed it should clear the cache on that serve so the preview is up to date.</a></li>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/5f6a98146ee5d97d298f0d286ce1ec21b0fd4592" target="_blank">Add event to hide the preview button because saving will make the website go into preview.</a></li>
+</ul>
+<p><a href="/archive/media/2016/preview-1.png" target="_blank" title="preview-1.png"><img style="width: 500px; height: 249.21875px;" src="/archive/media/2016/preview-1.png?width=500&amp;height=249.21875" alt="" rel="1402" data-id="1402"></a></p>
+<p><a href="/archive/media/2016/preview-2.png" target="_blank" title="preview-2.png"><img style="width: 500px; height: 249.21875px;" src="/archive/media/2016/preview-2.png?width=500&amp;height=249.21875" alt="" rel="1403" data-id="1403"></a></p>
+<p><a href="/archive/media/2016/preview-3.png" target="_blank" title="preview-3.png"><img style="width: 500px; height: 249.21875px;" src="/archive/media/2016/preview-3.png?width=500&amp;height=249.21875" alt="" rel="1404" data-id="1404"></a></p>
+<h2 id="search">Search Vorto content </h2>
+<p><strong>The story</strong></p>
+<p>There are plenty of examples to search with Examine, but none of those examples showed how to index content that is inside Vorto. When you search for content in a specific language you don't want to get results from another language.</p>
+<p><strong>The topic</strong></p>
+<p>Someone else started a topic to <a href="https://our.umbraco.org/projects/backoffice-extensions/vorto/bugs-feedback-suggestions/80285-searching-with-vorto" target="_blank">search with Vorto</a>.</p>
+<p><strong>The solution</strong></p>
+<p>With the GatheringNodeData event it's possible to add extra fields to indexes. So per language an extra field was added with the content of that language. The content is converted to an IPublishedContent because than it's much easier to get content per language from Vorto. With the help of some generic extract classes it's possible to iterate over all the node properties and decide per property what needs to be indexed. It's explained in more detail in the topic solution. All content per language is in a single field in Examine.</p>
+<p>The search page needs a few tweaks. Fetch the current language of the page and use that to only search the language specific field in Examine. </p>
+<p><strong>The code</strong></p>
+<p><span>These commits in the example project show how you can search with Vorto:</span></p>
+<ul>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/cd5834f04ad70297434adbb3fa01ee9aa566dc19" target="_blank"><span>Started on event we need for indexing content.</span></a></li>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/ad624ef261fe8b029bfe9e0aec34be3488e329d6" target="_blank"><span>Added PropertyExtractResolver.</span></a></li>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/39814e9309588ed2e170d1c612777128b6d4d96a" target="_blank"><span>Added all extract classes.</span></a></li>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/7407c953e8181ebda6f7ea5c6343c24cb73e6be6" target="_blank"><span>Index all content per language.</span></a></li>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/8de4b3dcf653cc9203db8549899d6b83e91ec2c8" target="_blank"><span>- Added empty search page. - Regenerated models.</span></a></li>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/5373f1a8d96fecb3a4fff9d007e816a3fac40683" target="_blank"><span>Added search logic. You can now search per language.</span></a></li>
+</ul>
+<p><a data-id="1408" href="/archive/media/2016/search-vorto-1.png" target="_blank" title="search-vorto-1.png"><span><img style="width: 500px; height: 249.21875px;" src="/archive/media/2016/search-vorto-1.png?width=500&amp;height=249.21875" alt="" rel="1408" data-id="1408"></span></a></p>
+<p><a data-id="1409" href="/archive/media/2016/search-vorto-2.png" target="_blank" title="search-vorto-2.png"><img style="width: 500px; height: 249.21875px;" src="/archive/media/2016/search-vorto-2.png?width=500&amp;height=249.21875" alt="" rel="1409" data-id="1409"></a></p>
+<p> </p>
+<h2 id="convert">Convert IContent to IPublishedContent</h2>
+<p><strong>The story</strong></p>
+<p>Sometimes having the content in Umbraco is not enough. A third party tool might need the content to translate it. The XML in the umbraco.config file contains ids and JSON which you don't want to export. Umbraco has a translation section, but it's heavily outdated so we need something custom. The code from the <a href="#search">search Vorto content story</a> indexes the same content which also needs to be exported. So the same technique with the generic extract classes can be used for this too. The extract classes need an IPublishedContent, but the content which needs to be exported could also be unpublished. </p>
+<p><strong>The topic</strong></p>
+<p>I started a topic if to ask if someone has some good ideas on how to get an <span>IPublishedContent with unpublished data. So <a href="https://our.umbraco.org/forum/extending-umbraco-and-using-the-api/77358-convert-icontent-to-ipublishedcontent" target="_blank">convert IContent to IPublishedContent</a>.</span></p>
+<p><strong>The solution</strong></p>
+<p>At the topic I got some good suggestions. One of them was from Stephan where he mentioned that the <a href="https://github.com/umbraco/Umbraco-CMS/tree/dev-v7-contentcache" target="_blank">NuCache branch</a> has code to do this. After making some changes to the code it was turned into an extension method. After extending the extract classes the content could be converted to XML with everything for a specific language that needs to be translated. With some extra AngularJS code this was turned into a menu action.</p>
+<p>There are a lot more use cases where it's easy to have an IPublishedContent of an unpublished item. For example if you want to have a data source for <a href="https://our.umbraco.org/projects/backoffice-extensions/nupickers/" target="_blank">nuPickers</a>. You could create a dropdown which needs to show category nodes for a news article. The website might be unpublished so getting all this data for the dropdown could be hard with the IContent API. If you use IPublishedContent for this it's much easier. For example because you can use <a href="https://our.umbraco.org/documentation/extending/property-editors/value-converters" target="_blank">Property Value Converters</a>.</p>
+<p><strong>The code</strong></p>
+<p>This gist shows the <a href="https://gist.github.com/jbreuer/dde3605035179c34b7287850c45cb8c9" target="_blank">extension method</a>.</p>
+<p><span>This commit in the example project shows how can get translatable XML:</span></p>
+<ul>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/258a9dad468a3da8d19306d3ea52b56baec0bbcb" target="_blank"><span>Extra menu item which can export the selected language to a clear XML document.</span></a></li>
+</ul>
+<p><a data-id="1410" href="/archive/media/2016/export-1.png" target="_blank" title="export-1.png"><span><img style="width: 500px; height: 249.21875px;" src="/archive/media/2016/export-1.png?width=500&amp;height=249.21875" alt="" rel="1410" data-id="1410"></span></a></p>
+<p> </p>
+<p><a data-id="1411" href="/archive/media/2016/export-2.png" target="_blank" title="export-2.png"><img style="width: 500px; height: 249.21875px;" src="/archive/media/2016/export-2.png?width=500&amp;height=249.21875" alt="" rel="1411" data-id="1411"></a></p>
+<h2 id="examine">Examine indexes in Azure Blob Storage</h2>
+<p><strong>The story</strong></p>
+<p>On a load balance environment it's possible that a new server is added which doesn't have the Examine index files yet. This means that Examine needs to reindex which can take a long time. So it would be better if the indexes are stored in a central place which can be shared between servers.</p>
+<p><strong>The topic</strong></p>
+<p>There is a long topic with issues of Examine on a load balance environment. Shannon has some <a href="https://our.umbraco.org/forum/extending-umbraco-and-using-the-api/74731-examine-corruption-issues#comment-244293" target="_blank">possible solutions</a>. Based on one of the solutions I started another topic called <a href="https://our.umbraco.org/forum/extending-umbraco-and-using-the-api/78818-using-azuredirectory-with-examine" target="_blank">Using AzureDirectory with Examine</a>.</p>
+<p><strong>The solution</strong></p>
+<p>Since Examine 0.1.69? it's possible to implement IDirectoryFactory?. With the help of AzureDirectory you can store the Examine index files in Azure Blob Storage. This is working, but currently it's having some performance problems. The indexes are stored in blob storage, but they also have a local copy. Somehow when searching the local copy isn't always used and it could make a request to the blob storage. This hasn't been fixed yet and I hope Shannon Deminick? will be able to have a look at it soon.</p>
+<p>Since there isn't a proper solution yet I started looking at alternatives. <a href="https://twitter.com/j_breuer/status/804337033938423808" target="_blank">Azure Search</a> seems be a nice replacement.</p>
+<p><strong>The code</strong></p>
+<p>There is a separate branch of the <a href="https://github.com/jbreuer/1-1-multilingual-example/tree/AzureDirectory" target="_blank">1-1 multilingual example</a> that runs on AzureDirectory.</p>
+<p>These commit in the example project show how? you can have examine indexes in Azure Blob Storage: </p>
+<ul>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/8e0bd96412aee03dad781b4599eb9dd8f7e30dac" target="_blank">Add all clases required for AzureDirectory.</a></li>
+<li><a href="https://github.com/jbreuer/1-1-multilingual-example/commit/3644880629cc8b873fcdbfa3a98b0a3612ab4904" target="_blank">Examine indexes are now stored with AzureDirectory.</a></li>
+</ul>
+<p><a data-id="1421" href="/archive/media/2016/blob-1.png" target="_blank" title="blob-1.png"><img style="width: 500px; height: 149.9143346659052px;" src="/archive/media/2016/blob-1.png?width=500&amp;height=149.9143346659052" alt="" rel="1421" data-id="1421"></a></p>
+<h2 id="conclusion">Conclusion</h2>
+<p>Umbraco has always been very extensible. The above stories are proof of that. There are probably much more edge case stories out there. But no matter how crazy, it's always a good idea to start a topic. All the topics from the above stories have helped me in one way or another. Without the help of the community it wouldn't have been possible. So start a topic on <a href="https://our.umbraco.org/" target="_blank">our</a> and ask for help. A tweet with #umbraco and a link to the topic might also help. And once you've found the solution update the topic so it can help others.</p>
+<p>Sometimes a topic with same question already exists. So do some research before starting a new topic. The <a href="https://github.com/umbraco/Umbraco-CMS" target="_blank">Umbraco source code</a> is also a great place for research. For example for the <a href="#preview">preview all content</a> story I discoverd an API that I needed by looking at the source code. And the source code of open source packages can also be very informative.</p>
+<h2 id="wrap">Wrap up</h2>
+<p>All the above stories are actually from a single customer. A large team at <a href="https://umbraco.com/certified-partners/browse-solution-providers/colours/" target="_blank">Colours</a> has been working on the <a href="https://www.newheroes.com/" target="_blank">New Heroes</a> project for a long time now. Even though it's been a very big project I thought it would be nice to backport some of these features to the <a href="https://our.umbraco.org/projects/developer-tools/1-1-multilingual-example/" target="_blank">1-1 multilingual example</a> project so others can learn from it.</p>
+<p>This is the 5th year that I'm writing an article for 24 days in Umbraco. It's interessting to see how Umbraco has changed:</p>
+<ul>
+<li><a href="http://24days.in/umbraco-cms/2012/damp-gallery/" target="_blank">2012 DAMP Gallery</a></li>
+<li><a href="http://24days.in/umbraco-cms/2013/hybrid-framework/" target="_blank">2013 Hybrid Framework</a></li>
+<li><a href="http://24days.in/umbraco-cms/2014/urlprovider-and-contentfinder/" target="_blank">2014 Modify Umbraco URLs with the UrlProvider and ContentFinder</a></li>
+<li><a href="http://24days.in/umbraco-cms/2015/multilingual-vorto-nested-content/" target="_blank">2015 1-1 Multilingual websites with Vorto and Nested Content</a></li>
+</ul>
+<p>A lot of things weren't possible yet in Umbraco when I wrote the first article in 2012. It's good to see Umbraco has improved so much over the last couple of years and with v8 it will keep improving. Hopefully next year I'll be able to write a v8 article about some nice new features.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/community/" title="See all articles tagged with Community">Community</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/github/" title="See all articles tagged with GitHub">GitHub</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/source/" title="See all articles tagged with Source">Source</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jeroen Breuer"><img src="//gravatar.com/avatar/093beed29b447cc589b5c1abeb4ff309.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/093beed29b447cc589b5c1abeb4ff309.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jeroen Breuer</h1>
+        <p>Jeroen is on Twitter as <a href="//twitter.com/j_breuer" title="Jeroen Breuer on Twitter" rel="author">@j_breuer</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

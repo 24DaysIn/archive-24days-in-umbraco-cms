@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Micro-Architectures: Umbraco on Docker - Part 1</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Micro-Architectures Part1</h1>
+      <p class="byline"> by Carl Sargunar, <span class="pubdate">posted on <time datetime="2021-12-21">Dec 21, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">This is the first part of my two-part talk - running Umbraco as part of a Micro-architecture application. I'll be discussing the pros and cons, and going through an example you can run yourself which is pre-configured to have the website, a database as well as an API all working together on the same application infrastructure. </p>
+<p class="intro"> </p>
+<p>
+        <iframe width="712" height="400" src="https://www.youtube.com/embed/OdZHdtDPIlg?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>
+      </p>
+<p><a href="https://www.youtube.com/watch?v=OdZHdtDPIlg">Micro-Architectures : Umbraco on Docker - YouTube</a></p>
+<p>All the code for this demo is available at : <a href="https://github.com/CarlSargunar/Umbraco-Docker">https://github.com/CarlSargunar/Umbraco-Docker</a>, and I would welcome any feedback. Any problems running this code please reach out to me on social media.<br><br>Thank you 🙂🧡</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/containers/" title="See all articles tagged with Containers">Containers</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/docker/" title="See all articles tagged with Docker">Docker</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/docker-compose/" title="See all articles tagged with Docker Compose">Docker Compose</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/microservices/" title="See all articles tagged with Microservices">Microservices</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/raspberrypi/" title="See all articles tagged with RaspberryPi">RaspberryPi</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/docker-hub/" title="See all articles tagged with Docker Hub">Docker Hub</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/linux/" title="See all articles tagged with Linux">Linux</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Carl Sargunar"><img src="//gravatar.com/avatar/0f9c4ad25d9efd4c209171ecdea71be6.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/0f9c4ad25d9efd4c209171ecdea71be6.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Carl Sargunar</h1>
+        <p>Carl is on Twitter as <a href="//twitter.com/carlcod_es" title="Carl Sargunar on Twitter" rel="author">@carlcod_es</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Managing Members in Umbraco</title>
+<meta name="description" content="Using the Member List View to manage members in Umbraco">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Managing Members in Umbraco</h1>
+      <p class="byline"> by Robert Foster, <span class="pubdate">posted on <time datetime="2014-12-07">Dec 7, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Recently Lee talked about <a href="/umbraco-cms/2014/dealing-with-members/" target="_blank" title="Dealing With Members Using The MemberService &amp; MembershipHelper">Dealing with Members using the MemberService and MembershipHelper</a> to register members and update their properties.  But now that you've got members, now what?  </p>
+<p class="intro">Once upon a time managing even a small set of members in Umbraco was painful - with a long tree breaking up the list by first letter, and only a simple search field, trying to find one record amongst hundreds was almost like trying to find a needle in a haystack. And record retrieval for members was slow.</p>
+<p>Then came Umbraco 7 - not much had changed in this area, although the introduction of the List View for content was promising.  (The recently released of Umbraco 7.2 takes it a step further and leverages the List View as a Media and Member management tool as well, with Members now grouped according to their Type instead of alphabetically; simplifying things greatly.  Go upgrade today!)</p>
+<p>Enter the Member List View:</p>
+<p><img src="/archive/media/2014/mlv_4_blurred.png" width="861" height="662" alt="Media List View"></p>
+<p>The Member List View package adds a new Dashboard to Members to allow for common member management and filtering functions including full record Export, batch Approval/Suspension, batch Delete, and unlocking locked out members. </p>
+<p>In addition, you can edit a member directly from the list without leaving it - click on a member's name and a dialog will display all of the properties for editing.</p>
+<p>With a little tweaking, the Member List View can be modified to show custom columns, and filtering on custom fields is also possible.</p>
+<h2>Configuring the Index</h2>
+<p>This is probably the single most important step you'll need to take when starting to use the Member List View.  As it relies heavily on the Examine Index, this must be done correctly taking into account any additional columns you want to display, filter on or export.</p>
+<p>The mandatory list of fields may already be set up for you out of the box, however here they are:</p>
+<pre class="language-markup"><code>  &lt;IndexSet SetName="InternalMemberIndexSet" IndexPath="~/App_Data/TEMP/ExamineIndexes/InternalMember/"&gt;
+    &lt;IndexAttributeFields&gt;
+      &lt;add Name="id" /&gt;
+      &lt;add Name="nodeName" EnableSorting="true"/&gt;
+      &lt;add Name="updateDate" /&gt;
+      &lt;add Name="writerName" /&gt;
+      &lt;add Name="loginName" /&gt;
+      &lt;add Name="email" EnableSorting="true"/&gt;
+      &lt;add Name="nodeTypeAlias" /&gt;
+    &lt;/IndexAttributeFields&gt;
+    &lt;IndexUserFields&gt;
+      &lt;add Name="umbracoMemberApproved" /&gt;
+      &lt;add Name="umbracoMemberLockedOut" /&gt;
+      &lt;add Name="umbracoMemberLastLockoutDate" Type="DATETIME" /&gt;
+      &lt;add Name="umbracoMemberLastLogin" Type="DATETIME" /&gt;
+      &lt;add Name="umbracoMemberPasswordRetrievalAnswer" /&gt;
+      &lt;add Name="umbracoMemberPasswordRetrievalQuestion" /&gt;
+      &lt;add Name="comments" /&gt;
+    &lt;/IndexUserFields&gt;
+  &lt;/IndexSet&gt;</code></pre>
+<p>In the example above I've also added a list of User field in the IndexUserFields node - these aren't strictly necessary, and you will be able to view members in the Member List View however including these fields will allow for better results.</p>
+<p>You can include additional properties that have been configured on the Member Types in the IndexUserFields node to have them show up in the export; or add them to the list of columns; or create a custom filter. </p>
+<p><strong>Note:</strong> You may have to re-build the index after changing the list of fields in order for the new field to show up.</p>
+<h2>Customising the View - adding additional columns</h2>
+<p>With minimal effort you can add your own columns to the Member List View by editing the html view.</p>
+<p>All custom properties registerd in the index as described above are returned as a dictionary of properties on each member, and can be accessed using the following template:</p>
+<p><span style="color: #880000; font-family: monospace;">result.properties[propertyAlias]</span></p>
+<p>This gives us the ability to easily add additional columns simply by editing the AngularJS html view for the list.</p>
+<p>For example, to add a property called <strong>Company</strong> to the list of columns, edit the memberListView.html file in the backoffice/dashboard folder under the MemberListView plugin directory, adding additional columns in the table template as desired.  For example, to add the Company column we will make the following changes:</p>
+<pre class="language-markup"><code>&lt;!-- Add a new Column Heading in the table header: --&gt;
+                &lt;thead&gt;
+                    &lt;tr&gt;
+&lt;!-- .. --&gt;
+                        &lt;td&gt;
+                            Company
+                        &lt;/td&gt;
+&lt;!-- .. --&gt;
+
+                    &lt;/tr&gt;
+                &lt;/thead&gt;
+
+&lt;!-- Then in the Body we're going to add the new column to the list of cells: --&gt;
+                &lt;tbody&gt;
+                    &lt;tr ng-repeat="result in listViewResultSet.items"
+                        ng-class="{selected:result.selected}"&gt;
+&lt;!-- .. --&gt;
+                        &lt;td&gt;
+                            {{result.properties['company']}}
+                        &lt;/td&gt;
+&lt;!-- .. --&gt;
+
+                    &lt;/tr&gt;
+                &lt;/tbody&gt;</code></pre>
+<h3>My property isn't showing up!</h3>
+<p>Check that the index is up to date.  Quite often problems related to unexpected results in the Member List View can be traced to an inconsistent Examine Index and the best way to deal with this is to rebuild the index using the tools in the Developer section.</p>
+<h2>Final Thoughts</h2>
+<p>So far we've seen a little of what can be achieved with the Member List View.  With a little effort you can also extend the filter dialog to include your own custom properties and format the properties in the exported CSV file.</p>
+<p>If you want to dig into the code, the MemberListView project is now available on github here:</p>
+<p><a href="https://github.com/robertjf/umbMemberListView" target="_blank" title="umbMemberListView on GitHub">https://github.com/robertjf/umbMemberListView</a></p>
+<p>If you have any suggestions for improvement, or would like to contribute some enhancement, feel free to submit a pull request!</p>
+<p>If you just want to install the package, it's available here:</p>
+<p><a href="http://our.umbraco.org/projects/backoffice-extensions/memberlistview-for-umbraco-7" target="_blank" title="MemberListView for Umbraco 7">http://our.umbraco.org/projects/backoffice-extensions/memberlistview-for-umbraco-7</a></p>
+<p>Enjoy!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/members/" title="See all articles tagged with Members">Members</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Robert Foster"><img width="150" height="150" src="/archive/media/2014/roberfoster.jpg?width=150" srcset="/archive/media/2014/roberfoster.jpg?width=300 2x"></div>
+        <h1>Robert Foster</h1>
+        <p>Robert is on Twitter as <a href="//twitter.com/robertjf72" title="Robert Foster on Twitter" rel="author">@robertjf72</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li class="selected"><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

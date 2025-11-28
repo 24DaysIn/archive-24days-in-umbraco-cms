@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Infuse Some AI Into Umbraco by Henk Boelman</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Infuse AI Into Umbraco</h1>
+      <p class="byline"> by Henk Boelman, <span class="pubdate">posted on <time datetime="2017-12-03">Dec 3, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Let me start with a small introduction. My name is Henk Boelman and I’m working as an Azure Architect with a company called <a rel="noopener noreferrer" href="http://www.ordina.nl/microsoft" target="_blank">Ordina</a>. I’m using Umbraco since version 4 and it is great to see how Umbraco is evolving and keeping their vision clear. Currently I’m busy with exploring developer-ready AI and trying to avoid the hassle of figuring out how to build my own classifiers and machine learning algorithms but just consuming them as a service. Because I’m working at a Microsoft focused company, the <a rel="noopener noreferrer" href="http://www.microsoft.com/cognitive-services" target="_blank">Microsoft Cognitive Services</a> are a logical choice to dive into. I like working with Umbraco and this <em>AI as a Service</em> stack. That is why I combined these two in some packages ready to use for Umbraco. </p>
+<h2>What are Cognitive Services?</h2>
+<p class="intro">First it is good to know what these services exactly are. Cognitive services are ready to use APIs built on top of very smart Machine Learning models. These services range from detecting and analyzing faces to natural language processing.</p>
+<h2>Infuse some vision in Umbraco</h2>
+<p>In the vision section of the Cognitive Services there are around 7 APIs to use. Some are for processing images and some for video. We are going to have a closer look at the Computer Vision API.</p>
+<blockquote><em>The Computer Vision Services API can tell you useful things about an image. It gives a description, a set of tags and it can even detect celebrities, landmarks and adult content.<br> </em></blockquote>
+<h2>Enable Umbraco to see</h2>
+<p>Now we know what these services are capable of it is time to get our heads around how to infuse them into the Umbraco Media library.</p>
+<p>From the content above, I hope you understand that the concept of the Cognitive Service is that you call an API and get back a JSON response with the correct data. Microsoft even made it easier for most of the services because there are SDKs available that saves you the hassle of mapping the JSON to a C# object.</p>
+<p>As the services are about describing the images, we are going to extend the media library with them. For that to work we will create an event handler that is triggered when the media is being saved. To read more about MediaService have a look in the Umbraco <a href="https://our.umbraco.org/documentation/reference/events/mediaservice-events">documentation</a>.</p>
+<h2><strong>Step 1: Create a Vision API</strong></h2>
+<p>To create a Computer Vision API you must have a Microsoft Azure account. If you don’t have access to Microsoft Azure, you can create a free account (this comes with a $200 credit for your first month). The Computer Vision API has 2 price plans, a free one that has some rate limits and a payed one that can handle up to 20 requests per second.</p>
+<ul>
+<li>To create the API, follow <a href="https://portal.azure.com/#create/Microsoft.CognitiveServicesComputerVision">this link</a>.</li>
+<li>To create an Azure account, follow <a href="https://azure.microsoft.com/en-us/free/">this link</a>.</li>
+</ul>
+<h2><strong>Step 2: Setup Umbraco and create an event handler</strong></h2>
+<p>Create a new Umbraco project or use an existing one. In your solution include the Vision SDK from Microsoft available on <a href="https://www.nuget.org/packages/Microsoft.ProjectOxford.Vision/">NuGet</a>. Once the package is installed create a new Class VisionEventHandler that extends the ApplicationEventHandler.</p>
+<pre><code class="language-csharp">﻿using Umbraco.Core;
+using Umbraco.Core.Events;
+using Umbraco.Core.Models;
+using Umbraco.Core.Services;
+
+namespace InfuseSomeAIintoU.Vision.SampleCode
+{
+
+    public class VisionEventHandler : ApplicationEventHandler
+    {
+        protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+        {
+            MediaService.Saving += MediaService_Saving;
+        }
+
+        private void MediaService_Saving(IMediaService sender, SaveEventArgs&lt;IMedia&gt; e)
+        {
+            foreach (IMedia media in e.SavedEntities)
+            {
+            }
+        }
+    }
+}</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Next add 2 keys to your Appsettings in the web.config.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span class="code">&lt;add key="VisionApiUrl" value="[Insert the vision endpoint url]" /&gt; </span><br><span class="code">&lt;add key="VisionApiKey" value="[Insert your key]" " /&gt;</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>In Azure on your vision API you can find these settings. After that, extend your VisionEventHandler to load the keys from your web.config and create a VisionServiceClient.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-csharp">﻿using System.Configuration;
+using System.Linq;
+using Microsoft.ProjectOxford.Vision;
+using Umbraco.Core;
+using Umbraco.Core.Events;
+using Umbraco.Core.Models;
+using Umbraco.Core.Services;
+
+namespace InfuseSomeAIintoU.Vision.SampleCode
+{
+
+    public class VisionEventHandler : ApplicationEventHandler
+    {
+        private readonly string _visionApiKey = ConfigurationManager.AppSettings["VisionApiKey"];
+        private readonly string _visionApiUrl = ConfigurationManager.AppSettings["VisionApiUrl"];
+
+        protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+        {
+            MediaService.Saving += MediaService_Saving;
+        }
+
+        private void MediaService_Saving(IMediaService sender, SaveEventArgs&lt;IMedia&gt; e)
+        {
+            VisionServiceClient visionServiceClient = new VisionServiceClient(_visionApiKey, _visionApiUrl);
+
+            foreach (IMedia media in e.SavedEntities.Where(a =&gt; a.ContentType.Name.Equals(Constants.Conventions.MediaTypes.Image)))
+            {
+            }
+        }
+    }
+}
+</code></pre>
+<h2>Step 3: Create the properties</h2>
+<p>The Vision API gives lot of information back that can be useful for your scenario. This information we want to store in the MediaType “Image”. See the screenshot below and add these properties with the according property types to the MediaType.</p>
+<p><img style="width: 500px; height: 396.96132596685083px;" src="/archive/media/2017/setup_mediatype_image.jpg?width=500&amp;height=396.96132596685083" alt="" data-udi="umb://media/1b9c9d8a3d454581b6dd45f20276dc3a"></p>
+<h2>Step 4: Putting it all together</h2>
+<p>Now Umbraco has the fields to store the data in, the EventHandler is implemented and the SDK is included. It's time to send images to this API to get some data back.</p>
+<p>To get this done you have to follow these 3 steps:</p>
+<ul>
+<li>Get the image as a Stream</li>
+<li>Call the AnalyzeImageAsync method of the VisionServiceClient and specify what you want to have returned.</li>
+<li>Map the data return in the AnalysisResult object to the values in your Umbraco MediaType.</li>
+</ul>
+<p>Below you see an example of the minimal code needed to get this job done. If you are using it in production please don’t forget to handle errors or just use <a href="https://our.umbraco.org/projects/backoffice-extensions/infuse-ai-into-u/">my package</a>.</p>
+<pre><code class="language-csharp">﻿using System.Collections.Generic;
+using System.Configuration;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.ProjectOxford.Vision;
+using Microsoft.ProjectOxford.Vision.Contract;
+using Newtonsoft.Json;
+using Umbraco.Core;
+using Umbraco.Core.Events;
+using Umbraco.Core.IO;
+using Umbraco.Core.Models;
+using Umbraco.Core.Services;
+using Umbraco.Web.Models;
+
+namespace InfuseSomeAIintoU.Vision.SampleCode
+{
+
+    public class VisionEventHandler : ApplicationEventHandler
+    {
+        private readonly string _visionApiKey = ConfigurationManager.AppSettings["VisionApiKey"];
+        private readonly string _visionApiUrl = ConfigurationManager.AppSettings["VisionApiUrl"];
+
+        protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+        {
+            MediaService.Saving += MediaService_Saving;
+        }
+
+        private void MediaService_Saving(IMediaService sender, SaveEventArgs&lt;IMedia&gt; e)
+        {
+            var visionServiceClient = new VisionServiceClient(_visionApiKey, _visionApiUrl);
+            var mediaFileSystem = FileSystemProviderManager.Current.GetFileSystemProvider&lt;MediaFileSystem&gt;();
+
+            foreach (IMedia media in e.SavedEntities.Where(a =&gt; a.ContentType.Name.Equals(Constants.Conventions.MediaTypes.Image)))
+            {
+                string relativeImagePath = JsonConvert.DeserializeObject&lt;ImageCropDataSet&gt;(media.GetValue&lt;string&gt;(Constants.Conventions.Media.File)).Src;
+
+                // Computer Vision API
+                using (Stream imageFileStream = mediaFileSystem.OpenFile(relativeImagePath))
+                {
+                    // Call the Computer Vision API
+                    AnalysisResult computervisionResult = visionServiceClient
+                        .AnalyzeImageAsync(
+                            imageFileStream,
+                            new[] { VisualFeature.Description, VisualFeature.Adult, VisualFeature.Tags,VisualFeature.Categories }
+                        ).Result;
+
+                    if (computervisionResult != null)
+                    {
+                        // Get the result 
+                        IEnumerable&lt;string&gt; tags = computervisionResult.Tags.Select(a =&gt; a.Name);
+                        string caption = computervisionResult.Description.Captions.First().Text;
+                        bool isAdult = computervisionResult.Adult.IsAdultContent;
+                        bool isRacy = computervisionResult.Adult.IsRacyContent;
+
+                        // Set the properties in Umbraco
+                        media.SetTags("infusedAI_general_tags", tags, true);
+                        media.SetValue("infusedAI_description", caption);
+                        media.SetValue("infusedAI_isAdult", isAdult);
+                        media.SetValue("infusedAI_isRacy", isRacy);
+                    }
+                }
+            }
+        }
+    }
+}
+</code></pre>
+<h2>And ready to go!</h2>
+<p>With around 100 lines of code you have Umbraco Infused with AI. The data return from this API you can use in many different ways. You can use it for scanning adult content and handle accordingly before it is even published on your website, or like Niels showed during CodeGarden for automatically sorting and categorizing images.</p>
+<p>I hope you enjoy this new kind of AI and that it empowers you to do great things with Umbraco!</p>
+<p><strong>Henk Boelman<br></strong><em>Read more on this topic on <a rel="noopener noreferrer" href="https://www.henkboelman.com" target="_blank">my blog</a>.</em></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/azure/" title="See all articles tagged with Azure">Azure</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/media/" title="See all articles tagged with Media">Media</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/members/" title="See all articles tagged with Members">Members</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Henk Boelman"><img src="//gravatar.com/avatar/fc043922261baf64eeb2a53f99d42738.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/fc043922261baf64eeb2a53f99d42738.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Henk Boelman</h1>
+        <p>Henk is on Twitter as <a href="//twitter.com/hboelman" title="Henk Boelman on Twitter" rel="author">@hboelman</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

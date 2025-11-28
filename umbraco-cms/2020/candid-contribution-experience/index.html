@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>An Umbraco Contribution Experience with Candid Contributions</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Candid Contribution Experience</h1>
+      <p class="byline"> by Nurhak Kaya, <span class="pubdate">posted on <time datetime="2020-12-20">Dec 20, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">It all started in 2010 in my first home, sunny Turkey, when I wrote my very own experimental CMS project. I moved to my second home, the not so sunny UK, in 2014 to start working at <a rel="noopener" href="https://www.felinesoft.com/" target="_blank">Felinesoft</a>. There I learned about Umbraco for the first time and ever since it has become an important part of my daily job &amp; personal life and more importantly my passion.</p>
+<p class="intro">I follow all sorts of Umbraco related news as much as I can, attend Umbraco meetups and conferences. At work; I write wikis, do lunch &amp; learns to share my knowledge about anything that is worth sharing. I write <a rel="noopener" href="https://nurhak-kaya.blogspot.com/" target="_blank">blogs</a> about my development experiences to reach a wider community, also try to answer questions on <a rel="noopener" href="https://our.umbraco.com/forum/" target="_blank">programming forums</a> and <a rel="noopener" href="https://stackoverflow.com/" target="_blank">Stack Overflow</a> as much as I can. I do all these things to help others and my future self. Giving back to people leads to a much deeper understanding and learning, eventually making me a more successful Developer and happier person. So I think it is fair to say that I'm very passionate about sharing my knowledge &amp; contributing, and yet it took me a while to understand how I could contribute to Umbraco properly. For this; I'm thankful to Candid Contributions, namely <a rel="noopener" href="https://twitter.com/lottepitcher" target="_blank">Lotte Pitcher</a>, <a rel="noopener" href="https://twitter.com/EmaBurst" target="_blank">Emma Burstow</a>, <a rel="noopener" href="https://twitter.com/crgrieve" target="_blank">Carole Rennie Logan</a>, <a rel="noopener" href="https://twitter.com/lssweatherhead" target="_blank">Laura Weatherhead</a> and their wonderful event <a rel="noopener" href="https://candidcontributions.com/umbrackathon/" target="_blank">the CanCon Umbrackathon</a>,<span> which they hosted during the annual Hacktober fest challenge.</span></p>
+<h3>The CanCon Umbrackathon</h3>
+<p>This is a 2-day Umbraco event that took place during the annual Hacktober fest challenge which is a month-long celebration of all things open source. The general idea with the CanCon hackathon is to help people come together to contribute to Umbraco while learning about Umbraco and having fun. This event was also a golden opportunity to ask questions to fellow Umbracians, including people from Umbraco HQ, like <a rel="noopener" href="https://twitter.com/cultiv" target="_blank">Sebastiaan Janssen</a>.</p>
+<p>The CanCon hackathon started with a warm "Welcome", followed by "Getting started with contributing" by <a rel="noopener" href="https://candidcontributions.com/" target="_blank">Candid Contributions Podcast Team</a>, "Getting started with building packages" by <a rel="noopener" href="https://umbraco.com/blog/the-umbraco-package-team/" target="_blank">the Umbraco Package Team</a> and all day long learning, hacking activities with a lot of games and fun! The following day was similar to the previous day which was great for people like myself who couldn't follow everything the previous day due a full-time job (and looking after children), and here are some tips to help you get your hands dirty and start contributing to Umbraco!</p>
+<h3>Get set contribute!</h3>
+<p>Here are the steps that you should follow to complete your setup and start contributing to the Umbraco source code;</p>
+<ul>
+<li>Login to <a rel="noopener" href="https://github.com/" target="_blank">github</a>, if you don't have a github account then sign up. </li>
+<li><a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS" target="_blank">Find the Umbraco CMS project</a> on github and fork it - simply click on the Fork icon on this page to create your own copy of this project.
+<ul>
+<li>Please note; if you have previously forked an older version of the Umbraco CMS project, then you might need to delete the old project from your github repository and fork the latest version again, otherwise you might not be able to see the correct branches, including <span class="code">v8/contrib</span> branch.</li>
+<li>For higher resolution screenshot images, please <a rel="noopener" href="https://github.com/NurhakKaya/24DasyInUmbracoArticleNotes/tree/master/2020" target="_blank">click here</a>.</li>
+</ul>
+</li>
+</ul>
+<p><img style="width: 500px; height: 215.03404924044005px;" src="/archive/media/2020/forkumbracocms.png?width=500&amp;height=215.03404924044005" alt="" data-udi="umb://media/5bc540a698fe468f8d4ca71be6b49a42"></p>
+<ul>
+<li>Check that you are on the correct branch - for my case it was v8/contrib.</li>
+</ul>
+<p><img style="width: 500px; height: 197.29907773386034px;" src="/archive/media/2020/branchselectionandclone.png?width=500&amp;height=197.29907773386034" alt="" data-udi="umb://media/1ead729eb1314a038fcb89758b104d58"></p>
+<ul>
+<li>Clone your fork to get the code to your computer, browse the src folder of your local Umbraco-CMS project and open the solution in Visual Studio.</li>
+</ul>
+<p><span class="code">git clone git@github.com:NurhakKaya/Umbraco-CMS.git</span></p>
+<p><img style="width: 500px; height: 204.22535211267606px;" src="/archive/media/2020/gitcloneumbracocms.png?width=500&amp;height=204.22535211267606" alt="" data-udi="umb://media/3b00da54028149be889377cdc3a51ca2"></p>
+<ul>
+<li>Build the solution in Visual Studio. First time build will load a lot of nuget packages, so be patient as this takes some time.</li>
+</ul>
+<p><img style="width: 500px; height: 112.45954692556634px;" src="/archive/media/2020/buildumbracocmssolution.png?width=500&amp;height=112.45954692556634" alt="" data-udi="umb://media/d1c6684a2fee44e4aedeb2573a0b372f"></p>
+<ul>
+<li>Once the build is successful, then open the Task Runner Explorer window. At first this might say; "Failed to load" and you might have to try building the project again or restart your Visual Studio. See that Gulpfile.js is loaded correctly with the following tasks, and then hit on the <span class="code">build</span> task. Wait for task to complete and you should see a screen similar to the one below;</li>
+</ul>
+<p><img style="width: 500px; height: 273.5554398750651px;" src="/archive/media/2020/taskrunnerexplorerbuild.png?width=500&amp;height=273.5554398750651" alt="" data-udi="umb://media/7cb3d8a196ee43e090cbb3f4646d1c22"></p>
+<ul>
+<li>At this point, you should be ready to run the project. Hit <span class="code">Ctrl+F5</span> to start the web project, follow the directions on the following screen to get a working Umbraco solution up and running. Login to Umbraco and see that things look ok.</li>
+</ul>
+<p><img style="width: 500px; height: 215.42401821286285px;" src="/archive/media/2020/umbracobackoffice.png?width=500&amp;height=215.42401821286285" alt="" data-udi="umb://media/100d0446d6a2480295fddc0731e37ece"></p>
+<ul>
+<li>You are all set! It is time to <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/issues?q=is%3Aissue+is%3Aopen+label%3Acommunity%2Fup-for-grabs" target="_blank" data-anchor="?q=is%3Aissue+is%3Aopen+label%3Acommunity%2Fup-for-grabs">go and find the open Umbraco issues</a> that you think you can fix on github and start working on them!
+<ul>
+<li>Issues that are tagged as <span class="code">community/up-for-grabs</span> are the best candidates for you as an Umbraco community member.</li>
+<li>While choosing your issue, check the notes of that issue to make sure nobody has started working on it.</li>
+</ul>
+</li>
+</ul>
+<p><img style="width: 500px; height: 266.12480335605665px;" src="/archive/media/2020/umbracoissues.png?width=500&amp;height=266.12480335605665" alt="" data-udi="umb://media/7e88a180ffc44855916629a33d55676c"></p>
+<ul>
+<li>Once you are ready to start working on an issue, first add a note to the issue, so that other Umbraco community members will know somebody has already started working on it. Then create a new bugfix branch locally and start working on it. 
+<ul>
+<li>Please note; creating a new separate Umbraco project with some very basic templates can be very handy to debug some problems. You can add code references to this project directly from your local Umbraco source code and debug &amp; fix things easier.</li>
+</ul>
+</li>
+</ul>
+<p><img style="width: 500px; height: 162.14099216710184px;" src="/archive/media/2020/createnewbugfixbranch.png?width=500&amp;height=162.14099216710184" alt="" data-udi="umb://media/dfccfb1abbf541fea8cd2257e276399d"></p>
+<ul>
+<li>Do your code changes and test them.</li>
+<li>Commit your changes and push them.</li>
+<li>Create a new Pull Request from your bugfix branch into <span class="code">v8/contrib</span> branch on github for your changes. Make sure that there are no merge problems, see that changes between 2 branches are how they should be. Add a title and description for your PR and create the pull request!</li>
+<li>Congratulations on completing your work on your issue! It is now time for somebody from Umbraco HQ or the Umbraco Community to take a look at your PR and if all is good, then they will approve your PR and close your issue after merging your changes into the parent branch (for our case it is <span class="code">v8/contrib</span>). Alternatively, they might ask for some additional changes or refuse your changes if things are not right. On this day I spent some time for <a href="https://github.com/umbraco/Umbraco-CMS/issues/7361#issuecomment-711013602" data-anchor="#issuecomment-711013602">this issue</a> and I'm looking forward to working on more Umbraco issues.</li>
+</ul>
+<p><img style="width: 500px; height: 172.47754886423667px;" src="/archive/media/2020/createpr.png?width=500&amp;height=172.47754886423667" alt="" data-udi="umb://media/d919838308b44139a5982fc741970442"></p>
+<p><img style="width: 500px; height: 238.93557422969187px;" src="/archive/media/2020/createprcomparechanges.png?width=500&amp;height=238.93557422969187" alt="" data-udi="umb://media/8dc36da99bb04b779c290833c55a6af8"></p>
+<p><img style="width: 500px; height: 302.07657365347177px;" src="/archive/media/2020/createpraddprdetails.png?width=500&amp;height=302.07657365347177" alt="" data-udi="umb://media/0e32b8f5acdf4834ac3a6b962ce69725"></p>
+<ul>
+<li>For Hacktoberfest contributions, a message similar to the following one can be used while creating PRs;</li>
+</ul>
+<blockquote style="margin: 0in; font-family: Calibri; font-size: 11.0pt;">Hi there,</blockquote>
+<blockquote style="margin: 0in; font-family: Calibri; font-size: 11.0pt;">I'm Nurhak and I'm taking some time to triage some issues on the Umbraco CMS issue tracker as part of my Hacktoberfest contribution. I will assess the issue reported, maybe ask some questions if I need more information and ultimately decide whether the issue should be progressed. If so, I'll label and if it has been fixed in a later release or is no longer relevant, I'll close, leaving a friendly message explaining why.</blockquote>
+<blockquote style="margin: 0in; font-family: Calibri; font-size: 11.0pt;">Best,</blockquote>
+<blockquote style="margin: 0in; font-family: Calibri; font-size: 11.0pt;">Hacktoberfest Contributor</blockquote>
+<h3>Packages Workshop</h3>
+<p>This year's CanCon Umbrackathon was also great to learn about how to create Umbraco packages. <a rel="noopener" href="https://twitter.com/therealrockerby" target="_blank">Richard Ockerby</a>, <a rel="noopener" href="https://twitter.com/hotchillicode" target="_blank">Nik Rimington</a> and <a rel="noopener" href="https://twitter.com/JesperMayn" target="_blank">Jesper Manytzhusen</a> showed the workshop attendees how to use <a rel="noopener" href="https://our.umbraco.com/documentation/Extending/Packages/UmbPack/" target="_blank">UmbPack</a> and follow some standard steps to create an Umbraco package successfully! </p>
+<p><img style="width: 500px; height: 263.81299332119px;" src="/archive/media/2020/firstumbracopackage.png?width=500&amp;height=263.81299332119" alt="" data-udi="umb://media/eeb5f4a3ff79494e91095075dc8a6e06"></p>
+<h3>Final words</h3>
+<p>There are many ways to contribute to Umbraco project, and one way is helping to fix the issues. While fixing these issues you might need the Umbraco source code and your local Umbraco solution up and running quickly. Hopefully my article will help you with this and will also remind you of the friendly Umbraco community and their wonderful events, like <a rel="noopener" href="https://candidcontributions.com/umbrackathon/" target="_blank">the CanCon Umbrackathon</a>.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/community/" title="See all articles tagged with Community">Community</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/contribution/" title="See all articles tagged with Contribution">Contribution</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/github/" title="See all articles tagged with GitHub">GitHub</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/personal-development/" title="See all articles tagged with Personal development">Personal development</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Nurhak Kaya"><img src="//gravatar.com/avatar/ebb2801b45150fb02c11fd7863d0dee4.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/ebb2801b45150fb02c11fd7863d0dee4.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Nurhak Kaya</h1>
+        <p>Nurhak is on Twitter as <a href="//twitter.com/nurhakkaya14" title="Nurhak Kaya on Twitter" rel="author">@nurhakkaya14</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

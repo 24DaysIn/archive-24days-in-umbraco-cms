@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Packaging for NuGet &amp; Our Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Packaging</h1>
+      <p class="byline"> by Callum Whyte, <span class="pubdate">posted on <time datetime="2019-12-19">Dec 19, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">It all started in 2012 when <a rel="noopener" href="https://twitter.com/mattbrailsford" target="_blank">Matt Brailsford</a> showed off his MSBuild Umbraco Tasks at Codegarden, and was followed up in 2014 with <a rel="noopener" href="https://twitter.com/crumpled_jeavon" target="_blank">Jeavon Leopold</a>’s 24 Days post on <a rel="noopener" href="/umbraco-cms/2014/packaging-with-appveyor/" target="_blank">packaging using AppVeyor CI</a>. We’ve seen approaches using Grunt by <a rel="noopener" href="https://skrift.io/articles/archive/automating-umbraco-package-creation/" target="_blank">Tom Fulton</a> and <a rel="noopener" href="/umbraco-cms/2015/grunt-all-the-things!/" target="_blank">Anders Bjerner</a>, Shannon Deminick’s <a rel="noopener" href="https://github.com/Shazwazza/Articulate/blob/master/build/build.ps1" target="_blank">PowerShell script</a>, and many other alternatives.</p>
+<p class="intro">However a lot has changed in recent years, and so it’s time to look at yet another approach – I will call it <strong>“The 2019 Way”</strong>. We’ve seen a rise in the complexity of creating a package, NuGet has become considered the “default” format, and AppVeyor is no longer the go-to CI tool for open-source projects – our processes need to adapt.</p>
+<p>Let’s take things right back to the beginning...</p>
+<h2>Visual Studio csproj format</h2>
+<p>Most packages with compiled C# code will use a .NET Framework Class Library project in Visual Studio. This is where we compile our code to a distributable DLL, as well as add references to external dependencies such as NuGet packages. Traditionally each file in the project is listed in a <span class="code">*.csproj</span> file and dependencies are tracked in a <span class="code">packages.config</span> file.</p>
+<p><img style="width: 404.320987654321px; height: 500px;" src="/archive/media/2019/project-dependencies.png?width=404.320987654321&amp;height=500" alt="" data-udi="umb://media/8d84506aca3443faa02671440dd70427"></p>
+<p>A lesser known feature introduced in Visual Studio 2017 is the <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/core/tools/csproj" target="_blank">.NET SDK project format</a>, offering a vastly simpler developer experience and significantly leaner <span class="code">*.csproj</span> files.</p>
+<p>The most noticeable improvements are the handling of project dependencies. The “dependencies” tree is now grouped into “Assemblies”, “NuGet” and “Projects” – no more scouring the long list of references to find the assembly you’re looking for. NuGet package’s own internal dependencies don’t get added individually to your project anymore, rather Visual Studio keeps a reference to the “top-level” package and it’s dependencies are nested beneath.</p>
+<p>For me the icing on the Christmas pudding is how insanely fast restoring packages is now, all thanks to the fact downloaded packages are kept a machine-wide cache rather than on a per-project basis.</p>
+<p>Migrating to the new format is a manual process so there’s a little bit of work to do. Scott Hanselman has an <a rel="noopener" href="https://www.hanselman.com/blog/UpgradingAnExistingNETProjectFilesToTheLeanNewCSPROJFormatFromNETCore.aspx" target="_blank">excellent tutorial</a> on how to migrate a project over, or you can follow the steps below.</p>
+<p>Start by adding a new project to your Visual Studio solution and choosing “Class Library (.NET Standard)” <em>(yes this seems wrong, bear with me here…)</em></p>
+<p><img style="width: 500px; height: 351.8987341772152px;" src="/archive/media/2019/add-net-standard-class-library.png?width=500&amp;height=351.8987341772152" alt="" data-udi="umb://media/f4da25e1369b48acb8e46a827d275bf6"></p>
+<p>SDK projects are the default format for .NET Standard Class Library projects, but with a little magic can also be used with legacy .NET Framework projects too.</p>
+<p>Select “Edit csproj” to reveal the XML config file for your project – change the value of the <span class="code">TargetFramework</span> element from <span class="code">netstandard2.0</span> to <span class="code">net472</span>.</p>
+<p><img style="width: 500px; height: 356.41025641025635px;" src="/archive/media/2019/edit-csproj-target-framework.png?width=500&amp;height=356.41025641025635" alt="" data-udi="umb://media/825c08a2f3d0449a90cff65b1050f23f"></p>
+<p>Any version of .NET Framework works here: v4.6.1 would be <span class="code">net461</span>, v4.5 would be <span class="code">net45</span>, and so on. We can only wish that Microsoft would make this a bit easier for us by adding a dropdown somewhere in the UI...</p>
+<p>Congrats, you're now using the new project format! Of course this is not limited to working with Umbraco packages but with any Class Library project in any existing applications – everything should work exactly the same as before only cleaner, faster and arguably more future-proof.</p>
+<p>For now these enhancements are only a small win for our projects, but it will have a far larger impact on other parts of the packaging process...</p>
+<h2>NuGet</h2>
+<p>Having your package available via NuGet feels essential nowadays, in fact many people refuse to install packages any other way.</p>
+<p>But creating a NuGet package isn’t as straightforward as you might think - you have to get your head around the NuGet.exe CLI as well as populate a <span class="code">.nuspec</span> file with all your project metadata. Developers generally have a separate build script to run the relevant commands and generate the package, but knowing how to write one or where to find one can be a tough task. I certainly found this a daunting and confusing task when I first started sharing my code with the community.</p>
+<p>Thankfully the simplified <span class="code">*.csproj</span> format massively helps out here by more tightly integrating with NuGet, effectively eliminating a large amount of the complexity and making package creation possible in only a few clicks!</p>
+<p>NuGet packages can be generated automatically on build through Visual Studio. Open the project properties and navigate to the “Packaging” section. Here it is possible to configure the common package metadata that would have previously been defined in a <span class="code">.nuspec</span> file.</p>
+<p><img style="width: 500px; height: 356.41025641025635px;" src="/archive/media/2019/nuget-package-metadata.png?width=500&amp;height=356.41025641025635" alt="" data-udi="umb://media/0a68eba231264bd88b98800cd6892075"></p>
+<p>Enabling “Generate NuGet package on build” adds a line <span class="code">&lt;GeneratePackageOnBuild&gt;true&lt;/GeneratePackageOnBuild&gt;</span> to the <span class="code">*.csproj</span> file which instructs MSBuild to generate a NuGet package on each build, or when the <span class="code">dotnet pack</span> command is run.</p>
+<p><img style="width: 500px; height: 458.01526717557255px;" src="/archive/media/2019/file-build-action-content.png?width=500&amp;height=458.01526717557255" alt="" data-udi="umb://media/b48fc4191b40455195af977367a9064f"></p>
+<p>C# files within the solution will be automatically compiled and the resulting assembly included in the NuGet package; external “package” references (e.g. NuGet packages) are listed as dependencies of your NuGet package and will be installed when someone installs your package.</p>
+<p>To include static files in the NuGet package the “build action” of that file needs to be set to “Content” within the file’s properties. You will notice this also adds a line to your <span class="code">*.csproj</span> file referencing the file’s path, this is because by default files are assumed to be for compilation.</p>
+<p>In this example I want to include my <span class="code">App_Plugins</span> files so I updated the “build action” for those files. As you can see in the screenshot below, when I inspect the package that gets created on build via NuGet Package Explorer, all my desired files are included as well as the metadata and dependencies I added. This was achieved purely through the Visual Studio UI and without writing a single line of code!</p>
+<p><img style="width: 500px; height: 356.41025641025635px;" src="/archive/media/2019/nuget-package.png?width=500&amp;height=356.41025641025635" alt="" data-udi="umb://media/e3974b2f597843b6989caf11f0f7d959"></p>
+<h2>Zip package</h2>
+<p>Umbraco has it's own <a rel="noopener" href="https://our.umbraco.com/documentation/Extending/Packages/Creating-a-Package/" target="_blank">package format</a> comprised of files plus a <span class="code">package.xml</span> manifest in a zip archive. Much like with compiling a NuGet package there has never been a straightforward way to create an Umbraco compatible zip - everyone has their own scripts for this.</p>
+<p>The longest standing solution is <a rel="noopener" href="https://twitter.com/mattbrailsford" target="_blank">Matt Brailsford</a>’s MSBuild tasks, but these scripts are pretty complicated if you don't know MSBuild and do still require a bit of configuration and know-how. In the same vein as how Microsoft made NuGet packaging infinitely simpler, it would be great to simplify the process to the point where generating the package zip is also something we no longer worry about.</p>
+<p>I realised that the Umbraco package format requires most of the same metadata as NuGet packages and this is already managed in Visual Studio. I set about developing a process to run alongside with MSBuild’s <span class="code">pack</span> target (which is responsible for generating NuGet packages). My MSBuild task generates a zip archive including the files and dependencies (via DLLs in this case) defined in the <span class="code">*.csproj</span>, as well as valid <span class="code">package.xml</span> file based off the metadata defined in the “Package” settings in Visual Studio.</p>
+<p>Crucially the solution needs to be painless to get up-and-running, so it can be installed into any project via NuGet. No code or config required; as long as “Generate NuGet package on build” is enabled, an Umbraco package zip will be created with every build!</p>
+<p><span class="code">PM &gt; Install-Package MSBuild.Umbraco.Packaging</span></p>
+<p>Naturally the project is <a rel="noopener" href="https://github.com/callumbwhyte/msbuild-umbraco-packaging" target="_blank">open-source on Github</a> and welcomes contributions.</p>
+<p>For those interested in the inner workings of the MSBuild tasks, the referenced assemblies and “content” files are copied into the resulting package.</p>
+<pre><code class="language-markup">﻿&lt;!-- Import tasks --&gt;
+&lt;UsingTask AssemblyFile="$(TargetDir)\MSBuild.Umbraco.Packaging.dll" TaskName="MSBuild.Umbraco.Packaging.GatherAssemblies" /&gt;
+
+&lt;Target Name="UmbracoGatherFiles"&gt;
+	&lt;!-- Gather assemblies --&gt;
+	&lt;GatherAssemblies Dependencies="@(ReferenceCopyLocalPaths)"
+					  PackageRefs="@(PackageReference);@(ProjectReference)"&gt;
+	  &lt;Output TaskParameter="Assemblies" ItemName="PackageAssemblies" /&gt;
+	&lt;/GatherAssemblies&gt;
+
+	&lt;!-- Copy assemblies --&gt;
+	&lt;Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TempFolder)\bin\" /&gt;
+	&lt;Copy SourceFiles="@(PackageAssemblies)" DestinationFolder="$(TempFolder)\bin\" /&gt;
+
+	&lt;!-- Copy files --&gt;
+	&lt;Copy SourceFiles="@(Content)" DestinationFiles="$(TempFolder)%(RelativeDir)%(Filename)%(Extension)" /&gt;
+&lt;/Target&gt;</code></pre>
+<p>Then MSBuild calls Umbraco Core’s internal packaging code to generate and validate the <span class="code">package.xml</span> file.</p>
+<pre><code class="language-markup">﻿&lt;!-- Import tasks --&gt;
+&lt;UsingTask AssemblyFile="$(TargetDir)\MSBuild.Umbraco.Packaging.dll" TaskName="MSBuild.Umbraco.Packaging.GenerateManifest" /&gt;
+
+&lt;Target Name="UmbracoPackage" AfterTargets="Pack" DependsOnTargets="UmbracoClean;UmbracoGatherFiles"&gt;
+	&lt;!-- Create manifest --&gt;
+	&lt;GenerateManifest TargetDirectory="$(TempFolder)"
+					  Name="$(Product)"
+					  Description="$(Description)"
+					  Version="$(Version)"
+					  UmbracoVersion="$(UmbracoVersion)"
+					  Author="$(Authors)"
+					  AuthorUrl="$(AuthorUrl)"
+					  ProjectUrl="$(PackageProjectUrl)"
+					  IconUrl="$(PackageIconUrl)"
+					  LicenseUrl="$(PackageLicenseUrl)" /&gt;
+&lt;/Target&gt;</code></pre>
+<p>Finally the resulting output gets zipped up and the task cleans up after itself.</p>
+<pre><code class="language-markup">﻿&lt;Target Name="UmbracoPackage" AfterTargets="Pack" DependsOnTargets="UmbracoClean;UmbracoGatherFiles"&gt;
+	&lt;!-- Create zip --&gt;
+	&lt;ZipDirectory SourceDirectory="$(TempFolder)"
+				  DestinationFile="$(DestFolder)\$(Product).$(Version).zip"
+				  Overwrite="true" /&gt;
+&lt;/Target&gt;
+
+&lt;Target Name="UmbracoClean" AfterTargets="Clean"&gt;
+	&lt;!-- Remove temp folder --&gt;
+	&lt;RemoveDir Directories="$(TempFolder)" /&gt;
+&lt;/Target&gt;</code></pre>
+<p> </p>
+<p>Want to learn about automating the process of building and releasing your package? <a data-udi="umb://document/6c5b3d0ef5ee4f4988432cd75a92f1af" href="/umbraco-cms/2019/umbraco-packages-2019/automating/" title="Automating Packages With Azure Pipelines">Check out Automating Package Builds With Azure Pipelines</a>!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/azure/" title="See all articles tagged with Azure">Azure</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/continuous-deployment/" title="See all articles tagged with Continuous deployment">Continuous deployment</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/devops/" title="See all articles tagged with Devops">Devops</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/github/" title="See all articles tagged with GitHub">GitHub</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Callum Whyte"><img src="//gravatar.com/avatar/05c1efd28f84ee7ebe5da188e220a47f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/05c1efd28f84ee7ebe5da188e220a47f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Callum Whyte</h1>
+        <p>Callum is on Twitter as <a href="//twitter.com/callumbwhyte" title="Callum Whyte on Twitter" rel="author">@callumbwhyte</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

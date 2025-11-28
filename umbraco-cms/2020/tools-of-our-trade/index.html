@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>The tools of our trade</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Tools of our trade</h1>
+      <p class="byline"> by Sebastiaan Janssen, <span class="pubdate">posted on <time datetime="2020-12-08">Dec 8, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Last year, <a href="https://twitter.com/lottepitcher?lang=en">Lotte</a> suggested that I might want to share these tips with a larger audience and turn it into a talk. I've since given my talk "The tools of our trade" a handful of times and it's been great fun. </p>
+<p class="intro">One of those talks resulted in my favourite piece of feedback when I used <a href="https://haveibeenpwned.com/">Have I Been Pwned</a> and afterwards the gentleman that was hired to take care of my microphone and the sound setup in the room asked for a copy of the slides so he could check his own email address. </p>
+<p>So consider that tip #1 for this post, if you don't know <a href="https://haveibeenpwned.com/">Have I Been Pwned</a> yet, try it out and (probably) be shocked. You will also want to change the passwords that you used for that account, and reused everywhere else. It's okay, I've reused passwords 😅, I know you have as well. But that has to stop, immediately. 🙈 </p>
+<p>Right, let's get started for real, I have tips ranging from little tweaks to tools, to shortcuts. Try them out and let me know your own tips!</p>
+<p>I'll start with a good portion of tips for Visual Studio and then move on to my favourites.</p>
+<h2>Visual Studio</h2>
+<p>For most Umbraco developers, Visual Studio is THE one and only tool to use to build Umbraco sites and it pains me when I see people use it wrong (IMHO!). There's a few things that you can do to make your experience with VS a lot better.</p>
+<p>I know people are set in their ways, and it's difficult to change your mind on how you use your IDE, trust me, I'm as stubborn as the best of them. I'll probably say some things you don't agree with about how you use VS in the next paragraphs, but try to keep an open mind.</p>
+<h3>Use IISExpress</h3>
+<p>When you stop a debugging session, IISExpress also stops. Are you this person, who makes a change in a file and then has to press F5 to start the IISExpress server again? Of course you probably already moved to IIS since then at least your site keeps running at all times. But then you need to always run VS as administrator of course in order to debug on IIS.</p>
+<p>What if I told you I have not used IIS for anything on my local machine for 5+ years? Everything I need runs great in IISExpress and I love not wasting time on setting up IIS sites for each thing I need to run plus not having running IIS sites saves on CPU cycles and memory usage. </p>
+<p>The easiest and most fun way to achieve IISExpress nirvana is to install <a href="https://marketplace.visualstudio.com/items?itemName=thebread.AttachToAllTheThings">Attach To All The Things</a>.</p>
+<p>This extension allows you to immediately attach the debugger to all running instances of IISExpress, easy peasy!</p>
+<p>After install it will appear in your Tools menu.</p>
+<p><img style="width: 425px; height: 157px;" src="/archive/media/2020/image5.png?width=425&amp;height=157" alt="Visual Studio Tools menu" data-udi="umb://media/842c2937448b4cc59f94455aeb21378c"></p>
+<p>Which is... fine, but why not make it easy for yourself and put it on your toolbar so you can either remember the keyboard shortcut ALT+F1 or tap the button when you need to. VS makes this quite complicated, so here's a gif to show you how you can do that.</p>
+<p><img style="width: 500px; height: 304.86968449931413px;" src="/archive/media/2020/image2.gif?width=500&amp;height=304.86968449931413" alt="Adding a custom button to the Visual Studio toolbar" data-udi="umb://media/80af16de180846c5ba6f1baa8adafc57"></p>
+<p>Additionally, tell VS to not stop the IISExpress server when you stop debugging or close the browser, that will keep it running as long as VS is open.</p>
+<p><img style="width: 500px; height: 292.61744966442956px;" src="/archive/media/2020/image6.png?width=500&amp;height=292.61744966442956" alt="Visual Studio options for stopping the debugger" data-udi="umb://media/930d11bd39d14b90a0b6cd6bd148f6ba"></p>
+<h3>Are you really debugging?</h3>
+<p>The other thing I see people do "wrong" all the time is to <strong>always</strong> start in debug mode. If you're just setting up your Umbraco install, creating doctypes, creating content, updating templates, etc. you really are not debugging any code so let's not have VS slow you down! </p>
+<p>I believe most people know the keyboard shortcut CTRL+F5 - I use it exclusively now, it starts the solution including IISExpress but it doesn't start the heavy debugging processes. If I need to set a breakpoint, I tap the "Attach IIS Express" button or use ALT+F1. </p>
+<h3>Visual Studio's "Edit and continue" is a lie</h3>
+<p>For reasons I don't understand, enabling "edit and continue" in VS actually asks you to stop your debugging session all the time when you're just trying to... edit stuff and continue.</p>
+<p>Even in order to disable the checkbox "Enable Edit and Continue" you need to stop your debugging session, ironically. 🤷‍♂️</p>
+<p><img style="width: 500px; height: 92.06989247311827px;" src="/archive/media/2020/image15.png?width=500&amp;height=92.06989247311827" alt="VS options for Enable Edit and Continue" data-udi="umb://media/43fe9f9fbca245e99ae0cdcaa8fa4c6e"></p>
+<p>Disabling this checkbox should make you a little bit happier. 😊</p>
+<h3>What's on your toolbar?</h3>
+<p>And why is it on your toolbar? If we have a look at the default toolbar that VS gives us, which buttons do you really actually use?</p>
+<p><img style="width: 500px; height: 38.131041890440386px;" src="/archive/media/2020/image3.png?width=500&amp;height=38.131041890440386" alt="VS default toolbar" data-udi="umb://media/e045463feaf44ce995876c9de47b50c6"></p>
+<p>We can see:</p>
+<ul>
+<li>"back" and "forward"</li>
+<ul>
+<li>Pro tip: you can do with the buttons on your mouse or keyboard as well, if you have those hardware buttons. </li>
+</ul>
+<li>"new project"</li>
+<ul>
+<li>Do you ever do that when you have a solution open?</li>
+</ul>
+<li>"open file"</li>
+<ul>
+<li>Pretty sure I've never used it, I wouldn't know what for.</li>
+</ul>
+<li>"save" </li>
+<ul>
+<li>CTRL+S for life!</li>
+</ul>
+<li>"save all" </li>
+<ul>
+<li>Since I struggle to remember the shortcut for that one, this can be useful especially when I need to save changes to a csproj file since VS sometimes doesn't automatically save those, leading to awkward commits with the description "forgot to add file to csproj".</li>
+</ul>
+<li>"undo" / "redo" </li>
+<ul>
+<li>Really? Does anyone not use the keyboard shortcuts? I'll admit, the undo/redo history dropdowns could be mildly useful. That said, I've never used those.</li>
+</ul>
+</ul>
+<p>I could continue but you know where I'm going; I recommend to customise it! We saw this earlier when adding a button to it. Currently, my VS toolbar looks like this, the only buttons I really use: </p>
+<p><img style="width: 500px; height: 50.769230769230774px;" src="/archive/media/2020/image14.png?width=500&amp;height=50.769230769230774" alt="Customized VS toolbar" data-udi="umb://media/4c3208e53e6b4b26b5d0f540cdfe71d6"></p>
+<p>The last two buttons are coming from Git Extensions, more on that later. </p>
+<p>I'm trying to detox even from having any toolbar with buttons. I do mostly know the keyboard shortcuts by now and I usually have Git Extensions open in a separate window anyway.</p>
+<p>The main takeaway from this paragraph should be that you can customise that toolbar, so why not think about the buttons you actually wish were there in the first place.</p>
+<h3>Stop the "rebuild solution" terror</h3>
+<p>This leads me to my last pet-peeve: why oh why does VS give you a "rebuild solution" option? It has the potential to ruin your build and has never (IMHO) led to anything productive. </p>
+<p>I'm sorry to break it to you, but most people who use this button religiously are only using it because they have a superstition that it fixes problems for them. It's not magic and doesn't do anything special.</p>
+<p>What does this button do? It <a href="https://bitwizards.com/thought-leadership/blog/2014/august-2014/visual-studio-why-clean-build-rebuild#:~:text=Rebuild%20Solution%20%2D%20Deletes%20all%20compiled,not%20the%20code%20has%20changed.">deletes all compiled files and compiles them again regardless of whether or not the code has changed.</a> This is exactly the same as choosing "clean solution" and then "build solution" by the way - I often see people doing: </p>
+<ol>
+<li>Clean solution - delete all compiles files (all dll's and exe's)</li>
+<li>Rebuild solution - compile all projects (and produce dll's and exe's)</li>
+<li>Build solution - compile code that has changed (in this case, it does absolutely nothing, since nothing has changed)</li>
+</ol>
+<p>So now that we know what "rebuild solution" does, we can theorise what problems it solves: absolutely none. It will only prove that your solution setup might be lacking something. </p>
+<p>When you rebuild the solution and the build doesn't complete, most of the time it's because you dropped dlls in a bin folder manually, instead of using NuGet or setting up a copy task from a lib directory. So there it at least is useful in pointing out that something is missing. </p>
+<p>I'm sorry to be so grumpy about this, I'm not grumpy at you, but at the lack of education from Microsoft's side. I also fell for this one for the longest time, by the way! ✋</p>
+<h3>Beware of the LoaderLock</h3>
+<p>When developing with Umbraco trying to work with the Umbraco codebase you will pretty quickly run into the LoaderLock error.</p>
+<p><img style="width: 500px; height: 288.49028400597905px;" src="/archive/media/2020/image10.png?width=500&amp;height=288.49028400597905" alt="LoaderLock error in VS" data-udi="umb://media/f41c3a8af9294f979b0c599da08da5b6"></p>
+<p>Unfortunately (we think) there's nothing we can do about it in our code, it doesn't have any negative effects either so we can ignore it, like in the screenshot above, disable the "Break when this exception type is thrown" checkbox and move on. After that, press F5 and of you go. </p>
+<p>If you do happen to know how to avoid this particular error then let us know, it's been a decade and we'd love to never see it again! 😅</p>
+<h2>IIS Express for Visual Studio Code</h2>
+<p>Speaking of IIS Express; My wonderful colleague <a href="https://twitter.com/warrenbuckley">Warren</a> made an <a href="https://marketplace.visualstudio.com/items?itemName=warren-buckley.iis-express" data-anchor="?itemName=warren-buckley.iis-express">excellent extension</a> for Visual Studio code to be able to start your current project in IIS Express. This is especially handy when you just want to unzip Umbraco somewhere and start running it.</p>
+<p><img style="width: 500px; height: 286.14685844057533px;" src="/archive/media/2020/2020-11-25_174306.png?width=500&amp;height=286.14685844057533" alt="Start a website with IISExpress in VSCode" data-udi="umb://media/473ee710f7af46198199874c6b075d1f"></p>
+<p>Just like in Visual Studio you can use CTRL+F5 to start a site in IISExpress or CTRL+SHIFT+F5 to restart the site. This makes it super quick to run an Umbraco website without having to set it up from scratch on your local machine.</p>
+<p>This extension is free and open source and Warren would love to buy some fancy coffees if you can <a href="https://github.com/sponsors/warrenbuckley">sponsor him for his hard and excellent work</a>. ☕</p>
+<h2>Windows Powertoys</h2>
+<p>Remember <a href="https://en.wikipedia.org/wiki/Microsoft_PowerToys#PowerToys_for_Windows_95">PowerToys for Windows 95</a>? Well, they're <a href="https://github.com/microsoft/PowerToys#current-powertoy-utilities">back for Windows 10</a>! And PowerToys Run is my favourite one since it solves the most annoying problem in Windows 10: finding an app! </p>
+<p>When I tap the start button and want to find ScreenToGif (more on that later), I start typing "gif". And why not, who can remember it starts with "Screen".. Why would I need to remember the exact name of the application?</p>
+<p><img style="width: 500px; height: 408.6294416243655px;" src="/archive/media/2020/image4.png?width=500&amp;height=408.6294416243655" alt="No results when searching for &quot;gif&quot; in the start menu" data-udi="umb://media/f156a48682964c17bc703049e64307d4"></p>
+<p>Is it too much to ask for a bit of wildcard searching, Microsoft? Apparently, yes.. </p>
+<p>Luckily PowerToys Run just works exactly how you expect it to.</p>
+<p><img style="width: 500px; height: 227.15572715572716px;" src="/archive/media/2020/image9.png?width=500&amp;height=227.15572715572716" alt="PowerToys Run finds ScreenToGif perfectly" data-udi="umb://media/56b83c51142b4caf9ba9427f5dfdc17e"></p>
+<p>The default key binding is ALT+SPACE but that seemed to conflict too often with the existing shortcut for older Windows apps to open the menu. I changed it to CTRL+ALT+SPACE and have been happy ever since.</p>
+<p><img style="width: 500px; height: 212.50000000000003px;" src="/archive/media/2020/image7.png?width=500&amp;height=212.50000000000003" alt="Settings for PowerToys Run" data-udi="umb://media/f56182a6497a4e0aa96142794a380a4a"></p>
+<p>Another notable PowerToy, <strong>FancyZones</strong>, is especially useful for owners of huge screens. FancyZones makes it easy to drop windows in predefined sections of the screen. </p>
+<p>There are new PowerToys being added all the time and the project is open source, so you could contribute (if only just by adding a feature request on their issue tracker).</p>
+<h2>Git</h2>
+<p>Git tooling is probably just as contentious as Visual Studio tips. Personal preference around tooling seems to usually come from: "this was the first thing I ever used and I can't  figure out how other tools do it".</p>
+<p>My personal favourite tool for git is <a href="http://gitextensions.github.io/">Git Extensions</a>, I've used it for well over 10 years and I know just where to find everything I need in a layout that I'm familiar with. It's not pretty, I will admit, but it <strong>works</strong> and it works very well.</p>
+<p><img style="width: 500px; height: 299.1329479768786px;" src="/archive/media/2020/image1.png?width=500&amp;height=299.1329479768786" alt="Git Extensions overview" data-udi="umb://media/37cf30674180419d8b70962af426b2d3"></p>
+<p>My favourite features are being able to compare between any commits, the filtering by branch or words in the commits, flattening the commit tree and the built-in console that makes it convenient to execute git commands right inside the interface.</p>
+<p>The closest I've come to really using a different git client was <a href="https://git-fork.com/">Fork</a>. It does a lot of things very right but I struggle with finding some of the things I use a lot. I keep trying it out though and I might be convinced to switch once it gets a few more features.</p>
+<p><img style="width: 500px; height: 271.88594297148575px;" src="/archive/media/2020/image8.jpg?width=500&amp;height=271.88594297148575" alt="Overview of the Fork application" data-udi="umb://media/1207509cc83349619456ee7000cb60ed"></p>
+<h3>Git aliases</h3>
+<p>In order to supercharge your git workflows, you can make your own git commands by introducing aliases. These aliases can take multiple commands and execute them as if they were one command. For example, when I work with pull requests for Umbraco, I can type `git pr 1234 v8/contrib` - that small command creates a new branch based on a PR number on GitHub, checks out the code in the PR and merges it with the v8/contrib branch. </p>
+<p><img style="width: 500px; height: 238.72785829307568px;" src="/archive/media/2020/gitaliases.gif?width=500&amp;height=238.72785829307568" alt="Examples of git aliases in Windows Terminal" data-udi="umb://media/d0e40dcbe6e04bd38dcb2618e380c305"></p>
+<p>This would normally be 4 different commands that I now no longer have to remember.</p>
+<p>For more inspiration, <a href="https://haacked.com/archive/2014/07/28/github-flow-aliases/">Phil Haack has a blog post</a> with some great and handy aliases as well. </p>
+<h2>Windows Terminal</h2>
+<p>In the screenshot above in the Git aliases paragraph, you already got a sneak peak of <a href="https://github.com/microsoft/terminal">Windows Terminal</a>. I was a long time fine of <a href="https://cmder.net/">cmder</a> before to make my command prompt a bit more pretty and a lot more useful than just cmd.exe, however recently, the new Windows Terminal has really stolen my heart.</p>
+<p><img style="width: 500px; height: 309.6774193548387px;" src="/archive/media/2020/image12.png?width=500&amp;height=309.6774193548387" alt="Windows Terminal running NPM and git commands side-by-side" data-udi="umb://media/7a9e1795a4e340f5801994120a1f53a8"></p>
+<p>It's fast, beautiful, native, and very customisable. I have enjoyed tinkering with my layouts and colours a lot. My current layout is based a lot on<a href="https://www.hanselman.com/blog/how-to-make-a-pretty-prompt-in-windows-terminal-with-powerline-nerd-fonts-cascadia-code-wsl-and-ohmyposh"> the excellent blog post by Scott Hanselman</a> to get fancy things in there like Posh-Git, Oh-My-Posh, Cascadia fonts and powerlines in there. It sounds like a lot of mumbo-jumbo but it provides those handy prompts on which git branch you're on, if there's any changes, etc. The powerline fonts make it look pretty. </p>
+<h2>ScreenToGif</h2>
+<p>Ever since <a href="https://twitter.com/kennjacobsen_dk">Kenn</a> showed us <a href="https://www.screentogif.com/">ScreenToGif</a> I've been hooked! It does what it says, it records what's on your screen to produce an animated gif. This is extremely helpful for me as I'm working with issues and pull requests since it makes it much easier to visually show where to click, what to type, etc. Instead of having to write out all the steps it's wonderful to be able to view them and see the subtle things that happen which sometimes don't get written down because they're assumed.</p>
+<p><img style="width: 500px; height: 405.05226480836234px;" src="/archive/media/2020/recorder-old220d6f4d.gif?width=500&amp;height=405.05226480836234" alt="Demo of ScreenToGif recording a portion of the screen" data-udi="umb://media/0f028a55e75d45b8bd29b8324b9afd30"></p>
+<p>Not only is it easy to record a gif, there's also a built-in editor which makes it a breeze to cut out frames, speed things up, highlight certain areas, etc.</p>
+<p>Did I mention it's free and open source? 👍</p>
+<h2>7zip</h2>
+<p>A quick one (and I mean that literally). Please, please, please: stop using WinRar or WinZip. Why are you struggling every day to not pay for these apps by waiting random times, hitting random buttons?</p>
+<p><a href="https://www.7-zip.org/">7zip</a> is <strong>fast</strong>, great and simple, it opens all compressed files, it is very ugly and we've already learned in the Git Extensions paragraph that I greatly enjoy ugly apps if they do their job well. Oh and please, don't even point out Windows' own unzipping tool (so slow!).</p>
+<p><img style="width: 500px; height: 172.103487064117px;" src="/archive/media/2020/2020-11-25_164053.png?width=500&amp;height=172.103487064117" alt="7zip screenshot" data-udi="umb://media/dff01a1faf3b4009ad11d1acda294ffc"></p>
+<p>Ps. Free ✅. Open source ✅.</p>
+<h2>Royal TS</h2>
+<p>If you manage more than a handful of remote desktop connections then <a href="https://www.royalapps.com/ts/win/features">Royal TS is the power tool for you</a>. </p>
+<p><img style="width: 500px; height: 293.29852045256746px;" src="/archive/media/2020/image1.png?width=500&amp;height=293.29852045256746" alt="Royal TS Screenshot" data-udi="umb://media/271127f6d79a400e9c2fe577277574e0"></p>
+<p>You can group different connections in named folders and they all open inside Royal TS instead of annoyingly taking over your full screen. You can set default config values for (for example) redirecting buttons like ALT+TAB to the remote desktop instead of your local machine. On top of that it supports many more protocols like VNC, TeamViewer and many more. </p>
+<p>On top of that, the files with lists of connections can be encrypted and then unlocked with a password so you can safely share them with your team without being afraid of someone getting a hold of the file and being able to jump on your server. They'll have an impossible time unlocking the file without the required password.</p>
+<p>I've been a happy paying customer for 10 years, and can't live without it for my RDP connections.</p>
+<h2>LinqPad</h2>
+<p>When working with Umbraco locally I create many many test installs, and to make it super easy they all run on a small SQL CE database so that I don't have to set up a full database in SQL Server (which would be using CPU/memory!). The only problem is when I want to look in the SQL CE database, or edit something. </p>
+<p>That's where <a href="https://www.linqpad.net/">LinqPad</a> comes to the rescue. It can natively open SQL CE (and regular SQL) databases and allow me to do anything I want with them, either with some Linq querying or raw SQL queries.</p>
+<p><img style="width: 500px; height: 271.74813587406794px;" src="/archive/media/2020/2020-11-25_165757.png?width=500&amp;height=271.74813587406794" alt="Using LinqPad to query a SQL CE database" data-udi="umb://media/e9dae0ca1b134e55a4762c9dfad08fa9"></p>
+<p>That is not the only thing LinqPad can do though, I often use it for very rapid prototyping of some C# code without having to open Visual Studio and starting a full debug session. </p>
+<p><img style="width: 500px; height: 359.47712418300654px;" src="/archive/media/2020/thebigdump.png?width=500&amp;height=359.47712418300654" alt="Using LinqPad to execute C# and &quot;dump&quot; the result" data-udi="umb://media/c2da3b86f45147d681b25a0bea480ceb"></p>
+<p>You can even install NuGet packages in the code editor to quickly start exploring a new API that you're unfamiliar with. It's a joy to use and my favourite is to use the built-in Dump() extension method that will show a rich preview of the result of almost anything, as pictured above.</p>
+<p>In order to edit databases rows/columns you need a paid license and with pricing between $49 and $95, it's a steal! Very much worth it.</p>
+<h2>Ditto</h2>
+<p>No, I'm not talking about <a href="https://our.umbraco.com/packages/developer-tools/ditto/">Lee's lovely Umbraco package</a>. The <a href="https://ditto-cp.sourceforge.io/">Ditto I'm talking about</a> is a clipboard manager for Windows. This excellent, yet slightly ugly pieces of software remembers what you put on your clipboard and it remembers your past items as well, which means you can easily cycle through them.</p>
+<p>For example, if you need to copy 3 parts of an address on different lines, just do a CTRL+C on the name, then CTRL+C on the address, then CTRL+C on the city and start filling out that form that has 3 separate fields for it. A quick CTRL+SHIFT+V brings up the list of items you just copied so you don't have to keep switching between windows or tabs.</p>
+<p><img style="width: 325px; height: 317px;" src="/archive/media/2020/image1.png?width=325&amp;height=317" alt="Example of the list of available pastes from Ditto" data-udi="umb://media/36fe638d3e634195934f9e9c4fdccadd"></p>
+<p>Ditto supports images as well and you can save items that you paste very often, for example a default reply or a test email address.</p>
+<p>And yes, people keep pointing out that the WIN+V shortcut does this natively as well.</p>
+<p><img style="width: 297px; height: 394px;" src="/archive/media/2020/2020-11-25_175435.png?width=297&amp;height=394" alt="WIN+V shortcut showing a list of pastes available" data-udi="umb://media/f35b2567c02b4b2b9b76b50914429829"></p>
+<p>This works great too, but with Ditto you have a lot more control over what is being kept, how many items, you can even share them between multiple computers. So once you fall in love with WIN+V, try to power up to Ditto and enjoy the added options.</p>
+<h2>Agent Ransack</h2>
+<p>Once more proving that I love ugly tools that do a <strong>great</strong> job... <a href="https://www.mythicsoft.com/agentransack/">Agent Ransack</a> is a simple but powerful search tool for Windows.</p>
+<p><img style="width: 500px; height: 310.0303951367781px;" src="/archive/media/2020/image1.png?width=500&amp;height=310.0303951367781" alt="Agent Ransack performing a complex search" data-udi="umb://media/49c5907061e34e878f0546199c9cdfc1"></p>
+<p>As I've complained about before, any searching built into Windows is shit (can I curse here? apologies... 😇). So in order to look for files on my disk the only tool that I like and trust is Agent Ransack. It's fast, without requiring you to create any kinds of indexes first.</p>
+<p>Not only can it find files or words in file, it can also do more complex searches like the one above where I need a javascript file that contains both specific words that I'm looking for.</p>
+<p>Agent Ransack has a free version and I haven't needed the paid features yet, maybe one day. </p>
+<h2>That's a wrap</h2>
+<p>I could keep going on and on! But I'll save some tips for the next time we meet, hopefully we can do that in person again soon. 🤞</p>
+<p>Finally, a call to action: let me know what you loved from this post, what you disagreed with (nicely, please) and what your favourite productivity tools and tips are! I'm always curious to try something new that can "spark joy" in my developer life. 🎁</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/app/" title="See all articles tagged with App">App</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/git/" title="See all articles tagged with Git">Git</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Sebastiaan Janssen"><img src="//gravatar.com/avatar/aca60d34370bea605a948095e06c6f7f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/aca60d34370bea605a948095e06c6f7f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Sebastiaan Janssen</h1>
+        <p>Sebastiaan is on Twitter as <a href="//twitter.com/cultiv" title="Sebastiaan Janssen on Twitter" rel="author">@cultiv</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Editor-proofing Umbraco</title>
+<meta name="description" content="How to stop your editors from deleting things they shouldn't, and changing things they shouldn't.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Editor-proofing Umbraco</h1>
+      <p class="byline"> by Tim Payne, <span class="pubdate">posted on <time datetime="2013-12-01">Dec 1, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Editors. They're the whole point of a CMS really, aren't they? You build a nice CMS for them to use, and then they get busy doing the day to day entry of the content. Umbraco makes it very easy for them to do this, but it also makes it quite easy for them to do things that you would rather they didn't.......</p>
+<p class="intro">Let me give you an example. You've built a large(ish) site, and you have a settings section that contains things like sidebar boxes and adverts. So far, so good, but what happens when your client, who likes to tinker with stuff, deletes the settings section by accident? Nuking your carefully constructed settings? Then lets say one of the other editors empties the recycling bin. When they phone you up to ask you why the site is suddenly broken, the chances are that you'll look a bit like this.......</p>
+<figure>
+  <a href="/archive/media/2013/khan.jpg">
+    <img src="/archive/media/2013/khan.jpg" alt="EEEEEEEEEEEEEEEEEEEEEEEEDIIIITOOOOOOOOOOOOORS!!!" width="530">
+  </a>
+  <figcaption>EEEEEEEEEEEEEEEEEEEEEEEEDIIIITOOOOOOOOOOOOORS!!!</figcaption>
+</figure>
+<p>So how do you stop the client from deleting, copying and moving things that they shouldn't? Handily, the API exposes a bunch of methods that you can hook into to remove menu items etc. You can code this for each project you do, but it's REALLY boring (trust me, I used to do it for each project, and it sucked). So I wrote a package that would allow me to do it in a config file, no coding required!!!</p>
+<p>You can download the package from it's our.umbraco <a href="http://our.umbraco.org/projects/backoffice-extensions/attackmonkey-custom-menus">project page</a>. Install it just like you would with any other package, and you're good to go. <em><strong>Note: the package is not currently compatible with Umbraco 7</strong></em>. I'm working on a compatible version at the moment.</p>
+<p>Here's an example site content tree with some settings nodes. Notice the context menu contains all sorts of things that we probably don't want the editors to do with the node, like delete, copy set hostnames etc.<a style="font-size: 10px;" href="/archive/media/2013/untitled_3.png"><br></a></p>
+<figure>
+  <a href="/archive/media/2013/untitled_3.png">
+    <img src="/archive/media/2013/untitled_3.png" alt="Look at all those nasty options! *shudder*" width="500">
+  </a>
+  <figcaption>Look at all those nasty options! *shudder*</figcaption>
+</figure>
+<p>When the package installs, it creates a new config file called "customMenus.config" in the /config folder of your Umbraco site. The config file looks a bit like this:</p>
+<pre class="language-markup"><code>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;!--
+ignoreForAdmin: set this to true if you'd like to show ALL menu options for members of the Administrator group
+
+useInMediaSection: set this to true if you want the rules to apply to Media items as well
+
+Custom Menus Rules:
+
+You can add as many rules as you like, each rule has the following properties:
+  docTypeAlias - the doc type alias the rule applies to (case sensitive)
+  nodeId - the node the rule applies to (use instead of docTypeAlias)
+  clickAction - if you set some javascript / a link here, will override the default click action for the node
+  mentItems - a comma separated list of menu items (Case sensitive, see list below for common values)
+  removeMenuItems - a comma separated list of menu items to remove (Case sensitive, see list below for common values)
+
+This package should support any menu items that are installed in your application and applicable to contet items.
+You should use the Alias of the menu actions, for reference, I have include the list of default content actions that come 
+with Umbraco here:
+
+assignDomain - assign host name
+auditTrail - view audit trail
+browse - browe node
+copy - copy node
+delete - delete node
+emptyTrashcan - empty recycle bin
+liveEdit - live editor link
+move - move content
+create - create new content
+notify - notification link
+protect - member authentication link
+publish - publish page
+refreshNode - reload nodes
+rights - set admin user permissions list
+rollback - rollback link
+sendToTranslate - send to translation link
+sort - sort documents
+sendtopublish - send to publis
+translate - translate link
+unpublish - unpublish page
+separator - menu divider
+
+Example 1: disable click and only allow "refresh" menu item on "settings" doc type
+&lt;add docTypeAlias="settings" nodeId="" clickAction="javascript:UmbClientMgr.appActions().openDashboard('content');" menuItems="refreshNode" /&gt;
+
+Example 2: normal click action, only affect node id 1057 and show create, sort and publish, with a divider
+&lt;add docTypeAlias="" nodeId="1057" clickAction="" menuItems="create,sort,separator,refreshNode" /&gt;
+
+Example 3: remove delete option from the "homePage" docType
+&lt;add docTypeAlias="homePage" nodeId="" clickAction="" removeMenuItems="delete" /&gt;
+--&gt;
+&lt;customMenus&gt;
+  &lt;ignoreForAdmin&gt;false&lt;/ignoreForAdmin&gt;
+  &lt;useInMediaSection&gt;false&lt;/useInMediaSection&gt;
+  &lt;menuRules&gt;
+    &lt;!-- add your rules here --&gt;
+  &lt;/menuRules&gt;
+&lt;/customMenus&gt;</code></pre>
+      <p class="snippet-caption">An untouched custom menus config file, just waiting for you to fill it full of rules!</p>
+<h2>Basic Configuration</h2>
+<p>Right, first things first. The settings node itself. The only thing that you should be able to do with it really is reload the sub-nodes, and we don't <em>really</em> want the editors to be able to get to the edit screen either, as we don't want them to unpublish it, rename it, or preview it. Assuming that the settings node has an alias of "settings", the config file would now look like this:</p>
+<pre class="language-markup"><code>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;customMenus&gt;
+  &lt;ignoreForAdmin&gt;false&lt;/ignoreForAdmin&gt;
+  &lt;useInMediaSection&gt;false&lt;/useInMediaSection&gt;
+  &lt;menuRules&gt;
+    &lt;add docTypeAlias="settings" nodeId="" clickAction="javascript:UmbClientMgr.appActions().openDashboard('content');" menuItems="refreshNode" /&gt;
+  &lt;/menuRules&gt;
+&lt;/customMenus&gt;</code></pre>
+      <p class="snippet-caption">Our first rule, this sets the click action to open the content dashboard rather than the editor, and only has the reload nodes menu item!</p>
+<p>Refreshing the tree (<em><strong>this is important! You MUST refresh the tree after you've changed the settings for the new menu items to take effect</strong></em>), we can now see that the right click menu only has the one option in it, "reload nodes". Also, if you click on the settings node, you'll get the content dashboard instead of the editor page.</p>
+<figure>
+  <a href="/archive/media/2013/menu_better.png">
+    <img src="/archive/media/2013/menu_better.png" alt="Much, much better! *yay*" width="500">
+  </a>
+  <figcaption>Much, much better! *yay*</figcaption>
+</figure>
+<h2>How does it work?</h2>
+<p>Looking at the config file entry, you'll see there are the following options on each rule in the config file:</p>
+<ul>
+<li><strong>docTypeAlias</strong> - this allows you to specify the document type alias that the rule should apply to. ALL content nodes of this type will have this rule applied to them.</li>
+<li><strong>nodeId</strong> - if you want the rule to JUST apply to a single node, add it's node id here, and leave the docTypeAlias empty.</li>
+<li><strong>clickAction</strong> - if you want to overide the action when someone clicks on the node in the tree, paste the code you want in the link here. It can be a physical URL, or a javascript call.</li>
+<li><strong>menuItems</strong> - enter a comma separated list of the menu items that should be used for this rule. The default config file lists all of the available options that you can use, as well as the special separator line.</li>
+</ul>
+<p>Using these settings, it's possible to have rules that apply to all documents of a specific type, or just individual content nodes. The plugin also respects the permissions of the user, so even if you define menu items that a user shouldn't see, they won't get shown them if they don't have permission to use them.</p>
+<p>Now that you've seen how that works, you can go through and set up the rules for each of the other settings sections. So for example, you might specify that the LHS Boxes settings node will only have the options to create, sort and reload nodes, and that the boxes themselves can only have delete move and publish. Below is an example of a more complete customMenus.config file:</p>
+<pre class="language-markup"><code>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;customMenus&gt;
+	&lt;ignoreForAdmin&gt;false&lt;/ignoreForAdmin&gt;
+	&lt;useInMediaSection&gt;false&lt;/useInMediaSection&gt;
+	&lt;menuRules&gt;
+		&lt;!-- general site content rules --&gt;
+		&lt;add docTypeAlias="HomePage" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="NotFoundPage" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="ErrorPage" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="RssFeed" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="SiteSearch" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="Sitemap" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="About" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="Careers" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="ContactUs" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="CustomerCare" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="FaqAskQuestion" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="FaqSearch" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="Faqs" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="GoogleSitemap" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="News" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="DateFolder" nodeId="" clickAction="" removeMenuItems="copy,move" /&gt;
+		&lt;add docTypeAlias="ProductsLandingPage" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="" nodeId="1196" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="" nodeId="1207" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		&lt;add docTypeAlias="" nodeId="1211" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+		
+		&lt;!-- general settings section rules --&gt;
+		&lt;add docTypeAlias="Settings" nodeId="" clickAction="javascript:UmbClientMgr.appActions().openDashboard('content');" menuItems="refreshNode" /&gt;
+		&lt;!-- lhs sidebar boxes rules --&gt;
+		&lt;add docTypeAlias="SettingsLhsBoxes" nodeId="" clickAction="javascript:UmbClientMgr.appActions().openDashboard('content');" menuItems="create,sort,separator,refreshNode" /&gt;
+		&lt;add docTypeAlias="SettingsLhsBoxStat" nodeId="" clickAction="" menuItems="delete,separator,move,separator,publish" /&gt;
+		&lt;add docTypeAlias="SettingsLhsBoxTextImageLink" nodeId="" clickAction="" menuItems="delete,separator,move,separator,publish" /&gt;
+		&lt;add docTypeAlias="SettingsLhsBoxDownload" nodeId="" clickAction="" menuItems="delete,separator,move,separator,publish" /&gt;
+		&lt;add docTypeAlias="SettingsLhsBoxImage" nodeId="" clickAction="" menuItems="delete,separator,move,separator,publish" /&gt;
+		&lt;add docTypeAlias="SettingsLhsBoxSocial" nodeId="" clickAction="" menuItems="delete,separator,move,separator,publish" /&gt;
+		&lt;add docTypeAlias="SettingsLhsBoxVideo" nodeId="" clickAction="" menuItems="delete,separator,move,separator,publish" /&gt;
+		&lt;add docTypeAlias="SettingsLhsCtaButtons" nodeId="" clickAction="" menuItems="delete,separator,move,separator,publish" /&gt;
+		&lt;add docTypeAlias="SettingsLhsBoxFolder" nodeId="" clickAction="" menuItems="create,separator,delete,separator,move,separator,sort,publish,refreshNode" /&gt;
+	&lt;/menuRules&gt;
+&lt;/customMenus&gt;</code></pre>
+      <p class="snippet-caption">Here is a more complete example with many rules set up for various different document types and specific nodes.</p>
+<h2>Removing menu items</h2>
+<p>What if you just want to <em><strong>remove</strong> </em>certain options from the menu? Lets say that you have a structurally important page with some special functionality that should never be deleted, such as a contact form. Easy! Instead of "menuItems" on your rule, use "removeMenuItems" and list the menu items that you would like to remove.</p>
+<p>The example rule below removes the delete and move options from a specific page:</p>
+<pre class="language-markup"><code>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;customMenus&gt;
+  &lt;ignoreForAdmin&gt;false&lt;/ignoreForAdmin&gt;
+  &lt;useInMediaSection&gt;false&lt;/useInMediaSection&gt;
+  &lt;menuRules&gt;
+    &lt;add docTypeAlias="contactForm" nodeId="" clickAction="" removeMenuItems="delete,copy,move" /&gt;
+  &lt;/menuRules&gt;
+&lt;/customMenus&gt;</code></pre>
+      <p class="snippet-caption">This rule will remove the delete, copy and move menu options from the "contactForm" document type.</p>
+<p>Here's what the menu on the contact form looks like once this rule is in place:</p>
+<figure>
+  <a href="/archive/media/2013/menu_be_gone.png">
+    <img src="/archive/media/2013/menu_be_gone.png" alt="Notice that the copy, move and delete menu items are gone!" width="500">
+  </a>
+  <figcaption>Notice that the copy, move and delete menu items are gone!</figcaption>
+</figure>
+<h2>Other options</h2>
+<p>There are two other options that you can set to affect the behaviour of the package:</p>
+<ul>
+<li><strong>ignoreForAdmin</strong> - setting this to true means that the rules are ignored for all members of the Administrator group, so you can still move and delete things that the editors can't.</li>
+<li><strong>useInMediaSection</strong> - setting this to true means that you can have rules that apply to the media section as well as the content section!</li>
+</ul>
+<h2>Alternatives to this method</h2>
+<p>You can also accomplish some of this by using the permissions in Umbraco. By right clicking on any node in the tree, you can set which users can perform what actions. However, I've found that if you have a lot of users and/or content, settings the rules for individual users can be quite time consuming, and as you can't set permissions for groups, you have to set the permissions for each new user that gets created (so you have to remember to set the permissions for each new user). Using the package means that you can set the rules at site launch, and all users have the menu rules automatically. If you'd like to find out more about using the built in Umbraco permissions, <a href="http://our.umbraco.org/wiki/reference/umbraco-client/context-menus/permissions">check out this page on our.umbraco</a>!</p>
+<h2>Hiding tabs in the CMS</h2>
+<p>Another thing that you might want to do is hide certain tabs on some pages from a user, or groups of users. You can do this with either my own Tab Hider package, which you can <a href="http://our.umbraco.org/projects/backoffice-extensions/attackmonkey-tab-hider">download from our.umbraco</a>, or with Anthony Dang's uHidesy (<a href="http://our.umbraco.org/projects/backoffice-extensions/uhidesy">also available on our.umbraco</a>). My tab hider package allows you configure tabs that should be hidden for certain DocTypes and users, again via a config file, whereas uHidesy adds a control that is only visible to administrators that allows you to set up hiding options for both tabs and properties on a particular page.</p>
+<p>For the sake of space, I'm just going to use my Tab Hider package in this example, but I encourage you to try out uHidesy as well and see which one suits your requirements best!</p>
+<p>Install the package as you would normally (<em><strong>again, this package is not currenlty compatible with Umbraco 7, and again, I'm working on fixing that!</strong></em>) and it will add another config file, called "tabHider.config" to your /config folder.</p>
+<p>Here is an example config file, where I've hidden the "SEO" tab on all document types from the writer and editor groups on the site, and the "Right Hand Boxes" tab from editors and writers, but only on the "homePage" document type:</p>
+<pre class="language-markup"><code>&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;tabHider&gt;
+  &lt;onlyShowToRoot&gt;false&lt;/onlyShowToRoot&gt;
+  &lt;disableHiddenValidators&gt;true&lt;/disableHiddenValidators&gt;
+  &lt;hideRules&gt;
+    &lt;!-- 
+    For each tab that you want to hide, include an entry here, the format is:
+
+    &lt;add tabName="" hideFrom="" docTypeAliases="" /&gt;
+
+    tabName = the name of the tab to hide
+    hideFrom = comma separated list of users to hide the tab from
+    docTypeAliases = comma separated list of doctypes the hide applies to, leave empty or omit to have the rule apply to the tab on all doc types
+    --&gt;
+    &lt;add  tabName="seo" hideFrom="writer,editor" /&gt;
+    &lt;add tabName="Right Hand Boxes" hideFrom="writer,editor" docTypeAliases="homePage" /&gt;
+  &lt;/hideRules&gt;
+&lt;/tabHider&gt;</code></pre>
+      <p class="snippet-caption">A basic tab hider configuration example</p>
+<p>The rules are very simple! There are three properties that you can set for each rule:</p>
+<ul>
+<li><strong>tabName</strong> - this is the text of the tab that you want to hide.</li>
+<li><strong>hideFrom</strong> - a comma separated list of the user type aliases you would like to hide the tab from.</li>
+<li><strong>docTypeAliases</strong> - a comma separated list of the document type aliases that the rule should apply to. If you omit this property, the rule will apply to ALL document types.</li>
+</ul>
+<p>Set the rules up that you need for all of the tabs and user groups, and you're good to go!</p>
+<h2>Boom! Your site is now considerably more editor proof!!!</h2>
+<p>With just a couple of simple package installs, and some easy config rules, you've now made it much harder for your editors to do anything that's likely to cause them (and by extension, YOU) problems, like deleting, copying or moving important things they shouldn't!</p>
+<p>This is something that the editors probably won't even notice, but it's worth doing. I've been doing this as a matter of course on my sites for a few years now and it's worth it for the headaches it can save!</p>
+<p>There are also a bunch of things you can do from a basic useability point of view that the mighty Doug Robar covered in his excellent talk on being an Umbraco Superhero. You can view the slides from his presentation <a href="http://blog.percipientstudios.com/2013/5/9/umbracoman-being-a-superhero.aspx">on his blog</a>. It's an interesting read, and I urge you to check it out!</p>
+<p>Thanks for reading, I hope you found this useful!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Tim Payne"><img src="//gravatar.com/avatar/f89f5989e8af75fdba2de0e2932fec3c.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/f89f5989e8af75fdba2de0e2932fec3c.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Tim Payne</h1>
+        <p>Tim is on Twitter as <a href="//twitter.com/attack_monkey" title="Tim Payne on Twitter" rel="author">@attack_monkey</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li class="selected"><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

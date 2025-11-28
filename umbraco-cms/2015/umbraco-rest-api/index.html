@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco REST API</title>
+<meta name="description" content="An article about what's possible with the Umbraco REST API in its current state">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco REST API</h1>
+      <p class="byline"> by Marcin Zajkowski, <span class="pubdate">posted on <time datetime="2015-12-07">Dec 7, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Some of you may know, some might have never heard, but since June, we, as Umbraco developers, are able to use REST API without creating our own (usually achieved by using custom WebAPI <a href="https://our.umbraco.org/documentation/Implementation/Controllers/" target="_blank">controllers</a>). Codegarden 2015 attendees were able to hear about the API during the Roadmap Q&amp;A session and all the rest could read about it on <a href="http://umbraco.com/follow-us/blog-archive/2015/6/11/codegarden-update-726-and-730-beta-released/" target="_blank">this</a> Umbraco blog post. <span>Personally, I got to know about the existence of the REST API during the Umbraco UK Festival this year and </span>Shannon's talk: <strong>"Road to V8"</strong> (<a href="http://umbracoukfestival.co.uk/s/RoadToV8.pdf" target="_blank">slides</a>, <a href="https://www.youtube.com/watch?v=esALcGMkpNI" target="_blank">video</a>).</p>
+<p class="intro">The API is based on the <a href="http://stateless.co/hal_specification.html" target="_blank">HAL specification</a> (available on <a href="https://github.com/mikekelly/hal_specification" target="_blank">Github</a>) and is using WebApi implementation of HAL which can by also found on <a href="https://github.com/JakeGinnivan/WebApi.Hal" target="_blank">Github</a>. </p>
+<p>In this article I want to go through the whole process: From installation, configuration and even a small PoC to finish with a functional prototype running on top of the current version of the Umbraco REST API. I also want to share some of my own thoughts and some of the community's thoughts about use cases, scenarios and a bright future of using this API in the near future. Let's go!</p>
+<h2>Installation</h2>
+<p>Umbraco REST API can be easily installed via NuGet:</p>
+<pre class="language-markup"><code>Install-Package UmbracoCms.RestApi</code></pre>
+<p>It's also installing the <a href="https://github.com/umbraco/UmbracoIdentityExtensions" target="_blank">Umbraco Identity Extensibility</a> package which enables easy extensibility points for ASP.NET Identity and the Umbraco backoffice.</p>
+<p>After installation, following the readme file we need to move on to the <span><strong><em>~/App_Startup/UmbracoStandardOwinStartup.cs</em></strong> file and add some configuration for our API. There is a lot of useful information in the code file already, but what should interest us the most at this point is the API configuration. So we are including the code snippets present in the readme file and to begin with we are also enabling the authentication based on the backoffice cookie, just to be able to easily test the API first. Currently it is secured only based on backoffice user logins. The plan for the near future include enabling the front-end member logins and an easy approach for configuring the security during this startup configuration of the REST API.</span></p>
+<pre class="language-csharp"><code>/// &lt;summary&gt;
+/// The standard way to configure OWIN for Umbraco
+/// &lt;/summary&gt;
+/// &lt;remarks&gt;
+/// The startup type is specified in appSettings under owin:appStartup - change it to "StandardUmbracoStartup" to use this class
+/// &lt;/remarks&gt;
+public class UmbracoStandardOwinStartup : UmbracoDefaultOwinStartup
+{
+    public override void Configuration(IAppBuilder app)
+    {
+        // Ensure the default options are configured
+        base.Configuration(app);
+
+        // Configuring the Umbraco REST API options
+        app.ConfigureUmbracoRestApi(new UmbracoRestApiOptions()
+        {
+            // Modify the CorsPolicy as required
+            CorsPolicy = new CorsPolicy()
+            {
+                AllowAnyHeader = true,
+                AllowAnyMethod = true,
+                AllowAnyOrigin = true
+            }
+        });
+
+        // Enabling the authentication based on Umbraco back office cookie
+        app.UseUmbracoCookieAuthenticationForRestApi(ApplicationContext.Current);
+    }
+}</code></pre>
+      <p class="snippet-caption">~/App_Startup/UmbracoStandardOwinStartup.cs after our modifications</p>
+<p>As the class's comment says, we also need to change the default class used for OwinStartup to use our modified one.</p>
+<pre class="language-markup"><code>&lt;add key="owin:appStartup" value="UmbracoStandardOwinStartup" /&gt;</code></pre>
+      <p class="snippet-caption">~/web.config key</p>
+<h2>Playground</h2>
+<p>To discover how powerful the API currently is, I've created a playground solution with <strong>Umbraco CMS v7.3.1</strong> with Fanoe starterkit and <strong>HAL Browser</strong> HTML/JavaScript <a href="https://github.com/mikekelly/hal-browser" target="_blank">code</a> which is a really awesome and simple tool helping to go through HAL-based APIs.</p>
+<p>Want to play yourself? Grab a copy of the Playground from Github <a href="https://github.com/mzajkowski/umbraco-rest-api-playground" target="_blank">here</a>.</p>
+<p>We've got four starting endpoints to play with:</p>
+<ul>
+<li>/umbraco/rest/v1/content</li>
+<li>/umbraco/rest/v1/media</li>
+<li>/umbraco/rest/v1/members</li>
+<li>/umbraco/rest/v1/relations</li>
+</ul>
+<p>The response body from the root of the Content section of API is shown below.</p>
+<pre class="language-javascript"><code>{
+  "totalResults": 1,
+  "_links": {
+    "root": {
+      "href": "/umbraco/rest/v1/content"
+    },
+    "search": {
+      "href": "/umbraco/rest/v1/content/search{?pageIndex,pageSize,lucene}",
+      "templated": true
+    },
+    "content": {
+      "href": "/umbraco/rest/v1/content/1063"
+    }
+  },
+  "_embedded": {
+    "content": [
+      {
+        "templateId": 1056,
+        "hasChildren": true,
+        "sortOrder": 0,
+        "contentTypeAlias": "Home",
+        "parentId": -1,
+        "writerId": 0,
+        "creatorId": 0,
+        "path": "-1,1063",
+        "level": 1,
+        "id": 1063,
+        "key": "e4288a47-98a8-42ce-a5fa-7a9dcfffd1e7",
+        "name": "Home",
+        "createDate": "2015-11-25T01:47:36.823+00:00",
+        "updateDate": "2015-11-25T01:47:37.737+00:00",
+        "itemType": 0,
+        "properties": {
+          "siteTitle": "Fanoe - Umbraco Starter Kit",
+          "siteLogo": "/media/1042/logo.jpg",
+          "siteDescription": "This is an official Umbraco Starter kit. It shows of the newest features in Umbraco and is the perfect place to start for newcomers.. Everything is made to be taken apart. It's your own little playground. Enjoy!",
+          "content": "{\n  \"name\": \"1 column layout\",\n  \"sections\": [\n    {\n      \"grid\": 12,\n      \"rows\": [\n        {\n          \"name\": \"Banner\",\n          \"areas\": [\n            {\n              \"grid\": 12,\n              \"allowAll\": false,\n              \"allowed\": [\n                \"rte\",\n                \"banner_headline\",\n                \"banner_tagline\"\n              ],\n              \"config\": {},\n              \"styles\": {\n                \"margin-bottom\": \"60px\"\n              },\n              \"controls\": [\n                {\n                  \"value\": \"Welcome to Fanoe\",\n                  \"editor\": {\n                    \"name\": \"Banner Headline\",\n                    \"alias\": \"banner_headline\",\n                    \"view\": \"textstring\",\n                    \"icon\": \"icon-coin\",\n                    \"config\": {\n                      \"style\": \"font-size: 36px; line-height: 45px; font-weight: bold; text-align:center\",\n                      \"markup\": \"&lt;h1 style='font-size:62px;text-align:center'&gt;#value#&lt;/h1&gt;\"\n                    }\n                  }\n                },\n                {\n                  \"value\": \"This is the new default starter kit for Umbraco, we enjoy building things that not only look great, but also work great.\",\n                  \"editor\": {\n                    \"name\": \"Banner Tagline\",\n                    \"alias\": \"banner_tagline\",\n                    \"view\": \"textstring\",\n                    \"icon\": \"icon-coin\",\n                    \"config\": {\n                      \"style\": \"font-size: 25px; line-height: 35px; font-weight: normal; text-align:center\",\n                      \"markup\": \"&lt;h2 style='font-weight: 100; font-size: 40px;text-align:center'&gt;#value#&lt;/h2&gt;\"\n                    }\n                  }\n                }\n              ]\n            },\n            {\n              \"grid\": 4,\n              \"allowAll\": false,\n              \"allowed\": [\n                \"rte\",\n                \"media\"\n              ],\n              \"controls\": [\n                {\n                  \"value\": \"&lt;h2&gt;The starter kit&lt;/h2&gt;\\n&lt;p&gt;Congratulations on getting up and running with the “Fanoe” starter kit. It's a great way to get to know the Grid datatype.&lt;/p&gt;\\n&lt;p&gt;&lt;a href=\\\"/{localLink:1078}\\\" title=\\\"The starter kit\\\"&gt;Learn about the starter kit →&lt;/a&gt;&lt;a href=\\\"/{localLink:1078}\\\" title=\\\"The Starterkit\\\"&gt;&lt;br /&gt;&lt;/a&gt;&lt;/p&gt;\",\n                  \"editor\": {\n                    \"name\": \"Rich text editor\",\n                    \"alias\": \"rte\",\n                    \"view\": \"rte\",\n                    \"icon\": \"icon-article\"\n                  }\n                }\n              ]\n            },\n            {\n              \"grid\": 4,\n              \"allowAll\": false,\n              \"allowed\": [\n                \"rte\",\n                \"media\"\n              ],\n              \"controls\": [\n                {\n                  \"value\": \"&lt;h2&gt;Learn the basics&lt;/h2&gt;\\n&lt;p&gt;To get started on the right foot make sure to check out our documentation - from tutorials to API reference.&lt;/p&gt;\\n&lt;p&gt;&lt;a href=\\\"/{localLink:1079}\\\" title=\\\"Basics\\\"&gt;Off to the docs →&lt;/a&gt;&lt;/p&gt;\",\n                  \"editor\": {\n                    \"name\": \"Rich text editor\",\n                    \"alias\": \"rte\",\n                    \"view\": \"rte\",\n                    \"icon\": \"icon-article\"\n                  }\n                }\n              ]\n            },\n            {\n              \"grid\": 4,\n              \"allowAll\": false,\n              \"allowed\": [\n                \"rte\",\n                \"media\"\n              ],\n              \"controls\": [\n                {\n                  \"value\": \"&lt;h2&gt;Master classes&lt;/h2&gt;\\n&lt;p&gt;The best way to learn Umbraco is through the Master classes that’s running every month in most regions.&lt;/p&gt;\\n&lt;p&gt;&lt;a href=\\\"/{localLink:1080}\\\" title=\\\"Masterclasses\\\"&gt;Learn about the masterclasses →&lt;/a&gt;&lt;/p&gt;\",\n                  \"editor\": {\n                    \"name\": \"Rich text editor\",\n                    \"alias\": \"rte\",\n                    \"view\": \"rte\",\n                    \"icon\": \"icon-article\"\n                  }\n                }\n              ]\n            }\n          ],\n          \"styles\": {\n            \"background-image\": \"url(/media/1044/14441035391_7ee1d0d166_h_darken.jpg)\"\n          },\n          \"config\": {\n            \"class\": \"dark\"\n          },\n          \"id\": \"d28a05da-2404-c1e7-6265-01b07fc5f722\"\n        },\n        {\n          \"name\": \"Two column\",\n          \"areas\": [\n            {\n              \"grid\": 6,\n              \"allowAll\": false,\n              \"allowed\": [\n                \"rte\",\n                \"media\",\n                \"media_round\",\n                \"quote\"\n              ],\n              \"controls\": [\n                {\n                  \"value\": \"&lt;h1&gt;Umbraco Forms&lt;/h1&gt;\\n&lt;p&gt;With our add-on product Umbraco Forms it’s a breeze to create any type of form you can imagine.&lt;/p&gt;\",\n                  \"editor\": {\n                    \"name\": \"Rich text editor\",\n                    \"alias\": \"rte\",\n                    \"view\": \"rte\",\n                    \"icon\": \"icon-article\"\n                  }\n                }\n              ]\n            },\n            {\n              \"grid\": 6,\n              \"allowAll\": false,\n              \"allowed\": [\n                \"rte\",\n                \"media\",\n                \"media_round\",\n                \"quote\"\n              ],\n              \"controls\": [\n                {\n                  \"value\": \"&lt;h1&gt;Package repository&lt;/h1&gt;\\n&lt;p&gt;At Our Umbraco you’ll find hundreds of free packages made and maintained by the community.&lt;/p&gt;\",\n                  \"editor\": {\n                    \"name\": \"Rich text editor\",\n                    \"alias\": \"rte\",\n                    \"view\": \"rte\",\n                    \"icon\": \"icon-article\"\n                  }\n                }\n              ]\n            }\n          ],\n          \"styles\": {\n            \"background-image\": \"url(/media/1023/form-bg.png)\"\n          },\n          \"config\": {\n            \"class\": \"light\"\n          },\n          \"id\": \"5362ea7d-e729-078b-e717-a1e7aa69fd4b\"\n        },\n        {\n          \"name\": \"Full width image\",\n          \"areas\": [\n            {\n              \"grid\": 12,\n              \"allowAll\": false,\n              \"allowed\": [\n                \"media_wide_cropped\",\n                \"media_wide\"\n              ],\n              \"controls\": [\n                {\n                  \"value\": {\n                    \"focalPoint\": {\n                      \"left\": 0.5,\n                      \"top\": 0.5\n                    },\n                    \"id\": 1127,\n                    \"image\": \"/media/1046/14386124825_d43f359900_h_cropped.jpg\"\n                  },\n                  \"editor\": {\n                    \"name\": \"Image wide\",\n                    \"alias\": \"media_wide\",\n                    \"view\": \"media\",\n                    \"render\": \"/App_Plugins/Grid/Editors/Render/media_wide.cshtml\",\n                    \"icon\": \"icon-picture\"\n                  }\n                }\n              ]\n            }\n          ],\n          \"styles\": {},\n          \"config\": {\n            \"class\": \"full triangle\"\n          },\n          \"id\": \"953b3802-6b4f-20ed-66f9-9a855e9afdd4\"\n        },\n        {\n          \"name\": \"Two column\",\n          \"areas\": [\n            {\n              \"grid\": 6,\n              \"allowAll\": false,\n              \"allowed\": [\n                \"rte\",\n                \"media\",\n                \"media_round\",\n                \"quote\"\n              ],\n              \"controls\": [\n                {\n                  \"value\": \"&lt;h2&gt;Sharing is caring&lt;/h2&gt;\\n&lt;p&gt;Our Umbraco is our community hub, bringing together over a hundred thousand people every month sharing knowledge in the forum, documentation, blogs, packages and much more.&lt;/p&gt;\",\n                  \"editor\": {\n                    \"name\": \"Rich text editor\",\n                    \"alias\": \"rte\",\n                    \"view\": \"rte\",\n                    \"icon\": \"icon-article\"\n                  }\n                }\n              ]\n            },\n            {\n              \"grid\": 6,\n              \"allowAll\": false,\n              \"allowed\": [\n                \"rte\",\n                \"media\",\n                \"media_round\",\n                \"quote\"\n              ],\n              \"controls\": [\n                {\n                  \"value\": \"&lt;h2&gt;Born global, loving local&lt;/h2&gt;\\n&lt;p&gt;If you can’t make it to CodeGarden, that doesn’t mean you have to miss the chance of hanging out with the Umbraco community. You can do just that through the many local user groups and meetups&lt;/p&gt;\",\n                  \"editor\": {\n                    \"name\": \"Rich text editor\",\n                    \"alias\": \"rte\",\n                    \"view\": \"rte\",\n                    \"icon\": \"icon-article\"\n                  }\n                }\n              ]\n            }\n          ],\n          \"styles\": {},\n          \"config\": {\n            \"class\": \"purple\"\n          },\n          \"id\": \"29cac0ff-d8e9-605b-9e7b-6809dce55edd\"\n        },\n        {\n          \"name\": \"Banner\",\n          \"areas\": [\n            {\n              \"grid\": 12,\n              \"allowAll\": false,\n              \"allowed\": [\n                \"rte\",\n                \"banner_headline\",\n                \"banner_tagline\"\n              ],\n              \"controls\": [\n                {\n                  \"value\": \"&lt;h1 style=\\\"text-align: center;\\\"&gt;CodeGarden&lt;/h1&gt;\\n&lt;h5 style=\\\"text-align: center;\\\"&gt;Every year in June, around 500 Umbracians gather in Denmark for our annual conference “CodeGarden”.&lt;/h5&gt;\",\n                  \"editor\": {\n                    \"name\": \"Rich text editor\",\n                    \"alias\": \"rte\",\n                    \"view\": \"rte\",\n                    \"icon\": \"icon-article\"\n                  }\n                }\n              ]\n            }\n          ],\n          \"styles\": {\n            \"background-image\": \"url(/media/1028/14435732345_c9f5b48dfa_h_dark.jpg)\"\n          },\n          \"config\": {\n            \"class\": \"dark\"\n          },\n          \"id\": \"0093bd05-735a-9623-8509-28085818745c\"\n        }\n      ]\n    }\n  ]\n}"
+        },
+        "_links": {
+          "self": {
+            "href": "/umbraco/rest/v1/content/1063"
+          },
+          "root": {
+            "href": "/umbraco/rest/v1/content"
+          },
+          "meta": {
+            "href": "/umbraco/rest/v1/content/1063/meta"
+          },
+          "children": {
+            "href": "/umbraco/rest/v1/content/1063/children{?pageIndex,pageSize}",
+            "templated": true
+          },
+          "descendants": {
+            "href": "/umbraco/rest/v1/content/1063/descendants{?pageIndex,pageSize}",
+            "templated": true
+          },
+          "upload": {
+            "href": "/umbraco/rest/v1/content/1063/upload"
+          }
+        }
+      }
+    ]
+  }
+}</code></pre>
+<p>It has only one property - <em>totalResults</em> - which is showing how many root nodes are present in the Content section of our backoffice. According to <a href="http://stateless.co/hal_specification.html" target="_blank">Hypertext Application Language specification</a> it also has additional properties for the HAL Model:</p>
+<ul>
+<li><em>_links</em> for <strong>Links</strong> (to documents URIs)</li>
+<li><em>_embedded</em> for <strong>Embedded Resources</strong> (i.e. other resources contained within the item)</li>
+</ul>
+<p>Our embedded items have all the standard JSON properties listed inside of them and of course the HAL Model properties helping to go throught them to discover other items below them for example.</p>
+<figure>
+  <a href="/archive/media/2015/info_model.png">
+    <img src="/archive/media/2015/info_model.png" width="800" alt="HAL representation structure">
+  </a>
+  <figcaption>HAL representation structure</figcaption>
+</figure>
+<p>We can easily play with all the items, navigate through them and find or create all what we need. All the sections are working and returning data in the same way.</p>
+<h2>Possible use cases</h2>
+<p>So where will it be helpful? Everywhere where REST is required or needed.</p>
+<p>We can use it inside our application, enabling users or members to manage parts of Umbraco outside the backoffice panel and without any knowledge of C# for example. All the scenarios where e.g. SPAs (single page apps) or landing pages may be created by other developers/companies who may have skills or ability to use or create their own items directly from front-end code, without interrupting the structure of the ASP.NET project.</p>
+<p>We can also use the API in any external, 3rd party app (mobile too!). It could be used to integrate Umbraco with other systems; CRMs, Productivity tools (IFTTT, Slack, Trello maybe?) or by custom apps using content or data from our Umbraco instances. For example, we've been thinking about creating mobile apps to help manage content mainly for our Clients. With REST API and its presence in each Umbraco installation for example, it could be simpler than we thought. It won't be necessary to use any other, additional stuff for that and the app may be universal for all of us (Challenge accepted?! :)).</p>
+<p>The other options? It may be all the rest of what REST is for :)</p>
+<h2>PoC</h2>
+<p>I wanted to dig a little bit more and create small proof-of-concept showing that we really can access our Umbraco data from any other app. </p>
+<p>This is also a great time to learn something new, so I decided to finally take a look at the <strong><a href="http://ionicframework.com/" target="_blank">Ionic framework</a></strong> and<strong> <a href="https://github.com/mgonto/restangular" target="_blank">Restangular</a>.</strong></p>
+<p>Let's assume that we want to create a simple Ionic app listing the root content nodes from an Umbraco instance.</p>
+<p>I found a great sample with pull-refresh list in Ionic: <a href="http://codepen.io/ionic/pen/mqolp" target="_blank">http://codepen.io/ionic/pen/mqolp</a>, exported project as .zip file and created a separate website in my Playground solution.</p>
+<p>The main concern is of course the security and accessing the data from another app. Backoffice cookie is no longer an option here, so we need to switch to another authentication method - token-based authentication (or enable it as additional option).</p>
+<p>According to docs and what we learned earlier, we just need to go to our appStartup class and add one line:</p>
+<pre class="language-markup"><code>app.UseUmbracoBackOfficeTokenAuth();</code></pre>
+<p>I decided to create a separate user, called "API", which has access to "Content", "Media" and "Member" sections only. I will be authenticating and accessing the token for this particular user. For this purpose I created an Angular service taking care of getting the token by creating a POST request to authentication endpoint enabled after setting usage of backoffice token auth.</p>
+<pre class="language-javascript"><code>// Authentication token url
+var authUrl = 'http://localhost:55368/umbraco/oauth/token';
+
+// Authentication service
+ionicApp.factory('authResource', function ($http) {
+
+    var getAccessToken = function (grantType, username, password) {
+
+        var postData = {
+            grant_type: grantType,
+            username: username,
+            password: password
+        };
+
+        return $http.post(authUrl, postData, {
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            transformRequest: function (obj) {
+                var str = [];
+                for (var p in obj)
+                    if (obj.hasOwnProperty(p)) str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+                return str.join("&amp;");
+            }
+        }).then(function (response) {
+            return response.data;
+        });
+
+    };
+
+    return {
+        getAccessToken: getAccessToken
+    }
+});</code></pre>
+      <p class="snippet-caption">Angular authentication service</p>
+<p>We need to make sure to not expose the user credentials in files which are easily accessed from the client side of our app.</p>
+<p>Quoting the REST API documentation:<br>"<em>Since the REST API is currently only secured against backoffice user logins it is important to understand that if you want to use the REST API for applications that exist outside of the web domain, that you do not hard code backoffice user login credentials. In the future when the security for the REST API can be more flexible it would be advised to authenticate your apps based on a member's credentials that your app users would need to enter."</em></p>
+<p>As this is just a PoC, credentials will be exposed, but just keep in mind that this is not a best practice and not advised at all :)</p>
+<p>Now we are able to receive a token which we need to attach to each following request to the Umbraco REST API.</p>
+<p>After playing around with requesting data throught the $http service, I decided to find an easier way to handle API and HAL responses. I found a couple of possible solutions to achieve this:</p>
+<ul>
+<li>angular-hy-res (<a href="https://github.com/petejohanson/angular-hy-res" target="_blank">https://github.com/petejohanson/angular-hy-res</a>)</li>
+<li>angular-hal (<a href="https://github.com/LuvDaSun/angular-hal" target="_blank">https://github.com/LuvDaSun/angular-hal</a>)</li>
+<li>hyperagent.js (<a href="https://weluse.github.io/hyperagent/" target="_blank">https://weluse.github.io/hyperagent/</a>)</li>
+<li>Restangular (<a href="https://github.com/mgonto/restangular" target="_blank">https://github.com/mgonto/restangular</a>)</li>
+</ul>
+<p>and chose Restangular (it was easier to understand for me, offering many custom options and methods and it looks very promising).</p>
+<p>To avoid duplicating a lot of code required to properly construct all the requests to our API, I created a global configuration for Restangular.</p>
+<pre class="language-javascript"><code>// Restangular configuration
+ionicApp.config(function (RestangularProvider) {
+    // Set the base url for your API endpoints
+    RestangularProvider.setBaseUrl(apiBase);
+
+    // You can set some default headers for calling the API
+    RestangularProvider.setDefaultHeaders(
+        { 'Accept': 'application/hal+json' },
+        { 'Content-Type': 'application/hal+json' }
+    );
+
+    // Set an interceptor in order to parse the API response 
+    // when getting a list of resources
+    RestangularProvider.setResponseInterceptor(function (data, operation, what) {
+        if (operation == 'getList') {
+            resp = data._embedded[what];
+            resp._links = data._links;
+            return resp;
+        }
+        return data;
+    });
+
+    // Using self link for self reference resources
+    RestangularProvider.setRestangularFields({
+        selfLink: 'self.link'
+    });
+});</code></pre>
+      <p class="snippet-caption">Restangular global configuration</p>
+<p>Using the options from Restangular interceptors we can also create an error interceptor for example which can be responsible for refreshing and getting a new token if, for example, our current one expires.</p>
+<p>The last step was to create a service responsible for getting the data from our API endpoint.</p>
+<pre class="language-javascript"><code>// Content service - very basic!
+ionicApp.factory('contentResource', function ($http, Restangular) {
+
+    var getRootItems = function (authorization) {
+
+        return Restangular.all("content").getList({}, { 'Authorization': authorization });
+
+    }
+
+    return {
+        getRootItems: getRootItems
+    }
+
+});</code></pre>
+      <p class="snippet-caption">Angular content service</p>
+<p>Looks really clean, doesn't it?</p>
+<p>Putting it all together we are finally able to retrieve a token and get the root items from Umbraco.</p>
+<pre class="language-javascript"><code>$scope.init = function () {
+
+    // Get access token for back office user (can be different for different apps) - Temporary
+    // Probably will be deprecated regarding to plans of changing the authentication method(s).
+    // Remember to not expose user credentials in production apps!!! This is just PoC.
+    var accessTokenResponse = authResource.getAccessToken('password', 'api', 'password');
+    accessTokenResponse.then(function (response) {
+        $scope.tokenResponse = response;
+
+        console.log($scope.tokenResponse);
+
+        $scope.loadRootItems();
+    });
+};
+
+$scope.loadRootItems = function () {
+
+    // Get root items with passed authorization details to authenticate the request
+    var rootItems = contentResource.getRootItems($scope.tokenResponse.token_type + ' ' + $scope.tokenResponse.access_token);
+    rootItems.then(function (response) {
+        console.log(response);
+
+        $scope.items = response;
+    });
+
+};</code></pre>
+      <p class="snippet-caption">Angular init and load root items</p>
+<p>Let's test it by adding another Home node after retrieving the data for the first time.</p>
+<figure>
+  <a href="/archive/media/2015/fanoe_home_default.png">
+    <img src="/archive/media/2015/fanoe_home_default.png" width="1903" alt="Fanoe default Content section">
+  </a>
+  <figcaption>Fanoe default Content section</figcaption>
+</figure>
+<figure>
+  <a href="/archive/media/2015/ionic_first_request.png">
+    <img src="/archive/media/2015/ionic_first_request.png" width="467" alt="Ionic App - first request">
+  </a>
+  <figcaption>Ionic App - first request</figcaption>
+</figure>
+<figure>
+  <a href="/archive/media/2015/fanoe_another_home.png">
+    <img src="/archive/media/2015/fanoe_another_home.png" width="1903" alt="Adding new root node to Starter Kit">
+  </a>
+  <figcaption>Adding new root node to Starter Kit</figcaption>
+</figure>
+<figure>
+  <a href="/archive/media/2015/ionic_load_and_show.png">
+    <img src="/archive/media/2015/ionic_load_and_show.png" width="937" alt="Ionic pull-refresh">
+  </a>
+  <figcaption>Ionic pull-refresh</figcaption>
+</figure>
+<p>Boom! It works! :) Now we can go deeper and deeper, playing, trying, exploring. The code of the PoC is also inside the Github repository <a href="https://github.com/mzajkowski/umbraco-rest-api-playground" target="_blank">here</a>. Feel free to explore it, extend it and share your feedback and thoughts.</p>
+<h2>Summary</h2>
+<p>The Umbraco REST API, even at the current stage, is a great piece of work and starter point to extend the Umbraco usage for everyone. It's not perfect (yet!) and requires some additional work to setup and include inside the package, but hey... it's not even full v1.0.0.</p>
+<p>We can connect to our Umbraco websites, authenticate users from 3rd party systems and manipulate data without using the backoffice. The rest is only limited by our imagination, time and budgets :)</p>
+<p>From my little research, users are extending the API to enable e.g.:</p>
+<ul>
+<li>publish options for nodes</li>
+<li>delete action for nodes</li>
+<li>authenticate users without having back office accounts</li>
+</ul>
+<p>Looking forward to the next steps from the Core Team and community as well. The result of this work will be a great piece of code/tool and a "must-have" for anyone interested in using REST with their solutions.</p>
+<p> </p>
+<p><em>Sources:</em><br>- <a href="https://our.umbraco.org/documentation/Implementation/Rest-Api/" target="_blank">https://our.umbraco.org/documentation/Implementation/Rest-Api/</a><br>- <a href="https://github.com/umbraco/UmbracoRestApi" target="_blank">https://github.com/umbraco/UmbracoRestApi</a><br>- <a href="http://www.javifernandez.me/2014/12/21/consuming-hypermedia-apis-with-restangular/" target="_blank">http://www.javifernandez.me/2014/12/21/consuming-hypermedia-apis-with-restangular/</a></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/app/" title="See all articles tagged with App">App</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Marcin Zajkowski"><img src="//gravatar.com/avatar/547a64147253291c4d4a0dca1b0eaffd.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/547a64147253291c4d4a0dca1b0eaffd.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Marcin Zajkowski</h1>
+        <p>Marcin is on Twitter as <a href="//twitter.com/zajkowskimarcin" title="Marcin Zajkowski on Twitter" rel="author">@zajkowskimarcin</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li class="selected"><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

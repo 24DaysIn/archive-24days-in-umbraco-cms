@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Extending Umbraco using AngularJS and TypeScript</title>
+<meta name="description" content="Learn about using AngularJS with TypeScript to create a plugin for Umbraco 7">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Extending the Umbraco backend using AngularJS and TypeScript</h1>
+      <p class="byline"> by Bert Loedeman &amp; Marcel Verweij, <span class="pubdate">posted on <time datetime="2014-12-20">Dec 20, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Introduction</h2>
+<p>Since the introduction of Umbraco 7, extending the backend is possible using AngularJS. At Seven Stars, we were very excited to see Per Ploug demoing Belle at CodeGarden 2013. Why?</p>
+<p class="intro">At Seven Stars, we are coding a lot using AngularJS. In fact, we started developing with AngularJS since its early days. Starting last year, one of our customers began redeveloping the entire existing codebase (originally in Delphi/Silverlight) to a modern REST API and an AngularJS frontend. Since the original code base consists of several millions lines of code, we had some issues regarding the untyped character of the Javascript language. Fortunately, TypeScript was <span>also </span>born almost at the same time, which led to the decision to fully use AngularJS in cooperation with TypeScript to keep the new codebase maintainable.</p>
+<p>Maybe you also began using TypeScript and AngularJS both at the same time. In that case, you probably faced the same difficulties we encountered: learning AngularJS is not easy, although doable with all kinds of examples available on the web. However, if you add TypeScript, you constantly have to translate those examples to their TypeScript alternatives. When you are learning both techniques at once, the learning curve can be very, very steep. Perhaps, if we would have had all of today's knowledge at the starting point, we would have gathered detailed knowledge of AngularJS first, after which we would have added TypeScript to the battle. On the other hand, where would the article you are currently reading be then ;) ?</p>
+<h2>What (not) to expect?</h2>
+<p>In this article, we are introducing a small Umbraco 7 backend extension package using AngularJS, fully written in TypeScript. The extension adds the popular FullCalendar JQuery plugin (<a href="http://fullcalendar.io/" target="_blank" title="FullCalendar plugin website">http://fullcalendar.io/</a>, AngularJS extension: <a href="https://github.com/angular-ui/ui-calendar" target="_blank" title="AngularJS wrapper for the FullCalendar plugin">https://github.com/angular-ui/ui-calendar</a>) to Umbraco. We will not cover adding the extension itself to Umbraco (<a href="http://b.ldmn.nl/umbraco-custom-section" target="_blank" title="Blog post about adding a custom section in Umbraco 7">http://b.ldmn.nl/umbraco-custom-section</a>), nor the server-side implementation for the required API's. Also, we will not explain every AngularJS concept, since it would result in a very long article. Instead, we will solely focus on the client-side TypeScript code. The main purpose of this article is to get you going with a lot of essential TypeScript samples for AngularJS. In order to provide some extra samples, we are adding an appointment maintenance dialog which interacts with our mocked server-side back-end. Should this article raise any questions about parts not covered, feel free to contact us! We are more than happy to help.</p>
+<h2>Some basics</h2>
+<p>We are developing in Visual Studio 2013, with the WebEssentials plugin installed. We are using the latest version of TypeScript (as of writing, v1.3). Something we have struggled on, is that Umbraco uses a somewhat dated version of AngularJS, namely the v1.1 range. Since almost all recent samples on the web cover the v1.2 range, there are some limitations when using those examples in Umbraco. The rumors are that v1.2 will be skipped, in favor of the newly released v1.3 branch (which is awesome).</p>
+<p>For those of you wondering if TypeScript adds something to plain old Javascript: it certainly does. First of all, it provides you with type safety for both your own and third party libraries using interfaces and type description files (*.d.ts). Please note that both interfaces and type description files do not result in actual Javascript - type safety is lost when compiling. Secondly, TypeScript results in less verbose code while taking care for the necessary <span>plumbing </span>to create standards compliant Javascript understood by all recent browsers. The code is far more easy to refactor. A very clear advantage of TypeScript over Javascript is that you should worry a lot less about constructor patterns, private functions, closure and much more.</p>
+<p>In practice, TypeScript does still compile into Javascript. However, sometimes closure mistakes might occur. In those cases, a profound Javascript knowledge still appears to be necessary. Our hope and experience until now is that the TypeScript team will continue to mitigate those situations in the future.</p>
+<p>When adding AngularJS files to the Umbraco backend, you should always remember to add all JavaScript files (the result of saving TypeScript files) to the package.manifest file.</p>
+<h2>Module</h2>
+<p>To start adding your own AngularJS code, remember to add your custom module to the existing Umbraco module using the following statement:</p>
+<pre class="language-javascript"><code>module CalendarModule {
+    'use strict';
+    // declare 'CalendarModule' module
+    angular.module('CalendarModule', ['ngResource']);
+
+    var app: ng.IModule = angular.module('umbraco');
+    app.requires.push('CalendarModule');
+} </code></pre>
+      <p class="snippet-caption">CalendarModule.ts</p>
+<p>The rest of this article will use this module for registration. The technical layout for the package is as follows:</p>
+<figure>
+  <a href="/archive/media/2014/structure.png">
+    <img src="/archive/media/2014/structure.png" width="387" alt="Plugin file structure">
+  </a>
+</figure>
+<h2>Controller</h2>
+<p>To start using AngularJS on your Umbraco back-end's edit.html file, you will need a controller first. This controller is registered using the ng-controller attribute. Since we will use a &lt;form&gt; element in our example as the root for our edit.html file, this is the place to be for the attribute.</p>
+<p class="code">&lt;form novalidate name="calendarForm" ng-controller="CalendarModule.Controllers.CalendarController"&gt;</p>
+<p>The controller is used to implement the FullCalendar plug-in on the page. The controller is used for interaction with the view and provide the correct data to be used by the view (model shaping). In our html file, we use the following element to show the calendar:</p>
+<p class="code">&lt;div id="calendar" data-ui-calendar="uiCalendarConfig" data-ng-model="eventSources" data-calendar="fullCalendar"&gt;&lt;/div&gt;</p>
+<p>The ui-calendar AngularJS shim around the original JQuery plug-in cannot fully hide the fact that FullCalendar has not originally been built as an AngularJS plug-in. Therefore, instantiation is a bit hairy (have a look for yourself in the attached controller file).</p>
+<pre class="language-javascript"><code>module CalendarModule {
+    'use strict';
+
+    /**
+     * @ngdoc controller
+     * @name CalendarController
+     * @function
+     * 
+     * @description
+     * The controller for agenda section tree edit page (or some other bla)
+     */
+    export class CalendarController {
+        /**
+         * The $inject array is used by AngularJS dependency injection to prevent name resolution problems when using minification. 
+         * It is important to have matching items with the actual constructor function (which is injected with those properties).
+         */
+        static $inject = ['$scope', '$routeParams', 'CalendarModule.Services.AppointmentsService', 'CalendarModule.Services.UserTypesService'];
+
+        /**
+         * Constructor
+         */
+        constructor(
+            private $scope: ICalendarControllerScope,
+            $routeParams: any,
+            private appointmentsService: CalendarModule.Services.AppointmentsService,
+            private userTypesService: CalendarModule.Services.UserTypesService
+            ) {
+
+            $scope.content = { tabs: [{ id: 1, label: 'Agenda' }] };
+            $scope.editMode = () =&gt; $routeParams.create === 'true';
+
+            var userTypePromise = userTypesService.getUserType($routeParams.id);
+            userTypePromise.then((result) =&gt; $scope.userType = result);
+
+            this.doFullCalendar($scope, appointmentsService, userTypePromise);
+
+            // a timing conflict occurs between Umbraco, Bootstrap and AngularJS.
+            this.ensureRendering('calendar', 0);
+        }
+
+        /**
+         * The actual configuration and instantiation of the FullCalendar plug-in.
+         */
+        private doFullCalendar($scope: any, calendarService: CalendarModule.Services.AppointmentsService, userTypePromise: ng.IPromise&lt;IUserType&gt;): void {
+            // set FullCalendar events. it is possible to use a callback, which is the only way to go when using AngularJS promises (async behavior).
+            // we use a calendar per Umbraco user type, therefore we first wait for our user type promise to resolve, after which we get the actual 
+            // appointments (and wait for that promise to resolve as well).
+            $scope.events = (start: Moment, end: Moment, timezone, callback) =&gt; {
+                userTypePromise.then((userType) =&gt; {
+                    this.appointmentsService.getAppointments(userType.alias, start, end).then(
+                        (result: IEventData): any =&gt; { callback(result.events); }, // success
+                        (): any =&gt; { callback([]); }); // error                    
+                });
+            };
+
+            $scope.eventSources = [$scope.events];
+
+            // event click
+            $scope.onEventClick = (event, allDay, jsEvent, view) =&gt; {
+                $scope.activeAppointment = event;
+                $scope.showAppointmentMaintenanceDialog = true;
+            };
+
+            $scope.saveAppointment = (appointment: IEvent) =&gt; {
+                return this.saveAppointment(appointment);
+            };
+
+            // Change View
+            $scope.changeView = (view, calendar) =&gt; { calendar.fullCalendar('changeView', view); };
+
+            var height: number = Math.max(600, window.innerHeight - 255);
+
+            /* set FullCalendar config */
+            $scope.uiCalendarConfig = {
+                lang: 'en', // Translate calendar in your language
+                height: height,
+                editable: true,
+                cache: false,
+                header: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'month,agendaWeek,agendaDay,list'
+                },
+                firstDay: 0,
+                eventClick: $scope.onEventClick
+            };
+        }
+
+        private saveAppointment(appointment: IEvent): ng.IPromise&lt;IEvent&gt; {
+            return this.appointmentsService.saveAppointment(appointment);
+        }
+
+        private renderCalendar(calendar: any): void {
+            if (calendar) {
+                calendar.fullCalendar('render');
+            }
+        }
+
+        // ensure rendering of the fullCalendar control (unless it takes more than 2500ms)
+        private ensureRendering(id: any, retryCount: any): void {
+            if (id) {
+                if ($('#' + id + ' .fc-widget-header').length === 0) {
+                    if (retryCount &lt; 200) {
+                        window.setTimeout((): any =&gt; {
+                            // console.log(retryCount);
+                            this.renderCalendar($('#' + id));
+                            this.ensureRendering(id, ++retryCount);
+                        }, 50);
+                    }
+                }
+            }
+        }
+    }
+    angular.module('CalendarModule').controller('CalendarModule.Controllers.CalendarController', CalendarController);
+}</code></pre>
+      <p class="snippet-caption">CalendarController.ts</p>
+<p>In fact, the controller has to main concerns to deal with:</p>
+<ul>
+<li>Providing the correct configuration for the ui-calender directive</li>
+<li>Loading (and possibly shaping) data from services</li>
+</ul>
+<p>The ui-calendar configuration is taken care of by specifying $scope.uiCalendarConfig on the data-ui-calendar HTML attribute. The data-ui-calendar attribute tells AngularJS to use the uiCalendar directive. The uiCalendar directive itself is 'out of scope' for this article. It is important to know the ui-calendar directive searches the parent scope (thus, the controller scope) for additional information it needs. For example, think about the events array and event functions. Second-most important to know is that events must be added instantly, otherwise, they will never appear on the calendar. Since AngularJS works with asynchronous data communication (using promises), the only way to have events being loaded is using FullCalendar's event function which expects a callback to notify data loading has been completed.</p>
+<h2>Service</h2>
+<p>We want events to appear on the calendar. Of course, technically we could stick with the controller and directly communicate with the appropriate API. Since we are trying to use a proper front-end architecture, business logic does not belong in a controller, but in a service. In this example, we use two services:</p>
+<ul>
+<li>The UserTypesService is used to retrieve Umbraco user types;</li>
+<li>The AppointmentsService is used to retrieve appointments.</li>
+</ul>
+<p>This article only covers the appointments service.</p>
+<pre class="language-javascript"><code>///// &lt;reference path='../Shared/Contracts/IEventDTO.ts' /&gt;
+///// &lt;reference path='../Shared/Core.ts' /&gt;
+
+module CalendarModule {
+    'use strict';
+
+    export interface IEventData {
+        events: IEvent[];
+    }
+
+    export interface IEvent {
+        id: number;
+        start: Date;
+        end: Date;
+        title: string;
+        location: string;
+    }
+
+    export module Services {
+        /**
+         * @ngdoc service
+         * @name AppointmentsService
+         * @function
+         * 
+         * @description
+         * Get all calendar events 
+         */
+        export class AppointmentsService {
+            private $location: ng.ILocationService;
+            private $filter: ng.IFilterService;
+            private $q: ng.IQService;
+            private appointmentsResource: Resources.AppointmentsResource;
+
+            constructor(
+                $location: ng.ILocationService,
+                $filter: ng.IFilterService,
+                $q: ng.IQService,
+                appointmentsResource: Resources.AppointmentsResource) {
+                this.$location = $location;
+                this.$filter = $filter;
+                this.$q = $q;
+                this.appointmentsResource = appointmentsResource;
+            }
+
+            public getAppointments(userType?: string, start?: Moment, end?: Moment): ng.IPromise&lt;IEventData&gt; {
+                var defer: ng.IDeferred&lt;CalendarModule.IEventData&gt; = this.$q.defer&lt;IEventData&gt;();
+
+                this.appointmentsResource.get(userType, start, end).then((response: Contracts.IAppointmentDTO[]) =&gt; {
+                    var eventData: IEventData = this.convertResponseToEventData(response);
+                    defer.resolve(eventData);
+                });
+
+                return defer.promise;
+            }
+
+            public saveAppointment(appointment: IEvent): ng.IPromise&lt;IEvent&gt; {
+                var defer: ng.IDeferred&lt;CalendarModule.IEvent&gt; = this.$q.defer&lt;IEvent&gt;();
+
+                var add = !angular.isDefined(appointment.id) || appointment.id &lt;= 0;
+
+                var eventDto = this.convertEventToEventDto(appointment);
+
+                if (add) {
+                    this.appointmentsResource.post(eventDto).then((response: Contracts.IAppointmentDTO) =&gt; {
+                        var event: IEvent = this.convertEventDtoToEvent(response);
+                        defer.resolve(event);
+                    });
+                } else {
+                    this.appointmentsResource.put(eventDto).then((response: Contracts.IAppointmentDTO) =&gt; {
+                        var event: IEvent = this.convertEventDtoToEvent(response);
+                        defer.resolve(event);
+                    });
+                }
+                return defer.promise;
+            }
+
+            private convertResponseToEventData(response: Contracts.IAppointmentDTO[]): IEventData {
+                var eventData: IEventData = { events: [] };
+
+                for (var i: number = 0; i &lt; response.length; i++) {
+                    eventData.events.push(this.convertEventDtoToEvent(response[i]));
+                }
+
+                return eventData;
+            }
+
+            convertEventDtoToEvent(from: Contracts.IAppointmentDTO): IEvent {
+                var to: IEvent = {
+                    id: from.id,
+                    start: from.start,
+                    end: from.end,
+                    title: from.title,
+                    location: '' // not yet in data transfer object
+                };
+                return to;
+            }
+
+            convertEventToEventDto(from: IEvent): Contracts.IAppointmentDTO {
+                var to: Contracts.IAppointmentDTO = {
+                    id: from.id,
+                    start: from.start,
+                    end: from.end,
+                    title: from.title//,
+                    //location: '' // not yet in data transfer object
+                };
+                return to;
+            }
+
+            getApplicationRoot(): string {
+                var applicationRoot: string = this.$location.protocol() + '://' /* + this.$location.port() + '//' */ +
+                    this.$location.host() + '/';
+                return applicationRoot;
+            }
+
+        }
+
+        AppointmentsService.$inject = ['$location', '$filter', '$q', 'CalendarModule.Resources.AppointmentsResource'];
+
+        angular.module('CalendarModule').service('CalendarModule.Services.AppointmentsService', AppointmentsService);
+    }
+}</code></pre>
+      <p class="snippet-caption">AppointmentsService.ts</p>
+<p>Please note that, just like the controller, the service also uses the $inject property to specify injection behavior. Every AngularJS controller or service should provide the $inject propertyto be able to support the AngularJS Dependency Injection system, even when minifying the code. The getAppointments function in the service provides us with the appointments via a (typed) promise. The saveAppointments function saves an appointment back to our API.</p>
+<h2>Resource</h2>
+<p>Most examples covering data retrieval use the AngularJS $resource service from within the service. We used to do this as well, but found out that mocking the $resource service for testing causes real headaches. For better testability, we use a resource wrapper (AppointmentsResource) which uses the $resource service. Following this pattern, we are better suited to fully test the service itself.</p>
+<pre class="language-javascript"><code>'use strict';
+
+module CalendarModule {
+    export module Resources {
+        interface IExecuteResource {
+            execute?: (...params: any[]) =&gt; { $promise: ng.IPromise&lt;any&gt; };
+        }
+
+        export interface IAppointmentsResource {
+            get?: (userType?: string, start?: Moment, end?: Moment) =&gt; ng.IPromise&lt;Contracts.IAppointmentDTO[]&gt;;
+            post?: (event: Contracts.IAppointmentDTO) =&gt; ng.IPromise&lt;Contracts.IAppointmentDTO&gt;;
+        }
+
+        export class AppointmentsResource implements IAppointmentsResource {
+            private apiHost: string;
+
+            constructor(
+                private $q: ng.IQService,
+                private $location: ng.ILocationService,
+                private $resource: ng.resource.IResourceService) {
+            }
+
+            public get(userType?: string, start?: Moment, end?: Moment): ng.IPromise&lt;Contracts.IAppointmentDTO[]&gt; {
+                var defer: ng.IDeferred&lt;Contracts.IAppointmentDTO[]&gt; = this.$q.defer&lt;Contracts.IAppointmentDTO[]&gt;();
+
+                var resource: IExecuteResource = this.$resource(
+                    this.getApplicationRoot() + 'api/appointments' +
+                    (angular.isDefined(userType) ? '/' + userType : '') +
+                    (angular.isDefined(start) ? '?start=' + start.format() : '') +
+                    (angular.isDefined(start) &amp;&amp; angular.isDefined(end) ? '&amp;end=' + end.format() : ''),
+                    {
+                    },
+                    {
+                        'execute': { method: 'GET', isArray: true }
+                    });
+
+                resource.execute({}, (response: Contracts.IAppointmentDTO[]): any =&gt; {
+                    defer.resolve(response);
+                });
+
+                return defer.promise;
+            }
+
+            public post(event: Contracts.IAppointmentDTO): ng.IPromise&lt;Contracts.IAppointmentDTO&gt; {
+                var defer: ng.IDeferred&lt;Contracts.IAppointmentDTO&gt; = this.$q.defer&lt;Contracts.IAppointmentDTO&gt;();
+                var resource: IExecuteResource = this.$resource(this.getApplicationRoot() + 'api/appointments',
+                    {
+
+                    },
+                    {
+                        execute: { method: 'POST' }
+                    });
+
+                resource.execute({}, event, (response: Contracts.IAppointmentDTO): any =&gt; {
+                    defer.resolve(response);
+                });
+                return defer.promise;
+
+            }
+
+            public put(event: Contracts.IAppointmentDTO): ng.IPromise&lt;Contracts.IAppointmentDTO&gt; {
+                var defer: ng.IDeferred&lt;Contracts.IAppointmentDTO&gt; = this.$q.defer&lt;Contracts.IAppointmentDTO&gt;();
+                var resource: IExecuteResource = this.$resource(this.getApplicationRoot() + 'api/appointments/:id',
+                    {
+                        id: '@id'
+                    },
+                    {
+                        execute: { method: 'PUT' }
+                    });
+
+                resource.execute({ id: event.id }, event, (response: Contracts.IAppointmentDTO): any =&gt; {
+                    defer.resolve(response);
+                });
+                return defer.promise;
+
+            }
+
+            private getApplicationRoot(): string {
+                var applicationRoot: string = this.$location.protocol() + '://' /* + this.$location.port() + '//' */ +
+                    this.$location.host() + '/';
+                return applicationRoot;
+            }
+        }
+
+        AppointmentsResource.$inject = ['$q', '$location', '$resource'];
+
+        angular.module('CalendarModule').service('CalendarModule.Resources.AppointmentsResource', AppointmentsResource);
+    }
+}</code></pre>
+      <p class="snippet-caption">AppointmentsResource.ts</p>
+<h2>Directive</h2>
+<p>Now that the calendar is shown on the back-end page and filled with events, it is time to move on. When clicking an event, we would like to have a maintenance dialog for the event. For this dialog, we implement a directive: the AppointmentMaintenanceDialogDirective.</p>
+<pre class="language-javascript"><code>module CalendarModule {
+    'use strict';
+
+    interface IAppointmentMaintenanceDialogScope extends ng.IScope {
+        show: boolean;
+        currentPage: number;
+        appointment: any;
+
+        // private functions
+        moveNext: () =&gt; void;
+        movePrevious: () =&gt; void;
+        navigateTo: (page: number) =&gt; void;
+        cancel: () =&gt; void;
+        save: () =&gt; void;
+
+        // external functions
+        saveCallback: () =&gt; any;
+    }
+
+    /**
+     * Controller for displaying the appointment maintenance screen.
+     */
+    class AppointmentMaintenanceDialogDirectiveController {
+
+        /**
+         * Reference to the appointment maintenance dialog element.
+         */
+        maintenanceDialogElement: ng.IAugmentedJQuery;
+
+        /**
+         * Constructor wires up scope events to private controller methods and initialize scope variables.
+         */
+        constructor(
+            private $scope: IAppointmentMaintenanceDialogScope,
+            private $routeParams: any
+            ) {
+            $scope.currentPage = 1;
+
+            $scope.moveNext = () =&gt; this.moveNext();
+            $scope.movePrevious = () =&gt; this.movePrevious();
+            $scope.navigateTo = (page: number) =&gt; this.navigateTo(page);
+            $scope.cancel = () =&gt; this.cancel();
+            $scope.save = () =&gt; this.save();
+        }
+
+        /**
+         * move to next page.
+         */
+        private moveNext(): void {
+            this.$scope.currentPage++;
+        }
+
+        /**
+         * move to previous page.
+         */
+        private movePrevious(): void {
+            this.$scope.currentPage--;
+        }
+
+        /**
+         * navigate directly to a specific page.
+         */
+        private navigateTo(pageNumber: number): void {
+            this.$scope.currentPage = pageNumber;
+        }
+
+        /**
+         * do not display the tour again during this session.
+         */
+        private cancel(): void {
+            this.$scope.show = false;
+            //this.maintenanceDialogElement.hide();
+        }
+
+        private save(): void {
+            var result = this.$scope.saveCallback()(this.$scope.appointment);
+
+            this.$scope.show = false;
+            this.$scope.navigateTo = (page: number) =&gt; this.navigateTo(1);
+
+        }
+    }
+
+    /**
+     * Angular directive definition for the appointment maintenance dialog.
+     */
+    export class AppointmentMaintenanceDialogDirective implements ng.IDirective {
+        public templateUrl: string;
+        public replace: boolean;
+        public controller: any;
+        public scope: any = {
+            show: '=',
+            appointment: '=',
+            saveCallback: '&amp;'
+        };
+        public link: ($scope: IAppointmentMaintenanceDialogScope, element: ng.IAugmentedJQuery, attributes: ng.IAttributes, controller: AppointmentMaintenanceDialogDirectiveController) =&gt; void;
+
+        public static $inject: any[] = [() =&gt; { return new AppointmentMaintenanceDialogDirective(); }];
+
+        constructor() {
+            this.templateUrl = '/App_Plugins/CalendarSection/Backoffice/AngularJS/Templates/appointment-maintenance-dialog.html';
+            this.controller = ['$scope', '$routeParams', AppointmentMaintenanceDialogDirectiveController];
+            this.replace = true;
+            this.link = ($scope: IAppointmentMaintenanceDialogScope, element: ng.IAugmentedJQuery, attributes: ng.IAttributes, controller: AppointmentMaintenanceDialogDirectiveController) =&gt; {
+                this.linkFn($scope, element, attributes, controller);
+            };
+        }
+
+        private linkFn($scope: IAppointmentMaintenanceDialogScope, element: ng.IAugmentedJQuery, attributes: ng.IAttributes, controller: AppointmentMaintenanceDialogDirectiveController): void {
+            this.initElement($scope, element);
+        }
+
+        private initElement($scope: IAppointmentMaintenanceDialogScope, element: ng.IAugmentedJQuery) {
+            $scope.$watch('show', (newValue: boolean, oldValue: boolean) =&gt; {
+                if (angular.isDefined(newValue) &amp;&amp; newValue !== null &amp;&amp; newValue) {
+                    element.show();
+                } else {
+                    element.hide();
+                }
+            });
+        }
+    }
+
+    // NOTE Do not start directive name with an uppercase character! Won't load the thing.
+    angular.module('CalendarModule').directive('appointmentMaintenanceDialog', AppointmentMaintenanceDialogDirective.$inject);
+}  </code></pre>
+      <p class="snippet-caption">AppointmentMaintenanceDialogDirective.ts</p>
+<p>A directive is mostly accompanied by a template file, specifying the html the directive outputs. When a directive is loaded, the link function is always called. In most examples, you therefore see all logic go into this link function. However, this is very bad for testing purposes. Luckily, AngularJS provides us with the opportunity to use a directive controller. To get the most out of your testing experience, logic should be in the directive controller, and only DOM interaction (JQuery, events) should stay in the directive itself.</p>
+<p>As you probably notice, the directive has its own scope, different than the earlier controller's scope. In AngularJS, this is called an isolated scope (Dan Wahlin has written an excellent series on isolated scope: <a href="http://b.ldmn.nl/isolated-scope-wahlin" target="_blank" title="Isolated scopes explained by Dan Wahlin">http://b.ldmn.nl/isolated-scope-wahlin</a>). If you look closely, you can see that the show and appointment properties are marked with an '=', meaning they are being synced between both scopes. The saveCallback function is marked with an '&amp;', meaning the directive (controller) can call this function when it is specified on the directive. Isolated scope is worth an article on its own, but notice how the saveCallback function is used differently from what you would expect. In fact, the saveCallback function is a function reference. You must get the actual function by calling the reference. After this, you can use the function on the parent scope. Counter-intuitive, but it works fine when you know the drill ;) .</p>
+<p>To wrap up the dialog process: when the saveCallback function is called (look for it in the directive template), the CalendarController's saveAppointment function is called. This function saves the appointment using the CalendarService described earlier. The saveCallback function waits for the parent's function promise to resolve successfully, after which the dialog itself is hidden.</p>
+<h2>Wrapping up</h2>
+<p>We hope we have got you some handy examples about using TypeScript with AngularJS, especially in the context of extending the Umbraco back-end. We love to get feedback. You can react below or send us an email. Should you have an opinion on how to get even better TypeScript code, we would love to learn from you as well ;) .</p>
+<p>Maybe, for this example the amount of architecture seems to be a little 'over the top'. At Seven Stars, we believe in beautiful quality code, even in small code bases. High quality code is testable (and tested). This enables us to be fast and predictable when delivering software for our clients. In our next article, we therefore cover some basics on how to test this back-end extension using Jasmine unit tests.</p>
+<p>For those of you curious about all source code for this package, including all services, resources, interfaces and the manifest: <a href="/archive/media/2014/calendarsection.zip" target="_blank" title="Full package source">here is the zip</a>.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/typescript/" title="See all articles tagged with TypeScript">TypeScript</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Bert Loedeman"><img src="//gravatar.com/avatar/aaacc8a6668232a6251bbb436887d6a6.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/aaacc8a6668232a6251bbb436887d6a6.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Bert Loedeman</h1>
+        <p>Bert is on Twitter as <a href="//twitter.com/loedeman" title="Bert Loedeman on Twitter" rel="author">@loedeman</a></p>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="Marcel Verweij"><img src="//gravatar.com/avatar/95b0c4a050e5036e0450bc25edccc8d9.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/95b0c4a050e5036e0450bc25edccc8d9.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Marcel Verweij</h1>
+        <p>Marcel is on Twitter as <a href="//twitter.com/marcelvwe" title="Marcel Verweij on Twitter" rel="author">@marcelvwe</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li class="selected"><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

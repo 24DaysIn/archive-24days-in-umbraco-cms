@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Grid Nouveau and other fun stuff with Block Lists</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Grid Nouveau Block List</h1>
+      <p class="byline"> by Søren Kottal, <span class="pubdate">posted on <time datetime="2020-12-09">Dec 9, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">September 10th 2020 marked the date where Umbraco revolutionised how easy custom complex property editors are made. With the introduction of block based editors, you can now easily tailor the editor experience towards the usecase. At first sight, the first block based editor, Block List, looks just like a beefed up version of Nested Content. But it's much more. In this article I will show you how you can make your own Block List based grid editor.</p>
+<p class="intro">Back in the days, when v8 first arrived, I was reluctant to start using it, because Doc Type Grid Editor was not ported. I had grown pretty dependent on the possibility to build page content using a collection of different block / component / widget / you-name-it types. I have never been a fan of the full blown grid experience, where the editor has to choose from a heap of column sizes, and then mix and match headlines, photos, textareas etc. to make up the content. I have always liked the component based approach, where you would have ie. a banner, a story etc. component you would place in a flow of a page. On top of that, grid let me divide these components into sections, and columns when needed. And I had the ability to add some settings to each division. This could be controlling whether or not the section should gain more focus on the page, through negative space or color, or more advanced stuff like preventing anonymous users from seeing the section.</p>
+<p>In my first v8 days, I was trying to fit Nested Content into what I needed, but often fell short on the single layer of components. I needed my sectioning ability. In addition to that, settings now had to be a part of each component document type. This was the driving factor for me to get Doc Type Grid Editor ported to v8. Grid v2 had been on the drawing board for v8, but development never really got started. Instead Project Proteus as the block based editing approach was called, was going on. The first one out there is the before mentioned Block List, but the real gist of this work, has been to unify the way different block based editors are storing their content. So in theory (practise awaits) you should be able to switch from using one block based editor to another, without losing your content. So maybe one day, we will see an even better approach, and moving to this, would be no harder than switching the data editor.</p>
+<p>As mentioned Block List looks like a beefed up version of Nested Content. I see two main differences. One being, that you can edit your stuff in a dialog, instead of the inline view that Nested Content uses. For more complex blocks, this makes it a bit easier to work with, as a long list of page components can be quite overwhelming. The other one, the most interesting one, is the addition of a "settings document type", used for all the non-content content of your block. This is where stuff like the before mentioned ability to add more focus, or control anonymous user access should live. Using a doctype for this is genius, I have always dreaded the way you add settings fields for grid rows/columns, and you even get them strongly typed with ModelsBuilder now. If only this "settings document type" could be a thing for real nodes too.</p>
+<p>Block List comes with a default placeholder view for each block, that behaves much like Nested Content does. You can add a javascript template for the name, so you don't have to settle with the document type name. In my previous attempts to add sections with nested content, I would create a section document type, and set its name template to something like "Section containing 4 blocks". Which is ok, but then you would also have to nest the blocks inside, hidden at first sight. Not very friendly UX if you ask me. In Block List, you can replace this view with your own - which is how I made my Block List Grid experience.</p>
+<h2>A simple example - The Twitter card</h2>
+<p>Before going full on and showing how the grid is replicated with Block List, I would like to show you a simpler example. Just to show what the custom view can be used for. I think most websites today in some way implement different meta tags, for controlling the appearance when the page is being shared in social media. One of the ways to share a link, is by using Twitter. When you share a link on Twitter, a card will be shown with a preview of the link you are sharing, this is called the Twitter card. The Twitter card is controlled by adding different meta tags, and if you were to control this in Umbraco, you would usually add a couple of textstring properties for the title and description, and a media picker for the image. You would maybe even have a composition document type for this.</p>
+<p>But what if this composition document type, was just an element type used in a block list? With the ability to set a custom view, you could use Block List, to make your own document type backed property editor for a Twitter card. Take this document type for example:</p>
+<table border="0">
+<thead>
+<tr>
+<th>Name</th>
+<th>Alias</th>
+<th>Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Image</td>
+<td>image</td>
+<td>Media Picker</td>
+</tr>
+<tr>
+<td>Title</td>
+<td>title</td>
+<td>Textstring</td>
+</tr>
+<tr>
+<td>Description</td>
+<td>title</td>
+<td>Textstring</td>
+</tr>
+</tbody>
+</table>
+<p> </p>
+<p>Just adding these fields to a regular document type, would be ok. The editor would then fill them, and have beautiful Twitter previews. But let's go the extra mile. I have set up a Block List data type instead, with this document type as a block. As the custom view, I add the following custom view, and some <a rel="noopener" href="https://gist.github.com/skttl/796aa9ece831cae53421b5e6f21609da" target="_blank">CSS for styling</a>. Note, the CSS needs to be added through a package.manifest, and not as custom CSS for the block.</p>
+<pre><code class="language-markup">&lt;div class="twitter-card"&gt;
+    &lt;div class="twitter-card__image"&gt;
+        &lt;umb-property-editor model="block.content.variants[0].tabs[0].properties[0]"&gt;&lt;/umb-property-editor&gt;
+    &lt;/div&gt;
+    &lt;div class="twitter-card__title"&gt;
+        &lt;input type="text" ng-model="block.data.title"&gt;
+    &lt;/div&gt;
+    &lt;div class="twitter-card__description"&gt;
+        &lt;input type="text" ng-model="block.data.description"&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>Notice how this is just basic html. Not much AngularJS magic going on here. You can see in<span> </span><span class="code">.twitter-card__title</span><span> </span>and<span> </span><span class="code">.twitter-card__description</span><span> </span>that I have added an input field for controlling the values, and set the model to be<span> </span><span class="code">block.data.title</span><span> </span>or<span> </span><span class="code">block.data.description</span>. These values are coming from the block, and are simultaneously updated when you type in them. So you can edit the Twitter view directly from the card preview. Looking at<span> </span><span class="code">.twitter-card__image</span>, it's a bit different. Because this is a media picker, I wanted to use Umbraco's own property editor. Umbraco comes with a component for this called<span> </span><span class="code">umb-property-editor</span>, if you feed this with the right model, you get the same experience as normally, when dealing with media pickers, but in the context of the Twitter card preview. I found the right model in the path<span> </span><span class="code">block.content.variants[0].tabs[0].properties[0]</span><span> </span>because the media picker is the first property in the first group of the document type for my Twitter card.</p>
+<p>The result of this looks like this - see how 10 lines of HTML, and some CSS makes the editor experience a lot more WYSIWYG.</p>
+<p><img style="width: 500px; height: 252.82485875706217px;" src="/archive/media/2020/msedge_28pryykdnp.png?width=500&amp;height=252.82485875706217" alt="Twitter Preview in the backoffice made with Block List" data-udi="umb://media/0ad46db106924b2e807f3eb33e389e03"></p>
+<p>It has a drawback though. In Nested Content, when you set the property to have a minimum of 1 item, a maximum of 1 item, and only one document type to choose from, you would get what is called the "Single Item Mode". In Single Item Mode the block is already added, and just works like a subpart of the node you are editing. I really like this approach for groups of properties on a document type, and this would be great for something like a Twitter card too. Block List doesn't work this way (yet, I have added an <a href="https://github.com/umbraco/Umbraco-CMS/issues/9277"></a><a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/issues/9277" target="_blank">issue, requesting something like this</a>, so hopefully one day, we'll get it). Instead, the editor needs to add the Twitter card manually.</p>
+<p> </p>
+<h2>The page builder</h2>
+<p>So with that in place, let's move on to the grid editor, or as I would call it, the page builder. As I wrote earlier, I need the ability to group blocks of content into columns and sections, so let's try to make an approach where you are shifting between sections with just one column, and sections with two columns of content.</p>
+<p>I would then need a document type for each section type, and one for each content block.</p>
+<p>This is how my sections would be configured:<span> </span></p>
+<p> </p>
+<p><strong>Document Type: Full Width Section</strong></p>
+<table border="0">
+<thead>
+<tr>
+<th>Name</th>
+<th>Alias</th>
+<th>Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main Column</td>
+<td><span class="code">mainColumn</span></td>
+<td>Block List Content</td>
+</tr>
+</tbody>
+</table>
+<p> </p>
+<p><strong>Document Type: Two Column Section</strong></p>
+<table border="0">
+<thead>
+<tr>
+<th>Name</th>
+<th>Alias</th>
+<th>Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Main Column</td>
+<td><span class="code">mainColumn</span></td>
+<td>Block List Content</td>
+</tr>
+<tr>
+<td>Aside Column</td>
+<td><span class="code">asideColumn</span></td>
+<td>Block List Content</td>
+</tr>
+</tbody>
+</table>
+<p> </p>
+<p>I need to add a minimum of two datatypes for this; Block List Content, to be used in the sections, and Block List Sections for the document types that should have the page builder. Both are using the Block List as their editor.</p>
+<p>Block List Content contains all the content blocks I need, this could be a banner, a story, a gallery, you name it. This is where you put the document types you make into Doc Type Grid Editors.</p>
+<p>Block List Sections contains all the section blocks I need, these are the before mentioned Full Width Section, and the Two Column Section. Both will have the following custom view.</p>
+<pre><code class="language-markup">&lt;div class="section-view"&gt;
+    &lt;div class="section-view__card blockelement-labelblock-editor"&gt;
+        &lt;div class="section-view__section"&gt;
+            &lt;div class="section-view__column flx-g1"
+                 ng-repeat="property in block.content.variants[0].tabs[0].properties"
+                 ng-style="{
+                    'flex-basis': property.alias.indexOf('main') != -1 
+                        ? '66%' 
+                        : property.alias.indexOf('aside') != -1 
+                            ? '33%' 
+                            : '50%'
+                }"&gt;
+                &lt;umb-property property="property"&gt;
+                    &lt;umb-property-editor model="property"&gt;&lt;/umb-property-editor&gt;
+                &lt;/umb-property&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>To make it look good, <a rel="noopener" href="https://gist.github.com/skttl/a44757b783a38e9354d3b103e10e4042" target="_blank">this CSS file</a> is added through a package.manifest. Note - You don't want to add it as a custom stylesheet for the block, as this will prevent the block from inheriting styles from the backoffice.</p>
+<p>Notice, how I use the<span> </span><span class="code">umb-property-editor</span><span> </span>component to show the properties here again. This way I get the nested block lists inside the custom view, and I can make my columns line up the way I want. If you see the<span> </span><span class="code">ng-style</span><span> </span>attribute, I set the <span class="code">flex-basis</span> property on each column according to the property aliases, making the <span class="code">mainColumn</span> double the width of the <span class="code">asideColumn</span>, in order to emphasise that this is where the main content should go. This is a simplified way of showing the columns, expecting that each property in the section document type is a block list. You could limit the visible properties to be only BlockLists by adding<span> </span><span class="code">ng-if="property.editor == 'Umbraco.BlockList'"</span><span> </span>to the <span class="code">&lt;div&gt;</span> with the<span> </span><span class="code">ng-repeat</span><span> </span>attribute and then handle other properties elsewhere.</p>
+<p>For this setup, it's important that you set the block to<span> "</span>Force hide content editor"<span> </span>in the settings dialog, otherwise it will open a dialog for editing, once the block has been added and you don't want this, as the editing (adding blocks to the nested block lists) is done in the preview.</p>
+<p>When adding Block List Sections to a page, you then end up with this view. Here I have replicated the "About us" page from the default starter kit, so you can see a Full Width Section containing a headline, and a Two Column Section containing a textarea and a video, and in the Aside column, there is an image.</p>
+<p><img src="/archive/media/2020/msedge_wiit3ndyco.png" alt="Grid like Page Builder built with Block List" data-udi="umb://media/f620df1330c04d85805335b25a3307a8"></p>
+<h3>Do you need custom previews of content?</h3>
+<p>Grid users, and probably especially Doc Type Grid Editor users, would probably need to get used to the lack of previews, and specifically razor previews in this. The custom views for blocks are AngularJS based, and thus can't render razor previews out of the box. I have never been a huge fan of the razor previews, as they take a little time to generate and load, and they can make the backoffice overwhelming with all the frontend design suddenly crammed into the backoffice. But I do think contextual previews is crucial for the editor experience. So in the above preview of my setup, you'll notice that I have set meaningful name templates for each block. I could also have made simple custom views for more elaboration. See <a rel="noopener" href="https://gist.github.com/skttl/738243fafff5f0100797e092754e95dd" target="_blank">this gist as an example</a> for a more detailed, but still native-like preview.</p>
+<p>Or you could just make razor previews work. I do have an experimental package working for this. You can get the source from <a rel="noopener" href="https://github.com/skttl/umbraco-block-type-custom-view-previewer" target="_blank">Github</a>, and you have to build it yourself. It has some concerns though - the path to your razor views are hardcoded, block lists needs <a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/issues/8757" target="_blank">a better way of sharing configurable custom views for blocks</a>, to make this really good. The AngularJS code for the view is iffy at best, in order to get the block data values passed through to the backend API responsible for generating the previews. And it <a rel="noopener" href="https://github.com/skttl/umbraco-block-type-custom-view-previewer/issues/1" target="_blank">doesn't work if you have a block list in your block content document type</a>. This will make a circular JSON dependency, and make it impossible to send the values to the backend. If you are adventurous, and can live with this, feel free to hack away :)</p>
+<p>For my own use, I would probably work more in a direction where the preview function in Umbraco is used. In v7, this was often criticised for being slow and unreliable. But in v8 this is not the case anymore. And it's even powered by SignalR, so every time you hit save in Umbraco, the preview updates. So take a look at this example, where I work with the content, and has the preview open next to it. In addition to that, from Umbraco 8.10, the preview will scale to fit the browser viewport when you select a viewport, so you don't have to use two monitors, to make it useable anymore!</p>
+<p><img style="width: 500px; height: 165.99099099099098px;" src="/archive/media/2020/0ep2zpae1b.gif?width=500&amp;height=165.99099099099098" alt="" data-udi="umb://media/c60a8cbff18c45dab2d2bcf963d5bbbf"></p>
+<h3>Rendering the grid content</h3>
+<p>With the "old" Grid, I had become used to using <a rel="noopener" href="https://our.umbraco.com/packages/developer-tools/skybrud-umbraco-griddata/" target="_blank">Skybrud.Umbraco.GridData</a> to make the grid strongly typed, and more predictable to work with. With Block Lists it is strongly typed and predictable out of the box.</p>
+<p>Block List comes with a default rendering using<span> </span><span class="code">@Html.GetBlockListHtml()</span>, where it looks for your blocks in a specific directory (<span class="code">Views/Partials/BlockList/Components</span>). I like to have a bit more control, so I made my own rendering. I have added <a rel="noopener" href="https://gist.github.com/skttl/d4428cb427770a0a403c3386a74712cd" target="_blank">all the files needed in a gist</a>, for your convenience.</p>
+<p>In my setup, I have a partial for the section list, a partial for each section, and then a partial for each content block. These are located in<span> </span><span class="code">Views/Partials</span>,<span> </span><span class="code">Views/Partials/Sections</span>,<span> </span><span class="code">Views/Partials/Blocks</span>. To render my Block List Grid from a template, all I have to do is adding<span> </span><span class="code">@Html.Partial("BlockGrid", Model.BlockListGrid)</span>.</p>
+<p>BlockGrid looks like this:</p>
+<pre><code class="language-javascript">﻿@inherits UmbracoViewPage&lt;BlockListModel&gt;
+@using Umbraco.Core.Models.Blocks
+
+@if (Model != null)
+{
+    &lt;div class="umb-grid"&gt;
+        @foreach (var section in Model)
+        {
+            @Html.Partial("BlockGrid/Sections/" + section.Content.ContentType.Alias, section)
+        }
+    &lt;/div&gt;
+}</code></pre>
+<p>As you can see, BlockGrid loops through each section (block) in the Block List Grid, and renders the sections view. Each section has their own view, and thus I am not obliged to use Bootstrap, Foundation or any other limited CSS grid setup. I can do the markup just as I want, and show my Two Column Section like this:</p>
+<pre><code class="language-javascript">﻿@inherits UmbracoViewPage&lt;BlockListItem&lt;ContentModels.TwoColumnSection&gt;&gt;
+@using Umbraco.Core.Models.Blocks
+@using ContentModels = Umbraco.Web.PublishedModels
+
+&lt;div class="row"&gt;
+    &lt;div class="col-md-4"&gt;
+        @foreach (var block in Model.Content.AsideColumn)
+        {
+            @Html.Partial("BlockGrid/Blocks/" + block.Content.ContentType.Alias, block)
+        }
+    &lt;/div&gt;
+    &lt;div class="col-md-8"&gt;
+        @foreach (var block in Model.Content.MainColumn)
+        {
+            @Html.Partial("BlockGrid/Blocks/" + block.Content.ContentType.Alias, block)
+        }
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p>As you can see, each section partial is responsible for how the section is laid out. If I wanted to show the <span class="code">AsideColumn</span> in its own row, I could do that, but here I want it to follow the view from the backoffice.</p>
+<p>I hope this article gave you some good inspiration, in how to tailor the editing experience, and make the life of your editors better.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Søren Kottal"><img src="//gravatar.com/avatar/0133324ce8da84f19a69ba6907e4f010.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/0133324ce8da84f19a69ba6907e4f010.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Søren Kottal</h1>
+        <p>Søren is on Twitter as <a href="//twitter.com/skttl" title="Søren Kottal on Twitter" rel="author">@skttl</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

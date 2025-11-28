@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Creating reusable code in MVC apps</title>
+<meta name="description" content="This post is about structuring (Umbraco) MVC applications to make reusable code using dependency injection.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Creating reusable code in MVC apps</h1>
+      <p class="byline"> by Bo Mortensen, <span class="pubdate">posted on <time datetime="2013-12-09">Dec 9, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Hello, I'm Bo Mortensen and I've been working full time with Umbraco since 2010. Previously, I've been working with XAML based solutions (Silerlight, Surface, WPF).</p>
+<p class="intro">As developers, I'm sure that we have all been through projects where the requirements changed in some way or another during the development iteration(s). More often than not, these requirements range from changing a CSS class to changing the way the menu structure is ordered which should be easy enough to handle. However, when the project manager calls you to let you know that the entire datacontext of a specific section needs to be changed in the final hour, things can/will eventually start to heat up and get messy. </p>
+<p>The purpose of this post is to consider how we can set up our Umbraco solutions to prepare ourselves for these kinds of changes through the process by creating reusable code and make it as easy as possible to change certain parts of a website.</p>
+<h2>The basics</h2>
+<p>In the following examples, I'm using the freshly released Umbraco 7 with a <em>very </em>basic structure to simulate what could be a (part of a) large site. The site structure consists of a homepage node, textpages and a news folder with newsitems:</p>
+<figure>
+  <a href="/archive/media/2013/structure.png">
+    <img src="/archive/media/2013/structure.png" width="352" alt="Umbraco site structure">
+  </a>
+  <figcaption>Umbraco site structure</figcaption>
+</figure>
+<p>Let's dig right into the code for this incredible complicated website. The <span class="code">_Layout.cshtml</span> file (the Master) contains all the general code which should be displayed at all times, i.e. the main navigation, logos, footer etc.:</p>
+<pre class="language-markup"><code>@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+
+&lt;!DOCTYPE html&gt;
+&lt;html lang="da"&gt;
+&lt;head&gt;
+&lt;!-- Markup omitted --&gt;
+&lt;/head&gt;
+    &lt;body&gt;        
+       &lt;!-- Markup omitted --&gt;
+                    &lt;ul class="nav navbar-nav"&gt;
+                        @foreach (var menuItem in CurrentPage.AncestorOrSelf(1).Children.Where("Visible"))
+                        {
+                            &lt;li&gt;
+                                &lt;a href="@menuItem.Url"&gt;@menuItem.Name&lt;/a&gt;
+                            &lt;/li&gt;
+                        }                        
+                    &lt;/ul&gt;        
+        @RenderBody()
+        
+        &lt;!-- Markup omitted --&gt;
+    &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+      <p class="snippet-caption">_Layout.cshtml</p>
+<p> And the actual frontpage will have a header, a bodytext and the latest news:</p>
+<pre class="language-markup"><code>@using Umbraco.Web
+@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+
+&lt;div class="container"&gt;
+    &lt;div class="row"&gt;
+        &lt;div class="col-lg-12"&gt;
+            &lt;h1&gt;@Model.Content.GetPropertyValue("header")&lt;/h1&gt;                
+            @Model.Content.GetPropertyValue("bodyText")
+        &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class="row"&gt;
+        &lt;div class="col-lg-12"&gt;
+            &lt;!-- Show latest news --&gt;
+            &lt;h3&gt;Latest news&lt;/h3&gt;
+            &lt;ul class="list-group"&gt;
+                @{
+                    var newsFolder = Model.Content.AncestorOrSelf(1).Children.FirstOrDefault(x =&gt; x.DocumentTypeAlias.Equals("News"));
+                    if (newsFolder != null)
+                    {
+                        foreach (var newsItem in newsFolder.Children.OrderByDescending(x =&gt; x.GetPropertyValue&lt;DateTime&gt;("date")).Take(3))
+                        {
+                            &lt;li class="list-group-item"&gt;
+                                &lt;h4&gt;@newsItem.GetPropertyValue("header")&lt;/h4&gt;
+                                &lt;span&gt;@newsItem.GetPropertyValue("date")&lt;/span&gt;
+                                &lt;p&gt;@Umbraco.Truncate(Html.Raw(newsItem.GetPropertyValue("bodyText")), 250, true)&lt;/p&gt;
+                                &lt;a href="@newsItem.Url"&gt;Read more &amp;raquo;&lt;/a&gt;
+                            &lt;/li&gt;
+                        }
+                    }
+                }
+            &lt;/ul&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">Frontpage markup</p>
+<p>While the above code works just fine, it's not pretty since the view shouldn't know anything about where the data comes from, it should only be responsible for transforming the data. As far as this goes, we've, essentially, only made use of the <strong>V</strong>iew in <strong>MVC </strong>(<strong>M</strong>odel-<strong>V</strong>iew-<strong>C</strong>ontroller) even though the view does inherit from the <span class="code">UmbracoTemplatePage </span>model object.<em><br></em></p>
+<h2>Setting up strongly typed views and controllers</h2>
+<p>What I've found most flexible in the long run, is to make an almost direct mapping of Document types to model classes and map data to these for the UI to transform. Let's consider the following structure in Visual Studio:</p>
+<figure>
+  <a href="/archive/media/2013/vsstructure1.png">
+    <img src="/archive/media/2013/vsstructure1.png" width="249" alt="Visual Studio structure">
+  </a>
+  <figcaption>Visual Studio structure</figcaption>
+</figure>
+<p>Here, I have added two new projects: a model layer and the controllers project. Notice the naming: the model <em>may</em> not be directly related to our Umbraco website while the Controllers is. As a given project grows in size, more models could be added for any other (web)projects aswell.</p>
+<p>Also notice that I have a <span class="code">MasterController</span> and a <span class="code">Master</span> model (<a href="http://ndesoft.dk/2013/05/25/how-to-create-a-real-mvc-app-using-umbraco/" target="_blank" title="How to create a real MVC app using umbraco">Credit goes to Nick Frederiksen</a>). The <span class="code">Master</span> model contains all data, that should be used across the site such as SEO related stuff, navigation, footer information etc. This enables us to let any other model inherit from the Master and then display the general data:</p>
+<pre class="language-markup"><code>namespace clientname.Model
+{
+    public class Master
+    {
+        public string Header { get; set; }
+        public HtmlString BodyText { get; set; }
+        public string MetaTitle { get; set; }
+        public string MetaDescription { get; set; }
+        public string MetaKeywords { get; set; }
+        public IEnumerable&lt;MenuItem&gt; MainNavigation { get; set; }
+    }
+}</code></pre>
+      <p class="snippet-caption">Master.cs</p>
+<p>(For this example I've just included the header and bodytext, these should be moved to their respective classes for convenience)</p>
+<p>The <span class="code">MasterController</span> allows us to map the data from Umbraco to our Master model and then return it to the view <em>(notice: we're serving the view with data, the view doesn't ask for it) </em>Like so:</p>
+<pre class="language-markup"><code>namespace clientname.Umbraco.Controllers
+{
+    public class MasterController : RenderMvcController
+    {
+        protected ViewResult View(Master model)
+        {
+            return View(null, model);
+        }
+
+        protected ViewResult View(string view, Master model)
+        {
+            // Map fields from Umbraco
+            model.BodyText = CurrentPage.HasProperty("bodyText")
+                ? new HtmlString(CurrentPage.GetPropertyValue&lt;string&gt;("bodyText"))
+                : new HtmlString(string.Empty);
+
+            model.Header = CurrentPage.HasProperty("header") ? CurrentPage.GetPropertyValue&lt;string&gt;("header") : CurrentPage.Name;
+            model.MetaKeywords = CurrentPage.GetPropertyValue&lt;string&gt;("metaKeywords");
+            model.MetaDescription = CurrentPage.GetPropertyValue&lt;string&gt;("metaDescription");
+            model.MetaTitle = CurrentPage.GetPropertyValue&lt;string&gt;("metaTitle");
+
+            // Build main navigation
+            model.MainNavigation = (from node in CurrentPage.AncestorOrSelf(1).Children.Where("Visible")
+                                    let isActive = node.Id == CurrentPage.Id
+                                    select new MenuItem
+                                    {
+                                        IsActive = isActive,
+                                        Name = node.Name,
+                                        Url = node.Url
+                                    }).ToList();
+
+            return base.View(model);
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">MasterController.cs</p>
+<p>To make use of the <span class="code">MasterController</span>, we can simply make our other controllers inherit from it rather than inheriting from the <span class="code">RenderMvcController</span>:</p>
+<pre class="language-markup"><code>namespace clientname.Umbraco.Controllers
+{
+    public class FrontpageController : MasterController
+    {
+        public ActionResult Frontpage()
+        {
+            var model = new Frontpage();
+            
+            var latestNews = new List&lt;NewsItem&gt;();
+            foreach (var newsNode in uQuery.GetNodesByType("NewsItem").Take(3))
+            {
+                latestNews.Add(new NewsItem()
+                {
+                    Header = !string.IsNullOrEmpty(newsNode.GetProperty&lt;string&gt;("header"))
+                        ? newsNode.GetProperty&lt;string&gt;("header")
+                        : newsNode.Name,
+                    BodyText = new HtmlString(newsNode.GetProperty&lt;string&gt;("bodyText")),
+                    Author = newsNode.GetProperty&lt;string&gt;("author"),
+                    Date = newsNode.GetProperty&lt;DateTime&gt;("date"),
+                    Url = newsNode.Url,
+                    TeaserText = library.TruncateString(library.StripHtml(newsNode.GetProperty&lt;string&gt;("bodyText")), 250, " ...")                    
+                });
+            }
+
+            model.LatestNews = latestNews;
+
+            return View(model);
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">FrontpageController.cs</p>
+<p>Now, let's switch to our view again and refactor some code. Instead of inheriting from the <span class="code">UmbracoTemplatePage</span>, we can now make our views strongly typed. Also, to separate reusable code, we can make partial views for i.e. our main navigation and our latest news section:</p>
+<p><span class="code">_Layout.cshtml</span></p>
+<pre class="language-markup"><code>@using System.Web.Mvc.Html
+@model clientname.Model.Master
+
+&lt;!DOCTYPE html&gt;
+&lt;html lang="da"&gt;
+&lt;head&gt;
+ &lt;!-- Markup omitted --&gt;
+&lt;/head&gt;
+    &lt;body&gt;        
+        &lt;header class="navbar navbar-inverse bs-docs-nav" role="banner"&gt;
+            &lt;div class="container"&gt;
+                &lt;div class="navbar-header"&gt;                    
+                    &lt;a href="../" class="navbar-brand"&gt;Client name&lt;/a&gt;
+                &lt;/div&gt;
+                @Html.Partial("Partials/_MainNavigation", Model.MainNavigation)
+            &lt;/div&gt;
+        &lt;/header&gt;
+&lt;!-- Markup omitted --&gt;
+    &lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p class="code">_MainNavigation.cshtml</p>
+<pre class="language-markup"><code>@model IEnumerable&lt;clientname.Model.MenuItem&gt;
+
+@{
+    if (Model.Any())
+    {
+        &lt;nav class="collapse navbar-collapse bs-navbar-collapse" role="navigation"&gt;
+            &lt;ul class="nav navbar-nav"&gt;
+                @foreach (var menuItem in Model)
+                {
+                    &lt;li&gt;&lt;a href="@menuItem.Url"&gt;@menuItem.Name&lt;/a&gt;&lt;/li&gt;
+                }
+            &lt;/ul&gt;
+        &lt;/nav&gt;
+    }
+}</code></pre>
+      <p class="snippet-caption">_MainNavigation.cshtml</p>
+<p class="code">Frontpage.cshtml</p>
+<pre class="language-markup"><code>@inherits Umbraco.Web.Mvc.UmbracoViewPage&lt;clientname.Model.Frontpage&gt;
+@using System.Web.Mvc.Html
+
+&lt;div class="container"&gt;
+    &lt;div class="row"&gt;
+        &lt;div class="col-lg-12"&gt;
+            &lt;h1&gt;@Model.Header&lt;/h1&gt;                
+            @Model.BodyText
+        &lt;/div&gt;
+    &lt;/div&gt;
+    @Html.Partial("Partials/_LatestNews", Model.LatestNews)
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">Frontpage.cshtml</p>
+<p class="code">_LatestNews.cshtml</p>
+<pre class="language-markup"><code>@model IEnumerable&lt;clientname.Model.NewsItem&gt;
+
+@{
+    if(Model.Any())
+    {
+        &lt;div class="row"&gt;
+            &lt;div class="col-lg-12"&gt;
+                &lt;!-- Show latest news --&gt;
+                &lt;h3&gt;Latest news&lt;/h3&gt;
+                &lt;ul class="list-group"&gt;
+                    @foreach (var newsItem in Model)
+                    {
+                        &lt;li class="list-group-item"&gt;
+                            &lt;h4&gt;@newsItem.Header&lt;/h4&gt;
+                            &lt;span&gt;@newsItem.Author&lt;/span&gt;                            
+                            &lt;p&gt;@newsItem.TeaserText&lt;/p&gt;
+                            &lt;a href="@newsItem.Url"&gt;Read more &amp;raquo;&lt;/a&gt;
+                        &lt;/li&gt;
+                    }
+                &lt;/ul&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+     }
+}</code></pre>
+      <p class="snippet-caption">_LatestNews.cshtml</p>
+<h2>The repository</h2>
+<p>So, what we've been doing up until now, is refactoring code to make it more reusable and thus separating our concerns of the implementation of the views.</p>
+<p>Let's, for a moment, pretend that our client wants to display the latest news on regular textpages just like they are on the frontpage. This should be simple enough, since we can just copy our logic from the <span class="code">FrontpageController </span>to our<span class="code"> TextpageController</span>. However, by doing this, we're duplicating code.</p>
+<p>What we can do to decouple the code in our controller(s) is to make another layer to our solution: the repository.</p>
+<figure>
+  <a href="/archive/media/2013/addedrepo.png">
+    <img src="/archive/media/2013/addedrepo.png" width="246" alt="Visual Studio structure with added repository">
+  </a>
+  <figcaption>Visual Studio structure with added repository</figcaption>
+</figure>
+<p>The repository should serve as our central data access layer (some would argue that you should have both a repository <em>and </em>a data access layer, though) so basically every single query to get data from <em>somewhere </em>should be placed here. In the following examples I'm using concrete repository classes. However, if your project demands standard CRUD operations like <span class="code">Save()</span>, <span class="code">Delete()</span>, <span class="code">Update()</span> etc., you could go for a generic repository.</p>
+<p>As you can tell from my figure above, I've added a folder called <strong>Umbraco</strong>. Classes in this folder is responsible for mapping data from Umbraco to our models to serve to the controllers. Let's have a look at our latest news example:</p>
+<pre class="language-markup"><code>namespace clientname.Repository.Umbraco
+{
+    public class NewsRepository
+    {
+        public IEnumerable&lt;NewsItem&gt; GetAllNewsItems()
+        {
+            return uQuery.GetNodesByType("NewsItem").Select(MapNewsItem);
+        }
+
+        public IEnumerable&lt;NewsItem&gt; GetLatestNews(int count)
+        {
+            return uQuery.GetNodesByType("NewsItem").Take(count).Select(MapNewsItem);
+        }
+
+        public NewsItem GetNewsItem(int id)
+        {
+            var newsNode = uQuery.GetNode(id);
+            return MapNewsItem(newsNode);
+        }
+
+        public NewsItem MapNewsItem(Node newsNode)
+        {
+            return new NewsItem
+                           {
+                               Header = !string.IsNullOrEmpty(newsNode.GetProperty&lt;string&gt;("header"))
+                                   ? newsNode.GetProperty&lt;string&gt;("header")
+                                   : newsNode.Name,
+                               BodyText = new HtmlString(newsNode.GetProperty&lt;string&gt;("bodyText")),
+                               Author = newsNode.GetProperty&lt;string&gt;("author"),
+                               Date = newsNode.GetProperty&lt;DateTime&gt;("date"),
+                               Url = newsNode.Url
+                           };
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">NewsRepository.cs</p>
+<p>This leaves us with a much cleaner controller for the frontpage:</p>
+<pre class="language-markup"><code>namespace clientname.Umbraco.Controllers
+{
+    public class FrontpageController : MasterController
+    {
+        public ActionResult Frontpage()
+        {
+            var newsRepository = new NewsRepository();
+            var model = FrontpageRepository.GetFrontpage(CurrentPage);
+            model.LatestNews = newsRepository.GetLatestNews(4);
+
+            return View(model);
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">FrontpageController.cs</p>
+<p>The <span class="code">FrontpageRepository.GetFrontpage(IPublishedContent content)</span> does the exact same as the <span class="code">NewsRepository: </span>takes the current IPublishedContent and maps it to our model to serve to the view<span class="code">.</span></p>
+<p>So, with the repository in place, we're able to add in more datasources as we wish (or as your boss wishes, rather) I.e., if the news should come from a MSSQL database, we could add a PetaPoco folder to our repository and simply change the repository in our controllers to use that one instead:</p>
+<figure>
+  <a href="/archive/media/2013/repositorypetapoco.png">
+    <img src="/archive/media/2013/repositorypetapoco.png" width="247" alt="clientname.Repository w. PetaPoco added">
+  </a>
+  <figcaption>clientname.Repository w. PetaPoco added</figcaption>
+</figure>
+<h2>Taking things a bit further with dependency injection</h2>
+<p>To make our code even more reusable, we can tighten things up a bit using dependency injection (DI) for our controllers. For this, I'm using <a href="https://code.google.com/p/autofac/" target="_blank">Autofac</a>. </p>
+<p>Basically, we don't want to new up a <span class="code">NewsRepository</span> each and every time it should be used in our controllers. Instead, we would like for our controllers to be "dumb" and not care about the implementation. Let's have a look at the new Visual Studio structure:</p>
+<figure>
+  <a href="/archive/media/2013/visualstudioeventsinterfaces.png">
+    <img src="/archive/media/2013/visualstudioeventsinterfaces.png" width="247" alt="Visual Studio structure with added interfaces and events">
+  </a>
+  <figcaption>Visual Studio structure with added interfaces and events</figcaption>
+</figure>
+<p>Here, I have added a project for the interfaces and one for handling Umbraco events. The <span class="code">INewsRepository</span> interface defines methods for getting news items from a given datasource:</p>
+<pre class="language-markup"><code>namespace clientname.Interfaces
+{
+    public interface INewsRepository
+    {
+        IEnumerable&lt;NewsItem&gt; GetAllNewsItems();
+        IEnumerable&lt;NewsItem&gt; GetLatestNews(int count);
+        NewsItem GetNewsItem(int id);
+    }
+}</code></pre>
+      <p class="snippet-caption">INewsRepository.cs</p>
+<p>The dark magic for registering dependencies happens in the <span class="code">ApplicationEvents</span> class:</p>
+<pre class="language-markup"><code>namespace clientname.Umbraco.Events
+{
+    public class ApplicationEvents : IApplicationEventHandler
+    {
+        public void OnApplicationInitialized(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+        {
+            
+        }
+
+        public void OnApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+        {
+          
+            var builder = new ContainerBuilder();
+            builder.RegisterControllers(typeof (clientname.Umbraco.Controllers.FrontpageController).Assembly);
+
+            builder.RegisterType&lt;Repository.Umbraco.NewsRepository&gt;().As&lt;INewsRepository&gt;();
+
+            var container = builder.Build();
+            DependencyResolver.SetResolver(new AutofacDependencyResolver(container));
+        }
+
+        public void OnApplicationStarting(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext) { }                    
+    }
+}</code></pre>
+      <p class="snippet-caption">ApplicationEvents.cs</p>
+<p>In the <span class="code">ApplicationStarted</span> event, we register the controllers (here I'm just registering the <span class="code">FrontpageController</span>) and then tell the DI container that whenever there's a constructor asking for the <span class="code">INewsRepository</span>, we'd like to pass the <span class="code">Repository.Umbraco.NewsRepository</span> concrete object.</p>
+<p>Now, let's go back to our <span class="code">FrontpageController</span> and refactor some code:</p>
+<pre class="language-markup"><code>namespace clientname.Umbraco.Controllers
+{
+    public class FrontpageController : MasterController
+    {
+        private readonly INewsRepository _newsRepository;
+
+        public FrontpageController(INewsRepository newsRepository)
+        {
+            _newsRepository = newsRepository;
+        }
+
+        public ActionResult Frontpage()
+        {                        
+            var model = FrontpageRepository.GetFrontpage();
+            model.LatestNews = _newsRepository.GetLatestNews(4);
+
+            return View(model);
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">FrontpageController.cs</p>
+<p>With the DI container wired up, we can now add a constructor for our <span class="code">FrontpageController</span> to take an <span class="code">INewsRepository</span> interface and store that in a global variable. In the Frontpage method, we then make use of that interface to get the latest news items. </p>
+<p>So basically, we now have both a view and a controller, that doesn't know anything of the actual implementation. Also, if the datasource should be changed from using the Umbraco news items to i.e. MSSQL, we can just swap it in the following line:</p>
+<p><span style="color: #880000; font-family: monospace;">builder.RegisterType&lt;Repository.PetaPoco.NewsRepository&gt;().As&lt;INewsRepository&gt;(); </span>and let the PetaPoco.NewsRepository implement the INewsRepository.</p>
+<h2>Afterword</h2>
+<p>I can almost hear you ask the following question: <em>"but isn't this overengineering the project?" </em>The answer is easy: <strong>Yes! </strong>It's absolutely overengineering if the website is for your uncles carpenter company which needs 4 pages and a contact form.</p>
+<p>The above example is <em>really </em>smallscale and it should be used to taste and to match the ambitions of a project. If you're developing a medium-to-large website with integrations to external systems/services, it could be useful in the long term to separate code like this.</p>
+<p>Also, I'm personally <em>not</em> a software architect of any kind (and I'm not striving to be), so I'm definitely listening to any feedback and would invite you all to an open discussion about this approach and structure in general.</p>
+<p>Happy christmas and happy coding! :-)</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Bo Mortensen"><img src="//gravatar.com/avatar/193e3b5502b5bbfe940ffc5bff8fe47a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/193e3b5502b5bbfe940ffc5bff8fe47a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Bo Mortensen</h1>
+        <p>Bo is on Twitter as <a href="//twitter.com/bo_mortensen" title="Bo Mortensen on Twitter" rel="author">@bo_mortensen</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li class="selected"><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Redirect rules</title>
+<meta name="description" content="A closer look at some handy Redirects, incidentally wrapped up in a single Nuget package.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Redirect rules</h1>
+      <p class="byline"> by Niels Ellegaard, <span class="pubdate">posted on <time datetime="2014-12-21">Dec 21, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">As a programmer you sometimes gets thrown into a subject you don't know anything about and you have to start from rock bottom. Redirect rules was that kind of subject to me. But you get to learn new things, which is awesome!<br>I want to share the things I learned and hope you can use it.</p>
+<p class="intro">I had only seen the most basic example rules and I found it hard to find any good documentation on how to make more advanced rules. What the different attributes and options did and how they worked together. But after a lot of trial and error I started to understand how most of it fit together.</p>
+<p>As I finished my work case I looked back and realized how I could make some fairly generic rules so I got an idea.</p>
+<p>I sought to make a set of generic redirect rules that most people could use without having to know the deep dark secrets of redirects rules.<br>The end result was a NuGet Package: <a href="http://www.nuget.org/packages/RedirectRules/">RedirectRules</a></p>
+<p>If anyone is interested in a more thorough guide on the anatomy of a rule and the different options and so on, write a comment and I might make a blog post about it, but for now I will stick with just this package.</p>
+<h2>Nuget Package </h2>
+<p>What does it do?</p>
+<p>Well to put it short, it insures that your URLs are neat, clean and user friendly.<br>It bundles together the most common redirect rules I have found and some extra goodies, I'll get into details later.</p>
+<p>To put it super simple it makes this ugly URL:<br><span class="code">http://mysite.com/SamplePage.aspx/</span></p>
+<p>Into this clean URL:<br><span class="code">http://www.mysite.com/samplepage</span></p>
+<p>Both URLs and variations of them, would in most cases give you the same page, especially in Umbraco.<br>Your webpage can actually be accessed by a number of different URLs. More than you might be aware of.<br>I believe that it at least helps a little on SEO, as it removes some unwanted duplicate content issues.</p>
+<p>The  package implements a bunch of common redirect rules:</p>
+<ul>
+<li>Remove trailing slash</li>
+<li>Lower case URL.</li>
+<li>Remove default.aspx</li>
+<li>Trim .aspx</li>
+<li>Enforce www prefix on toplevel domains</li>
+<li>Enforce no www prefix on sublevel domains</li>
+</ul>
+<p>And some extra goodies that's rarely seen elsewhere:</p>
+<ul>
+<li>No 301 chaining</li>
+<li>URL whitelisting</li>
+<li>No browser caching on 301</li>
+</ul>
+<p>For any redirect rules to work your server needs to have IIS URL Rewrite 2.0 installed.  You can download it <a href="http://www.iis.net/downloads/microsoft/url-rewrite" target="_blank" title="Rewrite Module download">here</a>.<br> As of IIS 8 it comes preinstalled.</p>
+<h2>How does it work?</h2>
+<p>The rules are split up in a few sections, I'll explain what they do and the structure behind it.</p>
+<h3>Whitelist</h3>
+<pre class="language-markup"><code>&lt;rule name="WhiteList" stopProcessing="true"&gt;
+	&lt;match url="(.*)" /&gt;
+	&lt;conditions logicalGrouping="MatchAny" trackAllCaptures="false"&gt;
+		&lt;add input="{URL}" pattern="^.*/(base|webshop|umbraco|umbraco_client|client|install|api|bundles)/" ignoreCase="true" /&gt;
+		&lt;add input="{HTTP_HOST}" pattern=".*localhost.*" ignoreCase="true" /&gt;
+	&lt;/conditions&gt;
+	&lt;action type="None" /&gt;
+&lt;/rule&gt;
+</code></pre>
+<p>If any of the conditions in this rule are met, we stop the processing of rules and do nothing else. This is intended for URLs we don't want to redirect. Umbraco, APIs, bundles and other situations like these. You can add more conditions if required.</p>
+<h3>Rewrite rules</h3>
+<pre class="language-markup"><code>&lt;rule name="SEO - Remove trailing slash" stopProcessing="false"&gt;
+	&lt;match url="^_*(.*)/+$" /&gt;
+	&lt;conditions&gt;
+		&lt;add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" /&gt;
+		&lt;add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" /&gt;
+	&lt;/conditions&gt;
+	&lt;action type="Rewrite" url="_{R:1}" /&gt;
+&lt;/rule&gt;
+&lt;rule name="SEO - ToLower" stopProcessing="false"&gt;
+	&lt;match url="^_*(.*)" ignoreCase="false" /&gt;
+	&lt;conditions logicalGrouping="MatchAll" trackAllCaptures="false"&gt;
+		&lt;add input="{R:1}" pattern="[A-Z]" ignoreCase="false" /&gt;
+		&lt;add input="{REQUEST_FILENAME}" matchType="IsFile" negate="true" /&gt;
+		&lt;add input="{REQUEST_FILENAME}" matchType="IsDirectory" negate="true" /&gt;
+		&lt;add input="{R:1}" pattern="^.*?\.(axd|css|js|jpg|jpeg|png|gif|ashx|asmx|svc).*?$" negate="true" ignoreCase="true" /&gt;
+	&lt;/conditions&gt;
+	&lt;action type="Rewrite" url="_{ToLower:{R:1}}" /&gt;
+&lt;/rule&gt;
+&lt;rule name="SEO - remove default.aspx" stopProcessing="false"&gt;
+	&lt;match url="^_*(.*?)/?default\.aspx$" /&gt;
+	&lt;action type="Rewrite" url="_{R:1}" /&gt;
+&lt;/rule&gt;
+&lt;rule name="SEO - Trim aspx" stopProcessing="false"&gt;
+	&lt;match url="^_*(.*)\.aspx$" /&gt;
+	&lt;action type="Rewrite" url="_{R:1}" /&gt;
+&lt;/rule&gt;
+</code></pre>
+<p>These are the common redirect rules. There are a few things different here than you normally see in a redirect rule. First off, it doesn't actually redirect them, it only makes a rewrite. It doesn't stop the processing either, which means it will go through all the rules and modify the URL each time.</p>
+<h3>The redirect</h3>
+<pre class="language-markup"><code>&lt;rule name="Redirect - Subdomains with www to non-www" stopProcessing="true"&gt;
+	&lt;match url="^_*(.*)" /&gt;
+	&lt;conditions logicalGrouping="MatchAll" trackAllCaptures="false"&gt;
+		&lt;add input="{HTTP_HOST}" pattern="^www\.(.*)\.([^\.]+)\.([^\.]+?)$" /&gt;
+	&lt;/conditions&gt;
+	&lt;action type="Redirect" url="{MapSSL:{HTTPS}}{C:1}.{C:2}.{C:3}/{R:1}" redirectType="Permanent" /&gt;
+&lt;/rule&gt;
+&lt;rule name="Redirect - Top domains with non-www to www" stopProcessing="true"&gt;
+	&lt;match url="^_*(.*)" /&gt;
+	&lt;conditions logicalGrouping="MatchAll" trackAllCaptures="false"&gt;
+		&lt;add input="{HTTP_HOST}" pattern="^([^\.]+)\.([^\.]+?)$" /&gt;
+	&lt;/conditions&gt;
+	&lt;action type="Redirect" url="{MapSSL:{HTTPS}}www.{HTTP_HOST}/{R:1}" redirectType="Permanent" /&gt;
+&lt;/rule&gt;
+&lt;rule name="Redirect - Non-canonical redirect" stopProcessing="true"&gt;
+	&lt;match url="^_+(.*)" /&gt;
+	&lt;action type="Redirect" url="{R:1}" redirectType="Permanent" /&gt;
+&lt;/rule&gt;
+</code></pre>
+<p>On a rewrite it can only modify the URL, it cannot modify the domain name. So here it has to redirect.</p>
+<p>The first two rules fixes any www issues. It does so by matching the domain with a regex, looking at how many punctuation marks are present in the domain name.</p>
+<p>This will mess up <em>co.uk</em> domains as there is a punctuation mark more than my regex expects. It is possible to modify the rule to take fix that. This functionality though, has not been implemented yet. If you need it and need my help, write me - I'll be happy to help. </p>
+<p>The last rule is a fallback in case the domain name is correct, but the URL was somehow modified.<br> As you might have noticed it adds an underscore (_) on each of the rules when it rewrites it. It is this underscore that it tests for in this last rule.<br>This naturally also makes URLs with underscore impossible. But to be fair I haven't seen many pages with underscores in them, which was why I choose underscore. It could have been anything.</p>
+<p>It does the rewrites rather than redirects to avoid redirecting more times than necessary. This should help keep some of the link juice for your google ranking.</p>
+<h3>Permanent Caching</h3>
+<pre class="language-markup"><code>&lt;rewriteMaps&gt;
+	&lt;rewriteMap name="MapSSL" defaultValue="OFF"&gt;
+		&lt;add key="ON" value="https://" /&gt;
+		&lt;add key="OFF" value="http://" /&gt;
+	&lt;/rewriteMap&gt;
+&lt;/rewriteMaps&gt;
+&lt;outboundRules&gt;
+	&lt;rule name="RewriteCache-Control" preCondition="old url with 301"&gt;
+		&lt;match serverVariable="RESPONSE_Cache-Control" pattern="(.*)" /&gt;
+		&lt;action type="Rewrite" value="NO-CACHE" /&gt;
+	&lt;/rule&gt;
+	&lt;preConditions&gt;
+		&lt;preCondition name="old url with 301"&gt;
+			&lt;add input="{RESPONSE_CONTENT_TYPE}" pattern="^text/html" /&gt;
+			&lt;add input="{RESPONSE_STATUS}" pattern="^301$" /&gt;
+		&lt;/preCondition&gt;
+	&lt;/preConditions&gt;
+&lt;/outboundRules&gt;
+</code></pre>
+<p>The rewrite map is used in the rules to ensure that if the request came through HTTPS, it stays in HTTPS, same with HTTP. You can see the usage in the rules above.</p>
+<p>Now the outbound rule is something special. I haven't seen it anywhere else, but I had a heavy need for it during testing.</p>
+<p>I'll explain why it is important. <br>Take a case where your webpage is being redirected from a <span class="code">/contact</span> to a <span class="code">/support</span> page. Not unreasonable.</p>
+<p>The browser hits the contact page and receives a 301 permanent redirect. The browser takes this very literally. 301 is a permanent redirect and therefore it is cached. Permanently.</p>
+<p>But as the web goes, nothing is really permanent and at some point you might want to have an actual contact page. Well you can't.</p>
+<p>Any browser that have made a request to the contact page would never be able to hit that page.<br>The browser already cached the redirect so it has no "need" to make a request to the page, it goes into the cache and redirects the request immediately.</p>
+<p>This caused me huge headaches when testing out these rules as I had to clear my entire cache each time I wanted to test any redirect. And you can't really ask your visitors to clear their cache because you wanted to make a contact page. </p>
+<p>This outbound rule fixes that. On a 301 response status it changes the Cache-Control header and sets it to "NO-CACHE" essentially telling the browser not to cache the redirect.<br>You can modify this if you want it to just cache it, for example, for a week.<br>Now you're able to reuse your redirected pages at a later date if you want to. </p>
+<p>Now, there is most likely still improvements to be made, so if anyone have suggestions or fixes, they are more than welcome to share and I will get the package updated.</p>
+<p>Merry Christmas everyone!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Niels Ellegaard"><img src="//gravatar.com/avatar/96de5607d60495b158ab8bbab4446ac0.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/96de5607d60495b158ab8bbab4446ac0.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Niels Ellegaard</h1>
+        <p>Niels is on Twitter as <a href="//twitter.com/NJEllegaard" title="Niels Ellegaard on Twitter" rel="author">@NJEllegaard</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li class="selected"><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

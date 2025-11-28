@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>A lap around Umbraco Extensibility</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco extensibility</h1>
+      <p class="byline"> by Simone Chiaretta, <span class="pubdate">posted on <time datetime="2016-12-21">Dec 21, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Since I'm a relatively <a href="http://codeclimber.net.nz/archive/2016/07/05/umbraco-and-me/" title="Umbraco and Me">new face</a> in the Umbraco community I'd like to start introducing myself. I'm <a href="http://codeclimber.net.nz/" title="CodeClimber blog">Simone</a>, I've been a Microsoft MVP in ASP.NET for 8 years, I <a href="http://amzn.to/2hoWmNU" title="Front-end Development with ASP.NET Core, AngularJS, and Bootstrap">wrote</a> some <a href="http://amzn.to/2gBVPvH" title="Beginning ASP.NET MVC 1.0">books</a>, organized a dozen of conferences and spoke at many others (including <a href="http://codeclimber.net.nz/archive/2010/06/16/speaking-about-asp-net-mvc-extensibility-at-the-umbraco-codegarden10/" title="Speaking about ASP.NET MVC Extensibility at the Umbraco CodeGarden10">two</a> <a href="http://codeclimber.net.nz/archive/2016/06/17/slides-and-demo-for-my-aspnet-core-talk-at-umbraco/" title="Slides and demo for my ASPNET Core talk at Umbraco CodeGarden 2016">CodeGarden</a>). After working on Umbraco only for side-projects, I'm finally starting a "real" project on Umbraco. I'm a fervent believer of the <a href="https://en.wikipedia.org/wiki/Open/closed_principle" title="Open/closed principle"><em>open/closed principle</em></a> and for that reason I'm a big advocate for extensible software libraries. And one of the things I love the most about Umbraco is that you can write pretty extreme customizations without touching a single line of the original source code. </p>
+<h2>Introducing NuTranslation</h2>
+<p class="intro">In this article I'm showing some less used extensibility points using as example a simplified version of NuTranslation, a translation package I'm working on, that might make its way to the new version of Umbraco. At the moment, without v8's language variations, it only works with <a href="https://our.umbraco.org/projects/backoffice-extensions/vorto/" title="Vorto">Vorto</a>.</p>
+<p>It's made of various components:</p>
+<ul>
+<li>A custom dialog used to request a translation for a node;</li>
+<li>A server-side component that creates the actual translation request;</li>
+<li>A translation history page that shows all translations request for a specific node;</li>
+<li>A dashboard that shows all pending translations.</li>
+</ul>
+<p> To implement these components, among other tasks, I had to:</p>
+<ul>
+<li>Add some new menu items in the content menu;</li>
+<li>Build a new dialog, using the Umbraco AngularJS directives to make it look like a native UI element;</li>
+<li>Build web services to interact with the AngularJS services of the dialog;</li>
+<li>Build a dashboard;</li>
+<li>Store custom data on custom tables.</li>
+</ul>
+<p> But enough introductions... let's see how to implement some of these custom components!</p>
+<p> <img src="/archive/media/2016/menuitems.png?width=291&amp;height=238" alt="" width="291" height="238" rel="1528" data-id="1528"></p>
+<h2>Adding new menu items</h2>
+<p>The entry point for node-related functionalities is the contextual menu that opens up by right-clicking on a node in the tree or in the actions button in the editing page. </p>
+<p>This is done by adding a new <span class="code">MenuItem</span> to the content tree. The following code shows the basics:</p>
+<pre><code class="language-csharp">public class UpdateContentMenu : ApplicationEventHandler
+{
+    protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+    {
+        Umbraco.Web.Trees.ContentTreeController.MenuRendering += ContentTreeController_MenuRendering;
+    }
+
+    private void ContentTreeController_MenuRendering(TreeControllerBase sender, MenuRenderingEventArgs e)
+    {
+        var myMenuItem = new Umbraco.Web.Models.Trees.MenuItem("alias","Item name");
+        myMenuItem.Icon="globe";
+        //Add item at the top of the list
+        menu.Items.Insert(0,myMenuItem);
+    }
+}</code></pre>
+      <p class="snippet-caption">Basic menuItem</p>
+<p>The code to create a menu must be added to an handler for the event <span class="code">MenuRendering</span> and must be setup in the <span class="code">ApplicationStarted</span> event.</p>
+<p>Inside the handler the menu is created with the name "Item name" and with the <span class="code">globe</span> icon. It will be the first in the item in the menu, and once clicked it will try to open the <span class="code">/umbraco/views/<em>&lt;currentSection&gt;</em>/alias.html</span> page in slide-out dialog. So if you are in the content section, the url called is <span class="code">/umbraco/views/content/alias.html</span>.</p>
+<p>These location is ok for actions that are part of Umbraco, but as a general rule one should not add files to folders of the core, or maintenance will become very difficult. But items can be configured to do other actions:</p>
+<ul>
+<li>open an AngularJS View with the <span class="code">LaunchDialogView</span> method;</li>
+<li>navigate to an AngularJS route with the <span class="code">NavigateToRoute</span> method;</li>
+<li>execute directly some javascript with the <span class="code">ExecuteLegacyJs</span> method;</li>
+<li>open a dialog with an iFrame with a webform in it with the method... not telling you, you shouldn't do it anyway.</li>
+</ul>
+<p>Probably you also don't want your item everywhere. You might want to add it only to a specific tree, or if the node is of a specific type or if the user has specific permissions. These things can be done by inspecting the <span class="code">sender</span> parameter or the e <span class="code">EventArgs</span> parameter. </p>
+<p>Finally you might want to add a separator before or after the item. The next snippet shows the code to add 2 menu items that call some views in my plugin folder, only when in the content tree and only if the user is allowed to access the translation section. And removes the "legacy" translation item.</p>
+<p>But beware: if you put them at the first place in the menu, like done in the previous sample, your custom action will be called as default action instead of the standard "Create" action, which is not a good idea. Better put them at the end with <span class="code">e.Menu.Items.Add</span>, or figure out a position in the middle of the menu.</p>
+<pre><code class="language-csharp">﻿using System.Linq;
+using Umbraco.Core;
+using Umbraco.Web.Models.Trees;
+using Umbraco.Web.Trees;
+
+namespace NuTranslation.Core.EventHandlers
+{
+    public class UpdateContentMenu : ApplicationEventHandler
+    {
+        protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+        {
+            Umbraco.Web.Trees.ContentTreeController.MenuRendering += ContentTreeController_MenuRendering;
+        }
+
+        private void ContentTreeController_MenuRendering(TreeControllerBase sender, MenuRenderingEventArgs e)
+        {
+            //If it's the content tree
+            if (sender.TreeAlias == "content")
+            {
+                //If the current user is allowed in the translation section
+                if(sender.Services.SectionService.GetAllowedSections(sender.Security.GetUserId())
+                    .Count(s =&gt; s.Alias.InvariantEquals("translation")) &gt; 0)
+                {
+                    //Get old translation item and remove it
+                    var oldMenuItem = e.Menu.Items.SingleOrDefault(m =&gt; m.Alias == "sendToTranslate");
+                    if (oldMenuItem != null)
+                    {
+                        e.Menu.Items.Remove(oldMenuItem);
+                    }
+
+                    //Adds 2 new items at the top of the list
+                    var sendToTranslationItem = new MenuItem("sendToNuTranslate", "Send to Translation");
+                    sendToTranslationItem.LaunchDialogView("/App_Plugins/NuTranslation/views/sendforTranslation.html", "Send to Translation");
+                    sendToTranslationItem.Icon = "flag-alt";
+                    e.Menu.Items.Insert(0,sendToTranslationItem);
+
+                    var translationHistoryItem = new MenuItem("translationHistory", "Translation History");
+                    translationHistoryItem.LaunchDialogView("/App_Plugins/NuTranslation/views/translationHistory.html", "Translation History");
+                    translationHistoryItem.Icon = "list";
+                    e.Menu.Items.Insert(1, translationHistoryItem);
+
+                    //Add separator before next menu item
+                    e.Menu.Items[2].SeperatorBefore = true;
+                }
+            }
+        }
+    }
+}
+</code></pre>
+      <p class="snippet-caption">The complete code for the event handler that adds the menuItem</p>
+<h2>Building the dialog</h2>
+<p> <img src="/archive/media/2016/dialog.png?width=421.50170648464166&amp;height=500" alt="" rel="1529" data-id="1529"></p>
+<p>The menu item now calls the <span class="code">/App_Plugins/NuTranslation/views/sendforTranslation.html</span>: let's see how it's built. </p>
+<p>An Umbraco plugin is a collection of html views and AngularJS scripts, all sitting in the same folder together with a manifest file that explains how they are tied together. Usually plugins are used for Property Editors, but they can also be used just as way to inject your own javascript files into the Umbraco backend. </p>
+<p>So, first step is creating a new folder under the <span class="code">/App_Plugins</span> folder. Just to keep things tidy also create 3 subfolders: views, js, css. </p>
+<p>A dialog is no different from a complex Property Editor: it has the view, an AngularJS controller and a WebAPI controller for managing the interaction with the server. </p>
+<h3>The Dialog's view </h3>
+<p><img style="width: 431.40589569161006px; height: 500px;" src="/archive/media/2016/dialog-highlight.png?width=431.40589569161006&amp;height=500" alt="" rel="1530" data-id="1530"></p>
+<p>Let's first start with the anatomy of the HTML view, and how it is made look like a native UI by using a combination of <span class="code">umb-</span> CSS classes and <span class="code">&lt;umb-*&gt;</span> directives for the few cases in which they are usable (Umbraco has a lots of AngularJS directives but they do not work on dialogs). </p>
+<p>The top part, the one not surrounded by any colored box is managed directly by Umbraco, and comes for "free".</p>
+<p>The two outside boxes (red and orange) are the two elements of the native-looking dialog:</p>
+<ul>
+<li>the body of the dialog, a div with the <span class="code">umb-dialog-body</span> class</li>
+<li>the footer, another div with the <span class="code">umb-dialog-footer</span> class</li>
+</ul>
+<p>Inside the body, there is the main pane (in green), defined with the <span class="code">&lt;umb-pane&gt;</span> directive. </p>
+<pre><code class="language-markup">&lt;div ng-controller="nutranslation.sendToTranslationController as vm"&gt;
+    &lt;div class="umb-dialog-body form-horizontal"&gt;
+        &lt;umb-pane&gt;
+          &lt;!-- The body of the dialog, usually containing buttons --&gt;
+
+          &lt;div class="control-group umb-control-group"&gt;
+            &lt;!-- Each property --&gt;
+          &lt;/div&gt;
+
+        &lt;/umb-pane&gt;
+    &lt;/div&gt;
+
+    &lt;div class="umb-dialog-footer btn-toolbar umb-btn-toolbar" ng-hide="vm.success"&gt;
+      &lt;!-- The footer of the dialog, usually containing buttons --&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">Structure of the dialog</p>
+<p>Inside there are all the controls of the dialog, each one enclosed in a <span class="code">umb-control-group</span> (highlighted in blue). Each control group contains the label and the actual controls, as shown in the code snippet below. </p>
+<pre><code class="language-markup">&lt;div class="control-group umb-control-group"&gt;
+    &lt;div class="umb-el-wrap"&gt;
+        &lt;label class="control-label" for="comment"&gt;Comment&lt;/label&gt;
+        &lt;div class="controls controls-row"&gt;
+            &lt;textarea id="comment" class="form-control"&gt;&lt;/textarea&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">Property within a control-group element</p>
+<p>In the footer, there the two buttons, one for simply closing the dialog and one for sending the current node to translation. </p>
+<pre><code class="language-markup">&lt;div class="umb-dialog-footer btn-toolbar umb-btn-toolbar" ng-hide="vm.success"&gt;
+    &lt;a class="btn btn-link" ng-click="nav.hideDialog()" ng-if="!vm.busy"&gt;
+        &lt;localize key="general_cancel"&gt;Cancel&lt;/localize&gt;
+    &lt;/a&gt;
+
+    &lt;button class="btn btn-primary" ng-click="vm.sentToTranslation()" ng-disabled="vm.busy"&gt;
+        &lt;localize key="actions_translate"&gt;Translate&lt;/localize&gt;
+    &lt;/button&gt;
+
+    &lt;umb-button
+        action="vm.sentToTranslation()"
+        type="button"
+        buttonStyle="btn-primary"
+        labelKey="actions_translate"
+        disabled="vm.busy"
+        label="Translate"&gt;
+    &lt;/umb-button&gt;
+
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">The footer section of the dialog</p>
+<p>Buttons can be created by either applying the Bootstrap classes directly, or by using the <span class="code">&lt;umb-button&gt;</span> directive if you want bit more of functionalities. The previous snippet shows both approaches.</p>
+<p>One final touch to dialog is the response to action, showing either a "success" or a "error" message.</p>
+<p><img style="width: 500px; height: 294.607190412783px;" src="/archive/media/2016/dialog-success-failure.png?width=500&amp;height=294.607190412783" alt="" rel="1538" data-id="1538"></p>
+<p>These are done by adding two alert boxes styled with Bootstrap, one with the <span class="code">alert-error</span> class and another with the <span class="code">alert-success</span> class.</p>
+<p>The complete listing is available in the following snippet. It has a lot AngularJS variables in it, but hopefully their names should be easy to guess. If not the next section will solve any doubt.</p>
+<pre><code class="language-markup">&lt;div ng-controller="nutranslation.sendToTranslationController as vm"&gt;
+    &lt;div class="umb-dialog-body form-horizontal"&gt;
+        &lt;umb-pane&gt;
+            &lt;p&gt;Choose to which languages to translate &lt;b&gt;{{currentNode.name}}&lt;/b&gt;&lt;/p&gt;
+
+            &lt;!-- Loading indicator --&gt;
+            &lt;div class="umb-loader-wrapper" ng-show="vm.busy"&gt;
+                &lt;div class="umb-loader"&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;!-- Error Alert --&gt;
+            &lt;div class="alert alert-error" ng-show="vm.error"&gt;
+                &lt;h4&gt;{{vm.error.errorMsg}}&lt;/h4&gt;
+                &lt;p&gt;{{vm.error.data.Message}}&lt;/p&gt;
+            &lt;/div&gt;
+            &lt;!-- Success message --&gt;
+            &lt;div class="alert alert-success" ng-show="vm.success"&gt;
+                &lt;p&gt;
+                    &lt;strong&gt;{{currentNode.name}}&lt;/strong&gt; was sent to translation for:
+                    &lt;ul&gt;
+                        &lt;li ng-repeat="item in vm.translationRequests"&gt;{{item}}&lt;/li&gt;
+                    &lt;/ul&gt;
+                &lt;/p&gt;
+
+                &lt;button class="btn btn-primary" ng-click="nav.hideDialog()"&gt;Ok&lt;/button&gt;
+            &lt;/div&gt;
+            
+            &lt;!-- Source language --&gt;
+            &lt;div class="control-group umb-control-group"&gt;
+                &lt;div class="umb-el-wrap"&gt;
+                    &lt;label class="control-label" for="sourceLanguage"&gt;Source Language&lt;/label&gt;
+                    &lt;div class="controls controls-row"&gt;
+                        &lt;select id="sourceLanguage" ng-model="vm.langFrom" ng-change="vm.setSource(vm.langFrom)" class="form-control"&gt;
+                            &lt;option value=""&gt;Choose Source...&lt;/option&gt;
+                            &lt;option ng-repeat="lang in vm.languages" value="{{lang.isoCode}}"&gt;{{lang.name}} ({{lang.nativeName}})&lt;/option&gt;
+                        &lt;/select&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+
+            &lt;!-- Destination languages --&gt;
+            &lt;div class="control-group umb-control-group"&gt;
+                &lt;div class="umb-el-wrap"&gt;
+                    &lt;label class="control-label"&gt;Target Languages&lt;/label&gt;
+                    &lt;div class="controls controls-row"&gt;
+                        &lt;div class="control"&gt;
+                            &lt;label&gt;&lt;input type="checkbox" ng-model="vm.selectedAll" ng-click="vm.toggleAll()"&gt; Check/Uncheck all&lt;/label&gt;
+                        &lt;/div&gt;
+                        &lt;div class="control" ng-repeat="lang in vm.languages" ng-class="{disabled: lang.disabled}"&gt;
+                            &lt;label&gt;&lt;input type="checkbox" name="selectedLang[]" value="{{lang.isoCode}}" ng-model="lang.selected" ng-disabled="lang.disabled"&gt; {{lang.name}} ({{lang.nativeName}})&lt;/label&gt;
+                        &lt;/div&gt;
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/umb-pane&gt;
+    &lt;/div&gt;
+
+    &lt;div class="umb-dialog-footer btn-toolbar umb-btn-toolbar" ng-hide="vm.success"&gt;
+        &lt;a class="btn btn-link" ng-click="nav.hideDialog()" ng-if="!vm.busy"&gt;
+            &lt;localize key="general_cancel"&gt;Cancel&lt;/localize&gt;
+        &lt;/a&gt;
+
+        &lt;button class="btn btn-primary" ng-click="vm.sentToTranslation()" ng-disabled="vm.busy"&gt;
+            &lt;localize key="actions_translate"&gt;Translate&lt;/localize&gt;
+        &lt;/button&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">The complete listing of the view</p>
+<h3>Dialog's controller</h3>
+<p>Happy with look of the HTML view of the dialog, it's time to add some interaction. For this dialog we needed to interact with the server in order to load or send data. This while showing some feedback to the user and handling possible errors.</p>
+<p>Every request to the server is done in the same way:</p>
+<ol>
+<li>First the status tracking variables are reset: <span class="code">success</span> and <span class="code">error</span> are set to <span class="code">false</span>.</li>
+<li>Then the <span class="code">busy</span> variable is set to <span class="code">true</span> since the request to the server is started. This will show the loading bar and disable the action buttons.</li>
+<li>The request is sent:
+<ol>
+<li>if everything is ok the request is processed, <span class="code">success</span> is set to <span class="code">true</span> and the rest to <span class="code">false</span></li>
+<li>if error happen, <span class="code">busy</span> is set to <span class="code">false</span> as the operation is completed, but <span class="code">error</span> now contains the error message.</li>
+</ol>
+</li>
+</ol>
+<p>Apart from the initial setting of variables, the request and its handling are done using the Umbraco AngularJS helper method <span class="code">umbRequestHelper.resourcePromise</span>.</p>
+<p>The following method to request a translation is an example of such process.</p>
+<pre><code class="language-javascript">vm.sentToTranslation = function () {
+
+    vm.busy = true;
+    vm.error = false;
+
+    var args =
+    {
+        contentId: $scope.currentNode.id,
+        sourceLang: vm.langFrom,
+        languages: _.map(_.where(vm.languages, { selected: true }), function (lang) { return lang.isoCode; })
+    };
+    umbRequestHelper.resourcePromise(
+        $http.post("/umbraco/backoffice/api/NuTranslation/post", args),
+        'Failed to request translation for content')
+        .then(function (data) {
+            vm.error = false;
+            vm.success = true;
+            vm.busy = false;
+            vm.translationRequests = data;
+
+        }, function (err) {
+            vm.success = false;
+            vm.error = err;
+            vm.busy = false;
+        });
+};</code></pre>
+      <p class="snippet-caption">The sendToTranslation function of the controller</p>
+<p>If you want to go one step further, you can also use the <span><span class="code">umbRequestHelper.GetApiUrl</span> method to automatically get the url of the backoffice API without hard coding it in the call. In this case <span class="code">umbRequestHelper.getApiUrl("nuTranslation","Post")</span>.</span></p>
+<p>I've omitted the full controller for sake of brevity, by you can see <a href="https://github.com/simonech/Umbraco-NuTranslation/blob/master/NuTranslation.Web/App_Plugins/NuTranslation/js/sendForTranslation.controller.js">its full version</a> on the project's repo on Github </p>
+<h2>WebAPI controllers</h2>
+<p>The dialog was sending some resource from the server, but if you run the code now you'll get an error. This because we haven't built the server-side counterpart. This is done by building a WebAPI controller and is probably the easiest part of the whole exercise.</p>
+<p>All you need is implementing an <span class="code">UmbracoAuthorizedJsonController</span>, and adding a <span class="code">Get</span> or <span class="code">Post</span> method. The controller just created will be available at the url: <span class="code">/umbraco/backoffice/api/&lt;ControllerName&gt;/&lt;actionName&gt;</span>.</p>
+<p>In the dialog the url that was called was <span class="code">/umbraco/backoffice/api/NuTranslation/post</span>, so my controller should be named <span class="code">NuTranslationController</span> and the action <span class="code">Post</span>.</p>
+<p>The listing shows the <span class="code">NuTranslationController</span> controller (with the logic stripped for brevity) with both actions used by the dialog: <span class="code">Post</span> and <span class="code">GetLanguages</span>.</p>
+<pre><code class="language-csharp">public class NuTranslationController: UmbracoAuthorizedJsonController
+{
+    [HttpPost]
+    public HttpResponseMessage Post([FromBody] TranslationRequestDTO request)
+    {
+        //Process Post
+        return Request.CreateResponse(HttpStatusCode.OK);
+    }
+
+    [HttpGet]
+    public HttpResponseMessage GetLanguages()
+    {
+      //Collect available languages
+      return Request.CreateResponse(HttpStatusCode.OK, languages);
+    }
+}</code></pre>
+      <p class="snippet-caption">Web API Controller</p>
+<p>The dialog showed two different alert boxes based on whether the request was successful or not. This can be done by checking the input and returning a validation error instead of an OK message.</p>
+<pre><code class="language-csharp">[HttpPost]
+public HttpResponseMessage Post([FromBody] TranslationRequestDTO request)
+{
+    if (request.Languages.Count() &lt; 1)
+        return Request.CreateValidationErrorResponse("At Least one Target language is needed");
+    if (String.IsNullOrWhiteSpace(request.SourceLang))
+        return Request.CreateValidationErrorResponse("Source Language is needed");
+
+    //Do the real work
+
+    return Request.CreateResponse(HttpStatusCode.OK, request.Languages);
+}</code></pre>
+      <p class="snippet-caption">Checking the input and returning a validation error</p>
+<p> If you want to use the <span class="code">getApiUrl</span> method, you also need to add the configuration it uses. This is done inside the handler for the <span><span class="code">ServerVariablesParser.Parsing</span> event by adding the url of the controller to the <span class="code">umbracoUrls</span> JavaScript dictionary. The whole process is explained more in details on my post: <a href="http://codeclimber.net.nz/archive/2016/12/21/how-to-get-the-url-of-custom-umbraco-backoffice-api-controllers-with-the-getapiurl-method/">How to get the url of custom Umbraco backoffice API controllers with the GetApiUrl method</a>.<span></span></span></p>
+<h2>Conclusions</h2>
+<p>In this article you've seen some of the extensibility points that you can leverage to build your own custom solution on top of Umbraco. There are still many more I haven't covered yet, like dashboards, complete editing forms, new sections and new tree, and you can even add your own tables to save data specific to your solution.</p>
+<p>And thanks to the <span class="code">umb-</span> classes and directives, you can build something that looks and behaves like the native UI of Umbraco.</p>
+<p>Unfortunately not everything is always well documented but you can see all the available angular directives and services on the <a href="https://our.umbraco.org/apidocs/ui/#/api">Umbraco Backoffice UI API documentation</a> and failing that, a visit to the <a href="https://github.com/umbraco/Umbraco-CMS">source code repository on Github</a> might solve many other doubts.</p>
+<p>If you want to try the NuTranslation sample, you can go to <a href="https://github.com/simonech/Umbraco-NuTranslation">the repository on GitHub</a>, clone it and look at the various elements. And why not, send a pull request if you think something might be improved. It's still a work in progress, do not expect a working solution tho.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/translation/" title="See all articles tagged with Translation">Translation</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Simone Chiaretta"><img src="//gravatar.com/avatar/444625287c652a4e31f4a271905b713a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/444625287c652a4e31f4a271905b713a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Simone Chiaretta</h1>
+        <p>Simone is on Twitter as <a href="//twitter.com/simonech" title="Simone Chiaretta on Twitter" rel="author">@simonech</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

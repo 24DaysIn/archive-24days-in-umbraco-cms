@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Tweaking Umbraco 7 Back Office</title>
+<meta name="description" content="Short article on steps you can take to tweak the Umbraco 7 back office using nothing but JavaScript and CSS.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Tweaking Umbraco 7 Back Office</h1>
+      <p class="byline"> by Matt Brailsford, <span class="pubdate">posted on <time datetime="2015-12-14">Dec 14, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">With Umbraco v7, the back office is a vast improvement on the old Umbraco UI, however there will always be occasions when you'd just like to make that little tweak or wish it did something a little bit differently. Of course, the best approach is to create a Pull Request for the Umbraco core so that we can all take advantage, but what about the time in between you submitting it, and it actually getting released? Or what if it's just a one off for the project you are on?</p>
+<p class="intro">In the past the only real approach has been to run from a custom build of the core which often leads to the inability to upgrade or run the risk of losing your changes. With v7 though there are a few more options available allowing you to make changes but maintain upgradability.</p>
+<h2>Custom CSS</h2>
+<p>So what if you just want to tweak some of the styling? Maybe the grid has too much whitespace? or a third party package isn't quite laying out how it should? One of the simplest tweaks you can make is overriding some of the core CSS styles, but how to inject the custom CSS? Thanks to Umbraco's plugin system, it's actually pretty easy.</p>
+<p>Start by creating a folder inside the <strong>App_Plugins</strong> folder giving it a name of <strong>tweaks</strong>. Then inside your tweaks folder, create a blank file named <strong>package.manifest</strong>. The package manifest is just a plain old text file containing a bit of JSON which tells Umbraco about the various files and plugins contained inside your folder. Next, inside your tweaks folder, create another folder named <strong>css</strong> and inside that folder create a <strong>tweaks.css</strong> file. This will be where we write our overriding styles, but first we need to inject it. To do this, open up your package.manifest file in a text editor and enter the following:</p>
+<pre class="language-javascript"><code>{
+   css: [
+       '~/App_Plugins/tweaks/css/tweaks.css'
+   ]
+}</code></pre>
+      <p class="snippet-caption">package.manifest</p>
+<p>And that's it, now if you give your browser a refresh, your custom CSS file will be automatically included. Obviously, it doesn't do much right now, but if you use your browser's dev tools to inspect the UI's markup, you can find references to the various classes applied to elements and simply create overriding styles inside your custom CSS file.</p>
+<h2>Custom JS</h2>
+<p>What if you want to run some additional logic in the back office? Well, you can pretty much do the same with JavaScript too. Go ahead and create a <strong>js</strong> folder inside your tweaks folder, and inside that create a <strong>tweaks.js</strong> file. Now, back in your package.manifest file, update it to match the following:</p>
+<pre class="language-javascript"><code>{
+   javascript: [
+       '~/App_Plugins/tweaks/js/tweaks.js'
+   ],
+   css: [
+       '~/App_Plugins/tweaks/css/tweaks.css'
+   ]
+}</code></pre>
+      <p class="snippet-caption">package.manifest</p>
+<p>Give your browser a refresh and tada, you've now injected a custom JS file too.</p>
+<h2>Tweaking Views</h2>
+<p>Ok, so including a JS file on its own is all well and good, but how can you actually get it to modify the UI? There are a couple of options here and both revolve around a key concept of AngularJS and that is $http <a href="https://docs.angularjs.org/api/ng/service/$http#interceptors" target="_blank" title="Interceptors">interceptors</a>.</p>
+<p>Interceptors allow you to decorate the standard $http service with additional methods that intercept the standard request/response methods giving it extra functionality. Given that the $http service is used to load pretty much everything within an AngularJS app from views to data requests, it's a handy resource to be able to hook into. Sounds scary, but in practise it's pretty simple.</p>
+<p>So how can we use these to help us tweak the UI? Simple, by intercepting the requests made via the $http service you can alter that request before it gets processed, thus redirecting to an alternative location.</p>
+<p>So let's say for example you wanted to make a change to a core Umbraco view, such as the listview.html file. What we can do then is take a copy of the listview.html file, and place it inside a <strong>views</strong> folder within a tweaks plugin folder, and then inside our custom JS file add the following:</p>
+<pre class="language-javascript"><code>angular.module('umbraco.services').config([
+   '$httpProvider',
+   function ($httpProvider) {
+
+       $httpProvider.interceptors.push(function ($q) {
+           return {
+               'request': function (request) {
+
+                   // Redirect any requests for the listview to our custom list view UI
+                   if (request.url === "views/propertyeditors/listview/listview.html")
+                       request.url = '/App_Plugins/tweaks/views/listview.html';
+
+                   return request || $q.when(request);
+               }
+           };
+       });
+
+   }]);</code></pre>
+      <p class="snippet-caption">tweaks.js</p>
+<p>Now, whenever a listview is requested, it'll now use our custom listview.html file rather than the core one, so we can happily tweak the markup without fear of losing our changes should we wish to upgrade (of course, the listview might get updated, so you'd need to keep your file in sync, but at least you won't just have your changes overwritten).</p>
+<h2>Tweaking Logic</h2>
+<p>You aren't just limited to overriding view requests though. You can pretty much intercept any API request too. So if you wished a service worked slightly differently, then you can just as easily detect the API URL and redirect it to your own custom API controller (of course, it's not advised that you go overriding the core APIs though as you could easily introduce some security holes, but it's good to know you can do this).</p>
+<p>However there is another way you can tweak logic without replacing APIs. So far we've been intercepting <strong>request</strong> calls for the $http service, but you can also intercept the <strong>response</strong> handler too, gaining access the data retrieved from the API before the CMS starts to process it, for example, tweaking the data for a content editor:</p>
+<pre class="language-javascript"><code>angular.module('umbraco.services').config([
+   '$httpProvider',
+   function ($httpProvider) {
+
+       $httpProvider.interceptors.push(function ($q) {
+           return {
+               'response': function (response) {
+
+                   // Intercept requests content editor data responses
+                   if (response.config.url.indexOf("/umbraco/backoffice/UmbracoApi/Content/GetById") === 0){
+                       //TODO: Tweak response.data
+                   }
+
+                   return response;
+               }
+           };
+       });
+
+   }]);</code></pre>
+      <p class="snippet-caption">tweaks.js</p>
+<p>With code like this, we can intercept the raw data used to construct the content editor page and do various things like hiding tabs or properties from view (if you do this you'll need to keep track of what you remove and re-add them back in on save as the back end is expecting them to be there, but you get the idea).</p>
+<p>So there you have it, four options for tweaking the back office whilst keeping some sense on upgradability. I know I haven't gone too much into detail about how to do specific things, but I hope these give you the keys to see how you might be able to tweak things without having to go for a completely custom build.</p>
+<p>And to reiterate what I said from the start, if you are making tweaks that could benefit everyone, please do think about submitting a PR to the core.</p>
+<p>Hacky christmas everyone :)</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Matt Brailsford"><img src="//gravatar.com/avatar/34b41f8815601e9a16baa4e56c69bcc2.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/34b41f8815601e9a16baa4e56c69bcc2.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Matt Brailsford</h1>
+        <p>Matt is on Twitter as <a href="//twitter.com/mattbrailsford" title="Matt Brailsford on Twitter" rel="author">@mattbrailsford</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li class="selected"><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Debugging AngularJS</title>
+<meta name="description" content="A bunch of tips to make it easier to debug AngularJS code when developing for the Umbraco 7 backoffice">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Debugging AngularJS</h1>
+      <p class="byline"> by Filip Bech, <span class="pubdate">posted on <time datetime="2014-12-02">Dec 2, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span><span>After Umbraco 7 shipped with a backend using AngularJS, the Umbraco community has welcomed Angular with somewhat open arms. But many of us started out as Angular rookies. In this blog post I will share some of my learnings on debugging Angular.</span></span></p>
+<p class="intro"><span><span>I won't cover the non-Angular backoffice setup, but just note that you should set </span><span class="code">debug="true"</span><span> in </span><span><span class="code">&lt;compilation</span> ...</span><span> in your web.config in order to disable Umbraco's backend caching of your Angular code. The other thing that's specific to the Umbraco Angular setup is that you should assign the desired output value to </span><span class="code">$scope.value</span><span> for umbraco to automatically save the value.</span></span></p>
+<p><span><span>First of all, you need to be able to clear your cache when you need it. I prefer using chrome's devtools and clear my cache with the extension </span><a href="https://chrome.google.com/webstore/detail/clear-cache/cppjkneekbjaeellbfkmgnhonkkjfpdn"><span>clear-cache</span></a><span>. This gives you more control than just turning on the "Disable cache (while DevTools is open)" option from devtools settings (that you open by clicking the little gear-icon).</span></span></p>
+<p><span><span>I also use two different Angular specific browser extensions: </span><a href="https://chrome.google.com/webstore/detail/ng-inspector-for-angularj/aadgmnobpdmgmigaicncghmmoeflnamj"><span>ngInspector</span></a><span> and </span><a href="https://chrome.google.com/webstore/detail/angularjs-batarang/ighdmehidhipcmcojjgiloacoafjmpfk"><span>Batarang</span></a><span>.</span></span></p>
+<h2>ngInspector</h2>
+<p><span><span>ngInspector is very simple and lightweight and sits fixed on top your website showing you the different scopes and their values. Click a value and it will </span><span class="code">console.log()</span><span> it for you (see some console tips a little later in this blog post).</span></span></p>
+<p><span><span><img src="/archive/media/2014/ngInspector.jpg" width="300" height="406" alt="Nginspector"></span></span></p>
+<h2>Batarang</h2>
+<p dir="ltr"><span>Batarang is a really powerful extension that shows you lots of information about your Angular app. It lives inside devtools under "Angular JS" and you need to enable it and reload the page to start using it. Batarang does all that ngInspector does and has a lot more features. It draws a nice dependency graph and shows you some relevant performance information (if you have expensive watchers/bindings etc).</span></p>
+<p><img src="/archive/media/2014/batarang_498x345.jpg" width="498" height="345" alt="Batarang"></p>
+<h2>Good old console</h2>
+<p><span><span>But what I find myself using most of the time is the console (open devtools and press escape to have it side-by-side with another open tab or use its own tab). Angular has the possibility of different, and even nested, scopes depending on where in the DOM you are. In the elements pane of devtools you can select a DOM node by clicking it. Then you can reference the DOM node from the console by using </span><span class="code">$0</span><span>. Combined with Angular's element methods this is pretty powerful. You can write </span><span class="code">angular.element($0).scope();</span><span> in the console to see the current scope.</span></span></p>
+<p><span><span><img src="/archive/media/2014/cons_500x285.jpg" width="500" height="285" alt="Cons"></span></span></p>
+<p dir="ltr"><span>Sometimes you will encounter issues where Angular doesn't update values in the view. This typically happens when you're using non-Angular async methods (like </span><span class="code">jquery.ajax()</span><span>, </span><span class="code">setTimeout()</span><span> etc. A great way to see if that's the case is to ask the current scope to update its bindings. You can confirm the solution if the view is updated when you do </span><span class="code">angular.element($0).scope().$apply()</span><span>.</span></p>
+<p dir="ltr"><span>You should ideally try to avoid this issue altogether by using Angular services whenever possible (</span><span class="code">$http</span><span>, </span><span class="code">$timeout</span><span>, etc), but when you occasionally can't avoid it the fix above is really helpful.</span></p>
+<p><span><span>Chrome has a feature where anything you log to the console can be saved to a temporary global variable, so you can play around with it later. You do that by right clicking the response and choosing "Store as global variable" (you can then reference it by </span><span class="code">temp1</span><span>).</span></span></p>
+<p><span><span><img src="/archive/media/2014/cons2_484x70.jpg" width="484" height="70" alt="Cons2"></span></span></p>
+<p><span><span>This way you can easily take a look at all the handy methods that are already on the scope.</span></span></p>
+<p><span><img src="/archive/media/2014/cons3.jpg" width="278" height="355" alt="Cons3"></span></p>
+<p dir="ltr"><span>Pretty neat, right? But this also allows you to assign any method (Angular internal or your own) to the <span class="code">$scope</span> and execute it in context and "on demand" from the console like you just did with <span class="code">$apply</span>.</span></p>
+<p dir="ltr"><span>If you want to make sure the object isn't changed in the middle of you playing around (because objects in javascript are referenced and not copied) you can wrap your call in an </span><span class="code">angular.copy(...)</span><span> call. This will of course break some of the methods, as you no longer reference the real scope object. This is especially useful when you are debugging a changing scope, because the logged version might update with the reference (this very chrome specific and has to do with the size of the object).</span></p>
+<p><span><span>Another console tip is its </span><span class="code">.table()</span><span> method. This is especially useful when you want to review a list (array) of similar items (objects), like recent news-articles, images in a gallery or something similar. If you for instance do </span><span class="code">console.table(galleryItems);</span><span> you get a clear and readable table view.</span></span></p>
+<p><span><img src="/archive/media/2014/table_500x170.jpg" width="500" height="170" alt="Table"></span></p>
+<h2>Angular source</h2>
+<p><span><span>A really good place to look for inspiration or best practices is of course </span><a href="http://code.angularjs.org/"><span>the Angular code</span></a><span>. An important thing to note here, is that there are differences in the source code if you use the minified production or not. In production mode error messages are very cryptic and often only contains a link to the Angular website. This isn't very helpful if you are offline. The non-minified development version has the full error-message and the source-code is full of great comments that contain the documentation for all the core features. So make sure to use the dev version when developing and the minified version in production (rather than just minifying the dev-version yourself - to save the error-msg bytes)...</span></span></p>
+<h2><a id="user-content-use-the-json-filter-and-the-pre-tag" href="#use-the-json-filter-and-the-pre-tag" class="anchor"></a>Use the json-filter and the pre-tag</h2>
+<p><span><span>You might find it handy to be able to see the changes of an object on your scope as it develops over time. A great way to do this is by using the standard html pre-tag (for pre-formatted content) and the json-filter in Angular. Lets say you have a deep myObject. You can do </span><span class="code">&lt;pre&gt; {{myObject | json}} &lt;/pre&gt;</span><span> to show it and the binding magic of Angular will keep that up to date as you interact with the object.</span></span></p>
+<p><span><span><img src="/archive/media/2014/json.jpg" width="190" height="279" alt="Json"></span></span></p>
+<h2>A couple of Angular tips</h2>
+<p><span><span>This is not really debugging, but rather tips that will make you happier when debugging different issues.</span></span></p>
+<h3>Use controllerAs</h3>
+<p dir="ltr"><span>A very common problem when you have nested scopes has to do with inheritance. Lets say you have a scope with a title-property and a child-scope that also has a title-property. Because of the way inheritance works you can't access the parent title from your child view (I know you can do <span class="code">$parent.title</span></span><span>, </span><span>but thats just wrong and ugly). What the </span><span class="code">controllerAs</span><span> syntax will let you do is assign each controller to a given name, so you can access their values that way. This needs some code for clarification (however this requires Angular v. 1.2+, which is newer than the Angular in the current umbraco backend, but </span><a href="http://twitter.com/pplough"><span>Per</span></a><span> promised me this will change soon).</span></p>
+<p><strong><a id="user-content-old-way" href="#old-way" class="anchor"></a>Old way</strong></p>
+<p><span><span>Both </span><span class="code">myListCtrl</span><span> and </span><span class="code">myItemCtrl</span><span> injects </span><span class="code">$scope</span><span> and sets </span><span class="code">$scope.title='different values here';</span></span></p>
+<pre class="language-javascript"><code>&lt;div ng-controller="myListCtrl"&gt;
+	&lt;h1&gt;{{title}}&lt;/h1&gt;
+	&lt;div ng-controller="myItemCtrl"&gt; I cant access the title-property on myListCtrl because myItemCtrl also has a property with this name &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p><strong><a id="user-content-new-way" href="#new-way" class="anchor"></a>New way</strong></p>
+<p dir="ltr"><span>Now the controllers don't use the <span class="code">$scope</span> to pass along values to the view, but instead use the controller instance. So values are saves like <span class="code">this.title='different values here';</span></span></p>
+<p dir="ltr"><span>Note that this is the new best practice and the direction Angular is going in the future (Angular 2.0 won't use <span class="code">$scope</span> anymore).</span></p>
+<pre class="language-javascript"><code>&lt;div ng-controller="myListCtrl as myList"&gt;
+	&lt;h1&gt;{{myList.title}}&lt;/h1&gt;
+	&lt;div ng-controller="myItemCtrl as myItem"&gt;Now I can access both {{myList.title}} and {{myItem.title}} and its much clearer which I want&lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<h3>Use $destroy and .one()</h3>
+<p dir="ltr"><span>Another problem you will run into when building larger Angular applications has to do with performance. When you have Angular directives and a view that changes a lot you can easily run into memory leak situations. Because of the way the garbage collector works in browsers (and because of the javascript spec) it can't free up memory by removing objects if they still have anything attached to them. Angular will cleanup after itself as best it can, but you should help along. When </span><span>scopes</span><span> are destroyed (a directive or view is removed) Angular will automatically remove all listeners to that scope. But if you have assigned any other listeners (like click handlers etc.) it won't know to clean this up when its destroyed. However it will broadcast a </span><span><span class="code">$destroy</span> </span><span>event on the scope just before removing it. You can (and should) listen for that event and clean up after yourself. If all you have is an event listener that will trigger the removal of the scope, why not just make this a one-time listener (by using </span><span class="code">.one()</span><span> instead of </span><span class="code">.on()</span><span>)? Again lets look at some (admittedly stupid example) code - </span><span>this time in a link-function of a directive:</span></p>
+<pre class="language-javascript"><code>link:function(scope,element,attr) {
+	var killMe = function() {
+		element.remove()
+	};
+	element.on('click',killMe);
+	scope.$on('$destroy', function() {
+		element.on('click',killMe);
+	})
+}</code></pre>
+<div class="highlight highlight-js">
+<pre><span class="pl-en"><span style="font-size: 14px;">...or with a one-time binding:</span></span></pre>
+</div>
+<div class="highlight highlight-js">
+<pre class="language-javascript"><code>link:function(scope,element,attr) {
+	element.one('click', function() {
+		element.remove()
+	});
+}</code></pre>
+<pre><span class="pl-en"> </span></pre>
+</div>
+<h2>Thats all folks</h2>
+<p><span><span>I hope you learned a thing or two. Maybe you can teach me if I got something wrong. Lets keep learning Angular together! #h5yr</span></span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Filip Bech"><img src="//gravatar.com/avatar/ec91ba762dd37fdce7727895fb029f7d.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/ec91ba762dd37fdce7727895fb029f7d.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Filip Bech</h1>
+        <p>Filip is on Twitter as <a href="//twitter.com/Filipbech" title="Filip Bech on Twitter" rel="author">@Filipbech</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li class="selected"><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

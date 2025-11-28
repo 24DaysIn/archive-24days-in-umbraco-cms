@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>How to Register &amp; Install a Free SSL Certificate on Umbraco Cloud</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Register and Install a Free SSL Certificate on Umbraco Cloud</h1>
+      <p class="byline"> by Heather Floyd, <span class="pubdate">posted on <time datetime="2017-12-24">Dec 24, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">These days an "https" in front of your domain is a requirement for any serious website, but SSL Certificates (going for $10 - $600 per year) can represent yet another ongoing cost for website owners. For sites which are small or don't have a budget for SSL certificates, there are no-cost options. So, if you are willing to substitute some time for money (since a free SSL Certificate needs to be manually renewed every few months), read on for a step-by-step guide.</p>
+<p class="intro">The first half of this procedure involves getting the free SSL Certificate. This can be used for any web host. The second half deals with setting up SSL on an Umbraco Cloud project, which would work with a free SSL Certificate or any other that you have obtained for your site.</p>
+<h2>Part 1: Get the Free SSL Certificate Files</h2>
+<ol>
+<li>Go to <a rel="noopener noreferrer" href="https://www.sslforfree.com/" target="_blank">https://www.sslforfree.com/</a></li>
+<li>Click "Login" in the upper-right, fill in your email and a password. Click the "Register" button (optional, but convenient when you need to renew your certificate).
+<p><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/0e6f21fe7e79483a9ec52d8681a4d894"></p>
+</li>
+<li>Add your domain and any related subdomains - I'd suggest at least adding "www".</li>
+<li>Go through the verification process. (For an Umbraco Cloud hosted site, I find the "Manual Verification (DNS)" option is the quickest, as long as you have access to the domain registrar.)</li>
+<li>Download all the resulting SSL files (it will be in a ZIP file) &amp; extract them.</li>
+<li>Install "Open SSL": <a rel="noopener noreferrer" href="http://gnuwin32.sourceforge.net/packages/openssl.htm" target="_blank">http://gnuwin32.sourceforge.net/packages/openssl.htm</a></li>
+<li>
+<p>Open notepad, copy &amp; paste in this command:</p>
+<p><span class="code">pkcs12 -export -out C:\temp\sslforfree\cert.pfx -inkey C:\temp\sslforfree\private.key -in C:\temp\sslforfree\certificate.crt -certfile C:\temp\sslforfree\ca_bundle.crt</span></p>
+</li>
+<li>Update it with the path to your extracted folder (from step 5). Select the new command text, and copy it.</li>
+<li>Open openssl.exe (C:\Program Files (x86)\GnuWin32\bin\openssl.exe)</li>
+<li>Paste in your updated command</li>
+<li>Type a password to set on the file - keep track of this.</li>
+<li>A new *.pfx file will now be in the directory with the other certificate files.</li>
+</ol>
+<h2>Part 2: Update Umbraco Cloud Project</h2>
+<ol>
+<li>In your Umbraco Cloud project, go to Settings &gt; Manage Domains.
+<p><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/264296254aeb470a9afcb82ed72ef539"></p>
+</li>
+<li>Scroll down to "Hostnames for Live". Make sure the domains you set up for the SSL Certificate are in the list. If not, add them.</li>
+<li>Scroll further down to "SSL Certificates"</li>
+<li>Under "Upload Certificate", browse to your new *.pfx file and type in the password you used in step 11 (above). Click the "Upload" button. You should then see your new certificated added to the list.<br><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/c5eaa77f955c4efba865654ca1cc38bc"></li>
+<li>Next, go to "Hostname bindings for SSL"<br><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/16553eac318842598622fc3886d827d8"></li>
+<li>Add bindings for all the related hostnames.</li>
+</ol>
+<p>Notice that if you have multiple sites with different domains on your Umbraco Cloud site, you can upload separate SSL Certificates for each domain as assign them individually. This offers you fantastic flexibility. </p>
+<p>Finally, if you haven't yet done it, you should add a url rewriting rule to your web.config to push all requests to the "https" version of your site:</p>
+<pre><code class="language-markup">&lt;rule name="Redirect to https" stopProcessing="true"&gt;
+	&lt;match url=".*" /&gt;
+	&lt;conditions&gt;
+		&lt;add input="{HTTPS}" pattern="off" ignoreCase="true" /&gt;
+		&lt;add input="{HTTP_HOST}" matchType="Pattern" pattern="local" negate="true" /&gt;
+	&lt;/conditions&gt;
+	&lt;action type="Redirect" url="https://{HTTP_HOST}{REQUEST_URI}" redirectType="Permanent" appendQueryString="false" /&gt;
+&lt;/rule&gt;</code></pre>
+<p><strong>Now, go celebrate - your website is secured!</strong></p>
+<hr>
+<p><strong>Heather Floyd</strong><span> is a freelance Umbraco and ASP.Net Developer with over a decade of Umbraco experience. She can be found at </span><a rel="noopener noreferrer" href="https://heatherfloyd.com/" target="_blank">HeatherFloyd.com</a><span>.</span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/security/" title="See all articles tagged with Security">Security</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/seo/" title="See all articles tagged with SEO">SEO</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/umbraco-cloud/" title="See all articles tagged with Umbraco Cloud">Umbraco Cloud</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Heather Floyd"><img src="//gravatar.com/avatar/e987a7108f5687d9fd4c25aec9fd322b.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/e987a7108f5687d9fd4c25aec9fd322b.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Heather Floyd</h1>
+        <p>Heather is on Twitter as <a href="//twitter.com/HFloyd" title="Heather Floyd on Twitter" rel="author">@HFloyd</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

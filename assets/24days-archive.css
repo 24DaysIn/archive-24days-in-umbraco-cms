@@ -1,0 +1,1243 @@
+.scr-text {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+/* PrismJS 1.25.0
+https://prismjs.com/download.html?#themes=prism-coy&languages=markup+css+clike+javascript+aspnet+bash+csharp+coffeescript+css-extras+git+json+less+markdown+powershell+jsx+ruby+sass+scss+sql+swift+typescript+yaml */
+/**
+ * prism.js Coy theme for JavaScript, CoffeeScript, CSS and HTML
+ * Based on https://github.com/tshedor/workshop-wp-theme (Example: http://workshop.kansan.com/category/sessions/basics or http://workshop.timshedor.com/category/sessions/basics);
+ * @author Tim  Shedor
+ */
+code[class*="language-"],
+pre[class*="language-"] {
+  color: black;
+  background: none;
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 1em;
+  text-align: left;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  word-wrap: normal;
+  line-height: 1.5;
+  -moz-tab-size: 4;
+  -o-tab-size: 4;
+  tab-size: 4;
+  -webkit-hyphens: none;
+  hyphens: none;
+}
+/* Code blocks */
+pre[class*="language-"] {
+  position: relative;
+  margin: 0.5em 0;
+  overflow: visible;
+  padding: 1px;
+}
+pre[class*="language-"] > code {
+  position: relative;
+  z-index: 1;
+  border-left: 10px solid #358ccb;
+  box-shadow: -1px 0px 0px 0px #358ccb, 0px 0px 0px 1px #dfdfdf;
+  background-color: #fdfdfd;
+  background-image: linear-gradient(transparent 50%, rgba(69, 142, 209, 0.04) 50%);
+  background-size: 3em 3em;
+  background-origin: content-box;
+  background-attachment: local;
+}
+code[class*="language-"] {
+  max-height: inherit;
+  height: inherit;
+  padding: 0 1em;
+  display: block;
+  overflow: auto;
+}
+/* Margin bottom to accommodate shadow */
+:not(pre) > code[class*="language-"],
+pre[class*="language-"] {
+  background-color: #fdfdfd;
+  box-sizing: border-box;
+  margin-bottom: 1em;
+}
+/* Inline code */
+:not(pre) > code[class*="language-"] {
+  position: relative;
+  padding: 0.2em;
+  border-radius: 0.3em;
+  color: #c92c2c;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: inline;
+  white-space: normal;
+}
+pre[class*="language-"]:before,
+pre[class*="language-"]:after {
+  content: '';
+  display: block;
+  position: absolute;
+  bottom: 0.75em;
+  left: 0.18em;
+  width: 40%;
+  height: 20%;
+  max-height: 13em;
+  box-shadow: 0px 13px 8px #979797;
+  transform: rotate(-2deg);
+}
+pre[class*="language-"]:after {
+  right: 0.75em;
+  left: auto;
+  transform: rotate(2deg);
+}
+.token.comment,
+.token.block-comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #7D8B99;
+}
+.token.punctuation {
+  color: #5F6364;
+}
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.function-name,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #c92c2c;
+}
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.function,
+.token.builtin,
+.token.inserted {
+  color: #2f9c0a;
+}
+.token.operator,
+.token.entity,
+.token.url,
+.token.variable {
+  color: #a67f59;
+  background: rgba(255, 255, 255, 0.5);
+}
+.token.atrule,
+.token.attr-value,
+.token.keyword,
+.token.class-name {
+  color: #1990b8;
+}
+.token.regex,
+.token.important {
+  color: #e90;
+}
+.language-css .token.string,
+.style .token.string {
+  color: #a67f59;
+  background: rgba(255, 255, 255, 0.5);
+}
+.token.important {
+  font-weight: normal;
+}
+.token.bold {
+  font-weight: bold;
+}
+.token.italic {
+  font-style: italic;
+}
+.token.entity {
+  cursor: help;
+}
+.token.namespace {
+  opacity: 0.7;
+}
+@media screen and (max-width: 767px) {
+  pre[class*="language-"]:before,
+  pre[class*="language-"]:after {
+    bottom: 14px;
+    box-shadow: none;
+  }
+}
+/* Plugin styles: Line Numbers */
+pre[class*="language-"].line-numbers.line-numbers {
+  padding-left: 0;
+}
+pre[class*="language-"].line-numbers.line-numbers code {
+  padding-left: 3.8em;
+}
+pre[class*="language-"].line-numbers.line-numbers .line-numbers-rows {
+  left: 0;
+}
+/* Plugin styles: Line Highlight */
+pre[class*="language-"][data-line] {
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0;
+}
+pre[data-line] code {
+  position: relative;
+  padding-left: 4em;
+}
+pre .line-highlight {
+  margin-top: 0;
+}
+pre[class*="language-"] {
+  font-size: 12px;
+  font-size: 1.2rem;
+}
+pre[class*="language-"] code[class*="language"] {
+  height: auto;
+}
+@media only screen and (max-width: 568px) {
+  pre[class*="language-"] {
+    width: calc(100% + 32px);
+    transform: translateX(-16px);
+  }
+}
+.header {
+  font-family: "ltc-bodoni-175", Georgia, Times, serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #222;
+  line-height: 1.14;
+  margin: 0;
+}
+@media only screen and (max-width: 568px) {
+  .header {
+    font-size: 32px;
+    font-size: 3.2rem;
+  }
+}
+@media only screen and (min-width: 569px) {
+  .header {
+    font-size: 57px;
+    font-size: 5.7rem;
+  }
+}
+.article > header {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.article > header .header {
+  flex-basis: 100%;
+}
+.teaser {
+  font-family: "ltc-bodoni-175", Georgia, Times, serif;
+  font-weight: 400;
+  font-size: 20px;
+  font-size: 2rem;
+  line-height: 1.2;
+}
+@media only screen and (min-width: 569px) {
+  .teaser {
+    font-size: 25px;
+    font-size: 2.5rem;
+  }
+}
+.epub {
+  color: #222;
+}
+@media only screen and (max-width: 568px) {
+  .epub {
+    opacity: 0.5;
+  }
+  .epub:hover {
+    opacity: 1;
+  }
+}
+@media only screen and (min-width: 569px) {
+  .epub {
+    position: relative;
+    content: "";
+    display: block;
+    width: 120px;
+    height: 120px;
+    background: url('arrow_down.png') center top no-repeat;
+    background-size: 100%;
+    padding-bottom: 36px;
+  }
+  .epub::after {
+    font-family: "mr-eaves-xl-modern", Helvetica, Arial, sans-serif;
+    font-size: 26px;
+    font-size: 2.6rem;
+    font-weight: 700;
+    content: ".epub";
+    text-transform: uppercase;
+    display: block;
+    position: absolute;
+    bottom: 0;
+    text-align: center;
+    width: 100%;
+    line-height: 36px;
+  }
+  .epub span {
+    border: 0;
+    clip: rect(0 0 0 0);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    padding: 0;
+    position: absolute;
+    width: 1px;
+  }
+}
+.byline {
+  font-family: "mr-eaves-xl-modern", Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: #d0021b;
+}
+.byline .pubdate {
+  display: block;
+}
+@media only screen and (max-width: 568px) {
+  .byline {
+    text-align: right;
+  }
+}
+.teaser + p::first-letter,
+.teaser + h2 + p::first-letter,
+.teaser + h3 + p::first-letter {
+  font-family: "mr-eaves-xl-modern", Helvetica, Arial, sans-serif;
+  font-size: 70px;
+  font-size: 7rem;
+  color: #d0021b;
+  font-weight: 900;
+  float: left;
+  line-height: 0.6;
+  margin: 0.5rem 0.05em 0 -0.05em;
+}
+@supports (initial-letter: 3) or (-webkit-initial-letter: 3) {
+  .teaser + p::first-letter,
+  .teaser + h2 + p::first-letter,
+  .teaser + h3 + p::first-letter {
+    -webkit-initial-letter: 3;
+    initial-letter: 3;
+    margin-left: -0.08em;
+  }
+}
+@supports (initial-letter: 3) or (-webkit-initial-letter: 3) {
+  .teaser + p.emphed::first-letter,
+  .teaser + h2 + p.emphed::first-letter,
+  .teaser + h3 + p.emphed::first-letter {
+    -webkit-initial-letter: 3;
+    initial-letter: 3;
+    margin-left: -0.08em;
+    margin-right: 0.16em;
+  }
+}
+.article {
+  position: relative;
+}
+.article a {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  -webkit-text-decoration-color: #d0021b;
+  text-decoration-color: #d0021b;
+}
+.article a:hover,
+.article a:focus {
+  text-decoration: none;
+}
+.article hr {
+  border: none;
+  height: 1px;
+  display: block;
+  clear: both;
+}
+.article.magazine a:hover {
+  border-bottom-color: transparent;
+}
+.article blockquote {
+  clear: both;
+  font-style: italic;
+  font-size: 110%;
+  border: 0 solid #d0021b;
+}
+.article .code,
+.article code:not([class*="language-"]) {
+  color: #a70032;
+  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+  font-size: 1.6rem;
+}
+.article .code {
+  background: #dddfe2;
+  padding-right: 3px;
+  padding-left: 3px;
+  border-radius: 3px;
+  font-weight: bold;
+  font-size: 1.6rem;
+}
+.article h2,
+.article h3 {
+  font-weight: 700;
+  color: #343434;
+  line-height: 1.2;
+  margin-bottom: 0;
+  margin-top: 1em;
+}
+.article h2 + *,
+.article h3 + * {
+  margin-top: 0.3em;
+}
+.article h2 {
+  font-family: "ltc-bodoni-175", Georgia, Times, serif;
+}
+.article h2 + h3 {
+  margin-top: 1.5em;
+}
+@media only screen and (max-width: 568px) {
+  .article {
+    padding-top: 2em;
+  }
+  .article blockquote {
+    padding: 1em 2em 1em 1em;
+    margin: 0;
+    border-width: 1px 0;
+    text-align: center;
+  }
+  .article h2 {
+    font-size: 20px;
+    font-size: 2rem;
+  }
+  .article h3 {
+    font-size: 18px;
+    font-size: 1.8rem;
+  }
+}
+@media only screen and (min-width: 569px) {
+  .article {
+    padding-top: 5em;
+  }
+  .article blockquote {
+    padding-left: 2em;
+    border-left-width: 2px;
+  }
+  .article h2 {
+    font-size: 25px;
+    font-size: 2.5rem;
+  }
+  .article h3 {
+    font-size: 20px;
+    font-size: 2rem;
+  }
+}
+a[rel="tag"],
+a.tag {
+  font-family: "mr-eaves-xl-modern", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  font-size: 1.4rem;
+  font-weight: 400;
+  opacity: 0.6;
+  color: #343434;
+  -webkit-text-decoration-color: currentColor;
+  text-decoration-color: currentColor;
+}
+.tags {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: inline-block;
+}
+.tags li {
+  display: inline;
+}
+.tags li + li a[rel="tag"] {
+  margin-left: 12px;
+}
+@media only screen and (min-width: 569px) {
+  .tags {
+    position: absolute;
+    top: 0;
+    right: 0;
+  }
+  .tags li + li a[rel="tag"] {
+    margin-left: 26px;
+  }
+}
+.dates-navbar {
+  font-family: "ltc-bodoni-175", Georgia, Times, serif;
+  font-weight: 700;
+  counter-reset: article;
+}
+.dates-navbar li {
+  list-style: none;
+  background: #d3d3d3;
+  width: 1.58em;
+  height: 1.58em;
+  line-height: 1.58;
+  text-align: center;
+}
+.dates-navbar li a::before {
+  content: "0" counter(article) " ";
+  counter-increment: article;
+}
+.dates-navbar li:nth-child(n + 10) a::before {
+  content: counter(article) " ";
+}
+.dates-navbar li a {
+  color: #fdfdfd;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.dates-navbar li a:hover {
+  background: #d0021b;
+}
+.dates-navbar li.selected a {
+  background: #d0021b;
+}
+@media only screen and (max-width: 568px) {
+  .dates-navbar {
+    font-size: 32px;
+    font-size: 3.2rem;
+  }
+  .dates-navbar .home-link {
+    margin-right: auto;
+    margin-left: auto;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+  .dates-navbar ol {
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: stretch;
+    align-content: stretch;
+  }
+  .dates-navbar li {
+    margin: 0 5px 10px 5px;
+  }
+}
+@media only screen and (min-width: 569px) {
+  .dates-navbar {
+    font-size: 57px;
+    font-size: 5.7rem;
+  }
+  .dates-navbar li {
+    display: block;
+  }
+}
+.dates-navbar ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+@media only screen and (min-width: 569px) {
+  .dates-navbar .home-link {
+    opacity: 0.1;
+  }
+  .dates-navbar li {
+    transition: 0.4s cubic-bezier(0.61, -0.27, 0.38, 0.85);
+    transition-property: max-height, margin-top, opacity;
+    max-height: 0;
+  }
+  .dates-navbar li a {
+    opacity: 0;
+    z-index: 1;
+  }
+  .dates-navbar li.selected,
+  .dates-navbar li:hover {
+    max-height: 1.58em;
+  }
+  .dates-navbar li.selected a,
+  .dates-navbar li:hover a {
+    opacity: 1;
+    z-index: 2;
+  }
+  .dates-navbar:hover .home-link {
+    opacity: 1;
+  }
+  .dates-navbar:hover li {
+    max-height: 1.58em;
+  }
+  .dates-navbar:hover li + li {
+    margin-top: 5px;
+  }
+  .dates-navbar:hover li a {
+    opacity: 1;
+  }
+}
+.article-index {
+  font-family: "ltc-bodoni-175", Georgia, Times, serif;
+  counter-reset: article;
+  padding: 0;
+}
+.article-index li {
+  font-weight: 400;
+  display: block;
+  list-style: none;
+  color: #222;
+  opacity: 0.75;
+}
+.article-index li::after {
+  content: ".";
+  display: block;
+  height: 0;
+  clear: both;
+  visibility: hidden;
+}
+.article-index li:hover {
+  opacity: 1;
+}
+.article-index li::before {
+  float: left;
+  content: "0" counter(article) " ";
+  counter-increment: article;
+}
+.article-index li:nth-child(n + 10)::before {
+  content: counter(article) " ";
+}
+.article-index li a {
+  font-weight: 400;
+  color: #222;
+  display: block;
+  text-decoration: none;
+}
+.article-index li .byline {
+  display: block;
+}
+.article-index li + li {
+  margin-top: 35px;
+}
+@media only screen and (max-width: 568px) {
+  .article-index li {
+    font-size: 57px;
+    font-size: 5.7rem;
+  }
+  .article-index li a {
+    font-size: 22px;
+    font-size: 2.2rem;
+    padding-top: 0.8em;
+  }
+  .article-index li a,
+  .article-index li .byline {
+    margin-left: 70px;
+  }
+  .article-index li + li {
+    margin-top: 10px;
+  }
+}
+@media only screen and (min-width: 569px) {
+  .article-index li {
+    font-size: 87px;
+    font-size: 8.7rem;
+  }
+  .article-index li a {
+    font-size: 26px;
+    font-size: 2.6rem;
+    padding-top: 1em;
+  }
+  .article-index li a,
+  .article-index li .byline {
+    margin-left: 100px;
+  }
+}
+.home-link {
+  position: relative;
+  display: block;
+  width: 1.58em;
+  height: 1.58em;
+  line-height: 1.58;
+}
+.home-link::after {
+  content: "";
+  display: block;
+  width: 41px;
+  height: 50px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: url(arrow_down.png) center no-repeat;
+  background-size: 100%;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+.site-header {
+  padding-top: 10%;
+  padding-left: 1em;
+  padding-right: 1em;
+  position: relative;
+}
+.site-header h1 {
+  font-family: "ltc-bodoni-175", Georgia, Times, serif;
+  font-size: 57px;
+  font-size: 5.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #222;
+  line-height: 0.9649;
+  margin-bottom: 0;
+}
+.site-header h1 a {
+  font-size: inherit;
+  color: inherit;
+}
+.site-header h1 em {
+  transition: all 0.2s ease-in-out;
+  color: #d0021b;
+  font-style: normal;
+}
+.site-header h1 a:hover em {
+  background: #d0021b;
+  color: #fdfdfd;
+}
+.site-header::before {
+  font-family: "ltc-bodoni-175", Georgia, Times, serif;
+  content: attr(data-year);
+  font-weight: bold;
+  line-height: 1;
+  color: rgba(0, 0, 0, 0.1);
+  display: inline-block;
+  position: absolute;
+  z-index: -1;
+}
+@media only screen and (max-width: 568px) {
+  .site-header h1 {
+    font-size: 30px;
+    font-size: 3rem;
+  }
+  .site-header::before {
+    font-size: 4em;
+    right: 0.5em;
+    top: 0.5em;
+  }
+}
+@media only screen and (min-width: 569px) {
+  .site-header {
+    display: flex;
+    justify-content: space-between;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    align-content: stretch;
+  }
+  .site-header::before {
+    font-size: 9em;
+    left: 1.2em;
+    bottom: 0.2em;
+  }
+}
+figcaption,
+.snippet-caption {
+  font-size: smaller;
+  font-style: italic;
+  text-align: right;
+}
+pre[class*=language-] {
+  clear: both;
+}
+@media only screen and (max-width: 568px) {
+  pre[class*=language-] {
+    border-left: none;
+  }
+}
+.bios {
+  clear: both;
+  border-top: 4px solid #222;
+  margin-top: 3em;
+  padding-top: 1em;
+  display: flex;
+  justify-content: center;
+  flex-wrap: nowrap;
+  align-content: stretch;
+}
+@media only screen and (max-width: 568px) {
+  .bios {
+    flex-direction: column;
+    align-content: center;
+  }
+}
+@media only screen and (min-width: 569px) {
+  .bios {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+.bio {
+  display: flex;
+  justify-content: flex-start;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+  align-content: stretch;
+  padding: 10px;
+}
+.bio .gravatar {
+  border: 2px solid #fdfdfd;
+  box-shadow: 0 0 0 1px #d0021b;
+  border-radius: 50%;
+  width: 150px;
+  height: 150px;
+  overflow: hidden;
+}
+.bio h1 {
+  font-family: "ltc-bodoni-175", Georgia, Times, serif;
+  margin: 0.5em 0 0;
+}
+.bio p {
+  margin: 0.2em 0 0;
+}
+.comments {
+  border-top: 4px solid #343434;
+}
+.article figure {
+  max-width: -webkit-max-content;
+  max-width: -moz-max-content;
+  max-width: max-content;
+}
+.article figure img {
+  border-radius: 3px;
+}
+.article:not(.no-floats) .pull-right {
+  max-width: 40%;
+  float: right;
+  clear: right;
+  margin: 0 0 1em 1em;
+}
+.iframe-embed {
+  position: relative;
+  padding-bottom: 56.25%;
+  height: 0;
+}
+.iframe-embed > iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+@supports (--custom-property: value) {
+  .iframe-embed {
+    padding-bottom: calc(var(--ratio, 56.25) * 1%);
+  }
+}
+.tagcloud {
+  position: static;
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  align-content: stretch;
+  text-align: center;
+  padding-right: 2em;
+  padding-left: 2em;
+}
+.tagcloud .tag {
+  font-size: 18px;
+  font-size: 1.8rem;
+  margin-right: 1em;
+}
+.tagcloud .tag.selected {
+  font-weight: bold;
+  opacity: 1;
+}
+.header + .tagcloud {
+  margin-top: 1em;
+}
+@media only screen and (max-width: 568px) {
+  .tagcloud {
+    padding-right: 0;
+    padding-left: 0;
+  }
+  .tagcloud .tag {
+    margin-right: 0.6em;
+  }
+}
+.results ul {
+  list-style: square;
+}
+figure.codepen-embed {
+  width: 100%;
+  max-width: none;
+  margin: 1em 0;
+}
+.site-nav {
+  padding-left: 1em;
+  padding-top: 5px;
+}
+.site-nav ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  align-items: flex-start;
+}
+.site-nav ul li:first-child a {
+  margin-left: 0;
+}
+.site-nav ul a {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  -webkit-text-decoration-color: #d0021b;
+  text-decoration-color: #d0021b;
+  text-decoration: none;
+  display: block;
+  margin: 0 0 0 1em;
+  color: rgba(208, 2, 27, 0.4);
+}
+.site-nav ul a:hover,
+.site-nav ul a:focus {
+  text-decoration: none;
+}
+.site-nav ul a:hover {
+  color: #d0021b;
+}
+.site-nav ul li.selected a {
+  font-weight: bold;
+  color: #d0021b;
+}
+.site-nav ul li.selected a::before {
+  content: "[ ";
+  font-weight: normal;
+}
+.site-nav ul li.selected a::after {
+  content: " ]";
+  font-weight: normal;
+}
+.notification {
+  font-size: smaller;
+  background: rgba(211, 211, 211, 0.5);
+  padding: 20px;
+  border: 4px solid #fdfdfd;
+  box-shadow: 0 0 0 3px #d3d3d3;
+  margin: 2em auto;
+}
+.notification h2 {
+  margin: 0;
+  font-family: inherit;
+}
+.notification p {
+  margin: 0;
+}
+.notification p + p {
+  margin-top: 1em;
+}
+.notification.warning {
+  background: #feaf2f;
+  box-shadow: 0 0 0 3px #feaf2f;
+}
+.ipuzzle-embed {
+  padding: 30px 0;
+  margin: 0;
+  max-width: 100%;
+}
+.recordinglink {
+  font-size: 16px;
+  font-size: 1.6rem;
+  display: inline-block;
+  color: #d0021b;
+  padding: 2px 8px;
+}
+.recordinglink a {
+  color: inherit;
+}
+.article,
+.article-index,
+.comments {
+  padding-left: 1em;
+  padding-right: 1em;
+}
+.page {
+  position: relative;
+}
+@media only screen and (min-width: 569px) {
+  .article {
+    margin-right: auto;
+    margin-left: auto;
+    max-width: 43em;
+  }
+  .page {
+    margin-right: auto;
+    margin-left: auto;
+    max-width: 1200px;
+    padding: 0 20px;
+    display: flex;
+    justify-content: flex-end;
+    flex-direction: row-reverse;
+    flex-wrap: nowrap;
+  }
+  .comments {
+    margin-right: auto;
+    margin-left: auto;
+    max-width: 43em;
+    padding: 0 20px 2em;
+    margin-top: 1em;
+  }
+}
+html {
+  font-size: 62.5%;
+  border-top: 4px solid #343434;
+}
+body {
+  font-family: "mr-eaves-xl-modern", Helvetica, Arial, sans-serif;
+  font-size: 2.2em;
+  line-height: 1.3888;
+  background: #fdfdfd;
+  color: #343434;
+}
+a {
+  transition: all 0.3s ease-in;
+  color: #d0021b;
+  text-decoration: none;
+}
+img {
+  max-width: 100%;
+  height: auto;
+}
+.scr-text {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  width: 1px;
+}
+.ooOOhh * {
+  transition-duration: 2s !important;
+}
+:root {
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #000015;
+    color: #b1b1b1;
+  }
+  a {
+    color: #d0021b;
+  }
+  .teaser + p::first-letter,
+  .teaser + h2 + p::first-letter,
+  .teaser + h3 + p::first-letter {
+    color: #d0021b;
+  }
+  .article a {
+    border-bottom-color: rgba(208, 2, 27, 0.5);
+  }
+  .article a:hover {
+    border-bottom-color: #d0021b;
+  }
+  .article blockquote {
+    border-color: #d0021b;
+  }
+  .article .code,
+  .article code:not([class*="language-"]) {
+    color: #e79127;
+  }
+  .article .code {
+    background: #222;
+  }
+  .article h2,
+  .article h3 {
+    color: #b1b1b1;
+  }
+  .header {
+    color: #c6c6c6;
+  }
+  .article-index li,
+  .article-index li a {
+    color: #c6c6c6;
+  }
+  a[rel="tag"],
+  a.tag {
+    color: #b1b1b1;
+  }
+  .bios {
+    border-top-color: #c6c6c6;
+  }
+  .bio .gravatar {
+    border-color: #000015;
+    box-shadow: 0 0 0 1px #d0021b;
+  }
+  .byline {
+    color: #d0021b;
+  }
+  .home-link::after {
+    filter: invert(90%);
+  }
+  .epub {
+    filter: invert(80%);
+  }
+  .notification {
+    background: rgba(83, 83, 83, 0.5);
+    border-color: #000015;
+    box-shadow: 0 0 0 3px #535353;
+    color: #b1b1b1;
+  }
+  .notification.warning {
+    background-color: #feaf2f;
+    box-shadow: 0 0 0 3px #feaf2f;
+    color: #000015;
+  }
+  .notification a {
+    font-weight: bold;
+    text-decoration: underline;
+  }
+  .site-header h1 {
+    color: #c6c6c6;
+  }
+  .site-header h1 em {
+    color: #d0021b;
+  }
+  .site-header h1 a:hover em {
+    background: #d0021b;
+  }
+  .site-header::before {
+    color: rgba(255, 255, 255, 0.1);
+  }
+  .site-nav ul a {
+    color: rgba(208, 2, 27, 0.4);
+    border-bottom-color: rgba(208, 2, 27, 0);
+  }
+  .site-nav ul a:hover {
+    border-bottom-color: #d0021b;
+  }
+  .site-nav ul a:hover {
+    color: #d0021b;
+  }
+  .site-nav ul li.selected a {
+    color: #d0021b;
+  }
+  .dates-navbar li {
+    background: #535353;
+  }
+  .dates-navbar .home-link {
+    opacity: 0.4;
+  }
+}
+@font-face {
+  font-display: swap;
+  font-family: 'Libre Bodoni';
+  font-style: normal;
+  font-weight: 400;
+  src: url('fonts/libre-bodoni-v8-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-display: swap;
+  font-family: 'Libre Bodoni';
+  font-style: italic;
+  font-weight: 400;
+  src: url('fonts/libre-bodoni-v8-latin-italic.woff2') format('woff2');
+}
+@font-face {
+  font-display: swap;
+  font-family: 'Libre Bodoni';
+  font-style: normal;
+  font-weight: 700;
+  src: url('fonts/libre-bodoni-v8-latin-700.woff2') format('woff2');
+}
+@font-face {
+  font-display: swap;
+  font-family: 'Libre Bodoni';
+  font-style: italic;
+  font-weight: 700;
+  src: url('fonts/libre-bodoni-v8-latin-700italic.woff2') format('woff2');
+}
+@font-face {
+  font-display: swap;
+  font-family: 'Jost';
+  font-style: normal;
+  font-weight: 400;
+  src: url('fonts/jost-v15-latin-regular.woff2') format('woff2');
+}
+@font-face {
+  font-display: swap;
+  font-family: 'Jost';
+  font-style: italic;
+  font-weight: 400;
+  src: url('fonts/jost-v15-latin-italic.woff2') format('woff2');
+}
+@font-face {
+  font-display: swap;
+  font-family: 'Jost';
+  font-style: normal;
+  font-weight: 700;
+  src: url('fonts/jost-v15-latin-700.woff2') format('woff2');
+}
+@font-face {
+  font-display: swap;
+  font-family: 'Jost';
+  font-style: italic;
+  font-weight: 700;
+  src: url('fonts/jost-v15-latin-700italic.woff2') format('woff2');
+}
+@media only screen and (min-width: 569px) {
+  .epub::after {
+    font-family: "Jost", "Lucida Grande", Calibri, Helvetica, Arial, sans-serif;
+  }
+}
+.byline,
+.teaser + p::first-letter,
+.teaser + h2 + p::first-letter,
+.teaser + h3 + p::first-letter,
+a[rel="tag"],
+a.tag,
+body {
+  font-family: "Jost", "Lucida Grande", Calibri, Helvetica, Arial, sans-serif;
+}
+.dates-navbar li a::before {
+  font-size: 90%;
+  line-height: 1.68;
+}
+.header,
+.teaser,
+.article h2,
+.dates-navbar,
+.article-index,
+.site-header h1,
+.site-header::before,
+.bio h1 {
+  font-family: "Libre Bodoni", Georgia, Times, serif;
+}
+.header {
+  text-wrap: balance;
+}
+.article .content-column > *:not(h2, h3) + * {
+  -webkit-margin-before: 1.6em;
+          margin-block-start: 1.6em;
+}
+.notification.warning h2 {
+  color: inherit;
+}
+.article-index li a,
+.article-index li .byline {
+  margin-left: 120px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+.article header .header {
+  view-transition-name: --article-title;
+}
+.article header .byline {
+  view-transition-name: --article-byline;
+}
+::view-transition-old(--article-title) {
+  animation-duration: 0.5s;
+  opacity: 0.5;
+}
+::view-transition-new(--article-title) {
+  animation-duration: 0.3s;
+  animation-timing-function: ease-in-out;
+}

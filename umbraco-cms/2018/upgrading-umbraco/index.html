@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Beginner's guide to upgrading Umbraco with Github.</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Upgrading Umbraco</h1>
+      <p class="byline"> by Tiffany Prosser, <span class="pubdate">posted on <time datetime="2018-12-18">Dec 18, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><img style="width: 500px; height: 281.25px;" src="/archive/media/2018/code.jpeg?width=500&amp;height=281.25" alt="" data-udi="umb://media/4ed9b3baa4c54d8f8a8f91d8931825c3"></p>
+<p class="intro">Before we begin, some context.  Don't worry you can skip my introduction and skip straight to the meat and bones of the guide by going <a data-udi="umb://document/875a83e6e5da4180a505045af51341d0" href="/umbraco-cms/2018/upgrading-umbraco/#guide" title="Upgrading Umbraco" data-anchor="#guide">here</a>.</p>
+<p>I'm both a recent convert to Umbraco and relatively new to developing with .net and the various tools such as Visual Studio and task runners such as Gulp that come part and parcel with being a web developer nowadays.</p>
+<p>I had been building hobby websites as early as the 1990's, I had no idea that there was a world beyond that of HTML+CSS+JS/SQL/PHP so when I moved into my current role managing websites that were built using Asp.Net and Umbraco - I found myself having to completely re-frame my understanding of what building and developing websites meant and further - a whole host of tools, techniques and concepts that seemed overly complex or counter-intuitive.</p>
+<p>Added to that - I inherited a good 15 or so websites that were built on the Umbraco platform - all of which were on different versions of Umbraco going as far back as version 6.1.6 and with an increasing need to upgrade these sites to make use of some of the advances in Umbraco required learning how to utilise the tools available such as Visual Studio in order to maintain and develop these sites further.  However as a newcomer to the technology, Visual Studio in particular, was a daunting prospect having never used the application previously.</p>
+<p><img style="width: 500px; height: 350px;" src="/archive/media/2018/umbracoupgrade.png?width=500&amp;height=350" alt="" data-udi="umb://media/8d2be889c7464be0a6464e5fbf41eb49"></p>
+<p>Similarly, even though I had previous experience with GitHub and version control - I had only scratched the surface with how useful it could be in assisting this kind of development - both ensuring that there was always a way of reverting my Umbraco projects so that if anything went wrong I had a fall back position and could reverse everything in simple steps - but more usefully in the case of upgrading Umbraco - something that explicitly gives me really useful information about the changes to files that I need to make in order to Upgrade successfully.</p>
+<p>As a result I've been constantly on the lookout for guides and tutorials that break things into simple easy steps that even those with the most basic understanding of web development can follow and understand.  However with the internet still in its relative infancy, there continues to be a large gap between user friendly accessible guidelines and information orientated towards already experienced web developers.</p>
+<p>This is why I've decided to write this article targeted at beginners to visual studio and GitHub so that it could be of use to anyone who may find themselves in the same position that I was in. This isn't necessarily the recommended way of either utilising GitHub or Visual Studio in these tasks and the more experience one gets in managing projects such as these - the more the process can be streamlined and improved.  But I'm hoping that by following the way I've managed to upgrade my sites through using version control process such as GitHub - this guide will give beginners a starting point through which they can quickly understand how it all works before they can then develop their own methods of achieving the same goals.<img style="width: 500px; height: 443.7716262975779px;" src="/archive/media/2018/cartoon.png?width=500&amp;height=443.7716262975779" alt="" data-udi="umb://media/0a25be02928c4badae93ae31db73e9a1"></p>
+<p>Without further ado - let's begin the guide which after all is the reason you're probably reading this article.</p>
+<h2><a id="guide"></a>Beginner's guide to Upgrading Umbraco</h2>
+<h3>Prerequisites:</h3>
+<ul>
+<li>Your site and database and any integrations etc fully backed up</li>
+<li><a href="https://visualstudio.microsoft.com/downloads/" title="Microsoft Visual Studio">Microsoft Visual Studio</a></li>
+<li><a href="https://git-scm.com/" title="Git">Git</a></li>
+<li>An account on <a href="https://github.com/" title="Github">GitHub</a></li>
+<li><a href="https://docs.microsoft.com/en-us/sql/ssms/download-sql-server-management-studio-ssms?view=sql-server-2017" title="Microsoft SQL Studio" data-anchor="?view=sql-server-2017">Microsoft SQL Studio</a> (or whichever equivalent tool used to view and manage your SQL databases)</li>
+<li>A working visual studio solution file (.sln) for your website project*</li>
+</ul>
+<p>* note: If you don't have a working Visual Studio file then don't panic all is not lost - I have included a brief guide to setting up Visual Studio for sites without solution files at the end of this article.</p>
+<p>** another note: Many of the steps required to upgrade may not need Visual Studio and can be done without it depending on the complexity of your site - it is perfectly feasible to upgrade without using it particularly if your site is based on a vanilla install of Umbraco without any custom code and therefore does not need to be recompiled - however without it will mean that if you do run into any issues that break the site, you will lack some really useful tools to help identify and solve the bugs causing the failure.  So if not using VS then proceed at your own risk (meaning that using version control will be even more useful).</p>
+<h3>Step 1: Plan your upgrade path</h3>
+<p> </p>
+<p>Planning out your upgrade path is critical.  Just search in google or on the Umbraco forums and you will find countless threads of developers who have attempted upgrades which have resulted in broken sites maybe because they have tried to upgrade in too few steps which has resulted in a cascade of errors which have all to be resolved before the site has a hope of working again.</p>
+<p>How many steps needed in your upgrade is dependent on your starting point - read through the <a href="https://our.umbraco.com/documentation/getting-started/setup/upgrading/version-specific" title="version specific upgrade guide">version specific upgrade guides on Umbraco</a> to find out the major changes that were implemented under each version.  It will also depend on the complexity of your site and how far away your site is from where you need it to be.</p>
+<p>A tool I've found really useful but is not immediately obvious is <a href="https://our.umbraco.com/download/releases/compare" title="compare tool on our.umbraco.com">the 'Compare' tool on our.umbraco.com</a>.  This will enable the user to define their starting and end point for upgrades and to plan file changes accordingly.</p>
+<p>As the site I am upgrading for this example is currently running on Umbraco 7.2.0 - I have planned to upgrade my site accordingly (thanks to codeshare for <a href="https://codeshare.co.uk/blog/how-to-upgrade-umbraco-safely/" title="how to upgrade Umbraco safely">creating this guide</a> which I generally use as the basis for defining my upgrade path).</p>
+<p>Therefore to reduce the risk of getting the trusty YSOD the plan I intend to use whilst upgrading is:</p>
+<p><strong>7.2.0 =&gt; 7.2.8 =&gt; 7.3.8 =&gt; 7.4.3 =&gt; 7.5.14 =&gt; 7.6.13 =&gt; 7.7.13 =&gt; 7.9.6 =&gt; 7.10.4 =&gt; 7.11.1 =&gt; 7.12.3</strong></p>
+<p>It seems a lot of steps so feel free to miss some out particularly if you are confident your site doesn't need so many steps.  However - as we're going to learn - ensuring good version control allows you to make mistakes as you will always have a roll-back position.  So feel free to experiment and see what happens.  Sometimes it can be fun to completely break a site and see if you can figure out why.</p>
+<p>The guide won't cover every single step - but will cover those with the most important changes that need to be considered.</p>
+<p>** just an important aside here - When planning your upgrades you will need to identify and check any packages or plugins that you have in your site.  There may well be dependencies that packages rely upon that get amended in the upgrade - so just always double check your packages and ensure that if you upgrade - the package will remain compatible.  If not - then check to see if the package author has released a version that will be compatible with the version you are upgrading to.  Failing that, then you will have to either abandon using the package / plug-in, use an alternative package that works with the version of Umbraco to which you are upgrading or lastly see if you can create your own custom code to perform the same function.</p>
+<h3>Step 2: Create a development version of your site</h3>
+<p>First backup your database</p>
+<p><img style="width: 500px; height: 300px;" src="/archive/media/2018/sql1.jpg?width=500&amp;height=300" alt="" data-udi="umb://media/74a043e9b6b84ba288cf32a16c82aceb"></p>
+<p>and restore your database to a new version.</p>
+<p><img style="width: 249px; height: 300px;" src="/archive/media/2018/restore3.jpg?width=249&amp;height=300" alt="" data-udi="umb://media/d8ffd056408446e599ce83e6a7418e98"></p>
+<p>Make sure you tick the 'copy only' box and that you have changed the name of the database you are restoring to so that it becomes a copy of the old data but in a freshly sparkling new database</p>
+<p><img style="width: 500px; height: 300px;" src="/archive/media/2018/restore2.jpg?width=500&amp;height=300" alt="" data-udi="umb://media/6987a06c56ae4e82b1d218a8281e0d95"></p>
+<p>Once the database is restored with a new name make a note of the new name of the database and if necessary ensure you have checked your security options and if necessary create a new profile for accessing your Dev site with a new password.</p>
+<h3>Step 3: Create a new Git repo</h3>
+<p>First - setup your folders for working with Git.</p>
+<ul>
+<li>Open the directory containing your website project code</li>
+<li>Copy your site files into the directory</li>
+<li>Right-click and choose 'Git bash here..'</li>
+</ul>
+<p><img style="width: 235px; height: 354px;" src="/archive/media/2018/gitbashere.jpg?width=235&amp;height=354" alt="" data-udi="umb://media/a4b302cc8d0347958a387a0c3c85a1e6"></p>
+<p>This will open up a command line interface from within your directory folder as well as setting up your master branch indicated but the &lt;master&gt; at the end of the directory path.</p>
+<ul>
+<li>Type<span> </span><span class="code">git init</span> to setup a new local git repository from within the folder</li>
+<li>Type<span> </span><span class="code">git add .</span><span> </span>to add all the files of your site</li>
+<li>Type<span> </span><span class="code">git commit -m "your message here"</span></li>
+</ul>
+<p>It's important to always include a message with your commit so that you can track your commits.  As we're setting up the project for the first time use a message such as:</p>
+<ul>
+<li><span class="code">git commit -m "Site Setup"</span></li>
+</ul>
+<p>Now open up your web browser and go to your git account and choose the 'new repo'.</p>
+<p><img style="width: 297px; height: 56px;" src="/archive/media/2018/new-repo.jpg?width=297&amp;height=56" alt="" data-udi="umb://media/5d614c41c9b8434c84fe368eaa7906c6"></p>
+<p>Give it a sensible name and click 'Create repository'.  On the right hand side of the window click on Clone or Download and copy the web url given as the path to your git repo on GitHub.</p>
+<p><img style="width: 404px; height: 210px;" src="/archive/media/2018/clone-repo-2.jpg?width=404&amp;height=210" alt="" data-udi="umb://media/c012316be1ec4acba26024205d319417"></p>
+<p>Now you need to set your local git to point to your new git repo on github.</p>
+<ul>
+<li>Open up your command line in your sites location</li>
+<li>Enter <span class="code">Git remote add origin https://github.com/yourSite</span> to tell your local repository where the remote repository is located</li>
+<li>Now you can upload or 'Push' your site to your new repo</li>
+<li>Enter <span class="code">Git push -u origin master</span></li>
+</ul>
+<p>Check in your web browser (you may need to refresh a few times) that the repository you created on GitHub has received the files that you 'pushed' to it.</p>
+<p>Now you have your site and its code on GitHub within your master branch.  This means you now have your site set as the 'master' version within its repo and as long as you don't commit or push to your master version of your site - you will always have this to fall back to if you ever need to completely restore your site before you began upgrading.</p>
+<h3>Step 4: Create a new branch for managing your upgrade</h3>
+<p>In order to manage your upgrade process you need to create a new branch for the updated site.</p>
+<p>The usual git workflow would be to create a branch for coding in some changes - once confirmed then merging into the master branch.</p>
+<p>However because we're running concurrent upgrades - rather than merging any changes into the master branch - we're going to continue to create branches per upgrade and only when we're satisfied that the site is running on the version of Umbraco that we want - then we can think about merging back into the master repository.</p>
+<p>In order to create a branch on your new repo - open up your Gitbash window in your project folder and type:</p>
+<p><span class="code">Git checkout -b upgrade7.5.3</span></p>
+<p>This will create a new branch on your project specifically to manage your upgrade of your site to 7.5.3</p>
+<p>Because it's empty and you haven't yet made any changes there is nothing to add.  However, because you created a new branch some of the git files have been amended.  So if you want to see your changes on the GitHub repository - then run git add . to pick up those changes, commit them with <span class="code">git commit -m "create branch for upgrade7.5.3"</span> and then push your changes to your repository: <span class="code">git push -u origin upgrade7.5.3</span>.</p>
+<h3>Step 5: Check Documentation</h3>
+<p>It's at this point you need to take a look at the <a href="https://our.umbraco.com/documentation/getting-started/setup/upgrading/version-specific" title="version specific upgrade page">version specific upgrade guides</a> and the <a href="https://our.umbraco.com/download/releases/compare" title="umbraco compare tool">compare tool</a> previously mentioned.  </p>
+<h3>Step 6: Upgrade</h3>
+<p>Now is the point you can commence your upgrade.</p>
+<p>If doing manually - you can skip most of this section as it covers using Visual Studio to run the upgrade - just make sure then when commencing the upgrade, follow the advice on the version specific upgrade guide.  The disadvantages of doing manually of course is that if the upgrade breaks your site - it will be much more problematic to identify the cause of the issue.</p>
+<p> </p>
+<p>If you're using MS Visual Studio for building your site - open your project and browse to <strong>Tools &gt; NuGet Package Manager &gt; Manage NuGet Packages for solution</strong></p>
+<p><strong><img style="width: 500px; height: 346.45061728395063px;" src="/archive/media/2018/vstoolsmenu.png?width=500&amp;height=346.45061728395063" alt="" data-udi="umb://media/247740848d8c47fa8c6ac3a0d26601f2"></strong></p>
+<p>Go to the updates tab and scroll down to UmbracoCMS and highlight it.</p>
+<p><img style="width: 500px; height: 126.21951219512195px;" src="/archive/media/2018/nuget3.jpg?width=500&amp;height=126.21951219512195" alt="" data-udi="umb://media/dd5bfbdabfac440da4847782aba2f8b9"></p>
+<p>To the right you will find a window with the current version of Umbraco installed on your site and the latest version of Umbraco available for install.</p>
+<p>Change the version that you want to install by opening the drop-down and finding the version you want to install to.</p>
+<p><img style="width: 337.7926421404682px; height: 500px;" src="/archive/media/2018/nuget2.jpg?width=337.7926421404682&amp;height=500" alt="" data-udi="umb://media/6900bedb2c4c4625acda0c25956c17b2"></p>
+<p>Now before we hit that install button - lets use Umbraco Compare to look at what updates the new version will bring and if we have to do anything in particular to make it work.</p>
+<p><img style="width: 500px; height: 247.60191846522784px;" src="/archive/media/2018/compare.jpg?width=500&amp;height=247.60191846522784" alt="" data-udi="umb://media/a498a74d8d3547828e6af3be6adf7432"></p>
+<p>Running through the list of things we can see that the updates are generally bug fixes and amendments to some of the features.</p>
+<p><img style="width: 500px; height: 390.9205548549811px;" src="/archive/media/2018/releasenotes.jpg?width=500&amp;height=390.9205548549811" alt="" data-udi="umb://media/cea138d1b4f1488ab8ffd360f2265121"></p>
+<p>The notes also tell me that in order to upgrade from version 7.2.1 - to just follow the general upgrade guide as per usual.</p>
+<p>So at this point - as I have everything backed up including my web.config - I feel confident that I can hit the install button and install the new version of Umbraco onto my site.</p>
+<p>Once done - you should get your nice new install of Umbraco - if using Visual Studio you will get that all too familiar screen indicating 'Don't Forget To Build'!</p>
+<h3>Step 7: Compare and merge</h3>
+<p>Before we hit build though - let's compare our web config with our backed up version so we can make any amendments necessary.</p>
+<p>To compare we can do what is sometimes referred to as a 'diff' - a useful tool that comes as part of Git to enable us to see what is being changed in a file.</p>
+<p>In the following example I've added a line "Here is some extra content" in my web.config</p>
+<p>So in your git bash window - enter the command <span class="code">git diff head</span></p>
+<p>This will look at any changed files on your local dev system.  The version install guides on Our Umbraco will indicate which files need to be merged.  However as a minimum you should always do a Diff on your web.config file so you can familiarise with any changes that are made and merge any custom code or references in your web.config that needs to be retained - in particular the connection string which will always need to be copied into any new version of your web.config.</p>
+<p>If you aren't quite comfortable doing your diff using the console - then there are many varied diff viewer software easily available not least of which is GitHub own Diff Viewer.</p>
+<h3>Step 8: Build</h3>
+<p>So once any merges have been made - it is time to try compiling your site with the new version of Umbraco.  In Visual Studio - hit build.</p>
+<p><img style="width: 500px; height: 218.19425444596445px;" src="/archive/media/2018/build.png?width=500&amp;height=218.19425444596445" alt="" data-udi="umb://media/68af3ee5f01646c1bd6a5e6b13a52317"></p>
+<p>With luck - your site should build first time without issue.  However invariably there will always be some versions of Visual Studio that you upgrade to that will cause issue when trying to build.  In many cases this is down to certain packages or plugins that have incorrect references or did not install or update correctly when installing Umbraco through Nuget.</p>
+<p>For example - the reference to HTML5AgilityPack in the web.config when installing Umbraco 7.6 through Nuget indicates that version 4.9 is needed yet the version that is installed when upgrading Umbraco is 4.9.5 - and Nuget has not updated the references in the project correctly.  I have found the best way to resolve this is to get Nuget to reinstall all the packages refrerenced in the project.</p>
+<p>In order to do this - open up the package-manager console in Visual Studio:</p>
+<p><img style="width: 500px; height: 210.04942339373972px;" src="/archive/media/2018/console.png?width=500&amp;height=210.04942339373972" alt="" data-udi="umb://media/b6d029eac04a4e729314e2e76f3e03a2"></p>
+<p>Type the following and press enter:</p>
+<p><span class="code">&gt;update-package -reinstall</span></p>
+<p><span class="code"><img style="width: 500px; height: 160.40268456375838px;" src="/archive/media/2018/packagerestore.png?width=500&amp;height=160.40268456375838" alt="" data-udi="umb://media/84f34ff2e2d24ae2b33d687290ba8163"></span></p>
+<p>This should update any references in your project</p>
+<h3>Step 9: Git add and push</h3>
+<p>In order to update your upgrade to the GitHub repo - firstly open git bash and type:</p>
+<p><span class="code">git add .</span></p>
+<p>This will search the repo for any files that have changed and stage them ready to be committed.  The period denotes that 'all' files in the current directory should be added.</p>
+<p>So the next step is to commit them to the project</p>
+<p>So staying in the same branch - use:</p>
+<p><span class="code">git commit -m "upgrade 7.4.3"</span></p>
+<p>Remember that when you commit it is important to include a descriptive message so you can easily identify the changes.</p>
+<p>Now that you've committed your files - it is time to update your GitHub repo so this time:</p>
+<p><span class="code">git push origin &lt;branch name&gt;</span></p>
+<p>Once done - you will see a list of all the files that are being added onto GitHub</p>
+<p>Now open up GitHub in your browser and browse to the repository.</p>
+<p>If your git push went according to plan - you will see all the files and folders that had the message "upgrade 7.4.3" now added to your repository.</p>
+<p><img style="width: 444.4444444444444px; height: 500px;" src="/archive/media/2018/github2.png?width=444.4444444444444&amp;height=500" alt="" data-udi="umb://media/8bda341b279c4522ba2abbe248ca9906"></p>
+<p>The magic here is that because you included a message with your commit - you can now easily identify the files that need updating into your live version by the addition of the message.  This means it's a simple matter of updating your live version with only those files that were updated.</p>
+<h3>Step 10: Update your live version</h3>
+<p>Now that we have the amended files on the GitHub repo - we can easily identify them with the message "upgrade 7.4.3" that we added when we committed.</p>
+<p>This is a very useful piece of information - it enables us to then easily identify the files that we need to replace or add in the live version of the site.</p>
+<p>If we were upgrading manually - depending on the number of changes to files - it can be more difficult to keep track of the files that need to be changes in the live version.</p>
+<h3>Step 11 Next steps</h3>
+<p>So if you recall - all this work was done within the branch on GitHub specific to this upgrade.</p>
+<p>If this were a new feature or a bug fix on a website - developers would normally end the process by merging the upgrade into the master repository</p>
+<p>However - because it is likely that there are more steps in the upgrade process - you now have a branch dedicated to a particular upgrade.</p>
+<p>Therefore in order to continue upgrading - you can create a new branch in your GitHub repo in order to manage the next upgrade.</p>
+<p>Only upon reaching the end of your upgrade path - you can then decide if you need to merge your upgrade code into the master repo.</p>
+<p> </p>
+<h2>Creating a Visual Studio solution for existing websites</h2>
+<ol>
+<ol>
+<li>Open fresh copy of Visual Studio</li>
+<li>File-&gt;New Project, select Web Application</li>
+<li>Use the following settings:</li>
+<ul>
+<li><strong>Name:</strong> Website <em>(this is the name of the existing folder with the website files in it)</em></li>
+<li><strong>Location:</strong> C:\Temp\ <em>(anywhere will do for now)</em></li>
+<li><strong>Solution Name:</strong> TheProject (name of the existing project's root folder)</li>
+</ul>
+<li>Check "Create directory for solution"</li>
+<li>Delete the auto-created Default, Global and Web.config files</li>
+<li>Save All and close Visual Studio</li>
+<li>In Windows Explorer, copy the new folder on top of the existing folder so that the files are merged.</li>
+<li>Double click on the sln file to open Visual Studio again.</li>
+<li>Select "Show all files" (at the top of Solution Explorer)</li>
+<li>Right click on any files or folders you want to add and select <em>Include in Project</em>.</li>
+<li>Open up the web.config in visual studio and got to appsettings &gt; umbracoconfigurationstatus to find the version of Umbraco you need</li>
+<li>Go to Nuget package manager &gt; and install a fresh version of Umbraco of the same version from your web.config</li>
+<li>Make sure not to overwrite the web.config otherwise the new install will overwrite the connection strings and any manual configuration</li>
+<li>Once Umbraco is installed – build it</li>
+<li>Run the site in debug mode through Visual Studio.  It will provide you with all the usual Umbraco install options but don't panic - your content will be safe.</li>
+<li>If everything has gone to plan you will find your build works but you cannot login – likely because the membership provider was overwritten by the new install</li>
+<li>Stop the site running in debug mode - save any changes and close the solution.</li>
+<li>Open up sql management studio and run the following query against your database: 
+<p><span class="code">UPDATE umbracoUser SET userdisabled = 0, userLogin = 'admin', userPassword = 'default' WHERE id = 0</span></p>
+</li>
+<li>This will clear the password for the admin account of the site</li>
+<li>Go to web.config and find the UsersMembershipProvider. Password Format will be set to “hashed” – you will need to change this to “clear”</li>
+<li>Save the web.config, open up your solution file in Visual Studio and run the site.</li>
+<li>You'll be taken to the Umbraco login page - insert username as admin and password as default - all being well this will log you in as admin</li>
+<li>Now this bit is critically important - whilst logged in you need to manually open your web.config using notepad (you won't be able to use Visual Studio if you are running the site - you'll be locked out of editing it).  Change the UsersMembershipProvider back to hashed.  If you amend any password details and leave the UsersMembershipProvider as "clear" and logout of the site - you will have to go through these steps again as it won't have saved your password.</li>
+<li>Create a new user - reset your password or whatever you need to do in order to be able to access the site again and save your changes</li>
+<li>Logout of the backoffice and stop the site in Visual Studio.  Just to be safe rebuild the site and run it again in debug mode.  Go to the login screen and check you can now login using the new details you added.</li>
+<li>Congratulations - you've now been able to create a whole new visual studio solution file for your site that you can continue to work on as you upgrade.</li>
+</ol>
+</ol>
+<p>Many many thanks and a #hfny to Paul Seal from CodeShare for providing me with the inspiration for writing these guides. I highly recommend visiting his pages here once you are done with 24Days.</p>
+<p>For further reading here is his guide on upgrading: </p>
+<p><a href="https://codeshare.co.uk/blog/how-to-upgrade-umbraco-safely/" title="How to upgrade Umbraco safely">How to upgrade Umbraco safely</a></p>
+<p>..and here is his guide to resetting the admin password:</p>
+<p><a href="https://codeshare.co.uk/blog/how-to-reset-the-umbraco-admin-account-password/" title="How to reset the Umbraco admin account password">How to reset the Umbraco admin account password</a></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/git/" title="See all articles tagged with Git">Git</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/github/" title="See all articles tagged with GitHub">GitHub</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Tiffany Prosser"><img src="//gravatar.com/avatar/842f71ce3119c7dd8fb98536e36dfe5d.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/842f71ce3119c7dd8fb98536e36dfe5d.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Tiffany Prosser</h1>
+        <p>Tiffany is on Twitter as <a href="//twitter.com/TiffanyMProsser" title="Tiffany Prosser on Twitter" rel="author">@TiffanyMProsser</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

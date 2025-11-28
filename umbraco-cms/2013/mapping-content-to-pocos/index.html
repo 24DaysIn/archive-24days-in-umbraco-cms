@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Mapping Umbraco content to POCOs for strongly typed views</title>
+<meta name="description" content="Mapping Umbraco content to POCOs for strongly typed views">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Mapping Umbraco content to POCOs for strongly typed views</h1>
+      <p class="byline"> by Darren Ferguson, <span class="pubdate">posted on <time datetime="2013-12-07">Dec 7, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><em>This article assumes you are familiar with using MVC views for Umbraco templates.</em></p>
+<p class="intro">I'm not in the Umbraco code first camp. I get bored of people rattling on about <a href="http://usitebuilder.vegaitsourcing.rs/">uSiteBuilder</a>, I just don't need it. At <a href="http://www.moriyama.co.uk/">Moriyama</a> we favour <a href="http://our.umbraco.org/projects/developer-tools/usync">uSync</a> for versioning and moving document types. I actually like the back office document type designer for creating my document types - it gives me a sense of structure, volume of document types and allows me to move stuff around quite quickly in a (reasonably) nice UI.</p>
+<p>But before all of you code first nutcases start issuing death threats I'll concede one thing. Views against <a href="http://en.wikipedia.org/wiki/Plain_Old_CLR_Object">POCOs</a> are much more readable and having <em>proper</em> intellisense is really neat. Also, views over POCOs can be much more readable to non .NET developers.</p>
+<p>So although I don't use uSiteBuilder, I do (on occasion) map <a href="http://our.umbraco.org/documentation/Reference/Mvc/querying">IPublishedContent </a>to my own POCOs.</p>
+<p>Which of the following two ways of outputting a document type property do you think is neater?</p>
+<pre class="language-javascript"><code>@inherits UmbracoTemplatePage
+
+@(Model.Content.GetPropertyValue&lt;string&gt;("SiteName").Trim())
+@(Model.Content.As&lt;Article&gt;.SiteName.Trim())
+</code></pre>
+      <p class="snippet-caption">Figure 1: Article is the name of an as yet undefined POCO</p>
+<p><em>Of course you answered the latter!</em></p>
+<p>So how to achieve the latter? Firstly I create my POCOs manually - I don't like code generation (but it is just personal preference OK?)</p>
+<pre class="language-csharp"><code>using System;
+namespace MvcApplication1.Poco
+{
+    public class Article
+    {
+        public string Title { get; set; }
+        public string SiteName { get; set; }
+        public DateTime UpdateDate { get; set; }
+    }
+}</code></pre>
+      <p class="snippet-caption">Figure 2: Article is an Example POCO</p>
+<p>The POCO has the same properties as your Umbraco document type, either default or custom. In the example above <em>SiteName</em> is a custom document type property.</p>
+<p>The next step is to turn <a href="http://our.umbraco.org/documentation/Reference/Mvc/querying">IPublishedContent</a> into this POCO which we do with the help of an extension method with the following signature:</p>
+<pre class="language-csharp"><code>using System;
+using Umbraco.Core.Models;
+namespace MvcApplication1
+{
+    public static class PocoHelper
+    {
+        public static T As&lt;T&gt;(this IPublishedContent content) {
+
+            var poco = Activator.CreateInstance&lt;T&gt;();
+
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Figure 3: This is a signature for a method to be completed later</p>
+<p>I'll come back to the implementation later, this just returns and empty POCO for now, but once complete I can start doing things in my view like:</p>
+<pre class="language-javascript"><code>@inherits UmbracoTemplatePage
+@using MvcApplication1
+@using MvcApplication1.Poco
+
+@Html.CachedPartial("PageHeader", Model.Content.As&lt;Article&gt;(), 10)
+
+</code></pre>
+      <p class="snippet-caption">Figure 4: Pass a POCO to a partial in an Umbraco View/Template</p>
+<p>That allows me to have partial views that are strongly typed to a POCO like this:</p>
+<pre class="language-javascript"><code>@model MvcApplication1.Poco.Article
+
+&lt;h2&gt;@Model.SiteName was updated on @Model.UpdateDate&lt;/h2&gt;
+</code></pre>
+      <p class="snippet-caption">Figure 5: A strongly typed and cached partial view</p>
+<p>For some people, doing all of this kind of stuff in the view is a bit mucky, and I agree. Using <a href="http://our.umbraco.org/documentation/Reference/Mvc/custom-controllers">route hijacking</a> one could do all of my querying and converting before we get to the view (but I have an hour to write this article not a day).</p>
+<p>So lastly, the implementation of my extension method:</p>
+<pre class="language-csharp"><code>using System;
+using System.Reflection;
+using Umbraco.Core.Models;
+using Umbraco.Web;
+
+namespace MvcApplication1
+{
+    public static class PocoHelper
+    {
+        public static T As&lt;T&gt;(this IPublishedContent content) {
+
+            // Create an empty instance of the POCO
+            var poco = Activator.CreateInstance&lt;T&gt;();
+
+            // Discover properties of the poco with reflection
+            PropertyInfo[] properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+            var pocoType = poco.GetType();
+
+            foreach (PropertyInfo propertyInfo in properties)
+            {
+                var contentType = content.GetType();
+                if (content.GetType().GetProperty(propertyInfo.Name) != null)
+                {
+                    // It is a default propery - get the value with refelection
+                    var propertyValue = contentType.GetProperty(propertyInfo.Name).GetValue(content, null);
+                    pocoType.GetProperty(propertyInfo.Name).SetValue(poco, propertyValue, null);
+                }
+                else
+                {
+                    // it is a doctype property - ask Umbraco for the value
+                    var propertyValue = content.GetPropertyValue(propertyInfo.Name);
+                    pocoType.GetProperty(propertyInfo.Name).SetValue(poco, propertyValue, null);
+                }
+            }
+
+            return poco;
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Figure 6: Implementation of IPublishedContent to your POCO</p>
+<p>Yes it is quite techie, but it is write once and you never see it again. Our real implementation of this is a bit more complex than that above.</p>
+<p>We use the <a href="http://msdn.microsoft.com/en-us/library/system.runtime.caching.memorycache(v=vs.110).aspx">MemoryCache</a> to check whether an object is available before constructing it. Before I conclude it is also worth mentioning that you'd probably need to work with <a href="http://our.umbraco.org/projects/developer-tools/umbraco-core-property-editor-converters">Property Editor Convertors</a> for more complex document type properties such as pickers.</p>
+<p>So anyway, I've completely failed to put a festive twist on this article, It would have been hard to do (I guess I could have called a POCO property Santa or something). Hopefully it fills you with festive cheer anyway and I hope you've enjoyed the read.</p>
+<p>Thanks to the guys behind 24days.in for the opportunity to post here. I'll write something up on using this technique combined with route hijacking and the MemoryCache on <a href="http://blog.darren-ferguson.com/">my blog</a> in the new year.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Darren Ferguson"><img src="//gravatar.com/avatar/34224320ecc5f8d79bd5985105a4122b.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/34224320ecc5f8d79bd5985105a4122b.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Darren Ferguson</h1>
+        <p>Darren is on Twitter as <a href="//twitter.com/darrenferguson" title="Darren Ferguson on Twitter" rel="author">@darrenferguson</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li class="selected"><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

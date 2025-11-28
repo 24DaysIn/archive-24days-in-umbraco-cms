@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>A team using Umbraco Cloud for the first time</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">First time with Umbraco Cloud</h1>
+      <p class="byline"> by Adriana Cerqueiro, <span class="pubdate">posted on <time datetime="2016-12-12">Dec 12, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><img style="width: 500px; height: 496.031746031746px;" src="/archive/media/2016/genewilder.jpg?width=500&amp;height=496.031746031746" alt="" rel="1271" data-id="1271"></p>
+<p class="intro">We had been waiting for that perfect project that would let us use Umbraco Cloud, or as everyone knows it UaaS –although the new name is way cooler! And suddenly, a new client had a project that seemed like it would be an awesome fit. It was a shiny new, baggage-free project. We pitched Umbraco Cloud but they weren’t taking it. The project was going to be a plain vanilla Umbraco project… or so we thought…</p>
+<p class="normal">As these things go, the project had a surprise for us. Halfway through, we heard the words every developer loves to hear “let’s do it the way you proposed”. Yes!! I think everyone was so excited about the idea that all of us muted that voice in the back of our heads that told us “don’t try something new when you are this close to the finish line”. So, of course, we plunged headfirst into migrating what we had so far to Umbraco Cloud.</p>
+<p class="normal"> </p>
+<h2>The original install</h2>
+<p><img style="width: 322.12389380530976px; height: 500px;" src="/archive/media/2016/sitestructure.png?width=322.12389380530976&amp;height=500" alt="" rel="1274" data-id="1274"></p>
+<p class="normal">We needed to build an Umbraco multi-site installation with shared content. At first, we would begin working with one site and later we would replicate that site to create sibling sites that would be customized as requested or needed. So we came up with the idea of having a group of nodes for the data they were going to share and another section for the configuration nodes, all of them separated from the actual pages from the site.</p>
+<p class="normal">We were not expecting a lot of traffic for the site, but the client required an infrastructure that could deal with a massive amount of bursty requests and also that was flexible in terms of node configuration without doing more programming (don’t they all want this?). So a relatively normal hosting without multiple environments sounded like the way to go.</p>
+<p class="normal"> </p>
+<h2>Perfect! Lets migrate to Umbraco Cloud</h2>
+<p>What else can you ask for? Clean installation, we were able to tell the client “you are going to have the last available version every single time”, you can test how the content is going to look and then push it to the live site without duplicating it manually –just with one click.</p>
+<p><br> Because we are a small company, we’ve seldom needed to use Subversion, and definitely not any sync mechanisms or messaging apps. We usually just talked to each other across the room… sometimes scaring the other people because we hadn’t said anything all morning, oops!</p>
+<p>But if that’s already hard, working in the same project with people located in three different time zones (North America, South America and Europe), is sometimes more than you can handle. Like a colleague heard on an Agile conference “latitude hurts teamwork, but longitude truly complicates it”.</p>
+<p class="normal">Anyway, with all of that in mind we decided to go ahead. It was only our first time using a new tech with the project, what could possibly go wrong?</p>
+<p class="normal"> </p>
+<h2>One small speed bump, using Git</h2>
+<p><img style="width: 500px; height: 420.06269592476485px;" src="/archive/media/2016/dividebyzero.jpg?width=500&amp;height=420.06269592476485" alt="" rel="1270" data-id="1270"></p>
+<p>We set up the Umbraco Cloud site in our hosting and everything seemed to be running just fine, but everyone was afraid that having more than two developers committing code in a rush at the same time would be a very error-prone scenario.</p>
+<p>When you have dev and live environments you have a lot more control in the programming process, but you also have to pay a lot more attention to which components can move on from one environment to the next and which should be held back. This is where we hit our first issue. In Umbraco Cloud you can’t choose what you want to send from dev to live -regarding schema, it’s either all or nothing. But with several programmers working on code that depends on someone else’s work, we found that more often than not we ended up breaking something. Some functionality was done and ready to go live, but other wasn’t and it would be deployed either way.</p>
+<p>To avoid breaking the Umbraco Cloud installation, we decided to use our own Git repository where everyone could push their local changes, and a project/repo admin would be the one to manage what would go to the dev environment of the project. That way, the client could do all the tests they wanted and approve the work we’d just done.<br> This extra step made us feel more confident that the client would not be looking at a broken site.</p>
+<p> </p>
+<h2>We found a hard-coded node Id</h2>
+<p>After getting over our first speed bump, one of the guys began facing a weird problem: one of his SurfaceControllers would work just fine locally and in the Umbraco Cloud dev environment, but it was acting up when pushed to the live environment. Weird, ¿right? It took a few minutes of peer-review of the source code until we found something. A node’s Id was hard-coded in the source code instead of being stored in a content picker datatype. Other than that, his code seemed to be pretty much in order. “Could that be it?” Off course that was it!</p>
+<p>While this is usually just considered bad practice, in Umbraco Cloud it’s quite a big no-no. You may need to use a hard-coded Id as a quick fix for anything (media folders, listing pages, etc) but when there is the need to synchronize two or more environments you should use Content, Media Pickers or data resolvers to prevent having to modify code when you go from dev to live. Let’s be honest, we’ve all said it “I’ll put this Id here, just for a second” and then out into the world it goes, until some poor soul erases the node and the code goes boom!!.</p>
+<p class="normal">When you are in Umbraco Cloud, Courier handles content nodes so the Id’s are most likely not going to match between environments. So the obvious route is to always, always, always use some sort of configuration management for the nodes you are using in partials or macros. I know this sounds silly, but I think a lot of people are in denial of how often this happens (me included).</p>
+<p class="normal"> </p>
+<h2>Working with doctypes and dictionary items</h2>
+<p><img style="width: 500px; height: 294.8943661971831px;" src="/archive/media/2016/onedoesnotsimply.jpg?width=500&amp;height=294.8943661971831" alt="" rel="1272" data-id="1272"></p>
+<p>Everyone started typing, in quite a rush, and we soon realised that all of us had made changes to doctypes and dictionary items while implementing new functionalities. That means that it didn’t take very long for the local sites to have different schemas.</p>
+<p>We tried a few different approaches to unify them. One of them was to export our DocTypes as .UDT files and share them via Git, but then we discovered something that threw us off a bit: you can’t import/export DocTypes in Umbraco Cloud -insert little panic attack here.</p>
+<p>We dove head first into the our.umbraco.org forums and even reached out to some of the Core team’s members and, thankfully, we found an answer quickly. A package <a href="https://our.umbraco.org/projects/developer-tools/usync/" target="_blank" title="uSync Package">uSync</a> (developed by Kevin Jump), and found out that it worked like a charm when it came to importing/exporting DocTypes and Dictionary Items between our local sites. This allowed us to make as many changes as we wanted locally, and then distribute our changes via Git and, in a matter of minutes, the team had their local schemas synced.</p>
+<p>Unfortunately, uSync’s project page did not show any reported compatibility with Umbraco Cloud. Since we were so close to the deadline, and we did not want to risk breaking the cloud environment, we didn’t try installing uSync there. That left our project manager with the time consuming task of creating the doctypes and dictionary items by hand.</p>
+<p> </p>
+<h2>The good, the great, the better</h2>
+<p><img style="width: 500px; height: 500px;" src="/archive/media/2016/successkid.jpg?width=500&amp;height=500" alt="" rel="1273" data-id="1273"></p>
+<p>I think what slowed us the most was being first time users in the middle of the project. In these cases sometimes you need to rush and use what you already know, what you are comfortable with. Umbraco Cloud is a tool that has everything to allow us to work faster, cleaner, and easier. But none of us had used it before, so we didn’t know what to actually expect.</p>
+<p>Nevertheless that didn’t matter… we had done it!! We finally had a working Umbraco Cloud installation that our client loved and in the end it didn’t take us off track by that much, so everything was perfect!</p>
+<p class="normal">This project gave us the chance to try out a tool that we’d been anticipating for a while. It made us work cleaner with content pickers, using them all the time for configuration parameters, that way we don’t have any troubles thank to the data resolvers. With this project we were able to use new tools like Git, Sourcetree and WinMerge to ease teamwork, and for that we are better prepared to face more challenging projects. Now we have the project hosted on a reliable server, with proper mechanisms for quality control and an easy way of showing the client new changes to their site.</p>
+<p> </p>
+<p>With the rush involved in this project I haven’t had the opportunity to try one of the features that I was most eager to use, the reuse of project components. The idea of having a master project that has everything you need for a new installation, everything you use on a daily basis and the small tweaks you are used to, sounds amazing. I can’t wait to start the next project in our own Master Umbraco Cloud installation.</p>
+<p> </p>
+<p class="normal">I don’t know the exact date this article is going to go live, so Happy Holidays and Happy New Year 2017!! to every Umbracian out there.</p>
+<p>Thanks for being an awesome community!</p>
+<p>Adriana-</p>
+<p> </p>
+<p>ps: most of the images are not my own, so here is where I got them from<br> divided by zero: https://pogoprinciple.files.wordpress.com/2012/02/divide3.jpg<span><br> </span>gene wilder meme: https://imgflip.com/i/1d0vz8<br> success kid: https://imgflip.com/i/1d10ex<br> one does not simply: https://imgflip.com/i/1d10pg</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/git/" title="See all articles tagged with Git">Git</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/umbraco-cloud/" title="See all articles tagged with Umbraco Cloud">Umbraco Cloud</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Adriana Cerqueiro"><img src="//gravatar.com/avatar/616a4272e341d6bf2d709c6adf6ada6d.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/616a4272e341d6bf2d709c6adf6ada6d.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Adriana Cerqueiro</h1>
+        <p>Adriana is on Twitter as <a href="//twitter.com/acerqueiro" title="Adriana Cerqueiro on Twitter" rel="author">@acerqueiro</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Razor and Faceted Search In Umbraco</title>
+<meta name="description" content="See how Jason Prothero solved multiple selection facets to multiple selection properties, and complex DynamicNode sorting in Umbraco, all using Razor">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Razor and Faceted Search In Umbraco</h1>
+      <p class="byline"> by Jason Prothero, <span class="pubdate">posted on <time datetime="2012-12-19">Dec 19, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">A little over a year ago we had a few sites that needed <a href="http://en.wikipedia.org/wiki/Faceted_search" target="_blank" title="Faceted Search on Wikipedia">faceted search</a> of content nodes for a specific Document Type.  At the time Razor had just been added to the core and I was finding excuses to create macros in Razor.  Rather than implementing the faceted search in XSLT or straight .NET User Controls, I went straight to Razor.  However, I found using the Umbraco Razor API challenging for search so I built my own workaround that has worked well for us and our clients.  </p>
+<p class="intro">In doing so I found some solutions to two key problems:</p>
+<ul>
+<li>Multiple selection facets to multiple selection properties in Razor</li>
+<li>Complex DynamicNode sorting using Razor</li>
+</ul>
+<p>I also used this technique to help quickly add a somewhat complex filter to the <a href="http://www.nauug.com/" target="_blank" title="North American Umbraco Users Group">North American Umbraco Users Group</a> site.  This will be my example for this post.</p>
+<figure>
+  <a href="/archive/media/2012/nauugscreenshot_croppedwide.png">
+    <img src="/archive/media/2012/nauugscreenshot_croppedwide.png" alt="nauug_wide" width="1191">
+  </a>
+</figure>
+<p>(Full disclosure: I'm not necessarily proposing this as a "best practice", but hope it will either help a few people or simply spark a conversation about better ways to get the same outcome (which I welcome).  Also, this was before Niels Kühnel's awesome <a href="http://stream.umbraco.org/video/6425828/the-niels-kuhnel-show" target="_blank" title="The Niels Kuhnel Show">Faceted Search with Examine demo</a> at Codegarden '12 which I still want to figure out how to do.) </p>
+<h2>Problem #1: Multiple selection facets to multiple selection properties in Razor</h2>
+<p>Currently each profile at the NAUUG site has a set of skills that they can select.  In the Umbraco admin this is simply content in a folder that is selected with a Multi-Node Tree Picker.  On the Search page, there is an advanced search that allows for search by skills.  Multiple skills can be selected.  If none are selected, the assumption is that all profiles will be shown that match the other filters.</p>
+<p>This was a difficult problem to solve for me using the the standard <span class="code">.Where()</span> method in the <a href="http://our.umbraco.org/wiki/reference/code-snippets/razor-snippets/dynamicnode-(and-model)-members-and-properties" target="_blank">Umbraco Razor API</a>.  After trying my best, I gave up and simply looped through the DynamicNodeList and did my own conditional check.   </p>
+<p>This is where I ran into my first problem.  I couldn't change the <span class="code">DynamicNodeList</span> to remove the items I didn't want.  I also couldn't add to an empty list.  But I could just create a <span class="code">List&lt;DynamicNode&gt;</span> and add to that.  Sweet!</p>
+<pre class="language-csharp"><code>// Get your set of nodes to loop through (could be any query including Where())
+var personListings = @Model.NodeById(parent).Descendants("Person");
+
+// Place to store matched profiles
+List&lt;DynamicNode&gt; possibleListings = new List&lt;DynamicNode&gt;();
+
+// Loop through and add
+foreach(dynamic item in profileListings)
+{
+    bool includeFromSkills = true;
+    // **** Filter code goes here      
+
+    // Include in results if matches    
+    if( … // **** other checks
+            &amp;&amp; includeFromSkills )
+    {
+      possibleListings.Add(item);
+    }
+}</code></pre>
+<p>Now we need to actually filter the nodes.  I borrowed a technique I saw first in the <a href="http://our.umbraco.org/projects/website-utilities/xsltsearch" target="_blank">XSLTSearch package</a> from Douglas Robar to add commas around a comma separated list and the search term and do a Contains check on a string.  This means my Multi-Node Tree Picker needed to be set to CSV instead of XML and the list of filtered skills needed to be a list of node ids (comma separated). </p>
+<p>I've now added the param passed in, added of the commas to the filter (outside of the foreach), and the skills filtering code.</p>
+<pre class="language-csharp"><code>// Get params
+var skills = String.IsNullOrEmpty(Parameter.Skills) ? "all" : Parameter.Skills;
+
+// Get your set of nodes to loop through (could technically be any query)
+var personListings = @Model.NodeById(parent).Descendants("Person");
+
+// Place to store matched profiles
+List&lt;DynamicNode&gt; possibleListings = new List&lt;DynamicNode&gt;();
+
+// Ids of skills that the User has selected to filter results with
+string skillsListJoined = String.Format(",{0},", skills);
+
+// Loop through and add
+foreach(dynamic item in profileListings)
+{
+    /////////////////////////////////////////    
+    // Skills search
+    bool includeFromSkills = true;
+    if( skills != "all" )    {
+      includeFromSkills = false;
+      string profileSkills = item.GetProperty("skills").Value;
+      if( profileSkills.Length &gt; 0 )
+      {      
+        foreach(var skill in profileSkills.Split(','))
+        {
+          if( skillsListJoined.Contains(String.Format(",{0},", skill)) )
+          {
+            includeFromSkills = true;
+            break;
+          }
+        }
+      }   
+    }    
+    /////////////////////////////////////////
+
+    // Include in results if matches    
+    if( … // other checks
+            &amp;&amp; includeFromSkills )
+    {
+      possibleListings.Add(item);
+    }
+}</code></pre>
+<p>The skill filtering does do a little more processing than I would like (the second foreach loop), but it hasn't affected performance considerably from the implementations we have done so far.  I would recommend doing only the things you absolutely have to in the loop.  For example, don't do extra node lookups or searches that can be done outside of the top level foreach.</p>
+<h2>Problem #2: Complex DynamicNode sorting using Razor</h2>
+<p>Now imagine you want to sort by some properties on each node like "levels" or "type" with a fallback to alphabetical when the properties are equal.</p>
+<p>In this case we're sorting by type (business/person) then alphabetical.  On other projects we have built there have been member levels and then even "auction" values that allow some listings to float up based on a paid amount (like Google AdWords).  Basically, you get full control over the sort.</p>
+<p>The nice thing is that by using a standard .NET <span class="code">List&lt;&gt;</span> object we have access to the <span class="code">Sort()</span> method and can provide our own delegate to handle the sorting logic.  The unfortunate thing we found is that you really have to watch what you put in the delegate or things can slow down quickly.  That is why there are ids in the sort logic.  The types are ids in the tree selected via Ultimate Picker.  I found that when we did a node lookup based on strings or names, it slowed things down considerably.  </p>
+<p>Here is the delegate code I used:</p>
+<pre class="language-csharp"><code>    possibleListings.Sort(delegate(DynamicNode x, DynamicNode y)    {       
+      dynamic xListingLevel = x.GetProperty("listingType").Value;
+      dynamic yListingLevel = y.GetProperty("listingType").Value;
+          
+      int xSort = 2;      // default
+      if( xListingLevel == "3245" ) { xSort = 1; }  // listing with more importance (direct id for speed)
+       
+      int ySort = 2;
+      if( yListingLevel == "3245" ) { ySort = 1; }
+     
+      if( xSort == ySort )
+      {
+        return x.Name.CompareTo(y.Name);
+      }
+      else
+      {
+        return xSort.CompareTo(ySort);
+      }
+    });</code></pre>
+<p>Hope that helps someone out there!  Or perhaps you have a different way to solve these problems?  </p>
+<p>Oh, and if you're located in North America <a href="http://www.nauug.com/sign-up/" target="_blank" title="Register for the North American Umbraco Users Group">join the North American Umbraco Users Group</a> and tell your friends to do the same! We need to unearth all the Umbraco goodness that's over here and hope to have a North America Umbraco Festival someday!  <a href="http://www.proworks.com/blog/2012/12/18/umbraco-fans-in-north-america-roll-call!/" target="_blank" title="Umbraco Fans in North America: Roll Call!">Join the Roll Call</a>!</p>
+<p>Happy Holidays!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jason Prothero"><img src="//gravatar.com/avatar/12998cb91ba1651eb9917a0356cd98fd.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/12998cb91ba1651eb9917a0356cd98fd.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jason Prothero</h1>
+        <p>Jason is on Twitter as <a href="//twitter.com/protherj" title="Jason Prothero on Twitter" rel="author">@protherj</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li class="selected"><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

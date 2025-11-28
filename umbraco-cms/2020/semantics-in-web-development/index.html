@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Semantics in web development</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Semantics in web development</h1>
+      <p class="byline"> by Dean Leigh, <span class="pubdate">posted on <time datetime="2020-12-22">Dec 22, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><strong>Web Developers are in the business of communication, conveying meaning from one entity to another. The method we use is language, human language for people and programming language for computers.</strong></p>
+<p class="intro">Semantics is the study of 'meaning' conveyed using these languages.</p>
+<p>Human beings strive to find meaning in everything, so the field of Semantics is huge!</p>
+<p>Therefore, it comes as no surprise that the term “Semantics” can mean many different things. In this article, I will identify and explain some of the most common examples in our industry.</p>
+<h2>The key elements of semantics</h2>
+<p><strong>We often hear the phrases; something is ‘semantically incorrect’ or a ‘question of semantics’. What do we ‘mean’ by these phrases in the context of web development?</strong></p>
+<p>Let’s look at three key elements that define semantics in web development:</p>
+<ul>
+<li>Intent</li>
+<li>Content</li>
+<li>Context</li>
+</ul>
+<h3>Intent</h3>
+<p>When we create content, that we wish to communicate, there are two intentions; our <strong>intended audience</strong> (digital or human) and our <strong>intended meaning</strong>, sometimes our intentions fail.</p>
+<blockquote>We create content to convey our intended meaning to our intended recipient but sometimes the road to failure is paved with good intentions</blockquote>
+<h4>Intended audience</h4>
+<p>Intended audiences are a form of context.</p>
+<p>We have all accidentally sent an email to the wrong person, commonly when they have the same first name and we do not notice that an unintended recipient has been added by auto complete.</p>
+<p>Right content, wrong context.</p>
+<h4>Intended meaning</h4>
+<p>Often we write something that we believe is very clear, when the intended recipient sees or hears something completely different. In code we get an error message, in real life we may get undesirable unintended consequences.</p>
+<h3>Content</h3>
+<p><strong>Communication requires content whether it is visual, the written word or computer code. In web development, we often combine consumable content intended for the human recipient with instructional content in the form of code for the digital recipient.</strong></p>
+<p>Labelling content is also very important e.g. gardeners will often stick labels in plant pots to remind them what they contain.</p>
+<blockquote>Always label seed packets immediately. Store in a cool, dry place until ready for sowing.<br>- Monty Don</blockquote>
+<p>Let’s take an example of a simple web page about Lavender in a garden centre website with a semantically named domain name:</p>
+<ul>
+<li><a data-udi="umb://document/2d2c4e3258fd40cfa5212b712d060e30" href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development">umbraco-gardencenter.co.uk</a></li>
+</ul>
+<p>Before we even begin to discuss Sematic Code, Sematic Markup or the Semantic Web, here is our first example of code that is meaningful to both humans who can read it and computers using DNS who can direct users to the correct web application.</p>
+<p>In the same way we can use file naming to describe content, our lavender page may be poorly named:</p>
+<ul>
+<li>page-07.html</li>
+</ul>
+<p>If hyperlinks resolve to this page technically it works for computers, but this does not carry any meaning to humans other than it may be page number 7 in a series of web pages.</p>
+<p>It’s arguable in the SEO community whether popular search engine algorithms factor in file naming, but this would also be an example using semantics to convey meaning to computers for the purpose of search.</p>
+<p>To give this page meaning to humans, a better name would be:</p>
+<ul>
+<li>lavender.html</li>
+</ul>
+<p>The same applies to an image file. If you download some images from a website and find them a few weeks later, without previewing the images, would you really know what is in this image:</p>
+<ul>
+<li>g5ds5sdf4sdf.jpg</li>
+</ul>
+<p>Of course it would be better if the images were named:</p>
+<ul>
+<li>lavender.jpg</li>
+<li>rose.jpg</li>
+<li>honeysuckle.jpg</li>
+</ul>
+<p>So you get the idea how important naming content is. In a way, meaningful file naming is in fact a form of metadata (or data about data) i.e. the filename is telling us what the content is within that file, whether it's an image or a web page.</p>
+<p>So we now have a web page clearly about “Lavender” residing at the following web address:</p>
+<ul>
+<li><a data-udi="umb://document/2d2c4e3258fd40cfa5212b712d060e30" href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development">umbraco-gardencenter.co.uk/lavender.html</a></li>
+</ul>
+<p>This make perfect sense in the 'context' of a garden centre web site, which brings us neatly onto context.</p>
+<h3>Context</h3>
+<p><strong>Sometimes simply naming is not enough. If your intended audience does not recognise the naming, then context my help.</strong></p>
+<blockquote>Content is king, context is queen and together they rule.</blockquote>
+<p>Imagine we have a list of plants using their Latin names and they are grouped by whether they like sun or shade.</p>
+<p>We can create meaningful URLs with just HTML alone and clever use of folder structure and file naming.</p>
+<p>Simply by nesting HTML files with a default filename such as index.html within folders, we can create URLs such as:</p>
+<ul>
+<li><a data-udi="umb://document/2d2c4e3258fd40cfa5212b712d060e30" href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development">umbraco-gardencenter.co.uk/sunny/</a></li>
+<li><a data-udi="umb://document/2d2c4e3258fd40cfa5212b712d060e30" href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development">umbraco-gardencenter.co.uk/shady/</a></li>
+</ul>
+<p>Now when we place the relevant files within the correct folders we generate meaningful URL’s that describe structure such as:<a href="http://www.gardencenter.co.uk/sunny/lavender.html"></a></p>
+<ul>
+<li><a data-udi="umb://document/2d2c4e3258fd40cfa5212b712d060e30" href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development">umbraco-gardencenter.co.uk/sunny/lavender.html</a></li>
+</ul>
+<p>Of course, most modern backend languages can do this with routing now. In fact we could make lavender.html appear in:</p>
+<ul>
+<li>sunny/lavender</li>
+<li>purple/lavender</li>
+<li>scented/lavender</li>
+</ul>
+<p>And use the meaningful <span class="code">&lt;link rel="canonical" href=”where-lavender-lives”&gt;</span> to describe the default address for Lavender.</p>
+<p>Regardless of the method used this is all part of semantics in modern web development we have given 'content' some 'context'.</p>
+<h2>Semantic Code</h2>
+<p><strong>In our spoken language we encode meaning. The listener needs to know that language in order to decipher (or decode) the 'meaning', to understand that meaning between two languages we need a translator.</strong></p>
+<blockquote>We're flooding people with information. We need to feed it through a processor. A human must turn information into intelligence or knowledge. We've tended to forget that no computer will ever ask a new question.<br>- Grace Hopper</blockquote>
+<p>When we give instructions to a computer in code, it must also be delivered in a programming language the computer understands. Yet we can write the instructions in a completely different programming language and translate it using a transpiler (or transcompiler).</p>
+<p>In the same way humans can describe the same thing in multiple languages, we can do the same thing with computers in multiple programming languages. In fact, terms within programming languages can often be used in different ways depending on the 'context' they are used.</p>
+<h3>Human Readable Code</h3>
+<p>Computers evaluate code using syntax and context, and whilst some programming languages may be syntactically correct this means the code only has meaning to computers.</p>
+<p>In web development the content that we create must often have 'meaning' to both humans and machines i.e. Human Readable Code.</p>
+<p>In modern programming languages, syntax is often easy to learn and it is meaningful to humans, in fact writing good code often includes making it possible to pass on to another developer.</p>
+<p>A good example of making code readable to human beings, would be the BEM system developed by Yandex.</p>
+<p><em>Note: Semantic class names do not have any impact on accessibility i.e. BEM syntax is sematic to developers, but not assistive technology.</em></p>
+<p>Developers at Yandex found that their CSS was getting so complicated when they were sharing it and so proposed a naming convention to make things easier.</p>
+<p>This system became known as BEM or Block, Element, Modifier using the following syntax:</p>
+<ul>
+<li>block-name_modifier-name</li>
+<li>block-name__element-name_modifier-name</li>
+</ul>
+<p>Here is a basic example from Yandex showing BEM in use:</p>
+<pre><code class="language-markup">&lt;!-- `search-form` block --&gt;
+&lt;form class="search-form"&gt;
+    &lt;!-- `input` element in the `search-form` block --&gt;
+    &lt;input class="search-form__input"&gt;
+
+    &lt;!-- `button` element in the `search-form` block --&gt;
+    &lt;button class="search-form__button"&gt;Search&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+<p>BEM Methodology has now found its way into numerous other programming languages including CSS and JavaScript and even file naming and project structure.</p>
+<p>You can find out more about BEM here:</p>
+<p><a href="https://en.bem.info/methodology/">https://en.bem.info/methodology/</a></p>
+<p>We can of course just use good commenting, but better still we can write self documenting code as well.</p>
+<h2>Semantic Markup</h2>
+<p>Semantic markup is a form of semantic code and the most common use in web development is HTML.</p>
+<blockquote><span>We've all seen examples of things that look like buttons which actually are 5 or 6 nested </span><span class="code">&lt;div&gt;</span><span> elements with a non breaking space in the middle. Then to make that work properly in non visual browsers you have to put a tab index on it to make sure that it can be tabbed into, because only links and form elements by default can be tabbed into, in browsers. Then you have to stick a bit of JavaScript on the top to handle clicks. Then you probably have to use some CSS and on hover or on focus change the cursor pointer to look like a little hand pointing. Then you need an ARIA role to say that this nested </span>&lt;div&gt;<span> pile is actually, fulfills the role of a button. Or you could just use the button element, which is what it's there for, and all this stuff is given to you. It seems to me a no-brainer.<br>- Bruce Lawson (<a href="https://thewebahead.net/74">HTML Semantics with Bruce Lawson | The Web Ahead</a>)</span></blockquote>
+<p>The earliest versions of HTML included instructions to the user agent, usually a web browser, about the structure of the document as well as formatting instructions such as colours and fonts.</p>
+<p>As the demands on web applications became more complex, it soon became clear a separation of concerns was required and the formatting aspect of HTML became Cascading Style Sheets (CSS).</p>
+<p>So what do we mean by Semantic Markup in HTML?</p>
+<h3>HTML – Non-Semantic</h3>
+<p><strong>Let's address the elephant in the room right away, some HTML is not semantic and unfortunately it’s the type that gets used most often and incorrectly . Yes I'm talking about you <span class="code">&lt;div&gt;</span> and <span class="code">&lt;span&gt;</span>.</strong></p>
+<blockquote>Everything's a <span class="code">&lt;div&gt;</span>,<br>Everything's a <span class="code">&lt;div&gt;</span>,<br>Hey, did you know this <span class="code">&lt;button&gt;</span> is a <span class="code">&lt;div&gt;</span>?<br>- cf. '<a href="https://youtu.be/Q2T7oLbmvx4" title="Everything's A Drum">Everything's A Drum</a>'</blockquote>
+<p>Often, entire pages of HTML have every single element marked up as a <span class="code">&lt;div&gt;</span>; just because you can, it does not mean you should.</p>
+<p>The <span class="code">&lt;div&gt;</span> and <span class="code">&lt;span&gt;</span> were not in the original HTML draught but appeared in the specifications around 1997.</p>
+<p>Ironically, in the context of this article, whilst the <span class="code">&lt;span&gt; </span>element has no semantics attached to it, the original intention was to address the issue of adding language attributes in the middle of paragraphs and hence is an inline element:</p>
+<ul>
+<li><span class="code">&lt;p&gt;I do not speak &lt;span lang="ja"&gt;日本語&lt;/span&gt; very well&lt;/p&gt;</span></li>
+</ul>
+<p>The <span class="code">&lt;div&gt;</span> element (short for division) on the other hand is a block element and was introduced to provide a generic container that had no meaning or layout style attached (other than they stack one above the other as any other block element).</p>
+<blockquote>The <span class="code">&lt;div&gt;</span> element should be used only when no other semantic element (such as <span class="code">&lt;article&gt;</span> or <span class="code">&lt;nav&gt;</span>) is appropriate.<br>MDN</blockquote>
+<p>The <span class="code">&lt;div&gt;</span> element is also undoubtedly one of the most widely misused elements. As the quote above suggests, <span class="code">&lt;div&gt;</span> should only be used where there is no meaning attached to the container, or there is not an existing semantic HTML element available.</p>
+<p>The Codepen below is a Tailwind component example I found that was pretty much all <span class="code">&lt;div&gt;</span>'s and <span class="code">&lt;span&gt;</span>'s. I have edited it slightly here, but not much, to demonstrate how not to mark up HTML.<ins></ins><a href="https://codepen.io/deanleigh/pen/KKggggL?editors=1000"></a></p>
+<p>It may be best to open it in Codepen to see both the HTML and the preview.</p>
+<figure class="codepen-embed"><p data-theme-id="dark" data-slug-hash="KKggggL?editors=1000" data-default-tab="result" data-user="deanleigh" data-embed-version="2" data-pen-title="Codepen by deanleigh" class="codepen" data-height="800px"><a href="https://codepen.io/deanleigh/pen/KKggggL?editors=1000">See the Pen</a> by deanleigh (<a href="https://codepen.io/deanleigh">@deanleigh</a>) on <a href="https://codepen.io">CodePen</a>.
+				</p><script async="" src="https://production-assets.codepen.io/assets/embed/ei.js">
+//
+
+////
+</script><figcaption></figcaption></figure>
+<p>Whilst the CSS works perfectly well the HTML is completely meaningless.</p>
+<p>Now let's take a look at how to mark up HTML up semantically. </p>
+<h3>HTML - Structural</h3>
+<p><strong>Structural HTML is very much semantic, it not only gives meaning to content it gives it context through the use of hierarchical structure.</strong></p>
+<p>In the most basic of HTML, we can see that when we use <span class="code">&lt;h1&gt;</span>, <span class="code">&lt;h2&gt;</span> or <span class="code">&lt;p&gt;</span> the browser format's the text in a particular way e.g. headings start larger than paragraph text and gradually get smaller.</p>
+<p>But as mentioned, HTML does not really concern itself with visual formatting, what you can see is the browser's interpretation off the markup.</p>
+<p>What is really happening is we are giving meaning to the content through the use of structure.</p>
+<p>Let's take a look at a web page and use one of our plants, lavender as an example:</p>
+<pre><code class="language-markup">&lt;h1&gt;Lavender&lt;/h1&gt;
+&lt;h2&gt;Introduction&lt;/h2&gt;
+&lt;p&gt;Lavender (Lavandula) is a wonderful plant for both appearance and fragrance.&lt;/p&gt;
+&lt;p&gt;It belongs to a genus of 47 known species of flowering plants in the mint family.&lt;/p&gt;
+&lt;h2&gt;Types of Lavender&lt;/h2&gt;
+&lt;p&gt;There are three major types of Lavender and one hybrid (Lavandins)&lt;/p&gt;
+&lt;h3&gt;English Lavender&lt;/h3&gt;
+&lt;p&gt;These bloom from spring to early summer.&lt;/p&gt;
+&lt;h3&gt;French Lavender&lt;/h3&gt;
+&lt;p&gt;Have grey, serrated leaves.&lt;/p&gt;
+&lt;h3&gt;Spanish Lavender&lt;/h3&gt;
+&lt;p&gt;Known for their unusual two-toned, pineapple-shaped blooms.&lt;/p&gt;
+&lt;h2&gt;Species and Sub-Species of Lavendar&lt;/h2&gt;
+&lt;p&gt;Lavender has many&amp;nbsp;Species and Sub-Species, for example the sub-genus Lavendula has three species:&lt;em&gt;&lt;br /&gt;&lt;/em&gt;
+&lt;/p&gt;
+&lt;dl&gt;
+    &lt;dt&gt;Lavandula angustifolia Mill.&lt;/dt&gt;
+    &lt;dd&gt;subsp. angustifolia from Catalonia and the Pyrenees.&lt;/dd&gt;
+    &lt;dt&gt;subsp. pyrenaica from southeast France and adjacent areas of Italy.&lt;/dt&gt;
+    &lt;dd&gt;Lavandula latifolia Medik&lt;/dd&gt;
+    &lt;dt&gt;native to central Portugal, central and eastern Spain, southern France, northern Italy.&lt;/dt&gt;
+    &lt;dd&gt;Lavandula lanata Boiss.&lt;/dd&gt;
+    &lt;dd&gt;native to southern Spain.&lt;/dd&gt;
+&lt;/dl&gt;
+&lt;h2&gt;Uses of Lavender&lt;/h2&gt;
+&lt;p&gt;Lavender has many uses including:&lt;/p&gt;
+&lt;ul&gt;
+    &lt;li&gt;Essential Oil&lt;/li&gt;
+    &lt;li&gt;Dried for fragrant pillows&lt;/li&gt;
+    &lt;li&gt;Culinary use&lt;/li&gt;
+&lt;/ul&gt;
+</code></pre>
+<p>Here, with the use of some very basic HTML we have given the page structure. We can clearly see that this is a page about lavender as we have used <span class="code">&lt;h1&gt;</span> for the title of the page.</p>
+<p>For "Introduction", "Types of Lavender" and "Species and subspecies" we have used <span class="code">&lt;h2&gt;</span> to denote blocks of related content.</p>
+<p>This nested heading formula is really at the core of HTML and not only give structure and meaning to web browsers but any other software that can read HTML. This includes software such as Microsoft Word, Google Docs or Adobe PDF,  they can all recognise the way the content is structured within this page.</p>
+<p>Within the "Introduction" we have introduced paragraphs using the <span class="code">&lt;p&gt;</span> element.</p>
+<p>In the "Types of Lavender" section We have created subsections using the <span class="code">&lt;h3&gt;</span> element.</p>
+<p>In the Species and Sub-Species of Lavender section we have used a Description List <span class="code">&lt;dl&gt;</span> which itself has Description Titles <span class="code">&lt;dt&gt;</span> and Description Definitions <span class="code">&lt;dd&gt;</span> as we can see in the last item, “Native to central Portugal…” we have multiple definitions.</p>
+<p>And lastly for the uses of lavender we use a simple Unordered Bulleted List <span class="code">&lt;ul&gt;</span> which could of course be a Ordered List (or numbered list) <span class="code">&lt;ol&gt;</span>.</p>
+<p>Essentially we have all of the typography formatting elements that you would expect from any word processor. However, all of these have meaning not just to users visually reading but software that can read this aloud and can even recognise lists.</p>
+<p>We can already ask voice activated devices to give us a list of recipe ingredients or to give us the definition of a word, in which case it would very likely read it from a web page using the same markup that we have above.</p>
+<p>This simple markup is both human and machine readable , HTML is very good at conveying meaning.</p>
+<h3>HTML - Sectional</h3>
+<p><strong>Sectional HTML is a relative newcomer and has added a great deal of meaning to what was commonly being used i.e. lot’s of nested <span class="code">&lt;div&gt;</span>’s.</strong></p>
+<p>The HTML5 specification authors researched the naming of these new elements, by what was most commonly being used as CSS class names e.g. <span class="code">class="main"</span>.</p>
+<p>Anyone familiar with HTML, will recognise the <span class="code">&lt;body&gt;</span> element within which we are able to add a <span class="code">&lt;header&gt;</span> and <span class="code">&lt;footer&gt;</span> elements above and below the <span class="code">&lt;main&gt;</span> element.</p>
+<p>The <span class="code">&lt;header&gt;</span> is not to be confused with the <span class="code">&lt;head&gt;</span> element which sits outside and above the <span class="code">&lt;body&gt;</span> element.</p>
+<p>The most basic of the sectional elements is of course <span class="code">&lt;section&gt;</span>, a simple way to give user agents and assistive technologies an understanding of structure within large documents by grouping related content together.</p>
+<p>Often within a single web page we may wish to define groups that have content which can be self-contained and in this case, the <span class="code">&lt;article&gt;</span> element is a good fit.</p>
+<p>Both <span class="code">&lt;article&gt;</span> and <span class="code">&lt;section&gt;</span> can be contained within the <span class="code">&lt;main&gt;</span> area of a web page and if there is additional information related to this content, we can use the <span class="code">&lt;aside&gt;</span> element. </p>
+<pre><code class="language-markup">&lt;header&gt;
+    &lt;nav&gt;&lt;/nav&gt;
+&lt;/header&gt;
+&lt;main&gt;
+    &lt;section&gt;
+        &lt;h2&gt;&lt;/h2&gt;
+        &lt;article&gt;
+            &lt;h3&gt;&lt;/h3&gt;
+            &lt;p&gt;&lt;/p&gt;
+        &lt;/article&gt;
+        &lt;article&gt;
+            &lt;h3&gt;&lt;/h3&gt;
+            &lt;p&gt;&lt;/p&gt;
+        &lt;/article&gt;
+        &lt;article&gt;
+            &lt;h3&gt;&lt;/h3&gt;
+            &lt;p&gt;&lt;/p&gt;
+        &lt;/article&gt;
+    &lt;/section&gt;
+    &lt;aside&gt;
+        &lt;section&gt;
+            &lt;h2&gt;&lt;/h2&gt;
+            &lt;article&gt;
+                &lt;h3&gt;&lt;/h3&gt;
+                &lt;ul&gt;
+                    &lt;li&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;/li&gt;
+                    &lt;li&gt;&lt;/li&gt;
+                &lt;/ul&gt;
+            &lt;/article&gt;
+        &lt;/section&gt;
+    &lt;/aside&gt;
+&lt;/main&gt;
+&lt;footer&gt;
+    &lt;nav&gt;&lt;/nav&gt;
+&lt;/footer&gt;</code></pre>
+<h3>Putting it all together</h3>
+<p>Remember the component we looked at earlier, now we know how it should be marked up let's revisit it.</p>
+<figure class="codepen-embed"><p data-theme-id="dark" data-slug-hash="LYRxmeG?editors=1000" data-default-tab="result" data-user="deanleigh" data-embed-version="2" data-pen-title="Codepen by deanleigh" class="codepen" data-height="800"><a href="https://codepen.io/deanleigh/pen/LYRxmeG?editors=1000">See the Pen</a> by deanleigh (<a href="https://codepen.io/deanleigh">@deanleigh</a>) on <a href="https://codepen.io">CodePen</a>.
+				</p><script async="" src="https://production-assets.codepen.io/assets/embed/ei.js">
+//
+
+////
+</script><figcaption></figcaption></figure>
+<p>Better? Don't forget to click HTML or better still open it in Codepen.</p>
+<p>We can now clearly see the structure of the document in the code, this will be the same for browsers, search engines and assistive technology.</p>
+<p>Yet, it looks exactly the same in browser. The 'separation of concerns' between meaning and appearance is achieved with good old HTML and CSS.</p>
+<p>But of course there is a catch, with all this fancy CSS giving us control over layout it does not that mean that content may appear in a different order to that which it was written.</p>
+<p>This is a good time to talk about Source order.</p>
+<h3>Source order</h3>
+<p><strong>Source order is the order in which elements appear within the document object model or DOM.</strong></p>
+<p>This is important as the order in which the content appears will be delivered to users or various different technologies in that order.</p>
+<p>There is much debate around the visual order of content and the source order of contents for various users.</p>
+<p>However, research and collaboration with users of assistive technologies, have given us plenty of feedback to understand the problems they face when source order is not taken into consideration.</p>
+<p>It is in fact not just an accessibility issue but can affect things like search engine optimization and how web pages are processed in other types of software.</p>
+<p>What is clear though, is that source order is very important at, yes you have guessed correctly, conveying 'meaning' to both humans and computers.</p>
+<h3>Metadata</h3>
+<p><strong>Metadata (or data about data) takes many forms and has many uses in web development. Most commonly when we think about Metadata it's in the context of search engine results and how they display information about web pages.</strong></p>
+<p>The humble <span class="code">&lt;title&gt;</span> element is still used to display the name of your web page in the tab at the top of your web browser.</p>
+<p>One of the key uses of Metadata in web development, is describing the following intended information: </p>
+<pre><code class="language-markup">&lt;!-- Meta data --&gt;
+&lt;title&gt;The Umbraco Garden Center - Lavender&lt;/title&gt;
+&lt;meta name="description" content="Lavandula (common name lavender) is a genus of 47 known species of flowering plants in the mint family"&gt;
+&lt;link rel="canonical" href="http://www.umbraco-gardencenter.co.uk/images/lavender.jpg"&gt;
+&lt;!-- Twitter Card data --&gt;
+&lt;meta name="twitter:card" content="summary"&gt;
+&lt;meta name="twitter:title" content="The Umbraco Garden Center - Lavender"&gt;
+&lt;meta name="twitter:description" content="Lavandula (common name lavender) is a genus of 47 known species of flowering plants in the mint family"&gt;
+&lt;meta name="twitter:image" content="http://www.umbraco-gardencenter.co.uk/images/lavender.jpg"&gt;
+&lt;!-- Open Graph data --&gt;
+&lt;meta property="og:type" content="article"&gt;
+&lt;meta property="og:title" content="The Umbraco Garden Center - Lavender"&gt;
+&lt;meta name="og:image" content="http://www.umbraco-gardencenter.co.uk/images/lavender.jpg"&gt;
+&lt;meta property="og:description" content="Lavandula (common name lavender) is a genus of 47 known species of flowering plants in the mint family"&gt;</code></pre>
+<h3>WAI-ARIA</h3>
+<p>WAI-ARIA, the Accessible Rich Internet Applications Suite, is a way of enhancing HTML to improve Accessibility where needed. HTML, if written correctly, should be accessible on its own, ARIA should only be used where this is not the case, as Heyden Pickering so elegantly states here:</p>
+<blockquote>ARIA doesn't make HTML accessible, it makes inaccessible HTML accessible<br>- Heyon Pickering</blockquote>
+<p>This statement could not be a better starting point for the use of ARIA, however when we do need its help it is more than just the case of scattering a few attributes here and there.</p>
+<p>ARIA assists users by applying meaning in three key ways; roles, states and properties:</p>
+<h3>Roles</h3>
+<p>A few examples of ARIA roles:</p>
+<ul>
+<li>Widget roles
+<ul>
+<li>button</li>
+<li>checkbox</li>
+</ul>
+</li>
+<li>Composite roles
+<ul>
+<li>menu</li>
+<li>menubar</li>
+</ul>
+</li>
+<li>Document structure roles
+<ul>
+<li>list</li>
+<li>listitem</li>
+</ul>
+</li>
+<li>Landmark roles</li>
+<li>main</li>
+<li>navigation</li>
+</ul>
+<h3>States and Properties</h3>
+<p>A few examples of ARIA states and properties:</p>
+<ul>
+<li>Widget attributes
+<ul>
+<li>aria-current</li>
+<li>aria-disabled</li>
+</ul>
+</li>
+<li>Relationship attributes
+<ul>
+<li>aria-colcount</li>
+<li>aria-colindex</li>
+<li>aria-colspan</li>
+</ul>
+</li>
+</ul>
+<p>This is really just scratching the surface and the relationship between these examples is also very important and is a whole other topic.</p>
+<p>If you wish to find out more about ARIA a good place to start is here:</p>
+<p><a href="https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/ARIA_Techniques">https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/ARIA_Techniques</a></p>
+<h2>Semantic web</h2>
+<p>Tim Berners-Lee had a vision that HTML could also contain data that had meaning to machines.</p>
+<blockquote>I have a dream for the Web [in which computers] become capable of analyzing all the data on the Web – the content, links, and transactions between people and computers. A "Semantic Web", which makes this possible, has yet to emerge, but when it does, the day-to-day mechanisms of trade, bureaucracy and our daily lives will be handled by machines talking to machines. The "intelligent agents" people have touted for ages will finally materialize.<br>- Tim Berners-Lee</blockquote>
+<p>When we discuss the semantic web, most people who are familiar with it would undoubtedly think of marking up HTML with the form of data.</p>
+<p>In fact in the early 2000’s we were getting very excited about harnessing the power of data stored in XML. Many of us are familiar with extracting data from XML and presenting it to the screen by translating it with XSLT to XHTML.</p>
+<p>However, at the time competing technologies such as Resource Description Framework (RDF), were much more flexible as they supported multiple schemas.</p>
+<h3>Microdata, RDFa and JSON-LD</h3>
+<p>Of these various schemas the ones that gained popularity were the ones that worked well with search engines. Despite the obvious benefits to marking up web pages with meaningful data, this technology did not really take off at any great speed.</p>
+<pre><code class="language-markup">&lt;!-- START ORGANISATION --&gt;
+&lt;p itemscope="" itemtype="http://schema.org/Organization"&gt;
+    &lt;span itemprop="name"&gt;The Umbraco Garden Center&lt;/span&gt;&lt;br&gt;
+    &lt;!-- START POSTAL ADDRESS --&gt;
+&lt;span itemscope itemtype="https://schema.org/PostalAddress"&gt;
+    &lt;span itemprop="streetAddress"&gt;37, Queen Street&lt;/span&gt;&lt;br&gt;
+    &lt;span itemprop="addressRegion"&gt;Colchester&lt;/span&gt;&lt;br&gt;
+    &lt;span itemprop="addressLocality"&gt;Essex&lt;/span&gt;&lt;br&gt;
+    &lt;span itemprop="postalCode"&gt;CO1 2PQ&lt;/span&gt;&lt;br&gt;
+    &lt;span itemprop="addressCountry"&gt;United Kingdon&lt;/span&gt;
+&lt;/span&gt;
+&lt;!-- END POSTAL ADDRESS --&gt;
+&lt;/p&gt;
+&lt;!-- END ORGANISATION --&gt;</code></pre>
+<p>It was really only once search engines, of course predominantly Google, started to make use of this additional data that it became of any value and popularity.</p>
+<p>Yet oddly only a few industries took to this you technology seriously e.g. event ticketing companies found that if they marked up all of their events with either Microdata or RDF the events would be listed at the top of the search engines with all of the relevant dates, times and locations.</p>
+<p>But this seemed to be about as far as it went until Google coined the phrase “Rich Snippets” and popularised the existing terminology “Structured data”.</p>
+<p>They now boast a long list of supported <a rel="noopener" href="https://schema.org/" target="_blank">schema</a> items, here are a few:</p>
+<ul>
+<li>Article</li>
+<li>Book</li>
+<li>Breadcrumb</li>
+<li>Carousel</li>
+<li>COVID-19 announcements</li>
+<li>Event</li>
+<li>Fact Check</li>
+<li>FAQ</li>
+<li>How-to</li>
+<li>Job Posting</li>
+<li>Local Business</li>
+<li>Q&amp;A</li>
+<li>Recipe</li>
+<li>Review snippet</li>
+</ul>
+<p>You are probably already familiar with recipes appearing in the Search Engine Results Pages without even having to visit the website containing the recipe.</p>
+<p>These will be coming to smart devices near you soon, just keep an on the front of your fridge!</p>
+<h2>Summary</h2>
+<p><strong>Every bit of code we write, every bit of content we create, every file we name can and should have meaning, meaning to computers, meaning to human beings.</strong></p>
+<blockquote>“Our prime purpose in this life is to help others. And if you can’t help them, at least don’t hurt them.”<br>- The Dalai Lama</blockquote>
+<p>We build and create websites to help people and to help each other, if we make our <strong>intentions</strong> clear, if we create good <strong>content</strong> in good <strong>context</strong> then we will achieve our aims.</p>
+<p> </p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Dean Leigh"><img src="//gravatar.com/avatar/ab5cd42bde420ca91ad33e5bc823e231.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/ab5cd42bde420ca91ad33e5bc823e231.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Dean Leigh</h1>
+        <p>Dean is on Twitter as <a href="//twitter.com/deanleigh" title="Dean Leigh on Twitter" rel="author">@deanleigh</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

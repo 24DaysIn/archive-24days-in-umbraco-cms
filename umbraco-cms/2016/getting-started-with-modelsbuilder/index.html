@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Getting started with Umbraco Modelsbuilder</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Getting started with ModelsBuilder</h1>
+      <p class="byline"> by Dave Woestenborghs, <span class="pubdate">posted on <time datetime="2016-12-20">Dec 20, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">A lot has happened since that article, and with the release of Umbraco 7.4 the models builder has been integrated into the Umbraco core and is now known as  <em>Umbraco ModelsBuilder</em></p>
+<p class="intro"> </p>
+<p> </p>
+<p> </p>
+<h2>Why use the models builder ?</h2>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Strongly typed content access has been available in Umbraco with the <em>IPublishedContent</em> interface, but the syntax is very verbose and prone to errors. To retrieve a property you would do something like this</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-javascript">@Model.GetPropertyValue&lt;string&gt;(“newsTitle”)
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>As you can see a typo in the property alias would make your code fail and you would never notice this until runtime. Also changing the property alias (not that I would recommend that) would require you to update your code everywhere the alias is used. To avoid these problems creating constants for your property alias would help out a lot, but then you are writing a lot of constants if you have a lot of documenttypes.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Using the models builder your syntax will be less verbose. Retreiving the same property now will look like this</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-javascript">@Model.NewsTitle</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>So this means it’s less prone to typos, but also when you change your document type the model will be regenerated and will show you compile errors instead of runtime errors.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>How does it work</h2>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>So let’s assume for simplicity that we have a <em>NewsItem</em> documenttype with one property called <em>newsTitle</em>.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>The models builder will generate a class for that looking like this</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-csharp">public partial class NewsItem : PublishedContentModel 
+{
+	public string NewsTitle 
+	{
+		this.GetPropertyValue&lt;string&gt;(“newsTitle”);
+	}
+}
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Now every time you request a content item of this document type it will return you the strongly typed object of type <em>NewsItem</em> because Umbraco’s content cache returns these natively.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>So in your view you can put this on top and your model will be of type <em>NewsItem</em></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-javascript">@inherits UmbracoViewPage&lt;NewsItem&gt;
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>The models builder respects the content type's inheritance, and content type's compositions are represented by interfaces.</p>
+<p> </p>
+<p>To see how the models are generated then you can go into <em>~/App_Data/Models/models.generated.cs</em> and <em>/App_Data/Models/all.generated.cs</em></p>
+<p> </p>
+<p>The <em>models.generated.cs</em> contains the code representing the documenttype in Umbraco. The <em>all.generated.cs</em> file contains your extensions to the models. We will cover extending models later in this article.</p>
+<p> </p>
+<p>In case something goes wrong with the generation this folder will also contain a <em>models.err</em> file where the errors are logged. </p>
+<p> </p>
+<h2>Using the models builder</h2>
+<p> </p>
+<p>As I mentioned, since Umbraco 7.4 the models builder is part of the core and will be enabled by default in <em>PureLive</em> mode.</p>
+<p> </p>
+<p>To change in which mode the models are generated, you need to update the following appsetting in the web.config:</p>
+<p> </p>
+<pre><code class="language-markup">&lt;add key="Umbraco.ModelsBuilder.ModelsMode" value="PureLive" /&gt;
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>To turn the models builder off entirely you can change the following appSetting in the web.config to false:</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-markup">&lt;add key="Umbraco.ModelsBuilder.Enable" value="true" /&gt;</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>More info on the possible values and more advanced web.config settings for the models builder can be found here: <a href="https://github.com/zpqrtbnk/Zbu.ModelsBuilder/wiki/Install-And-Configure" target="_blank">https://github.com/zpqrtbnk/Zbu.ModelsBuilder/wiki/Install-And-Configure</a></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>To see how the models builder is configured doesn’t require you to go in to the web.config. In the developer section of Umbraco there is now a “Models builder” dashboard. On this dashboard you can see how the models builder is configured. Depending on the mode it will have different options.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><img style="width: 500px; height: 285.3717026378897px;" src="/archive/media/2016/dashboard.png?width=500&amp;height=285.3717026378897" alt="" rel="1545" data-id="1545"></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><span style="font-weight: 400;">ModelsBuilder comes with different modes for generating models. I will try to explain how they work and the differences between them.</span></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h3>Pure Live Models</h3>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>This is the default mode with a new install and corresponds to the <em>ModelsMode</em> setting <em>PureLive.</em></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>With <em>PureLive</em> models, the models are generated on the fly in memory, at runtime. So every time you make a change in a document type the models will be generated.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>So in your view you can do this to render our previous news title property.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-javascript">@inherits UmbracoViewPage&lt;ContentModels.NewsItem&gt;
+@using ContentModels = Umbraco.Web.PublishedContentModels;
+@{
+	Layout = null;
+}
+
+@Model.NewsTitle
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Or for getting an overview of child items of a certain type.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-javascript">@inherits UmbracoViewPage&lt;ContentModels.NewsOverview&gt;
+@using ContentModels = Umbraco.Web.PublishedContentModels;
+@{
+	Layout = null;
+}
+
+@foreach (var item in Model.Children&lt;NewsItem&gt;())
+{
+    &lt;p&gt;@item.NewsTitle&lt;/p&gt;
+}
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>As you can see, no "Where" clause is needed anymore to filter on doctype.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Downside to this mode is that the models are only avaible in views and no intellisense is available. So if you want to use your models in custom code this is probably not what you are looking for.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h3>Dll Models</h3>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>With Dll Models, models are generated and then compiled in to a dll that is copied to the bin folder. With the default config this will be <em>Umbraco.Web.PublishedContentModels.dll.</em></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>To activate dll models you need to set the <em>ModelsMode</em> in the web.config to <em>Dll</em> or <em>LiveDll.</em></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>The difference between the 2 modes is when the models are generated.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<ul>
+<li><em>Dll</em> : with this mode you need to go to the Models Builder dashboard in the developer section and push the “Generate Models”</li>
+<li><em>LiveDll</em> : with this mode the dll will be generated when you make changes to doctypes.</li>
+</ul>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><img style="width: 500px; height: 314.79217603911985px;" src="/archive/media/2016/dashboard-dll.png?width=500&amp;height=314.79217603911985" alt="" rel="1546" data-id="1546"></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>For both modes generating the models will cause the Umbraco application to restart.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>But now we can get intellisense when using the models in the views and the models are available in custom code like controllers, etc. You can also reference the generated dll in other Visual Studio projects.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h3>AppData Models</h3>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>With <em>AppData</em> Models the ModelsBuilder will only generate the models for you and that’s it. It’s up to you to make them available in your application, e.g. including them in a Visual Studio solution and compile them with your solution.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>This mode is triggered by setting the <em>ModelsMode</em> in the web.config to <em>AppData</em> or <em>LiveAppData.</em></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>The difference between the 2 modes is when the models are generated.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<ul>
+<li><em>AppData</em> : with this mode you need to go to the Models Builder dashboard in the developer section and push the “Generate Models” to update your models. </li>
+<li><em>LiveAppData</em>: with this mode the model files will be generated on the fly whenever you make changes to doctypes, but compared to <em>LiveDll</em> doesn’t require an application restart.</li>
+</ul>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Remember that I told you to look in <em>~/App_Data/Models/models.generated.cs</em> and<em> /App_Data/Models/all.generated.cs</em> to see how the models are generated. Well, with <em>AppData</em> models these files don’t exist.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>With <em>AppData</em> Models you will get a *.generated.cs file per doctype and media type you have in Umbraco e.g. <em>NewsItem.generated.cs.</em></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h3>API Models</h3>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>With <em>API models</em>, the ModelsBuilder does not generate models into your website, but it uses an API to expose the models to external tools. The easiest way to get started is the following:</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Change the <em>ModelsMode</em> in the web.config to <em>Nothing</em> or remove the setting.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Then in Visual Studio install the ModelsBuilder API nuget package into your web project :</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><img style="width: 500px; height: 67.46463547334058px;" src="/archive/media/2016/nuget-install-api.png?width=500&amp;height=67.46463547334058" alt="" rel="1547" data-id="1547"></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>The package installation should add this appSettting to your web.config to enable the API:</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-markup">&lt;add key="Umbraco.ModelsBuilder.EnableApi" value="true" /&gt;
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>If that is not the case you can add it yourself.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><em>TIP</em> : run your website in debug mode otherwise the API will not work.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Now that we have our website setup for API mode we need to install the <em>Umbraco Models builder Visual Studio Extension.</em></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>In Visual Studio go to <em>Tools &gt; Extensions</em> and updates and search for <em>Umbraco ModelsBuilder Custom Tool</em> and install it. You can also download the it from here : <a href="https://marketplace.visualstudio.com/items?itemName=ZpqrtBnk.UmbracoModelsBuilderCustomTool"><span style="font-weight: 400;">https://marketplace.visualstudio.com/items?itemName=ZpqrtBnk.UmbracoModelsBuilderCustomTool</span></a></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>After you have installed the tool we need to configure it for our project. In visual studio go to <em>Tools &gt; Options</em> and locate the Umbraco section and go to ModelsBuilder Options. Fill in the all the fields.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><img style="width: 500px; height: 353.1428571428571px;" src="/archive/media/2016/visual-studio-models-builder-options.png?width=500&amp;height=353.1428571428571" alt="" rel="1549" data-id="1549"> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>After that add classes in your project somewhere. For this demo I created a Models folder and added a <em>Builder.cs</em> file in there.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Then go to the properties window of this file (Righ Click &gt; Properties). In the custom tool field, fill in “<em>UmbracoModelsBuilder</em>”.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><img style="width: 500px; height: 493.2523616734143px;" src="/archive/media/2016/custom-tool-config.png?width=500&amp;height=493.2523616734143" alt="" rel="1544" data-id="1544"></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><br>Normally models should be generated now. If that is not the case you can also right-click the Builder.cs file and then “<em>Run Custom tool</em>”. In case of errors, check the output window of Visual Studio for more information.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Now if you click the expand icon on the Builder file you would see all your generated models like this.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><img style="width: 381.9742489270386px; height: 500px;" src="/archive/media/2016/visual-studio-generated-classes.png?width=381.9742489270386&amp;height=500" alt="" rel="1548" data-id="1548"></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h3>What mode should I use?</h3>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>So now that we covered all the different modes, let’s have a look at what you should use.</p>
+<p> </p>
+<ul>
+<li>If you do not care about intellisense and do not plan to write any custom C# code, then PureLive is the way to go.</li>
+<li>But if you want intellisense or use the models in controllers for example, you should go with Dll Models, AppData Models or the API Models.</li>
+<li>Dll models is a good solution if your editor doesn’t have any compiling options. So you can let the ModelsBuilder do it for you. But you need to think if you put your generated dll into source control. This can cause issues when working with multiple devs on the same project. If you exclude, make sure you always generate the models when pulling from source control.</li>
+<li>When using Visual Studio then you should use AppData or API Models. If you only have one project in your solution AppData is good solution. If you seperate your code in multiple projects then API Models are the best solution.</li>
+</ul>
+<p> </p>
+<p>Personally I prefer the API models, but you can choose whatever mode you like. And the good news is you can always switch the mode your are using at any time.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>Controlling model generation</h2>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Sometimes you want to overrule how models are generated. For example do not generate certain properties or implement your own logic for how a property is generated.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h3>Excluding properties from models</h3>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>In our website we are using the reserved property type alias “<em>umbracoNaviHide</em>” to control if a page should appear in the navigation.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>The ModelsBuilder would generate this code for the property:</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-csharp">[ImplementPropertyType("umbracoNaviHide")]
+public bool UmbracoNaviHide
+{
+get { return this.GetPropertyValue&lt;bool&gt;("umbracoNaviHide"); }
+}
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p><br>Because the <em>IsVisible()</em> method of an <em>IPublishedContent</em> already checks for a property with this alias we do not need to generate it on our content model.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>So to prevent this property from being generated on your models you need to do the following:</p>
+<p> </p>
+<p><br>In <em>~/App_Data/Models</em> create a class file with the same name as your model. If you are using API models this will be the folder where you have the <em>Builder</em> class.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>In our case it looks like this to exclude the property from generation.</p>
+<p> </p>
+<p>  </p>
+<p> </p>
+<pre><code class="language-csharp">namespace TwentyFourDays.Web.Models
+{
+    using Umbraco.ModelsBuilder;
+
+    [IgnorePropertyType("umbracoNaviHide")]
+    public partial class NewsItem
+    {
+    }
+}
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>We tell the builder to not generate this property in our model by using the <em>IgnorePropertyType</em> attribute. If you are using the API Models you can add this to your builder class and this rule is applied to all document types.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h3>Implementing our own logic</h3>
+<p> </p>
+<p>In our news item example from earlier on the newsTitle field wasn’t required. So if an editor leaves it empty we want to fall back to our item Name. We do no want to do this check everywhere in our views so we will change how this property is generated.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>We will update our class for the NewsItem again to this :</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-csharp">namespace TwentyFourDays.Web.Models
+{
+    using Umbraco.ModelsBuilder;
+    using Umbraco.Web;
+
+    [IgnorePropertyType("umbracoNaviHide")]
+    public partial class NewsItem
+    {
+        [ImplementPropertyType("newsTitle")]
+        public string NewsTitle
+        {
+            get
+            {
+                var title = this.GetPropertyValue&lt;string&gt;("newsTitle");
+
+                if (string.IsNullOrEmpty(title))
+                {
+                    return this.Name;
+                }
+                return title;
+            }
+        }
+    }
+}
+</code></pre>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Now, when we generate the models again the models builder knows not to generate the property, but to use the property we just created.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>More on controlling the generation can be found here : <a href="https://github.com/zpqrtbnk/Zbu.ModelsBuilder/wiki/Control-Generation" target="_blank">https://github.com/zpqrtbnk/Zbu.ModelsBuilder/wiki/Control-Generation</a></p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>Extending your models with 3rd party data</h2>
+<p> </p>
+<p>Nowadays a lot of websites are not built using CMS data alone, but also present data from 3rd party data sources.</p>
+<p> </p>
+<p>For this example we want to display product data from a database. We have created a ProductPage doctype and generated a model for that. In our content tree will have one page of this type that will be used to show all products from the database. The URL of the page in the CMS is <em>&lt;domain&gt;/product</em>. The unique URL for each product will be this URL with SKU appended e.g.: <em>&lt;domain&gt;/product/&lt;sku&gt;.</em></p>
+<p> </p>
+<p>First we extend our content model for the product page with a property that will store the product information from the database.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-csharp">namespace TwentyFourDays.Web.Models
+{
+    public partial class ProductPage
+    {
+        public ProductInfo ProductDetails { get; set; }
+    }
+}
+</code></pre>
+<p> </p>
+<p>To handle the requests for these product URLs we will implement a ContentFinder that will check if we have a product with the SKU from the URL in the database and display the product page. Otherwise it will just render a 404.</p>
+<p> </p>
+<p>A simplified version of the content finder would look like this :</p>
+<p> </p>
+<pre><code class="language-csharp">public class ProductContentFinder : IContentFinder
+{       
+
+    public bool TryFindContent(PublishedContentRequest contentRequest)
+    {
+           
+		if (contentRequest == null)
+        {
+			return false;
+        }
+		
+		// logic to determine if it's a product url and to get content item is  omitted
+		
+		var product = ProductRepository.GetBySku(sku);
+		
+		if(product == null)
+		{
+			// no product found
+			return false;
+		}
+		
+		// contentItem is of type ProductPage
+		contentItem.ProductDetails = product
+		
+		contentRequest.PublishedContent = content;
+		
+		return true;
+    }
+
+}
+</code></pre>
+<p> </p>
+<p>With this logic we have product details available as property of our content model during the entire request. So we don’t need to write any logic in controllers or views (ughh) to get this data. Pretty cool right ?</p>
+<p> </p>
+<h2>Wrapping it up.</h2>
+<p> </p>
+<p>If you haven’t tried using the ModelsBuilder yet this article should help you get started and hopefully give you some ideas to do cool stuff with it.</p>
+<p> </p>
+<p>Some interesting links:<br><a href="https://github.com/zpqrtbnk/Zbu.ModelsBuilder/wiki" target="_blank">Models builder wiki</a> <br><a href="http://blog.aabech.no/archive/comparing-modelsbuilder-and-ditto/" target="_blank">Comparing Models builder and ditto by Lars-Erik Aabech</a><br><a href="https://www.youtube.com/watch?v=NTzb7qQlNzM">uHangout about  ZbuModelsBuilder</a> <br><a href="https://www.youtube.com/watch?v=dNZG4DOk6Vk" target="_blank">Lars-Erik talking at UK Fest about Models builder</a> </p>
+<p> </p>
+<p><br>Happy holidays. And if you have questions… reach out on twitter.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/templates/" title="See all articles tagged with Templates">Templates</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Dave Woestenborghs"><img src="//gravatar.com/avatar/c6c76510af08bcb2896f4e9e887074fd.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c6c76510af08bcb2896f4e9e887074fd.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Dave Woestenborghs</h1>
+        <p>Dave is on Twitter as <a href="//twitter.com/dawoe21" title="Dave Woestenborghs on Twitter" rel="author">@dawoe21</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

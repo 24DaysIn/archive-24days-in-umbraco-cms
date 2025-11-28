@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Using Mustache to share templates between both server and client</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Mustache Client and Server Templates</h1>
+      <p class="byline"> by Steve Temple, <span class="pubdate">posted on <time datetime="2017-12-23">Dec 23, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Modern websites take advantage of both client side Javascript and server side code to create the best experience. It's easy for this to add some maintenance headaches as you may now need to maintain 2 different code bases.</p>
+<p class="intro">I'm going to show you how we make things a bit simpler by using the <a href="https://mustache.github.io/">Mustache</a> templating engine to use the same templates when generating html on the client and the server. I've chosen Mustache primarily because it's very simple and has good client and server side implementations.</p>
+<p>I'm taking the starter site that comes with Umbraco. On the blog page there is a TODO to implement paging, so that seemed a good place to start. I'm going to do the simplest version of paging just implementing a load more button to load a new page every press until there are no more pages, at which point I'll remove the button.</p>
+<p>I plan on tackling this as follows:</p>
+<p><strong>Step 1:</strong> Refactor the existing server side implementation to make it simpler to add support for a client side implementation.</p>
+<p><strong>Step 2:</strong> Create a client side Mustache implementation that allows for additional blog posts to be fetched from the server.</p>
+<p><strong>Step 3:</strong> Update the server side implementation to share the client side Mustache templates on the server.</p>
+<h2>Step 1</h2>
+<p>The first thing we're going to do is make a new model to store just the information that is required to show the blog posts on the blog page. I'm starting with a new model rather than the one provided by Models Builder because it will need to be serialised and it will be sent as an Ajax request so I want it to contain just the required information. We'll call it BlogPostSummary to differentiate it from the regular blog post model and make it clear that it's not the full blog post.</p>
+<pre><code class="language-csharp">﻿using System.Collections.Generic;
+
+namespace MustacheDemo.Models
+{
+	public class BlogPostSummary
+	{
+		public BlogPostSummary(Blogpost post)
+		{
+			Url = post.Url;
+			CreateDate = post.CreateDate.ToShortDateString();
+			PageTitle = post.PageTitle;
+			Excerpt = post.Excerpt;
+			Categories = post.Categories;
+		}
+		public string Url { get; set; }
+		public string CreateDate { get; set; }
+		public IEnumerable&lt;string&gt; Categories { get; set; }
+		public string PageTitle { get; set; }
+		public string Excerpt { get; set; }
+	}
+}</code></pre>
+<p>We'll also create a new model to represent a single page of the Blog, as well as indicate if there are more posts available.</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace MustacheDemo.Models
+{
+	public class BlogPage
+	{
+		public IEnumerable&lt;BlogPostSummary&gt; BlogPosts { get; set; }
+		public bool HasMore { get; set; }
+	}
+}</code></pre>
+<p>Next we'll create a very basic service to make it easy to fetch a BlogPage containing an enumeration of BlogPostSummary to represent a single page of the blog. </p>
+<pre><code class="language-csharp">﻿using System.Linq;
+using MustacheDemo.Models;
+using Umbraco.Core.Models;
+
+namespace MustacheDemo.Services
+{
+	public class BlogPageService
+	{
+		public BlogPage Page(IPublishedContent parent, int page = 1, int perPage = 5)
+		{
+			var posts = parent.Children
+				.OrderByDescending(x =&gt; x.CreateDate)
+				.Skip((page - 1) * perPage).Take(perPage + 1)
+				.ToList();
+
+			return new BlogPage
+			{
+				BlogPosts = posts.Take(perPage).Select(p =&gt; new BlogPostSummary(new Blogpost(p))),
+				HasMore = posts.Count &gt; perPage
+			};
+		}
+	}
+}</code></pre>
+<p>We'll now update the blog template to use this service to get its blog posts and output them rather than use the macro that comes with the starter site. First create a new partial in the shared folder called BlogPage.cshtml.</p>
+<pre><code class="language-javascript">﻿@model MustacheDemo.Models.BlogPage
+@foreach (var post in Model.BlogPosts)
+{
+	&lt;a href="@post.Url" class="blogpost"&gt;
+		&lt;div class="blogpost-meta"&gt;
+			&lt;small class="blogpost-date"&gt;@post.CreateDate&lt;/small&gt;
+			&lt;small class="blogpost-cat"&gt;
+				@foreach (var category in post.Categories)
+				{
+					@category
+				}
+			&lt;/small&gt;
+		&lt;/div&gt;
+		&lt;h3 class="blogpost-title"&gt;@post.PageTitle&lt;/h3&gt;
+		&lt;div class="blogpost-excerpt"&gt;@post.Excerpt&lt;/div&gt;
+	&lt;/a&gt;
+}</code></pre>
+<p>We'll also delete the LatestBlogposts.cshtml file from the MacroPartials folder that comes with the starter site.</p>
+<p>Finally we'll update the blog.cshtml template to use this new partial and the new BlogPageService we've just created.</p>
+<pre><code class="language-javascript">﻿@inherits UmbracoTemplatePage&lt;ContentModels.Blog&gt;
+@using MustacheDemo.Services
+@using ContentModels = Umbraco.Web.PublishedContentModels;
+@{
+	Layout = "Master.cshtml";
+	var blogModel = new BlogPageService().Page(Model.Content);
+}
+@Html.Partial("~/Views/Partials/SectionHeader.cshtml")
+&lt;section class="section"&gt;
+	&lt;div class="container"&gt;
+		&lt;div class="blogposts"&gt;
+			@Html.Partial("BlogPage", blogModel)
+		&lt;/div&gt;
+	&lt;/div&gt;
+&lt;/section&gt;</code></pre>
+<p>Spinning the site up you should be able to see that the blog page is still working as before. If so we can be confident that the refactoring is complete and we haven't broken anything on the site. Although we haven't changed the functionality we have put the foundations in place to support the new client side implementation by moving the code that fetches the blog posts to a service allowing the same logic to be used in more than one place.</p>
+<h2>Step 2</h2>
+<p>Now we want to enable the client side to be able to get hold of blog posts. First off we'll need to expose the BlogPageService through a new WebApiController. Umbraco provides a base class for this called UmbracoApiController. So we'll add a new BlogPageController inheriting UmbracoApiController to the site. (I've hardcoded the blog page id in this to keep the code simple, don't do that on production)</p>
+<pre><code class="language-csharp">﻿using MustacheDemo.Models;
+using MustacheDemo.Services;
+using Umbraco.Web.WebApi;
+
+namespace MustacheDemo.Controllers
+{
+	public class BlogPageController : UmbracoApiController
+	{
+		[System.Web.Http.AcceptVerbs("GET")]
+		public BlogPage Page(int page = 1, int perPage = 5)
+		{
+			var startNode = Umbraco.TypedContent(1122);
+			return new BlogPageService().Page(startNode, page, perPage);
+		}
+	}
+}</code></pre>
+<p>This will automatically be setup a route by Umbraco at at /umbraco/api/blogpage/page?page=&lt;pagenumber&gt; to test this we can go to that URL to see if the results show and it's all working correctly. This should return one page at a time of blog post summaries as JSON or XML.</p>
+<p>Next we'll need some Javascript to call the API endpoint, convert the page of blog posts to HTML and then insert that into the page. To do this I've downloaded the Javacript <a href="https://github.com/janl/mustache.js">Mustache</a> library to enable us to use it to render templates for the blog. I've added a reference to this in the Master.cshml file.</p>
+<p>After the blog posts are initially loaded we'll add a new "load more" link to load the next set of results. So we'll add this to the bottom of the razor blogposts.cshtml partial template we created earlier:</p>
+<p><span class="code">@if (blogModel.HasMore)</span><br><span class="code">{</span><br><span class="code">  &lt;a href="#" class="loadmoreblogposts"&gt;Load more&lt;/button&gt;</span><br><span class="code">}</span></p>
+<p>Mustache will need a template which it will use to render the page of blog posts, so we'll create a Mustache version of the updated BlogPosts.cshtml template at the bottom of the blog.cshtml section inside a script tag like this.</p>
+<pre><code class="language-markup">﻿&lt;script id="blogPageTemplate" type="x-tmpl-mustache"&gt;
+	{{#BlogPosts}}
+	&lt;a href="{{Url}}" class="blogpost"&gt;
+		&lt;div class="blogpost-meta"&gt;
+			&lt;small class="blogpost-date"&gt;{{CreateDate}}&lt;/small&gt;
+			&lt;small class="blogpost-cat"&gt;
+				{{#Categories}}
+				{{.}}
+				{{/Categories}}
+			&lt;/small&gt;
+		&lt;/div&gt;
+		&lt;h3 class="blogpost-title"&gt;{{PageTitle}}&lt;/h3&gt;
+		&lt;div class="blogpost-excerpt"&gt;{{Excerpt}}&lt;/div&gt;
+	&lt;/a&gt;
+	{{/BlogPosts}}
+	{{#HasMore}}
+	&lt;a class="loadmoreblogposts" href="#"&gt;Load more&lt;/a&gt;
+	{{/HasMore}}
+&lt;/script&gt;</code></pre>
+<p>If you're not familiar with Mustache there is some <a href="https://mustache.github.io/mustache.1.html">documentation</a> to help you get up to speed (Unfortunately the .NET implementation only supports version 1 so we'll stick to that)</p>
+<p>We'll also need to add some Javascript, we'll add this to the scripts folder called MustacheDemo.js and reference it in the Master.cshtml view. </p>
+<pre><code class="language-javascript">﻿var page = 1;
+
+function attachToLoadNextPageLink() {
+	$(".loadmoreblogposts").on('click', loadNextBlogPage);
+}
+
+function loadNextBlogPage() {
+	$.get('/umbraco/api/blogpage/page?page=' + (page + 1), function (data) {
+		page++;
+		var template = $('#blogPageTemplate').html();
+		Mustache.parse(template);
+		$(".loadmoreblogposts").replaceWith(Mustache.render(template, data));
+		attachToLoadNextPageLink();
+	});
+	return false;
+}
+
+attachToLoadNextPageLink();</code></pre>
+<p>This hooks up an event to fetch the blog posts from the server via Ajax, parse the Mustache template and use that to render the blog page returned by the server. Now clicking the "load more" link should load additional results each press of the button.</p>
+<p>So we're in the position where both the client side and server side code is working but we'll have to maintain 2 versions of the template, a razor one and a Mustache one. If we wanted to modify the markup for the blog posts we'll have to remember to do it in 2 places. This will make the site less maintainable, not such a big problem in this example but a big site might have lots of duplicated templates.</p>
+<h2>Step 3</h2>
+<p>So let's now get MVC outputting the blog pages using the same Mustache template as the Javascript. Handily there is a .NET implementation of Mustache called Nustache that has a MVC Nuget package called Nustache.MVC3 that will add a ViewEngine for .NET that will work with Mustache templates. We'll install this using the Package Manager command line:</p>
+<p><span class="code">Install-Package Nustache.Mvc3</span></p>
+<p>This installs the package, but it won't do anything until we add Nustache to the standard .NET ViewEngines. To do this we'll need to instruct MVC to add the new ViewEngine when the application starts. So let's create an App_Start folder and add a new ViewEngineConfig.cs class to it.</p>
+<pre><code class="language-csharp">﻿using System.Web.Mvc;
+using Nustache.Mvc;
+
+namespace MustacheDemo
+{
+	public class ViewEngineConfig
+	{
+		public static void RegisterViewEngines(ViewEngineCollection engines)
+		{
+			engines.Add(new NustacheViewEngine
+			{
+				// Comment out this line to require Model in front of all your expressions.
+				// This makes it easier to share templates between the client and server.
+				// But it also means that ViewData/ViewBag is inaccessible.
+				RootContext = NustacheViewEngineRootContext.Model
+			});
+		}
+	}
+}</code></pre>
+<p>The site won't automatically pick this up so we'll also need to hook into the ApplicationStarting event in Umbraco. This requires another class in the App_Start folder which we'll call UmbracoStartup.cs. By inheriting from the Umbraco class ApplicationEventHandler we can hook into Umbraco events. In this case we'll override the ApplicationStarting event and add code to register our new ViewEngine.</p>
+<pre><code class="language-csharp">﻿using System.Web.Mvc;
+using Umbraco.Core;
+
+namespace MustacheDemo
+{
+	public class UmbracoStartup : ApplicationEventHandler
+	{
+		protected override void ApplicationStarting(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+		{
+			ViewEngineConfig.RegisterViewEngines(ViewEngines.Engines);
+		}
+	}
+}</code></pre>
+<p><span class="code"></span>Because we added this ViewEngine, MVC will now start searching for Mustache templates with a .mustache extension as well as the standard Razor templates it already supports. To share this Mustache template between the client and server by removing the one in Blog.cshtml and making the server write the same one in its place. We'll created a small HtmlHelper extension method that will output the Mustache view file into a razor view to make this easy.</p>
+<pre><code class="language-csharp">﻿using System.IO;
+using System.Web;
+using System.Web.Mvc;
+
+namespace MustacheDemo.Helpers
+{
+	/// &lt;summary&gt;
+	/// Load a view from file and output it directly into the page
+	/// &lt;/summary&gt;
+	public static class ViewExtensions
+	{
+		public static IHtmlString RenderRawContent(this HtmlHelper helper, string serverPath)
+		{
+			var filePath = HttpContext.Current.Server.MapPath(serverPath);
+
+			var streamReader = File.OpenText(filePath);
+			var markup = streamReader.ReadToEnd();
+			streamReader.Close();
+
+			return new HtmlString(markup);
+		}
+	}
+}</code></pre>
+<p> To use this we'll need to add a reference to this class' namespace in the namespaces section of the views/web.config.</p>
+<p><span class="code">&lt;system.web.webPages.razor&gt;</span><br><span class="code">  ...</span><br><span class="code">  &lt;pages ...&gt;</span><br><span class="code">    &lt;namespaces&gt;</span><br><span class="code">      ...</span><br><span class="code">      &lt;add namespace="MustacheDemo.Helpers"/&gt;</span><br><span class="code">    &lt;/namespaces&gt;</span><br><span class="code">  &lt;/pages&gt;</span><br><span class="code"> &lt;/system.web.webPages.razor&gt;</span></p>
+<p><span class="code"></span>Now we can copy the current Mustache template that's inside the blog.cshtml to it's own view file at views/shared/blogpage.mustache. This is one of the locations that the ViewEngine will search when looking for views. We can then delete the razor version of the view (BlogPage.cshtml) we created earlier and it will now use the new Mustache version instead.</p>
+<p>Finally we'll update the blog.cshtml template to render the Mustache template inline instead of hardcoding it directly into the page by using the new HtmlHelper extension. To do this we'll update the blog.cshtml template to look like this:</p>
+<pre><code class="language-javascript">﻿@inherits UmbracoTemplatePage&lt;ContentModels.Blog&gt;
+@using MustacheDemo.Services
+@using ContentModels = Umbraco.Web.PublishedContentModels;
+@{
+	Layout = "Master.cshtml";
+	var blogModel = new BlogPageService().Page(Model.Content);
+}
+@Html.Partial("~/Views/Partials/SectionHeader.cshtml")
+&lt;section class="section"&gt;
+	&lt;div class="container"&gt;
+		&lt;div class="blogposts"&gt;
+			@Html.Partial("BlogPage", blogModel)
+		&lt;/div&gt;
+	&lt;/div&gt;
+&lt;/section&gt;
+&lt;script id="blogPageTemplate" type="x-tmpl-mustache"&gt;
+	@Html.RenderRawContent("~/views/shared/blogpage.mustache")
+&lt;/script&gt;</code></pre>
+<p>We should now have a working blog section which is using a single Mustache template on both the client and server. We can now maintain just the one set of markup in the Mustache template without any chance of it getting out of sync between client side and server side implementations.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/source/" title="See all articles tagged with Source">Source</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/templates/" title="See all articles tagged with Templates">Templates</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Steve Temple"><img src="//gravatar.com/avatar/5dc18d65dc9d505ab089d2d986cd3850.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/5dc18d65dc9d505ab089d2d986cd3850.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Steve Temple</h1>
+        <p>Steve is on Twitter as <a href="//twitter.com/Steve_Gibe" title="Steve Temple on Twitter" rel="author">@Steve_Gibe</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

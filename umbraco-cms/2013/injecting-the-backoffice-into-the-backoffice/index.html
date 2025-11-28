@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Injecting the backoffice into the backoffice</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Injecting the backoffice into the backoffice</h1>
+      <p class="byline"> by Merijn Mourik, <span class="pubdate">posted on <time datetime="2013-12-22">Dec 22, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">When I am spending time with the Umbraco 7 backoffice, it's so nice I would almost forget there are other backoffice applications too. Yes, those nasty dynosaurs which basically have my quality time for diner. All those hours I spent on data integration.... Why not do some cool stuff with dependency injection and inversion of control. And save some time... so you can spend more time with Belle. </p>
+<p class="intro">First for some theory. A <a href="http://www.allbusiness.com/glossaries/back-office/4951490-1.html" title="backoffice">formal</a> definition of a backoffice could be:</p>
+<blockquote>
+<p>area in a bank where checks are paid, deposits and withdrawals are posted to accounts, and interest earned on deposits is credited to the account holders</p>
+</blockquote>
+<p>When I translate this to e-commerce it happens a customer purchases something at a webshop. Then the ERP system receives the data and processes a journal entry of the purchase. And the CRM systems gets an update with the e-mail address, the product SKU and other relevant data. So the marketing department can target their e-mails campaigns.</p>
+<p>To implement this use case I would have the following data.</p>
+<pre class="language-markup"><code>&lt;order&gt;
+    &lt;id&gt;12345&lt;/id&gt;
+	&lt;orderDate&gt;2013-12-23&lt;/orderDate&gt;
+	&lt;firstName&gt;Merijn&lt;/firstName&gt;
+	&lt;lastName&gt;van Mourik&lt;/lastName&gt;
+	&lt;email&gt;mmourik(at)gmail(dot)com&lt;/email&gt;
+	&lt;sku&gt;1234&lt;/sku&gt;
+&lt;/order&gt;</code></pre>
+      <p class="snippet-caption">Houston we got an order!</p>
+<p>After the order is finalized, I usually store it somewhere on a disk. Then at a certain point in time a batch job gets triggered and picks it up for further processing. </p>
+<p>Wouldn't it nice if I can just send it to CRM or ERP without having to worry about making connections to other servers. Or scheduling all kind of batch jobs. What if I could have just one single command to get the data to its destination.</p>
+<pre class="language-csharp"><code>RegisterOrder order = new RegisterOrder();
+
+order.id = "12345";
+order.orderDate = "2013-12-23";
+order.firstName = "Merijn";
+order.lastName = "van Mourik";
+order.email = "mmourik(at)gmail(dot)com";
+order.sku = "1234";
+
+IBus bus = ServiceBus.Bus;
+
+bus.Send(order);</code></pre>
+      <p class="snippet-caption">Get me to the backoffice!</p>
+<p>The order is just a plain old data transfer object, a class. Then the bus.Send() does the magic. </p>
+<p>The bus.Send() can also be used from inside a MVC controller. Then it would look like this:</p>
+<pre class="language-csharp"><code>public class OrderConfirmationController : 
+    Umbraco.Web.Mvc.RenderMvcController
+{
+    public IBus bus { get; set; }
+
+    private static readonly ILog Log = LogManager
+        .GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
+    public override ActionResult Index(RenderModel model)
+    {
+// .....
+	bus.Send(order);
+// .....
+    }
+}</code></pre>
+      <p class="snippet-caption">Inject me!</p>
+<p>With NServiceBus the bus.Send() magic comes to reality!</p>
+<p><a href="http://particular.net/NServiceBus" title="NServiceBus">NServiceBus</a> takes the responsiblity for sending data over the wire. It's just like how ethernet cards wire PC's to the local area network. You configure some addresses and NServiceBus does the job. It uses MSMQ as transport mechanism, but can use other mechanisms as well. It can also take care of scheduling and long-running processes. It just injects itself in your code, and your code stays neat and clean!</p>
+<p>Before I dive into the code further. For me 2013 was a year when I found out about some amazing technologies. I got certified under guidance of Per and Sebastiaan. Next I built my first e-commerce website with Umbraco and TeaCommerce. I met those unicorns doing nasty stuff with HTML. Thanks <a href="http://stream.umbraco.org/video/8315406/angularjs-in-umbraco-7-belle" title="AngularJS in Belle">Per</a> for introducing me to AngularJs. I had loads of fun with TeaCommerce, I got certified on that too. Thanks Anders! It also was the year where I found out how to get rid of batch processing. Thanks Udi Dahan for <a href="http://player.vimeo.com/video/64010853?title=0&amp;byline=0&amp;portrait=0&amp;autoplay=1" title="Introduction to NServiceBus">introducing</a> me to NServiceBus. Thanks community for building great open source software. Which makes my life fun.</p>
+<p>Now let's get my feet back on the ground. How to inject NServiceBus right into the Umbraco controllers and event handlers? How to transport your business data to the backoffice - the easy way?</p>
+<p>First we need to startup the bus. This is done in the <a href="http://our.umbraco.org/Documentation/Reference/Events/application-startup">startup handler</a> of Umbraco.</p>
+<pre class="language-csharp"><code>public void OnApplicationStarted(UmbracoApplicationBase umbracoApplication, 
+    ApplicationContext applicationContext)
+{
+	ServiceBus.Init();
+}
+</code></pre>
+      <p class="snippet-caption">Get on the bus!</p>
+<p>The ServiceBus.Init() uses a <a href="http://en.wikipedia.org/wiki/Singleton_pattern" title="Singleton">singleton</a>, which ensures there is only one instance at the same time. NServiceBus needs several seconds to initialize. You only want to do this once.</p>
+<pre class="language-csharp"><code>using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using NServiceBus;
+
+namespace Umbraco.Extensions
+{
+    public static class ServiceBus
+    {
+        public static IBus Bus { get; private set; }
+
+        public static void Init()
+        {
+            if (Bus != null)
+                return;
+
+            lock (typeof(ServiceBus))
+            {
+                if (Bus != null)
+                    return;
+                Bus = Configure.With(AllAssemblies.Except("sqlceca40")
+                    .And("sqlcecompact40").And("sqlceer40en").And("sqlceme40")
+                    .And("sqlceqp40").And("sqlcese40").And("msvcr90"))
+                    .Log4Net()
+                    .DefaultBuilder()
+                    .ForMVC()   // &lt;------ here is the line that 
+                                // registers everything in MVC
+                    .UseTransport&lt;Msmq&gt;()
+                    .UnicastBus()
+                    .SendOnly();
+            }
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">One and only one!</p>
+<p>NServiceBus uses a fluent API which makes it really easy to configure it. It's very well <a href="http://particular.net/documentation/nservicebus" title="NServiceBus Documentation">documented</a>. At startup each and every dll inside the bin folder is scanned, so NServiceBus can inject itself. It uses AutoFac, but also other containers are supported. Some dll's are troublemakers, you can just Except them like I did.</p>
+<p>The SendOnly() configuration is important. It will make sure the endpoint only sends messages, and skips some extra unneeded configuration. So everything stays as fast as possible. The receiving party does not have this, this will be a service endpoint that does full processing. But it does not have to be located at your Umbraco server. So you are really offload backoffice processing from your frontend server. NServiceBus has even load-balancing by default, so if you need heavy processing, you can easily add worker nodes too.</p>
+<pre class="language-csharp"><code>using System;
+using System.Linq;
+using NServiceBus;
+using System.Web.Mvc;
+using System.Web.Http;
+
+public static class NServiceBusConfig
+{
+    public static Configure ForMVC(this Configure configure)
+    {
+        // Register our http controller activator with NSB
+        configure.Configurer.RegisterSingleton(typeof(IControllerActivator),
+            new NServiceBusControllerActivator());
+
+        // Find every http controller class so that we can register it
+        var controllers = Configure.TypesToScan
+            .Where(t =&gt; typeof(IController).IsAssignableFrom(t));
+
+        // Register each http controller class with the NServiceBus container
+        foreach (Type type in controllers)
+            configure.Configurer.ConfigureComponent(type, DependencyLifecycle.InstancePerCall);
+
+        //Configure any other dependencies you need here
+
+        // Set the MVC dependency resolver to use our resolver
+        DependencyResolver.SetResolver(new NServiceBusDependencyResolverAdapter(configure.Builder));
+
+        // Required by the fluent configuration semantics
+        return configure;
+    }
+}</code></pre>
+      <p class="snippet-caption">Get me my configuration!</p>
+<p>The ForMVC() part connects NServiceBus to MVC. From where it can do it's funky stuff with dependency resolvers. </p>
+<pre class="language-csharp"><code>using System;
+using System.Web.Mvc;
+
+public class NServiceBusControllerActivator : IControllerActivator
+{
+    public IController Create(System.Web.Routing.RequestContext requestContext, 
+	    Type controllerType)
+    {
+        return DependencyResolver.Current
+             .GetService(controllerType) as IController;
+    }
+}</code></pre>
+      <p class="snippet-caption">Activate me!</p>
+<p>With the NServiceBusControllerActivator in place, MVC is able to resolve the dependencies ot NServiceBus.</p>
+<pre class="language-csharp"><code>using System;
+using System.Collections.Generic;
+using NServiceBus.ObjectBuilder;
+using System.Web.Mvc;
+
+public class NServiceBusDependencyResolverAdapter : IDependencyResolver
+{
+    private IBuilder builder;
+
+    public NServiceBusDependencyResolverAdapter(IBuilder builder)
+    {
+        this.builder = builder;
+    }
+
+    public object GetService(Type serviceType)
+    {
+        if (typeof(IController).IsAssignableFrom(serviceType))
+        {
+            return builder.Build(serviceType);
+        }
+
+        return null;
+    }
+
+    public IEnumerable&lt;object&gt; GetServices(Type serviceType)
+    {
+        if (typeof(IController).IsAssignableFrom(serviceType))
+        {
+            return builder.BuildAll(serviceType);
+        }
+        else
+        {
+            return new List&lt;object&gt;();
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Let's resolve the dependencies!</p>
+<p>And there we have it. Apart from the controller or event handler there are 5 small files of code which do the plumbing. And it just works...</p>
+<p>There is one little missing piece. How do CRM and ERP process the same message? This is the best part where the pub-sub pattern enters the game. Basically CRM and ERP subscribe to the message you send on the bus. And NServiceBus is just getting it done.</p>
+<p>This all worked for me pretty well, it's a valuable extension to my toolbelt. I use it daily in a production environment where we process a lot of orders. I hope you will soon benefit from it too! I'm currently working on an example on <a href="https://github.com/mebrein/Hybrid-Framework-Best-Practices" title="Hybrid Framework extended with NServiceBus">GitHub</a>, you can already have a look at the code. It's based upon the <a href="http://our.umbraco.org/projects/developer-tools/hybrid-framework" title="Umbraco Hybrid Framework">Hybrid Framework</a> from Jeroen and Jeavon.</p>
+<p>Happy coding!</p>
+<p>Merijn</p>
+<p> </p>
+<h3>References:</h3>
+<ul>
+<li><a href="http://www.make-awesome.com/2011/02/injecting-nservicebus-into-asp-net-mvc-3/">Injecting NServiceBus into ASP.NET MVC 3</a></li>
+<li><a href="http://coderkarl.wordpress.com/2012/03/16/injecting-nservicebus-into-asp-net-webapi/">Injecting NServiceBus into ASP.NET WebApi</a></li>
+</ul>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Merijn van Mourik"><img src="//gravatar.com/avatar/9c59cdb6aae8638f1299765aad24c404.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/9c59cdb6aae8638f1299765aad24c404.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Merijn van Mourik</h1>
+        <p>Merijn is on Twitter as <a href="//twitter.com/mebrein" title="Merijn van Mourik on Twitter" rel="author">@mebrein</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li class="selected"><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Architectural thoughts when using Umbraco in Multi-platform solutions</title>
+<meta name="description" content="A post about structuring code in solutions intended for multiple platforms">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Architectural thoughts when using Umbraco in Multi-platform solutions</h1>
+      <p class="byline"> by Lars Rasmussen, <span class="pubdate">posted on <time datetime="2014-12-09">Dec 9, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Last year, in January, I was about to start up a new project at work. This project is called '<a href="https://mademyday.dk">mademyday</a>', and were to become a <em>sister project</em> to <a href="https://duglemmerdetaldrig.dk">DuGlemmerDetAldrig.dk</a>.</p>
+<p class="intro">On DGDA.dk, we sell experiences like driving a Lamborghini (I can personally recommend that one, btw!), and mademyday should be somewhere in the same alley, but with smaller gifts. Gifts where it's the thought that matters most. This could be a cup of coffee, a sandwich or brunch. Mademyday should be a "mobile only"-universe, where we were going to create a Web App, allowing us to serve (mostly) all mobile OSs.</p>
+<p>Since this was a mobile platform, we had to put responsiveness and performance as our top priorities. At this point, I'd never worked with AngularJS before, and Umbraco had only a few months earlier, released v7, so this was a whole new territory for me.</p>
+<p>DuGlemmerDetAldrig.dk was running a dinosaur build of Umbraco (v4.11-something) and uCommerce (v2.6'ish), and was. Lets just say. Not performing (the checkout could take 30+ seconds per page-change; I know this is unusual even for a bad site, but it came down to a bad database structure, a ton of bad code and hacks all around the solution). So it was easy to say, that we had to think of a new way of doing things, that would delivering the amazing speed and responsiveness close to that of native apps, but as a web app. Still, we didn't want to limit ourselves to running only a Web App, since the possibility of actually developing native apps for iOS, Android etc., shouldn't be ruled out. The plan was to launch with the web app, and then build the native apps, once we started to gain traction.</p>
+<p>With that in mind, we decided that using AngularJS as our "frontend" was the best solution. We wanted to use the new Umbraco v7, but unfortunately uCommerce v5 didn't support v7 yet, so we had to stick with the older v6. It didn't really matter much anyway, though, and we've since then updated to Umbraco v7 and uCommece v6, yay!</p>
+<p>This post will mainly be about some of the thoughts we (I) had during the development of mademyday, and subsequent projects. It won't be a code-heavy post, but mainly from an architectural point of view.</p>
+<p>We were two people building mademyday.dk. Myself and a designer/frontender from <a href="http://www.novicell.dk/">Novicell</a>/<a href="http://beneath.dk">Beneath</a> (Lars Hesselberg). I mainly did the API-backend and most of the AngularJS "backend", while my colleague handled the implementation and frontend.</p>
+<p>In the following projects after mademyday, I've been the only developer, and many of the tweaks and optimizations mentioned in this post, aren't implemented on mademyday (yet), but things I've learned along the way.</p>
+<p>Enough with the intro; lets get this ship sailing!</p>
+<h2>Structuring our code</h2>
+<p>Since we were using AngularJS, all data should be delivered using web services running on the Umbraco site. We also wanted the initial load to be as fast as possible. With that in mind, we decided to decouple our frontend and backend, so the frontend wouldn't have to wait for Umbraco to initialize. This way we could service a static HTML-file which booted up Angular, while having an API sitting somewhere else, only requested when needed. This means, when the user hits https://mademyday.dk, the static HTML-page is served. Angular then communicates with our api on https://api.mademyday.dk using our Angular-services (implemented using ngResource).</p>
+<h3>The setup</h3>
+<p>We ended up with a (Visual Studio) solution structure kinda like this:</p>
+<p><strong>mademyday.Services</strong></p>
+<p>This project contained all of our ServiceStack web services. The amount of actual logic in this project, is kept at a minimum.</p>
+<p><strong>mademyday.WebApp</strong></p>
+<p>We created this project with the sole purpose, of being able to publish our "compiled" frontend. Since a lot of our AngularJS Web App is contained in JavaScript files, images and a LESS-file, we wanted a project we could 'clean' and publish without publishing a lot of 'garbage'.</p>
+<p>On this project, I've set up a "Post Build"-event, which compiles/builds our frontend in accordance to the chosen configuration (Debug, Staging, Release etc.), like so:</p>
+<pre class="language-markup"><code>CD $(ProjectDir)..\DGDA.Builder
+IF "$(ConfigurationName)" == "Release" OR "$(ConfigurationName)" == "Staging" (
+	gulp --profile release
+	XCOPY "$(ProjectDir)..\DGDA.Builder\obj\release\*" "$(ProjectDir)" /Y /S /E /R /D
+) ELSE (
+	gulp --profile debug
+	XCOPY "$(ProjectDir)..\DGDA.Builder\obj\debug\*" "$(ProjectDir)" /Y /S /E /R /D
+)</code></pre>
+<p><strong>mademyday.Builder</strong></p>
+<p>This project contains the actual source for our web app. We never actually publish this project, and there's no binaries or anything else in this. The "builder" project contains a Gulp setup which handles 'building' (or 'compiling') our project. The output files are stored in the .WebApp-project. The Web App project can then be published to our dev, staging or live servers.</p>
+<p>Because of this setup, the builder-project might as well be an external project, setup in Sublime Text, Notepad++ or any other editor/IDE. During the initial development of mademyday, my colleague actually only used Sublime Text, while I was sitting in Visual Studio. Since I usually hold the role of both front- and backender, I find it easier to keep everything at one place (inside Visual Studio) :-)</p>
+<p>A little side-note: My Windows-machine is actually just a Virtual Machine, since I use a Macbook Pro for all my work, I'm running Windows 8 in Parallels. On my VM I have Visual Studio, IIS and a SQL Server running. All IIS-sites accessible from my Chrome-browser on my mac.</p>
+<p><strong>mademyday.Api</strong></p>
+<p>The API-project is the 'internal' API which the services pull data from. The API contains most of our logic, pulls data from Umbraco, uCommerce, RavenDB and wherever we get our data from :-)</p>
+<p><strong>mademyday.Umbraco</strong></p>
+<p>Finally, the actual "API Website", which is an empty Umbraco installation, referencing the API, Services and external libs like uCommerce.</p>
+<p>The actual mademyday-solution looks somewhat different than this, but after creating 5+ different projects with the same "setup" (angular frontend and umbraco backend), this is the solution setup I've found to be the most efficient.</p>
+<h3>Structuring our code - the frontend</h3>
+<p>AngularJS is a very modular framework, so when building both mademyday, DGDA and all of our other (internal) tools, building our 'apps', we used the same modular approach.</p>
+<p>The overall folder structure of our *.Builder-project, is something like this:</p>
+<ul>
+<li>*.Builder
+<ul>
+<li>gulp/
+<ul>
+<li>tasks/<br> <em>Our tasks-folder contains all Gulp-tasks, separated in one task per file.<br><br></em></li>
+<li>config.js</li>
+<li>index.js</li>
+</ul>
+</li>
+<li>src/
+<ul>
+<li>app/
+<ul>
+<li>modules/
+<ul>
+<li>directives/</li>
+<li>filters/</li>
+<li>services/</li>
+</ul>
+</li>
+<li>partials/<br> <em>The partials-folder contains partial HTML template files, if any. This could be a header, footer or something else, that's reused in most of the app.<br><br></em></li>
+<li>states/</li>
+<li>app.js<br> <em>app.js is the 'main' module, and this file contains the initial module dependencies. You could say, that this is the 'starting point' of our app.<br><br></em></li>
+<li>index.html<br> <em>A template-file which contains placeholders for stylesheets, scripts and views. The index-file will be 'compiled' by a Gulp-task into a proper index.html containing the needed scripts and stylesheets. Views will be injected by Angular. In development environments, all separate JS-files will be included for easier debugging, and in staging-/production-environments, only one js-file is included (except CDN-hosted files, of course).<br><br></em></li>
+</ul>
+</li>
+<li>assets/
+<ul>
+<li>fonts/</li>
+<li>images/</li>
+<li>js/</li>
+<li>less/
+<ul>
+<li>app.less<br> <em>The app.less-file is the main stylesheet. All other less- and css-files are included in this file. This makes it easier to maintain, since we do not have "independent" files scattered all over. app.less includes all vendor-specific less-files as well.<br><br></em></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>vendor/<br> <em>This folder contains all of the bower-specific 'vendor' files, like bootstrap, jQuery, angular etc.<br><br></em></li>
+<li>bower.json</li>
+<li>gulpfile.js</li>
+<li>package.json</li>
+</ul>
+</li>
+</ul>
+<p>So, that's an outline of the basic setup of the frontend app. I've mentioned before, that most of our app is modular, which means that each service, state, directive etc. is a separate module (when it makes sense). That makes it easy to reuse code between projects. I've created multiple directives and filters that are used on both mademyday and DuGlemmerDetAldrig. Being able to just "copy/paste" files around and add the module-dependency where it's needed, ensures a properly decoupled and efficient structure and makes my life a lot easier, since I dont have to recreate the same functionality each time it's needed :-)</p>
+<p>In all of our projects, we've used the module '<a href="https://github.com/angular-ui/ui-router">ui-router</a>'. It replaces the angular native routing module. I wont go into details on how it works, except saying that using ui-router makes your app behave like a finite state machine. Every 'page' is a state, so we can have a "products"-state, a "product"-state, a "content"-state etc.</p>
+<p>Every state is, of course, a separate module with it's own dependencies, it's own views and one/more controllers. So if a state requires an Angular-service, a directive or a filter, that is only used in that particular state, I'll "bundle" the required functionality along with the state. Keeping dependant services etc. next to the depending state, keeps the structure clean, and makes it easy to figure out whether the modules fit together, or can be used separately.</p>
+<p>One great thing about the modular setup is, I only load the modules needed. For instance, I've built a "cockpit" for our shops (mmd and DGDA). This cockpit consists of an angular project and a class library. The class library is added to both mmd and DGDA, and contains some Web API web services that (for instance) loads settings from both sites. An example:</p>
+<p>We have an algorithm we use for sorting our products. This algorithm is the same on both sites, but has a few input parameters (calculation weights). These parameters are stored on the individual sites, in the database, and the web services will provide the Cockpit-app with access to these data.</p>
+<p>The cockpit also contains site-specific modules, like 'resend text messages' on mademyday, or 'recreate PDFs' on DGDA. In our cockpit "app.js", we have a lot of shared dependencies. Other than the shared modules, I've created two site-specific modules:</p>
+<ul>
+<li>Cockpit.State.Mademyday</li>
+<li>Cockpit.State.Dgda</li>
+</ul>
+<p>Our app.js looks somewhat like this:</p>
+<pre class="language-javascript"><code>var Config = {
+	Api: window.location.protocol + "//" + window.location.host.replace("cockpit", "api")  + "/Umbraco/CockpitApi/"
+};
+
+var modules = [
+	'... shared modules ...'
+];
+
+if (window.location.host.indexOf("mademyday") &gt; -1) {
+	modules.push('Cockpit.State.Mademyday');
+}
+if (window.location.host.indexOf("duglemmerdetaldrig") &gt; -1 || window.location.host.indexOf("dgda") &gt; -1) {
+	modules.push('Cockpit.State.Dgda');
+}
+
+angular.module('dgdaCockpit', modules)
+...</code></pre>
+<p>So, our cockpit uses the same code, but depending whether we access cockpit from the duglemmerdetaldrig.dk or mademyday.dk domain, different modules are loaded.</p>
+<p>The mademyday-state-module then looks something like this:</p>
+<pre class="language-javascript"><code>angular.module('Cockpit.State.Mademyday', [
+	'ui.router',
+	'Cockpit.State.Mademyday.Events',
+	'Cockpit.State.Mademyday.Filters',
+	'Cockpit.State.Mademyday.BatchSend'
+])
+
+.config(function config($stateProvider) {
+	$stateProvider
+		.state('private.mademyday', {
+			abstract: true,
+			template: '&lt;ui-view/&gt;'
+		})
+	;
+})
+;</code></pre>
+<p>Each module is then required to load the required modules itself, so the BatchSend-module will load the required services automatically. And if we're on DGDA, the mademyday main module wont be loaded, which again wont load the mademyday-specific modules.</p>
+<p>Being able to load certain modules like this, makes Angular incredibly powerful as a "tooling framework", and the reusability is amazing. The cockpit has a ton of shared states and services, each accessing either DGDA or MMD, depending on the accessed domain. So even though we're using the exact same angular-app, it'll adapt and change depending on the modules loaded, and the navigation will reflect this as well.</p>
+<p>Last up, I'll just give you an example of what else you can do, when using a modular setup like this. A thing we're currently working on is "splittesting modules" up against each other. This could be, creating <strong>Product List A</strong> and <strong>Product List B</strong>. We can test them against each other by loading module-A ex. 80 % of the time, and module-B 20 % of the time (or 50/50, if that's what we want).</p>
+<p>I think that pretty much concludes this section. Next up: our backend!</p>
+<h3>Structuring our code - the backend</h3>
+<p>I promise, this wont be as long :-) I just want to quickly tell you about our web service setup. On both DuGlemmerDetAldrig.dk and mademyday.dk, we decided to use the uCommerce-bundled ServiceStack instead of the native Web API.</p>
+<p>There's two reasons as to why we chose ServiceStack instead of Web API. The first reason was due to the Routing-features of Web API v1. In ServiceStack, I define a service like this:</p>
+<pre class="language-csharp"><code>namespace DGDA.Api.Services {
+	[Route("/products")]
+	public class ProductsRequest { }
+
+	[Route("/products/{Slug}"]
+	public class ProductRequest {
+		public string Slug { get; set; }
+	}
+
+	public class ProductService : Service {
+		public List&lt;Product&gt; Get(ProductsRequest req) { ... }
+		public Product Get(ProductRequest req) { ... }
+		public Product Post(Product product) { ... }
+	}
+}</code></pre>
+<p>Nothing special here, and Web API v1 could just as well support this. But, the problem arose when I wanted related services. Imagine that a product has related stores. If we want to get those stores, I'd create a service like this:</p>
+<pre class="language-csharp"><code>namespace DGDA.Api.Services {
+	[Route("/stores")]
+	public class StoresRequest { }
+
+	[Route("/stores/{Id}"]
+	public class StoreRequest {
+		public string Slug { get; set; }
+	}
+
+	[Route("/products/{Slug}/stores"]
+	public class ProductStoresRequest {
+		public string Slug { get; set; }
+	}
+
+	public class ProductService : Service {
+		...
+		public List&lt;Store&gt; Get(ProductStoresRequest req) { … }
+		...
+	}
+}</code></pre>
+<p>This kind of routing isn't (to my knowledge) possible in Web API v1. However, you can do like this in Web API v2. Unfortunately Umbraco doesn't yet ship with Web API v2, and the hassle of getting Web API v2 working alongside Umbraco, wasn't worth the time, compared to just using ServiceStack.</p>
+<p>Another reason we didn't use Web API, was the lack of CORS (Cross-Origin Resource Sharing) support (in short: AJAX-requests across domains). In Web API v2, there's a NuGet package that enables CORS simply by using a class-attribute. I didn't find an easy way to implement this with Web API v1, while enabling CORS in ServiceStack was a simple attribute.</p>
+<p>Other than that, I didn't really put that much thought into our backend structure (of course, that's a lie, but it's not nearly as exciting as the frontend imo). So I'll let this be, and quickly jump to the next section.</p>
+<h3>The Frontend/Backend-connection</h3>
+<p>When creating the connection between our web app and the web services, we used ngResource, which is an Angular-wrapper on top of the $http-service, when communicating with RESTful services. Using ngResource, I could create a module like this:</p>
+<pre class="language-javascript"><code>angular.module('Dgda.Sevice.Product', ['ngResource', 'Dgda.Service.Config'])
+	.factory('Product', ['$resource', 'Config', function ($resource, Config) {
+		return $resource(Config.Api + 'products/:slug', { slug: '@Slug' });
+	}])
+;</code></pre>
+<p>In my controllers, I can then access products, using the built-in methods, like so:</p>
+<pre class="language-javascript"><code>var products = Product.query(); // Get all products
+var product = Product.Get({Slug: 'my-product'}); // Get a specific product</code></pre>
+<p>The great thing about ngResource, is that all non-GET-methods are available on the invidual resource-objects, so I could do like this:</p>
+<pre class="language-javascript"><code>product.SomeProperty = "test";
+product.$save();
+
+/** or **/
+
+products[x].SomeProperty = "test";
+products[x].$save();</code></pre>
+<p>Or I could create a new product:</p>
+<pre class="language-javascript"><code>var product = new Product();
+product.Slug = 'new-product';
+product.SomeProperty = 'Horse';
+product.$save();</code></pre>
+<p>(Of course, functionality like this, editing products, isn't available on our public services)</p>
+<p>I use ngResource <strong>a lot</strong> in our cockpit and other internal tools, because the when building the services in a RESTful manner, everything is so easy and fast to implement. Both implementing the Angular- and .NET-services are quite trivial, once you get the hang of it :-)</p>
+<p>What about those stores, then? You remember, the product stores? I'd do like this:</p>
+<pre class="language-javascript"><code>angular.module('Dgda.Sevice.Product', ['ngResource', 'Dgda.Service.Config'])
+.factory('Product', ['$resource', 'Config', function ($resource, Config) {
+	return $resource(Config.Api + 'products/:slug', { slug: '@Slug' }, {
+		stores: {
+			method: 'GET',
+			url: Config.Api + 'products/:slug/stores',
+			isArray: true
+		});
+}]);</code></pre>
+<p>The ngResource objects are extendable as well, and you can override any parameters and thereby create "rich" objects, that're easily used everywhere in your project :-)</p>
+<p>This pretty much wraps up what I intended to write about, here in the "connecting the dots"-section.</p>
+<p>I'll wrap this section by adding that the AngularJS-documentation is quite good, and I'd recommend <a href="https://docs.angularjs.org/tutorial">the tutorial on angularjs.org</a>, if you want to try it out for yourself. To me, learning AngularJS was one of the biggest leaps forward in the web development world, that I've done, in the past few years. Once I actually got the hang of Angular and the whole "web service based"-backends, I really dont want to create apps any other way :-)</p>
+<h2>Finally: The conclusion</h2>
+<p>So why did we decide to do like this? And how do we use it now?</p>
+<p>Since we released the fist version of our mademyday Web App in March, we now have an iOS app as well. The iOS app was created by one of my colleagues at Novicell in his spare time. Because of the way we built our solution, decoupling everything and relying on nothing but web services, we were able to get the app developed almost without my help. I had already written up all of the services, so the functionality and logic was "in place". All the app had to do, was "show" the data (I'm writing this, as if it was a quick thing to do, which is definitely not the case. Developing the app has taken a lot of hours; just not mine :-)). Sure, I had to assist and explain how the services worked, how the flow was etc., but I think that going from having the web app only, to web app + iOS app, only required very few tweaks to our services.</p>
+<p>The original mademyday-project taught us how powerful the combination of AngularJS and uCommece + Umbraco was. The performance we achieved when "breaking" the original flow of both uCommerce and Umbraco was amazing. When I say 'breaking the flow', I mean using both Umbraco and specially uCommerce and only relying on their APIs and some not-so-well-documented features. It wasn't an easy task, and it took a lot of "learning hours". I bet some of those hours could most likely have been saved, if I knew more about Umbraco and uCommerce than what I did, but that's just how it is ;-) It was time well spent, and the result is a very stable (and flexible) backend, with a great performing frontend that provides close to the responsiveness you would expect from a native app.</p>
+<p>Since the development of mademyday, we've rebuilt DuGlemmerDetAldrig from scratch using the knowledge about AngularJS and Umbraco + uCommerce. Developing mademyday included a lot of "learning by doing", and it's safe to say that the DGDA-project is miles ahead of MMD. Every new project I build, I find some new and better way of doing something. That's why I love prototyping and building tools for internal use; there's always new things to learn and existing code to optimize :-)</p>
+<p>I hope you enjoyed reading this (rather long) post. During the last year'ish, I've learned a ton just "by doing". A lot of things have been done, redone and scrapped. It's been challenging, and most of all: fun.</p>
+<p>And I'm sorry for the length of the post though, I really am :-) I actually found it quite hard to get started, not knowing what to write about. But I went with the idea of writing a lot of the thoughts I wish I could have read about, when I started developing mademyday.</p>
+<p>I hope that my thoughts on these subjects have been inspiring, educating or at least in any way exciting to read about :-) If you have any questions, want me to explain something further or simply bash my way of doing things, feel free to drop a comment below :-) And please: If you have better ways to do things I've talked about, suggestions or anything else, let me hear it!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/app/" title="See all articles tagged with App">App</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/commerce/" title="See all articles tagged with Commerce">Commerce</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/ios/" title="See all articles tagged with iOS">iOS</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Lars D. Rasmussen"><img src="//gravatar.com/avatar/576b2fb1a669146e949b192b8d1f0a63.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/576b2fb1a669146e949b192b8d1f0a63.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Lars D. Rasmussen</h1>
+        <p>Lars is on Twitter as <a href="//twitter.com/LarsDRasmussen" title="Lars D. Rasmussen on Twitter" rel="author">@LarsDRasmussen</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li class="selected"><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

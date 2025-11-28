@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>One member to rule them all</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">One member to rule them all</h1>
+      <p class="byline"> by Jacob Polden &amp; Paul Marden, <span class="pubdate">posted on <time datetime="2013-12-21">Dec 21, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Background</h2>
+<p>As part of the upgrade process moving one of our clients to Umbraco 6 from 4.7, we were asked to make a significant change for which we couldn't find one single "how-to" resource".</p>
+<p class="intro">The client has a public marketing site and a private members area for teachers to download training materials both of which run on Umbraco as well as a separate asp.net webforms web app enabling teachers to register for and book training courses.</p>
+<p>Currently the private members site and web app are disconnected. Users have different member profiles for the two systems, and so have to log on to each separately. Our client wants us to implement a shared security context so that the two systems <span><span>can</span></span> share profile information and implement single sign-on.</p>
+<p>Final delivery is still ongoing, but this article will cover the proof of concept we built which shows how <span><span>we will achieve this</span></span>. We set out to:</p>
+<ul>
+<li>demonstrate that a .NET Webforms application can share a security context with an Umbraco 6 MVC membership site;</li>
+</ul>
+<ul>
+<li>demonstrate that these two applications can share:</li>
+<ul>
+<li>a membership provider;</li>
+<li>a member database, thereby sharing usernames and passwords;</li>
+</ul>
+<li>demonstrate single sign-on [<a href="http://en.wikipedia.org/wiki/Single_sign-on">1</a>] i.e.:</li>
+<ul>
+<li>Sign onto one site and be logged in immediately to the other</li>
+<li>Log off <span><span>either site</span></span> and immediately be logged off the other as well</li>
+</ul>
+</ul>
+<h2>Overview</h2>
+<p><span>The Proof of Concept was run from a single local development machine on which we ran:</span></p>
+<ul>
+<li>IIS 7</li>
+<li>SQL Server 2008 R2</li>
+<li>Umbraco 6.1.6</li>
+</ul>
+<p>Figure 1, below outlines the technical solution that was created.</p>
+<p><strong><span><span><span><span><img src="/archive/media/2013/figure1_497x415.jpg" width="497" height="415" alt="Figure1"></span></span></span></span></strong></p>
+<p><strong>Figure 1: Proof of concept system architecture diagram</strong></p>
+<p><span>IIS was configured to run two separate AppPools. Although the applications are running on the same machine both applications are running independently of each other.</span></p>
+<h2>Shared membership provider</h2>
+<p><span>For the proof of concept we had to make a small change to the default Umbraco Membership Provider. Both applications shared the same code base for the membership provider, enabling both applications to communicate with the same database of members.</span></p>
+<p>When you log into the site the default Umbraco Membership Provider persists data by using the <span class="code">m.Save()</span> method. However our Webapp cannot implement this method as <span class="code">m.Save()</span> is a method on the Umbraco Member object that commits the instantiated member object to the database. The Webapp doesn't contain any Umbraco binaries so for the sake of the proof of concept we commented out this method call to avoid an exception being thrown.</p>
+<p><span>line 803-805</span></p>
+<pre class="language-csharp"><code>		// persist data
+		//if (m != null)
+		//    m.Save();</code></pre>
+<p dir="ltr"><span>For future work we would customise the membership provider more fully to allow us to have complete Umbraco functionality and access the same member database.</span></p>
+<h2>Member controls for WebForms</h2>
+<p dir="ltr"><span>For the webforms app we use the default ASP login controls:</span></p>
+<ul>
+<li>LoginName - To see who is currently logged in</li>
+<li>LoginStatus - To see if we are logged in</li>
+<li>Login - The default ASP control to actually perform the login, it utilises the membership provider in the web.config</li>
+</ul>
+<pre class="language-csharp"><code>&lt;form runat="server"&gt;
+            &lt;asp:LoginName ID="LoginName1" runat="server" /&gt;
+            &lt;asp:LoginStatus ID="LoginStatus1" runat="server" /&gt;
+            &lt;asp:Login ID="Login1" runat="server"&gt;&lt;/asp:Login&gt;
+ &lt;/form&gt;</code></pre>
+<h2>Creating Member Login Controls for Umbraco 6</h2>
+<p>The Umbraco 6 MVC login setup is a bit more complicated. Due to the nature of MVC we have to create our own authentication methods and controller. We used this 24days in Umbraco article as reference [<a href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/">2</a>].</p>
+<p dir="ltr"><em><strong>MemberLoginSurfaceController.cs</strong></em></p>
+<pre class="language-csharp"><code>using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.Security;
+using umbraco.cms.businesslogic.member;
+using Umbraco.Web.Mvc;
+using Umbraco6SLSite.Models;
+
+namespace Umbraco6SLSite.Controllers
+{
+    public class MemberLoginSurfaceController : SurfaceController
+    {
+
+        [HttpGet]
+        [ActionName("MemberLogin")]
+        public ActionResult MemberLoginGet()
+        {
+            return PartialView("MemberLogin", new MemberLoginModel());
+        }
+
+        // The MemberLogout Action signs out the user and redirects to the site home page:
+
+        [HttpGet]
+        public ActionResult MemberLogout()
+        {
+            Session.Clear();
+            FormsAuthentication.SignOut();
+            return Redirect("/");
+        }
+
+        [HttpPost]
+        [ActionName("MemberLogin")]
+        public ActionResult MemberLogin(MemberLoginModel model)
+        {
+                //Check if the dat posted is valid (All required's &amp; email set in email field)
+            if (!ModelState.IsValid)
+            {
+                //Not valid - so lets return the user back to the view with the data they entered still prepopulated
+                return CurrentUmbracoPage();
+            }
+
+            if (Membership.ValidateUser(model.Username, model.Password))
+            {
+                FormsAuthentication.SetAuthCookie(model.Username, true);
+                return RedirectToCurrentUmbracoPage();
+            }
+            else
+            {
+                TempData["Status"] = "Invalid username or password";
+                return RedirectToCurrentUmbracoPage();
+            }
+        }
+
+    }
+}</code></pre>
+<p><em><strong>MemberLoginModel.cs</strong></em></p>
+<pre class="language-csharp"><code>using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
+using System.Web;
+
+namespace Umbraco6SLSite.Models
+{
+    public class MemberLoginModel
+    {
+        [Required, Display(Name = "Enter your user name")]
+        public string Username { get; set; }
+
+        [Required, Display(Name = "Password"), DataType(DataType.Password)]
+        public string Password { get; set; }
+    }
+    
+}
+</code></pre>
+<p dir="ltr" class="code"><em style="color: #000000; font-family: Verdana, Arial, Helvetica, sans-serif;"><strong>Login.cshtml</strong></em></p>
+<pre class="language-csharp"><code>@Html.Action("MemberLogin","MemberLoginSurface")</code></pre>
+<p dir="ltr" class="code"><span style="font-size: 16px; font-weight: bold; color: #000000; font-family: Verdana, Arial, Helvetica, sans-serif;">Configure IIS for Single Sign-on</span></p>
+<p dir="ltr"><span>By default IIS stores session data in memory for each application [See </span><a href="http://msdn.microsoft.com/en-us/library/ms178586.ASPX"><span>3</span></a><span>]. However, we want to share this session between the two applications.</span></p>
+<p dir="ltr"><span>So each has been configured to store session information in a separate ASP Session Database using the SessionStateMode=SQLServer setting in web.config:</span></p>
+<pre class="language-csharp"><code>&lt;sessionState mode="SQLServer" cookieless="false" timeout="45"
+      sqlConnectionString="data source=localhost;user id=sa;password=pA55w0rd" /&gt;</code></pre>
+<p dir="ltr" class="code"><span style="color: #000000; font-family: Verdana, Arial, Helvetica, sans-serif;">The database itself being created using the Aspnet_regsql.exe tool [See </span><a style="font-family: Verdana, Arial, Helvetica, sans-serif;" href="http://msdn.microsoft.com/en-us/library/ms178586.ASPX">3</a><span style="color: #000000; font-family: Verdana, Arial, Helvetica, sans-serif;">].</span></p>
+<p dir="ltr">To setup the ASPState database on your instance:</p>
+<pre class="language-csharp"><code>aspnet_regsql.exe -S SampleSqlServer -E -ssadd -sstype p</code></pre>
+<p dir="ltr" class="code"><strong style="color: #000000; font-family: Verdana, Arial, Helvetica, sans-serif;">Web.config</strong></p>
+<pre class="language-csharp"><code> &lt;authentication mode="Forms"&gt;
+      &lt;forms name="yourAuthCookie" loginUrl="login.aspx" protection="All" path="ourproject.local" domain="ourproject.local" /&gt;
+    &lt;/authentication&gt;</code></pre>
+<p><span>The Webforms app shows another strength in its ability to be rapidly developed, the default asp login reacts to the configuration in the web.config. The code snippet below is the same as the MVC configuration. That configuration alone is enough to replicate the same result as the MVC app.</span></p>
+<p dir="ltr"><strong>Web.config</strong></p>
+<pre class="language-csharp"><code> &lt;authentication mode="Forms"&gt;
+      &lt;forms name="yourAuthCookie" loginUrl="login.aspx" protection="All" path="ourproject.local" domain="ourproject.local" /&gt;
+    &lt;/authentication&gt;</code></pre>
+<h2>Putting it all together</h2>
+<p dir="ltr"><span>The following screenshots run through the login and logout process demonstrating the single sign on:</span></p>
+<p dir="ltr"><img src="/archive/media/2013/figure21.png" width="289" height="175" alt="Figure 21"><img src="/archive/media/2013/figure22_245x189.jpg" width="245" height="189" alt="Figure 22"></p>
+<p dir="ltr"><strong>Figure 2.</strong></p>
+<p><span>We can see here that both of the applications are logged out. Notice also how they share the same domain name "ourproject".</span></p>
+<p dir="ltr"><span><span><span><br><img src="/archive/media/2013/figure31.png" width="290" height="162" alt="Figure 31"><img src="/archive/media/2013/figure32_231x175.jpg" width="231" height="175" alt="Figure 32"></span></span></span></p>
+<p dir="ltr"><strong>Figure 3.</strong></p>
+<p><span>In this image you can see I have entered login details for one of applications (app) and no details have been entered on the other (umbraco).</span></p>
+<p dir="ltr"><span><span><span><br><img src="/archive/media/2013/figure41.png" width="286" height="162" alt="Figure 41"><img src="/archive/media/2013/figure42_244x159.jpg" width="244" height="159" alt="Figure 42"></span></span></span></p>
+<p dir="ltr"><strong>Figure 4.</strong></p>
+<p><span>We can now see how both applications are showing the user is authenticated and logged in. We only entered our login details on the "app" application and yet we are simultaneously logged into the "umbraco" application.</span></p>
+<p dir="ltr"><span><span><span><br><img src="/archive/media/2013/figure51.png" width="289" height="171" alt="Figure 51"><img src="/archive/media/2013/figure52_226x170.jpg" width="226" height="170" alt="Figure 52"></span></span></span></p>
+<p dir="ltr"><strong>Figure 5.</strong></p>
+<p><span>We have now hit the "log out" link. Both applications are now reporting no users are currently logged in.</span></p>
+<p><span>This outlines the basic concept of a single login process, for future work we would include the ability to reset passwords and other user management tools. </span></p>
+<h2>Next steps</h2>
+<p><span>So far this is just a proof of concept -- we've got a lot of work before going live.  For example, we need to do a lot more testing before going live, making sure that our Custom Membership provider doesn't break core Umbraco functionality.  Our client is expecting a big increase in the number of members on the site, so we're be developing some new membership management tools to help them.</span></p>
+<h2>References</h2>
+<p><span>Below are the links I used to aid my development for this proof of concept:</span></p>
+<ol>
+<li>Single sign on, Wikipedia <a href="http://en.wikipedia.org/wiki/Single_sign-on">http://en.wikipedia.org/wiki/Single_sign-on</a></li>
+<li>Create a login with Umbraco MVC <a href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/">/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/</a></li>
+<li>Session-State Modes, MSDN, <a href="http://msdn.microsoft.com/en-us/library/ms178586.ASPX">http://msdn.microsoft.com/en-us/library/ms178586.ASPX</a></li>
+<li>FormsAuthentication.SetAuthCookie Method, MSDN <a href="http://msdn.microsoft.com/en-us/library/system.web.security.formsauthentication.setauthcookie(v=vs.110).aspx">http://msdn.microsoft.com/en-us/library/system.web.security.formsauthentication.setauthcookie(v=vs.110).aspx</a></li>
+</ol>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/members/" title="See all articles tagged with Members">Members</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/webforms/" title="See all articles tagged with Webforms">Webforms</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jacob Polden"><img src="//gravatar.com/avatar/1c4fe4c5fc4ba78d7c5b6c9c318379a6.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/1c4fe4c5fc4ba78d7c5b6c9c318379a6.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jacob Polden</h1>
+        <p>Jacob is on Twitter as <a href="//twitter.com/Yackob94" title="Jacob Polden on Twitter" rel="author">@Yackob94</a></p>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="Paul Marden"><img src="//gravatar.com/avatar/655ef4d0c289f6eb3691928e8b8ce35a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/655ef4d0c289f6eb3691928e8b8ce35a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Paul Marden</h1>
+        <p>Paul is on Twitter as <a href="//twitter.com/orcare" title="Paul Marden on Twitter" rel="author">@orcare</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li class="selected"><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

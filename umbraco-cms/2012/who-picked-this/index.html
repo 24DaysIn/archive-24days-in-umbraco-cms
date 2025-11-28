@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Who Picked This?</title>
+<meta name="description" content="How to wire up pickers to Relations, so a given node can list any other node(s) referring to it.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Who Picked This ?</h1>
+      <p class="byline"> by Hendy Racher, <span class="pubdate">posted on <time datetime="2012-12-18">Dec 18, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Here's a feature that can be added to sites using pickers<sup>*</sup> to show on a picked node (be that a content, media or member item) any other nodes that may have selected it - it uses two DataTypes: <strong>Relation Links</strong> from <a href="http://ucomponents.org/">uComponents </a>and <strong>Picker Relations</strong> (Umbraco 4.9+) where both are wired-up by a shared <a href="http://umbraco.com/follow-us/blog-archive/2012/12/7/getting-to-know-umbraco-relations.aspx?utm_source=feedburner&amp;utm_medium=feed&amp;utm_campaign=Feed%3A+UmbracoBlog+%28umbraco+blog%29">Relation Type</a>. (No code required).</p>
+<p class="intro"><sup>* Compatible pickers include any that store either a single Id, a CSV of Ids or known XML fragments.</sup></p>
+<p><span>These backlinks can be really useful to content editors, as it's a quick way to see and navigate around related items. For example, on an image, see a list of links to all pages where it's been picked as a heading or for use in a carousel... </span></p>
+<p>To demonstrate, we'll create a content structure where products can pick colours (via a Multi-Node Tree Picker):</p>
+<p><img src="/archive/media/2012/contentstructure_800x322.jpg" width="800" height="322" alt="Content Structure"></p>
+<p><span>with a view to rendering a list of links back to the related products on each of the colour nodes:</span></p>
+<p><img src="/archive/media/2012/productsforcolour_799x310.jpg" width="799" height="310" alt="Products For Colour"></p>
+<h3>1) Create Relation Type</h3>
+<p>First we'll create a RelationType. This'll be used to store the associations between products and colours.<a href="http://umbraco.com/follow-us/blog-archive/2012/12/7/getting-to-know-umbraco-relations.aspx" title="Getting to Know Umbraco Relations"><br></a></p>
+<p> <img src="/archive/media/2012/createrelationtype_409x309.jpg" width="409" height="309" alt="Create Relation Type"></p>
+<p>The naming convention using the word 'To' for Parent to Child types, and the word 'And' for Bidirectional types seems to work quite well - for example, relateProductAndColour indicates that both the Parent and Child fields will be checked, so it makes no difference which field the colour and product Ids are in (whilst if it was named relateProductToColour, it would imply a direction where lookups are performed on the Parent Product Id only).</p>
+<p>The Direction has been set to Bidirectional, as we just want to know if two Ids are related - using a Parent to Child type could prove beneficial if the direction was significant (or for micro performance tuning).</p>
+<p>Parent and Child types have been set to use Documents, as products and colours are both items in the content tree.</p>
+<h3>2) Create Picker Relations</h3>
+<p>Next we'll create a DataType using Picker Relations - this will watch a picker and automatically create and/or delete relations such that they remain in-sync with the items selected by the picker, in this case the colours selected by a product.</p>
+<p><img src="/archive/media/2012/createdatatypepickerrelations_488x244.jpg" width="488" height="244" alt="Create Data Type"></p>
+<p>The value for the Picker Alias (as above) will be the <em>Alias</em> of the <strong>Colours</strong> MNTP property on the Product DocumentType (see screenshot below), the Relation Type refers to the one just created, whilst checking Hide Data Editor prevents this DataType from being visible as no UI required (it can however be useful to uncheck this option if debugging, to confirm that the Picker Alias was found on the current item).</p>
+<h3>3) Add Picker Relations to Product</h3>
+<p><span>The DataType can be added on any tab, or at any level in the hierarchy (so long as at render time a matching Picker Alias can be found) - usually place it next to the Picker it's watching, so it's easy to identify.</span></p>
+<p><img src="/archive/media/2012/adddatatypetoproduct_499x383.jpg" width="499" height="383" alt="Add Data Type To Product"></p>
+<h3>4) Create Relation Links</h3>
+<p>The second DataType to create uses Relation Links. Configuration is simple, it just needs a single RelationType and in this example we're using the the one created in the first step.</p>
+<p> <img src="/archive/media/2012/createdatatyperelationlinks.gif" width="500" height="241" alt="Create Data Type Relation links"></p>
+<h3>5) Add Relation Links to Colour</h3>
+<p>Once added to the Colour DocumentType, it will query the relations data and render a list of links back to any related Products - it simply queries the configured RelationType for anything that relates to the Id of the item currently being viewed / edited.</p>
+<p> <img src="/archive/media/2012/adddatatypetocolour_497x365.jpg" width="497" height="365" alt="Add DataType To Colour"></p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Hendy Racher"><img src="//gravatar.com/avatar/2a23e5224e8eca1628eb608347598d4a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/2a23e5224e8eca1628eb608347598d4a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Hendy Racher</h1>
+        <p>Hendy is on Twitter as <a href="//twitter.com/hendyracher" title="Hendy Racher on Twitter" rel="author">@hendyracher</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li class="selected"><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

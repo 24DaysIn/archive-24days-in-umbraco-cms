@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>A Traveller's Guide to the Umbraco Codebase</title>
+<meta name="description" content="An introduction to some of the highways and by-ways of the Umbraco code base.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">The Umbraco Codebase: A Traveller's Guide</h1>
+      <p class="byline"> by Andy Butland, <span class="pubdate">posted on <time datetime="2014-12-01">Dec 1, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><em>"Welcome my friend, glad you could join us!  Balthasar's the name, and you've arrived just as my two wise friends and I are preparing for a trip.  I expect you are interested to hear about what we expect to see on our travels?  Well, we're not sure yet, but no doubt we'll come across many shiny new structures and well-crafted architecture.  Probably we'll find some relics of past civilisations too and possibly even a few fossils."</em></p>
+<p class="intro"><em>"When are we off to the Holy Lands you ask?  Oh no, it's not that trip - we leave for there in a couple of weeks.  No, today we're venturing into the Umbraco code base!  It might take us a bit of time but we're hoping for an epiphany at the end of it."</em></p>
+<p><img src="/archive/media/2014/wise_men_umbraco.jpg" width="800" height="" alt="Three Wise Men - Umbraco"></p>
+<p>I was going to push that analogy further but to be honest it's already rather forced!  However, that's the plan for today's page of the Umbraco advent calendar; to take a whistle-stop tour through the Umbraco code base, which will hopefully be useful for anyone considering contributing code to the project, or simply wanting to understand a little more about what goes on under the covers.</p>
+<h2>Why contribute?</h2>
+<p>Umbraco has always been an open-source project and - particularly since the move to Github for the code hosting - has had a number of people in addition to the core team contributing everything from minor fixes to sizeable features.</p>
+<p>Why are they doing this?  Well, some might be doing it to "scratch an itch" and fix something that is troubling them or their clients.   Others see it as one way to contribute to the success of the project that we all benefit from in different ways.  When it comes to more direct benefits, there's a lot to learn from seeing how a project of this size is architected and managed.  And last but not least - we're all geeks here of course - it can be rather fun.  For most, I guess it's probably all of the above.</p>
+<h2>Can I contribute?</h2>
+<p>There's no doubt that seriously smart people are working with or as part of the HQ on the development of Umbraco and there are some major changes that have been and continue to be made that require long-term planning from a tightly organised team.  But that still leaves plenty of scope for others to contribute.  The open <a href="http://issues.umbraco.org/dashboard" title="Umbraco Issue Tracker">issue tracker</a> contains many smaller scale feature requests and bug reports that they'd welcome solutions too.</p>
+<p>I'd suggest that any competent developer willing to take a bit of time to get stuck into an issue will make valuable progress - whether alone, or in collaboration with others such as at the recent <a href="http://umbracoukfestival.co.uk/hackathon" title="Umbraco UK Festival Hackathon">UK Festival hack day</a>.</p>
+<p>So the answer is almost certainly yes.  </p>
+<h2>Getting started</h2>
+<p>The first step is to register or log in to a GitHub account, find the <a href="https://github.com/umbraco/Umbraco-CMS/" title="Umbraco on GitHub">Umbraco page</a> and click to fork the repository.  This gives you your own copy to work in and, when ready, submit a pull request back to the core project.</p>
+<p>As the name suggests, GitHub supports the <a href="http://git-scm.com/">Git</a> distributed source control system which you can either use from the command line - there's a only a small sub-set of instructions you generally need to use - or an application with a GUI wrapper such as <a href="https://code.google.com/p/gitextensions/">Git Extensions</a>.</p>
+<p>There are excellent guidelines provided by <a href="https://help.github.com/categories/collaborating/" title="GitHub collaboration guidelines">Github</a> and <a href="http://our.umbraco.org/contribute/working-with-the-umbraco-source" title="Umbraco Contribution Guidelines">Umbraco themselves</a> as to the process of forking, creating pull requests and keeping your working fork up to date with changes made by others.</p>
+<p><span>Once submitted, your pull request will be reviewed by a member of the core team and either accepted as is or with modifications, or feedback provided.</span></p>
+<h2>Cracking open the code</h2>
+<p>Having forked the repository and cloned a local copy, despite the encouraging words above it can be a little daunting when you first open the solution (found in src\umbraco.sln) in Visual Studio. </p>
+<p>There are quite a number of projects - many of which are retained for legacy and backward compatibility reasons rather than undergoing active development.  Down the line - perhaps at Umbraco 8 or 9 - many of these will likely be removed.  But clearly this has to be done with careful consideration and having given developers using the CMS plenty of time to be aware that methods they are using are obsolete and will be at some point be retired.</p>
+<p>The <a href="http://our.umbraco.org/documentation/Development-Guidelines/project-structure" title="Umbraco Development Guidelines">Umbraco development guidelines</a> gives a good summary of the important projects for ongoing development and a <a href="https://groups.google.com/forum/#!msg/umbraco-dev/feI67sD0jYE/1An3LQ8HK4YJ" title="Discussion on Umbraco legacy projects">discussion in the developer group</a> provides a some further detail on the legacy ones.</p>
+<h3>Umbraco.Web.UI.Client</h3>
+<p>Starting at the most client facing end of the application, within the <strong>Umbraco.Web.UI.Client</strong> project we find the <a href="https://angularjs.org/">AngularJS</a> based JavaScript application that provides the user interface for the back-office.</p>
+<p>Umbraco make use of many of the features available in the AngularJS framework but even if you aren't particularly up to speed on that it's fairly straightforward to see what's going on.  Starting from what is rendered on the screen, each component is made up of a view (the template) and a controller (the logic behind the view).  So taking the shiniest new example, the Grid editor has a <strong>grid.html</strong> file associated with a <strong>grid.controller.js</strong> (found in src\views\propertyeditors\grid\).</p>
+<p>If you open up this or any other of the controllers, you'll see it's defined as a function that is called with various parameters.  The objects passed via parameters are all used by the controller in various ways, and are provided to it by a means of <a href="https://docs.angularjs.org/guide/di" title="Dependency injection in AngularJS">dependency injection</a> by the AngularJS framework.</p>
+<p>These dependencies are of various types.  One example is a <strong>resource</strong> - an encapsulation of a particular object with methods to allow it to be created and saved via HTTP requests.  The grid controller for example has a dependency on a media resource defined in <strong>media.resource.js</strong> (in src\common\resources\).</p>
+<p>Other dependencies may be <strong>services</strong>.  These provide encapsulations of logic that are used across many controllers.  An example here is the dialog service defined in <strong>dialog.service.js</strong> (in src\common\services\) which provides common functionality for handling various modal and overlay dialog boxes.</p>
+<p>The views themselves will also have reference to another class of component which are <strong>directives</strong>.  These again encapsulate functionally that is shared across multiple UI elements (and are found in src\common\directives\).</p>
+<p>Last point to note here is to make sure to check out the <strong>Readme.md</strong> file found in the root of the project.  This explains how to set up the various components needed to run the task runner <a href="http://gruntjs.com/">grunt</a> which will bundle up the JavaScript, process the .less files to .css and copy them to the web application.</p>
+<h3>Umbraco.Web.UI</h3>
+<p>This project will be most familiar to Umbraco developers as it's the main web application that actually runs the software.  It's where your custom views, master pages or XSLT files are created and also contains the files related to the back-office itself.</p>
+<p>Digging into the <strong>umbraco</strong> folder you'll come across a few things that you might have thought had been left behind - web forms and user controls?  Well yes, it's not all shiny AngularJS and MVC yet!  Although much of the back-office has been rebuilt to use these technologies - particularly the content, media and member sections - there is still some parts of the software still running using legacy web forms technology.</p>
+<p>This is seamless to the end user due to some clever work that allows the re-use of these pages and controls within the AngularJS single page application implementation of the back-office - and effectively allowed Umbraco 7 to be released sooner than it would otherwise had been.  No doubt in time though these will be obsoleted and the rest of the back-office rewritten to use the newer and consistent technologies.</p>
+<h3>Umbraco.Web</h3>
+<p>The <strong>Umbraco.Web</strong> project contains all the Umbraco C# class files related to the web application, such as controllers, models and web APIs.  You'll also find here the various classes that provide flexibility in the request pipeline.  So there's a lot in here in other words, but let's trace one small route through this layer of the solution.</p>
+<p>Going back to the AngularJS resources, I mentioned that they are able to retrieve and save details of a particular type using AJAX based HTTP requests.  So for example content.resource.js contains a method called <strong>getById()</strong>, that retrieves a specific content node for a given Id.  This translates to a controller method in <strong>ContentController</strong> (found in the Editors folder).</p>
+<p>In turn this makes a request to a method in a service class in the core project, which will look rather familiar to many.  It's exactly the same <a href="http://our.umbraco.org/documentation/Reference/Management-v6/Services/ContentService" title="Umbraco services">ContentService</a> that's publically available and used when we are working with the database in our own Umbraco applications.  This is one reason why the service APIs are so reliable and well thought out - they've been <a href="http://en.wikipedia.org/wiki/Eating_your_own_dog_food">dogfooded</a> in a sense as they are used throughout the Umbraco back-office itself.</p>
+<h3>Umbraco.Core</h3>
+<p>The <strong>Umbraco.Core</strong> project contains some fundamental features of the content management system, in particular those that don't rely on being used in a web application context.  The services mentioned previously are defined here, as are the classes involved with persisting data to the database.  We can also find code involved in the saving and retrieving of files as well as various common helper classes used throughout the application</p>
+<p>Following our example further the <strong>ContentService</strong> (found in the Services folder) also has a <strong>GetById()</strong> method which instantiates an instance of the <strong>ContentRepository</strong> (found in Persistance\Repositories). In turn, the <strong>Get()</strong> method of the repository is called within the context of a unit of work, passing through the node Id we want to retrieve content for.</p>
+<p>Tracing further we get to the actual data access methods themselves, which utilise <a href="http://www.toptensoftware.com/petapoco/">PetaPoco</a>, a light-weight object relational mapper (ORM) that is used to generate the necessary SQL statements to pull back the required information from the database and instantiate an object of the type we want to return.</p>
+<h3>Umbraco.Tests</h3>
+<p>Last but not least, we come to the <strong>Umbraco.Tests</strong> project.  As the name implies, this contains unit and integration tests providing coverage for many of the methods in the Umbraco.Core and Umbraco.Web projects.</p>
+<p>The tests utilise <a href="http://www.nunit.org/">NUnit</a> and mostly inherit from common on some base classes that will instantiate the necessary contexts and dependencies that the tests require.</p>
+<p>Rounding off our example, we can find tests that check the service and repository methods for retrieving a content instance by its Id, in <strong>ContentServiceTests</strong> and <strong>ContentRepositoryTest</strong> respectively.</p>
+<h2>Summing up</h2>
+<p>Well, we got there.  I hope that was a useful, albeit very top-line, introduction to some of the highways and by-ways of the Umbraco code base.  Who knows, maybe it'll even inspire a new year's resolution or two and there'll be even more pull requests coming in 2015!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/community/" title="See all articles tagged with Community">Community</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/contribution/" title="See all articles tagged with Contribution">Contribution</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/source/" title="See all articles tagged with Source">Source</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Andy Butland"><img src="//gravatar.com/avatar/ac0b8b6627894839d43798bec6b46018.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/ac0b8b6627894839d43798bec6b46018.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Andy Butland</h1>
+        <p>Andy is on Twitter as <a href="//twitter.com/andybutland" title="Andy Butland on Twitter" rel="author">@andybutland</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li class="selected"><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

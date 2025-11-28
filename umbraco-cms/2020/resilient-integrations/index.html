@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Resilient integrations</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Resilient integrations</h1>
+      <p class="byline"> by Mario Lopez, <span class="pubdate">posted on <time datetime="2020-12-11">Dec 11, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">One of the great things about Umbraco is that it doesn’t stand in your way to create a CMS tailored to your needs. These needs often include integration with external systems. You can communicate with APIs, send data from Umbraco or even import custom data.</p>
+<p class="intro">When you use any external system to Umbraco, you can never assume that everything is going according to plan. In fact, it will never go according to plan ;)</p>
+<p>Let’s say that you create a record in Salesforce or your favourite CRM (customer relationship management system) each time a user submits a form with their details. You want to return a success message to your user before your record was created in your CRM and run this task in the background. What can you do if this task fails?</p>
+<p>Another example: You want to create some content in Umbraco from an external API, let’s say an eLearning platform that will return some courses. Are you going to schedule a task to import them? What if the import fails? What if the eLearning system is down?</p>
+<p>In this article, I want to go through some tools and techniques to help you make your integrations more resilient to failures and make your website respond to those failures actively.</p>
+<h2>Logging your errors</h2>
+<p>I will start with probably the simplest way to make you aware that something didn’t go smoothly: The <a href="https://our.umbraco.com/documentation/getting-started/Code/Debugging/Logging/">Umbraco logs</a>.</p>
+<p>You can record your messages, warnings or error messages in Umbraco using a service already registered for you in the <a href="https://our.umbraco.com/documentation/reference/using-ioc/">DI container</a>: ILogger. If you are in an Umbraco controller (Surface Controller, for example) you can use the Logger property instead:</p>
+<pre><code class="language-csharp">Logger.Error&lt;MyController&gt;("Argh! Something broke!");</code></pre>
+<h3>Notifying the admins</h3>
+<p>Recording messages in the logs is pretty useful for debugging purposes, but if you don’t go further, you will need to check your logs manually to find if anything failed.</p>
+<h4>The manual way</h4>
+<p>You can always create a notification service that sends an email to your admins. Something like this:</p>
+<pre><code class="language-csharp">catch(Exception ex){
+    Logger.Error&lt;MyController&gt;("Argh! Something broke!", ex);
+    _notificationService.SendErrorToAdmins(“Argh! Something broke on MyController!”, ex)
+}
+</code></pre>
+<h4>The Serilog way</h4>
+<p>Umbraco logs use Serilog. <a rel="noopener" href="https://serilog.net/" target="_blank">Serilog is a .NET library</a> to write to logs in a structured way. From the Umbraco docs: ‘This allows us to have a more detailed log message, rather than the traditional text message in a long text file.’</p>
+<p>There are extensions for Serilog (these are called ‘sinks’) that can extend the workflow of your log to perform other tasks. For our specific example, we could use the <a href="https://github.com/serilog/serilog-sinks-email">Email sink</a> to send an email to the admins when something is written in the logs.</p>
+<p>Configuring this package can be a bit tricky if you have never done it before. Umbraco Serilog configuration is done <a href="https://our.umbraco.com/documentation/Reference/Config/Serilog/">using XML</a> but the help on the package shows how to do it in code instead. The translation of that would be:</p>
+<pre><code class="language-csharp">&lt;add key="serilog:using:Email" value="Serilog.Sinks.Email" /&gt;
+&lt;add key="serilog:write-to:Email.fromEmail" value="app@example.com" /&gt;
+&lt;add key="serilog:write-to:Email.toEmail" value="support@example.com" /&gt;
+&lt;add key="serilog:write-to:Email.mailServer" value="smtp.example.com" /&gt;
+</code></pre>
+<p>If you try to configure a server port, you’ll realise that you need to use an EmailConnectionInfo object instead. This is not supported in the XML configuration. <a href="https://stackoverflow.com/questions/50387469/net-core-and-serilog-email-sink-json-config/50580020#50580020">You have a workaround </a>you can adapt from JSON.</p>
+<p> </p>
+<h2>Scheduling your tasks</h2>
+<p>If you need to schedule a task, let’s say you need to import some external content every 24 hours, you have a few options here. If you don’t want to install any extra external dependencies, you can use Umbraco’s BackgroundTaskRunner. You have more information about how to create your tasks on the Umbraco <a href="https://our.umbraco.com/documentation/Reference/Scheduling/">documentation</a>.</p>
+<h3>Hangfire<a href="https://www.hangfire.io/"></a></h3>
+<p><img style="width: 500px; height: 156.35451505016724px;" src="/archive/media/2020/2020-11-09-11_37_42-queues-hangfire.png?width=500&amp;height=156.35451505016724" alt="" data-udi="umb://media/afffaa7b004d4198a602b21294750880"></p>
+<p>Instead of using a BackgroundTaskRunner, I prefer to use <a rel="noopener" href="https://www.hangfire.io/" target="_blank">Hangfire</a>. It involves way less code, it offers a pretty cool dashboard to monitor your tasks, and the best of all is that it keeps any failed jobs in a list, recording the exceptions thrown and giving you the chance to retry them again.</p>
+<p>Hangfire allows you to run background jobs. There are a few types of jobs you can configure and run depending on your requirements: fire-and-forget, delayed and recurring.</p>
+<p><strong>Fire-and-forget Jobs</strong></p>
+<p>You can create a background job that is created on the fly like</p>
+<pre><code class="language-csharp">BackgroundJob.Enqueue(() =&gt; _myService.Method());
+</code></pre>
+<p><strong>Delayed Jobs</strong></p>
+<p>Create a background job on the fly that won’t run immediately:</p>
+<pre><code class="language-csharp">BackgroundJob.Schedule(() =&gt;  _myService.Method(), TimeSpan.FromDays(7));</code></pre>
+<p><strong>Recurring Jobs</strong></p>
+<p>You can create recurring jobs that run for unlimited times. These have to be configured when your site starts, so you would use a Umbraco Component and enter some code like this:</p>
+<pre><code class="language-csharp">RecurringJob.AddOrUpdate&lt;UmbracoApiImporter&gt;("My Job",
+                x =&gt; x.RunJob(),
+                Cron.Daily(5, 0),
+                TimeZoneInfo.FindSystemTimeZoneById("AUS Eastern Standard Time"));
+</code></pre>
+<h4><img style="width: 500px; height: 254.02201524132093px;" src="/archive/media/2020/2020-11-09-11_38_06-recurring-jobs-hangfire.png?width=500&amp;height=254.02201524132093" alt="" data-udi="umb://media/95d2c045e10844f295ca20872feabb5b"></h4>
+<h4>Installing Hangfire in Umbraco</h4>
+<p>First, you need to configure Hangfire to load with your site. To do this, we need to create a component that will ‘insert’ our Hangfire middleware into the Umbraco application.</p>
+<p> </p>
+<pre><code class="language-csharp">   public class InitHangfireComponent : IComponent
+    {
+        public void Initialize()
+        {
+            UmbracoDefaultOwinStartup.MiddlewareConfigured += (_, e) =&gt; ConfigureMiddleware(e.AppBuilder);
+        }
+
+        private void ConfigureMiddleware(IAppBuilder app)
+        {
+            // Give hangfire a URL and start the server
+            var dashboardOptions = new DashboardOptions { Authorization = new[] { new UmbracoAuthorizationFilter() } };
+            app.UseHangfireDashboard("/hangfire", dashboardOptions);
+            app.UseHangfireServer();
+        }
+
+        public void Terminate()
+        {
+        }
+    }
+</code></pre>
+<p> You can see that the Authorization property is initialised to use the UmbracoAuthorizationFilter that we created before.</p>
+<h4>Dashboard</h4>
+<p>Once your site is running, you can access your Hangfire dashboard from ‘~/hangfire’. But at this point, anyone could access it as it is not secured. Let’s fix that.</p>
+<h4>Securing the dashboard</h4>
+<p>First, you need to create a class that inherits from IDashboardAuthorizationFilter. This interface is in the Hangfire package. This filter will get our Umbraco user and will let Hangfire know if we can access or not.</p>
+<pre><code class="language-csharp">
+  public class UmbracoAuthorizationFilter : IDashboardAuthorizationFilter
+    {
+        public bool Authorize([NotNull] DashboardContext context)
+        {
+            var auth = new HttpContextWrapper(HttpContext.Current).GetUmbracoAuthTicket();
+
+            UmbracoBackOfficeIdentity user = UmbracoBackOfficeIdentity.FromClaimsIdentity(auth.Identity);
+
+            if (user.Roles.Contains("admin"))
+            {
+                return true;
+            }
+            return false;
+        }
+    }
+</code></pre>
+<p><br>Next, you will need to modify the Hangfire’s configuration. In the previous created InitHangfireComponent you’ll add the authorisation filter like so:</p>
+<pre><code class="language-csharp">private void ConfigureMiddleware(IAppBuilder app)
+{
+    // Give hangfire a URL and start the server
+    var dashboardOptions = new DashboardOptions { Authorization = new[] { new UmbracoAuthorizationFilter() } };
+    app.UseHangfireDashboard("/hangfire", dashboardOptions);
+    app.UseHangfireServer();
+}
+</code></pre>
+<p>Now your Hangfire dashboard is secured by Umbraco. </p>
+<h4>A dashboard for the dashboard!</h4>
+<p>Another way of accessing the dashboard is by creating a <a rel="noopener" href="https://our.umbraco.com/documentation/tutorials/Creating-a-Custom-Dashboard/" target="_blank">Umbraco dashboard</a>, so it’s nicely integrated into your backoffice. To do so, you have to create a folder in `~/App_Plugins/Hangfire` (or another name of your choice but in the App_Plugins folder) and create a couple of files in there, first a package.manifest:</p>
+<pre><code class="language-json">{
+    "dashboards": [
+        {
+            "alias": "futuraPhoto.Hangfire",
+            "view": "/App_Plugins/Hangfire/dashboard.html",
+            "sections": [
+                "settings"
+            ]
+        }
+    ]
+}</code></pre>
+<p>  </p>
+<p>And a dashboard.html that will contain the actual content of your dashboard:</p>
+<pre><code class="language-markup">&lt;style type="text/css"&gt;
+    .hangfireWrapper {
+        margin: -30px -20px;
+    }
+
+    .hangfireContent {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+    }
+&lt;/style&gt;
+
+&lt;div class="hangfireWrapper"&gt;
+    &lt;iframe name="hangfireIframe" class="hangfireContent" id="Hangfire" frameborder="0" scrolling="yes" marginheight="0"
+        marginwidth="0" src="/hangfire/" allowfullscreen="true" style="width:100%!important"
+        webkitallowfullscreen="true" mozallowfullscreen="true" oallowfullscreen msallowfullscreen="true"&gt;&lt;/iframe&gt;
+&lt;/div&gt;</code></pre>
+<h3>Polly</h3>
+<p> </p>
+<p><a rel="noopener" href="https://github.com/App-vNext/Polly" target="_blank">Polly</a> is a .NET resilience and transient-fault-handling library that allows developers to express policies such as Retry, Circuit Breaker, Timeout, Bulkhead Isolation, and Fallback in a fluent and thread-safe manner.</p>
+<p>Behind that description lives a library that once you start using it, you can’t live without it.</p>
+<p>Polly allows you to channel your API calls through pre-configured policies. You configure these policies to react to the success or failures of your methods, improving the resilience of your application. It’s like having someone taking care of the response of your methods and dealing with them without you being present.</p>
+<h4>Retrying after a failure</h4>
+<p>With Polly, you can configure different kind of policies that react in different ways when your method throws an exception.</p>
+<p>In this example, we are going to start using the Retry policy. With this policy, we run our method, if it fails we wait for some time, and then we retry the same method again expecting that the external system we are connecting to gets recovered and our call gets through.</p>
+<p>Our policy will retry twice and will wait 3 seconds between calls.</p>
+<p> </p>
+<pre><code class="language-csharp">var retryPolicy = Policy
+        .Handle&lt;Exception&gt;()
+        .WaitAndRetry(2, retryAttempt =&gt; TimeSpan.FromSeconds(3));
+</code></pre>
+<p><br>To run our method through this policy we use it like this:</p>
+<pre><code class="language-csharp">retryPolicy.Execute(()=&gt;service.Method(data));</code></pre>
+<p> </p>
+<p>The previous call doesn’t expect any values returned by our method; it just takes care whether it succeeds or not. We can run Policies using ‘ExecuteAndCapture’ that you to return the values from your methods. To keep this article a bit simpler, we are assuming we don’t need any returned values. </p>
+<h4>Notifying that something went wrong</h4>
+<p>With the previous retry policy, we can run our method a few more times, but what if the service stays down for longer than expected? Or maybe the request is incorrect and cannot be requested? In this case, we can make use of the Fallback policy. This policy allows as to define an action that must be run if the method throws an exception.</p>
+<p> </p>
+<pre><code class="language-csharp">var fallbackPolicy = Policy.Handle&lt;Exception&gt;()
+                            .Fallback(() =&gt;
+                            {          
+                                _notificationsService.SendNotification();                                        
+                            });
+</code></pre>
+<p><br>We want this policy to quick off only after our method has failed a few times. For that to work, we need to nest our policies, which we would run like so:</p>
+<p> </p>
+<pre><code class="language-csharp">fallbackPolicy.Execute(() =&gt; retryPolicy.Execute(() =&gt; service.Method(data)));</code></pre>
+<p> </p>
+<p>As you can see the fallback policy needs to wrap the retry policy in case this one fails.</p>
+<p>There’s another way of nesting policies, and it’s using the PolicyWrap. This method allows us to combine other policies flexibly. The previous example would be written as:</p>
+<pre><code class="language-csharp">wrappedPolicy.Execute(action);</code></pre>
+<p>From Polly’s docs: “the outermost (leftmost in reading order) policy executes the next inner, which executes the next inner, etc.; until the innermost policy executes the user delegate.”</p>
+<p>We would run the method through this policy in the normal way:</p>
+<pre><code class="language-csharp">var wrappedPolicy = Policy.Wrap(fallbackPolicy, retryPolicy);</code></pre>
+<p> </p>
+<h4>A policies service recommendation</h4>
+<p>You can always create your policies right before using them in your code, but it’s highly recommended that you create your own policies service to store them all and use them over your code. In this service class you can add any dependencies you will need like, in the previous example, a notifications service. Don’t forget to register this service in the Umbraco dependency container.</p>
+<p> </p>
+<h2>Wrapping up</h2>
+<p>Integrating with external services is tricky and prone to failures. Your application should be ready to manage those failures and never assume that they will never fail because they eventually will.</p>
+<p>We have seen how you can keep track of your integrations with external APIs, recoding to the Umbraco logs, notifying to the admins if something goes wrong, running jobs in the background to improve the user experience and make them resilient enough, so you are aware of the status of those jobs. Also, we have seen how your integrations can be resilient to failures, retrying failed calls or fallback to emergency tasks if things are definitely broken.</p>
+<p><br><br><br><br></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Mario Lopez"><img src="//gravatar.com/avatar/28c062e5ef2e27aa30918b86274daf9f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/28c062e5ef2e27aa30918b86274daf9f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Mario Lopez</h1>
+        <p>Mario is on Twitter as <a href="//twitter.com/skartknet" title="Mario Lopez on Twitter" rel="author">@skartknet</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

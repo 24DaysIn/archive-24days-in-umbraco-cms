@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>AutoIcons, Conventions in Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+	
+
+
+</head>
+<body>
+
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">AutoIcons, Conventions in Umbraco</h1>
+      <p class="byline"> by Laurence Gillian, <span class="pubdate">posted on <time datetime="2012-12-22">Dec 22, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I'll make a slight assumption - you've used <a href="http://our.umbraco.org/projects/developer-tools/famfamfam-icons" target="_blank" title="Shannon's great FamFamFam package for Umbraco">FamFamFam</a> and played with Umbraco. Those icons make life easier for content editors, which makes us look better to our clients. Across the universe everyone wins.</p>
+<p class="intro"><img src="/archive/media/2012/2012_12_18_1816.png" alt="Website using FamFamFam"></p>
+<p>But, setting it up is a pain. There are 1003 icons, on average 15 used and scrolling that dropdown is - well horid. Even displaying a preview within Umbraco causes performance issues. To compound matters it gets worse, one day you're smoking your pipe (slippers) and login to a 'live' site. In a flash you realise you've used different icons between each site - it's confusing for users and frustrating for (anally retentive) developers like me.</p>
+<p>So what's the solution?</p>
+<h2>Convention over Configuration</h2>
+<p>We use conventions when building our Umbraco websites, for example our DocTypes and PropertyAliases follow these patterns: (type prefix, etc)</p>
+<p><img src="/archive/media/2012/2012_12_19_1522_800x394.jpg" width="800" height="394" alt="Consistent Document Types"></p>
+<p>Everything inherits from Base and then we use some containers to logically group our document types, e.g. Level 1, Level 2, Level Neutral. </p>
+<p>Something I've often dreamt is that Document Types lived as simple XML documents on the file system, editable via Umbraco or a editor of your choice. Document Types could support multiple parents (and children). These multiple points of entry could be rendered into the tree which would represent the data structure, completly removing the need for grouping Document Types. </p>
+<p>This however is a dream. The reality I do know, from our agency and working with other people is most Umbraco developers use patterns. These feature in DocTypes, Properties, Macro Naming Conventions, etc. and are of colossal importance as getting architecture right (consistent) is one of the most important parts of a successful Umbraco build.</p>
+<p>So a simple idea. Why not name our icons the same as our DocTypeAlias? The 'One to One' relationship would make finding them easier in that dropdown list and could save us some time.</p>
+<h2>Sounds like a convention to me</h2>
+<p>But wait a minute, that's still a manual task. So lets automate it! Earlier in the year myself and Hendy decided to write a package that does exactly that. It saves time and ensures sites are consistent. </p>
+<h3>So...</h3>
+<p>On application start-up, (if <span class="code">UmbracoDebugMode = True</span>)<br>If an image matches DocTypeAlias (umbraco/images/umbraco)<br>Then set as icon.</p>
+<p><img src="/archive/media/2012/2012_12_19_1540_800x394.jpg" width="800" height="394" alt="Umbraco/Images with DocTypeAlias"></p>
+<p>Everytime the Umbraco application is restarted the code checks for new files and correctly wires them up! Like magic!</p>
+<h2>Summary</h2>
+<ol>
+<li>Package provides a default behaviour, that makes setting up Umbraco easier. :-)</li>
+<li>Re-use a default collection of Icons across all websites. </li>
+<li>Give your designer and architect access to Hg/Git, they can be part of the UI process. On larger sites which might have custom sections and icons this saves wasting developer time wiring up new icons.</li>
+<li><a href="http://our.umbraco.org/projects/backoffice-extensions/auto-icons" title="Auto Icons for Umbraco">Get the Package from Umbraco - Auto Icons</a></li>
+<li>Psssst! This also support Media and Member Types too (:</li>
+<li>@Hendy - wouldn't it be kewl, if we made it so it checked the umbracoExtension property/label and then overlayed a little symbol over the picked icon.</li>
+</ol>
+<p>All the best for 2013, </p>
+<p>
+        <!-- <iframe src="http://www.screenr.com/embed/qtW7" width="650" height="396" frameborder="0"></iframe> -->
+		<div class="notification note">
+			😢 This video file is sadly no longer available.
+		</div>
+		
+      </p>
+<h2>Ideas</h2>
+<h3>Package Configuration View</h3>
+<p>It would be neat if a package's configuration lived inside that package. There's no standard approach right now, with some packages adding a tabs whilst others add trees (uComponents is a good example). A consistent approach would be great and this should make life easier for package developers too. </p>
+<p>Packages could become portable with no dependencies on dashboard.config. Neato!</p>
+<p>This can be extended further with packages being 'picked' and implemented into existing trees. This would be great for packages like FALM and 301 URL Tracker that you may want certain User Groups to have access to.</p>
+<p>On a bespoke project a developer could build custom functionality in a series of standalone packages which could then be loaded into a custom section &amp; tree for certain users. It would be fairly straightforward to disable the 'properties' tab, except when being viewed through the Developer section.</p>
+<p><img src="/archive/media/2012/2012_12_19_1556.gif" alt="Package Configuration View"></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Laurence Gillian"><img src="//gravatar.com/avatar/4b8414d7ac43c2120cc69b9d393ad8d5.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/4b8414d7ac43c2120cc69b9d393ad8d5.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Laurence Gillian</h1>
+        <p>Laurence is on Twitter as <a href="//twitter.com/uniquelau" title="Laurence Gillian on Twitter" rel="author">@uniquelau</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li class="selected"><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

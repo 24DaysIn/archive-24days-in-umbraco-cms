@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>SEO in Umbraco</title>
+<meta name="description" content="A quick guide to the basic SEO settings you could have on your site.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">SEO in Umbraco</h1>
+      <p class="byline"> by Allan Kirk, <span class="pubdate">posted on <time datetime="2015-12-06">Dec 6, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">At <a href="http://manaosoftware.com/">Manao Software</a> we are constantly working on improving the way the content editor can improve the SEO of the site. I will go through some things we have done here.</p>
+<h2>SEO-tab</h2>
+<p class="intro">Of course we start with the SEO-tab on the individual page. We have collected everything here, so the SEO-girl only has to go to this one place to change anything about SEO for the page. I think it is better, if the user never has to remember where to go. We used to have several tabs, one for each area, but they have been combined now.</p>
+<h2>Keywords</h2>
+<p>We have had a look at a lot of the keyword packages, but ended up rolling our own:</p>
+<figure>
+  <a href="/archive/media/2015/keywords.PNG">
+    <img src="/archive/media/2015/keywords.PNG" width="924" alt="Keywords">
+  </a>
+</figure>
+<p>We have keywords, title, and description, each used in the standard way in the code. We have added an SERP-Preview, using the content from the other fields. We have also added a warning if any of the fields are empty, or if the keywords are not actually used. In our opinion, the keywords are not for Google, but simply a reminder for the editor for what the page should focus on.</p>
+<p>We want to add some content validation too, but I cannot find a plugin that parses HTML5 correctly. As an example, in HTML5 you are actually allowed to have multiple <span class="code">&lt;h1&gt;</span> on a page, as long as only one is in the main content, and the others are in asides, articles, etc. If anyone knows a plugin that can do this correctly, please mention it in the comments below.</p>
+<p>You might notice, that we are using pixels for the title. Google actually uses pixels here, not characters as you will see in most SERP-previews.</p>
+<h2>Robots.txt per site</h2>
+<p>If you have ever done an Umbraco installation with more than one site, which includes multiple languages, you might have had this scenario:<br>The editor wants to block a specific URL from one of the sites, but not from the other one. If you simply add a <em>robots.txt</em> in the root folder, it will have effect on all sites in the installation.<br>To solve this, we have added a robots-node in the configuration of each site:</p>
+<figure>
+  <a href="/archive/media/2015/robots_config.png">
+    <img src="/archive/media/2015/robots_config.png" width="1025" alt="Robots Config">
+  </a>
+</figure>
+<p>We have three settings.</p>
+<ul>
+<li>Disallow everything. We use this for our test environment, or on production before it goes live.</li>
+<li>Allow everything. We just include this so we don't get an SEO-guy telling us to add it later.</li>
+<li>Automatic. This will automatically block the list at the top of the page, as well as any pages the editor has decided to block - see below.</li>
+</ul>
+<p>On top of this we have an area, where the SEO-guy can add extra lines, as needed.</p>
+<p>As there is one of these nodes per domain, we have solved that problem.</p>
+<h2>Block a page in robots</h2>
+<p>As we create the robots.txt <span>programmatically</span>, we have also added a feature for the editor to block a page:</p>
+<figure>
+  <a href="/archive/media/2015/robots_setting.PNG">
+    <img src="/archive/media/2015/robots_setting.PNG" width="585" alt="Robots Setting">
+  </a>
+</figure>
+<p>This does exactly what it says on the can.</p>
+<h2>Sitemap.xml per site</h2>
+<p>As we solved the <em>robots.txt</em> above, we thought we might have a look at the <em>sitemap.xml</em> too. The way it normally works, is that the admin uses an external tool to create a sitemap, and either add it manually to the search-engines, or add it to the root folder with all the same problems as above in thee <em>robots.txt</em>. On top of that, the sitemap will almost always be out of date. We actually have the essential information in Umbraco already, so why not just serve it:</p>
+<figure>
+  <a href="/archive/media/2015/sitemap_config.PNG">
+    <img src="/archive/media/2015/sitemap_config.PNG" width="589" alt="Sitemap Config">
+  </a>
+</figure>
+<p>Of course we make sure to conform to the standards:</p>
+<pre class="language-markup"><code>&lt;urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd"&gt;
+&lt;url&gt;
+&lt;loc&gt;http://umbracopackage/&lt;/loc&gt;
+&lt;lastmod&gt;2015-12-01T16:46:58+00:00&lt;/lastmod&gt;
+&lt;changefreq&gt;hourly&lt;/changefreq&gt;
+&lt;priority&gt;0.5&lt;/priority&gt;
+&lt;/url&gt;
+&lt;url&gt;
+&lt;loc&gt;http://umbracopackage/page-2/&lt;/loc&gt;
+&lt;lastmod&gt;2015-11-17T09:15:01+00:00&lt;/lastmod&gt;
+&lt;priority&gt;0.5&lt;/priority&gt;
+&lt;/url&gt;
+&lt;/urlset&gt;</code></pre>
+<p>Now we have a sitemap that is always 100% up to date, and it is automatically included in the <em>robots.txt</em> too.</p>
+<p>See about the extra settings below.</p>
+<h2>Sitemap settings per page</h2>
+<p>As you can see above, we have some extra information, that is not normally available in Umbraco. We have these settings on the <em>SEO-tab</em> for this:</p>
+<figure>
+  <a href="/archive/media/2015/sitemap_setting.png">
+    <img src="/archive/media/2015/sitemap_setting.png" width="833" alt="Sitemap Setting">
+  </a>
+</figure>
+<p>It is possible to hide the page from the sitemap, in case you want to, and you can change the rest of the settings outlined in the <a href="http://www.sitemaps.org/protocol.html">xml specification</a>.</p>
+<p>The location is obviously the link to the page, and last modified is last published. Nice and simple.</p>
+<h2>Noindex and nofollow on page</h2>
+<p>The final settings we have in the SEO-tab is whether the page should be indexed, and whether links should be followed:</p>
+<figure>
+  <a href="/archive/media/2015/index_follow.png">
+    <img src="/archive/media/2015/index_follow.png" width="437" alt="Index Follow">
+  </a>
+</figure>
+<p>This will normally not be used, but we have the option, so we never have that request from an SEO company again. Of course it works just like you would expect.</p>
+<h2>Redirects and rewrites</h2>
+<p>By default any page in Umbraco can be opened with six urls:</p>
+<ul>
+<li>example.com/page</li>
+<li>example.com/page/</li>
+<li>example.com/page.aspx</li>
+<li>www.example.com/page</li>
+<li>www.example.com/page/</li>
+<li>www.example.com/page.aspx</li>
+</ul>
+<p>This actually counts as duplicate content, so we want to stop that. I was going to write exactly what we do and why, but it turns out my source is <a href="/umbraco-cms/2014/redirect-rules/">last years calendar</a>. Good job Niels Ellegaard - #h5yr.</p>
+<h2>Image alt and title texts</h2>
+<p>We have had a difficult time with this one. The default media picker in the RTE in Umbraco allows for an <em>alt text</em> (finally), but no title text. Some people suggest using the image name as the title text, but what would you do, if you want to use the same image in multiple places, but in different contexts? Or if you have multiple languages?.</p>
+<p>We are using the grid, so we have stopped using the media picker in the RTE. If we need an image, we use our own picker, that allows alt and title texts directly on the settings flyout. If the editor clicks on an image on the page, this is the first thing she will see:</p>
+<figure>
+  <a href="/archive/media/2015/image.PNG">
+    <img src="/archive/media/2015/image.PNG" width="425" alt="Image">
+  </a>
+</figure>
+<p>Of course, if there is more settings, like text overlay, it goes here too, but that is for another day. The main thing is, that we never have to talk to an SEO-guy about this again.</p>
+<p>One thing to remember here: It is very important to escape the input in these fields. Let's say the title text is <em>The bear's "tail" looks funny</em>. Because there is both a single and a double quotation mark in there, the html of the page will break if it is not escaped correctly. We learned this the hard way.</p>
+<h2>Nofollow on links</h2>
+<p>We haven't had this requirement yet, so we have not implemented it, but at some point we will have some SEO-freak telling us, that he needs to control the follow/nofollow on individual links. When that happens, we will add another setting on the link picker just for this.</p>
+<h2>404-page</h2>
+<p>The standard 404-page from Umbraco has the same limitations as above. There is only one link in the configuration, but you might have multiple languages or sites. As far as I remember, it links to a node ID too, so the admin can break this unknowingly.</p>
+<p>We have made a configuration for this, where the admin can choose what page is the 404-page. Simple as that:</p>
+<figure>
+  <a href="/archive/media/2015/404.png">
+    <img src="/archive/media/2015/404.png" width="576" alt="404">
+  </a>
+</figure>
+<p>Accessing any url that does not exist on the site, will now open the 404-page, as expected. The admin should remember to block that page from <em>robots.txt</em> etc.</p>
+<h2>Final thoughts</h2>
+<p>I know it looks like a lot of the settings above can be combined, but it is my experience, that all SEO-companies have their own idea of what combination is best practice, and there is simply no way to change their mind. For this reason, we have given them the options in any combination they would like.</p>
+<p>The normal editor can simply stay away from this tab, as we have set the default setting to the way a page would normally behave.</p>
+<p>If you use the <em>robots.txt</em> and <em>sitemap.xml</em> as above, you have to careful about how you setup a page with multiple languages. If you have a host setting with <em>example.com/de</em>, the <em>robots.txt</em> will not work, as it needs to be in the root of the domain.</p>
+<p>Some of the things above can be seen in action on our <a href="http://umbracodemo.manaosoftware.com/">demo site</a>. The login credentials are on the homepage. Note that the demo page runs an older version of our setup, so things will look slightly different from above.</p>
+<p>Of course I'm happy to get any feedback, and if there is anything we have forgotten, please let me know.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/online-marketing/" title="See all articles tagged with Online marketing">Online marketing</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/seo/" title="See all articles tagged with SEO">SEO</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Allan Kirk"><img src="//gravatar.com/avatar/d6bcf6f53ba858f8f2c826a619ff6ba5.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/d6bcf6f53ba858f8f2c826a619ff6ba5.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Allan Kirk</h1>
+        <p>Allan is on Twitter as <a href="//twitter.com/MrAllanKirk" title="Allan Kirk on Twitter" rel="author">@MrAllanKirk</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li class="selected"><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

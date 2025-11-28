@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Modify Umbraco URLs with the UrlProvider and ContentFinder</title>
+<meta name="description" content="These days Umbraco has a lot of public APIs which make it possible to modify URLs. This is done with the help of an UrlProvider and ContentFinder.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Modify Umbraco URLs with the UrlProvider and ContentFinder</h1>
+      <p class="byline"> by Jeroen Breuer, <span class="pubdate">posted on <time datetime="2014-12-17">Dec 17, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I'm Jeroen Breuer and I work as a developer at <a href="http://www.haveanicedayonline.nl/" target="_blank">Have A Nice Day Online</a>. These days Umbraco has a lot of public APIs which make it possible to modify URLs. This is done with the help of an <a href="http://our.umbraco.org/documentation/Reference/Request-Pipeline/outbound-pipeline#CreateUrls" target="_blank">UrlProvider</a> and <a href="http://our.umbraco.org/documentation/Reference/Request-Pipeline/IContentFinder" target="_blank">ContentFinder</a>.</p>
+<h2>Change the home URL</h2>
+<p class="intro">For years I've been using <a href="https://cultiv.nl/blog/tip-of-the-week-the-ultimate-site-structure-setup/" target="_blank">the "ultimate" site structure setup</a>. Sebastiaan's post might be old, but it's still pretty up to date. The only part which can be improved these days is that after you've set the internal redirect the homepage URL is still /home. You can change this with the following UrlProvider:</p>
+<pre class="language-csharp"><code>public class HomeUrlProvider : IUrlProvider
+{
+    public string GetUrl(UmbracoContext umbracoContext, int id, Uri current, UrlProviderMode mode)
+    {
+        var content = umbracoContext.ContentCache.GetById(id);
+        if (content != null &amp;&amp; content.DocumentTypeAlias == "Home" &amp;&amp; content.Parent != null)
+        {
+            //The home node will have / instead of /home/.
+            return content.Parent.Url;
+        }
+
+        return null;
+    }
+
+    public IEnumerable&lt;string&gt; GetOtherUrls(UmbracoContext umbracoContext, int id, Uri current)
+    {
+        return Enumerable.Empty&lt;string&gt;();
+    }
+}</code></pre>
+<p>After this the homepage URL will become the URL of its parent which is the site node. Even in the backoffice. The internal redirect is still active so visiting the parent URL will show the homepage. You don't need the urlRewrite anymore. The HomeUrlProvider needs to be registered, but that code will be shown below. This is also part of the <a href="http://our.umbraco.org/projects/developer-tools/hybrid-framework-for-umbraco-v7" target="_blank">Hybrid Framework</a>.</p>
+<h2>Add an extra segment in the URL</h2>
+<h3>Part 1: The UrlProvider</h3>
+<p>In Umbraco the URL structure is pretty straightforward. The <span>URL</span> is the same as the tree structure. All the node's parents are segments in the <span>URL</span>, but what if you want to add a segment that's not a parent node? For example a date in a news page. The following UrlProvider will add the date as a segment to the <span>URL</span>.</p>
+<pre class="language-csharp"><code>public class NewsUrlProvider : IUrlProvider
+{
+    public string GetUrl(UmbracoContext umbracoContext, int id, Uri current, UrlProviderMode mode)
+    {
+        var content = umbracoContext.ContentCache.GetById(id);
+        if (content != null &amp;&amp; content.DocumentTypeAlias == "Newsitem" &amp;&amp; content.Parent != null)
+        {
+            var date = content.GetPropertyValue&lt;DateTime&gt;("date");
+            if(date != null)
+            {
+                //This will add the selected date before the node name.
+                //For example /news/item1/ becomes /news/28-07-2014/item1/.
+                var url = content.Parent.Url;
+                if (!(url.EndsWith("/")))
+                {
+                    url += "/";
+                }
+                return url + date.ToString("dd-MM-yyyy") + "/" + content.UrlName + "/";
+            }
+        }
+
+        return null;
+    }
+
+    public IEnumerable&lt;string&gt; GetOtherUrls(UmbracoContext umbracoContext, int id, Uri current)
+    {
+        return Enumerable.Empty&lt;string&gt;();
+    }
+}</code></pre>
+<h3>Part 2: The ContentFinder</h3>
+<p>Now that the <span>URL</span> has an extra segment you'll get a 404 when trying to visit the page. That's because the <span>URL</span> segments don't match the tree structure anymore. We need to create a ContentFinder that returns the correct node based on the <span>URL</span>. The following ContentFinder does this for the news.</p>
+<pre class="language-csharp"><code>public class NewsContentFinder : IContentFinder
+{
+    public bool TryFindContent(PublishedContentRequest contentRequest)
+    {
+        try
+        {
+            if (contentRequest != null)
+            {
+                //Get the current url.
+                var url = contentRequest.Uri.AbsoluteUri;
+
+                //Get the news nodes that are already cached.
+                var cachedNewsNodes = (Dictionary&lt;string, ContentFinderItem&gt;)HttpContext.Current.Cache["CachedNewsNodes"];
+                if (cachedNewsNodes != null)
+                {
+                    //Check if the current url already has a news item.
+                    if (cachedNewsNodes.ContainsKey(url))
+                    {
+                        //If the current url already has a node use that so the rest of the code doesn't need to run again.
+                        var contentFinderItem = cachedNewsNodes[url];
+                        contentRequest.PublishedContent = contentFinderItem.Content;
+                        contentRequest.TrySetTemplate(contentFinderItem.Template);
+                        return true;
+                    }
+                }
+
+                //Split the url segments.
+                var path = contentRequest.Uri.GetAbsolutePathDecoded();
+                var parts = path.Split(new[] { '/' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+                //The news items should contain 3 segments.
+                if (parts.Length == 3)
+                {
+                    //Get all the root nodes.
+                    var rootNodes = contentRequest.RoutingContext.UmbracoContext.ContentCache.GetAtRoot();
+
+                    //Find the news item that matches the last segment in the url.
+                    var newsItem = rootNodes.DescendantsOrSelf("Newsitem").Where(x =&gt; x.UrlName == parts.Last()).FirstOrDefault();
+                    if(newsItem != null)
+                    {
+                        //Get the news item template.
+                        var template = Services.FileService.GetTemplate(newsItem.TemplateId);
+
+                        if (template != null)
+                        {
+                            //Store the fields in the ContentFinderItem-object.
+                            var contentFinderItem = new ContentFinderItem()
+                            {
+                                Template = template.Alias,
+                                Content = newsItem
+                            };
+
+                            //If the correct node is found display that node.
+                            contentRequest.PublishedContent = contentFinderItem.Content;
+                            contentRequest.TrySetTemplate(contentFinderItem.Template);
+
+                            if (cachedNewsNodes != null)
+                            {
+                                //Add the new ContentFinderItem-object to the cache.
+                                cachedNewsNodes.Add(url, contentFinderItem);
+                            }
+                            else
+                            {
+                                //Create a new dictionary and store it in the cache.
+                                cachedNewsNodes = new Dictionary&lt;string, ContentFinderItem&gt;()
+                                {
+                                    {
+                                        url, contentFinderItem
+                                    }
+                                };
+                                HttpContext.Current.Cache.Add("CachedNewsNodes",
+                                        cachedNewsNodes,
+                                        null,
+                                        DateTime.Now.AddDays(1),
+                                        System.Web.Caching.Cache.NoSlidingExpiration,
+                                        System.Web.Caching.CacheItemPriority.High,
+                                        null);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Umbraco.LogException&lt;NewsContentFinder&gt;(ex);
+        }
+
+        return contentRequest.PublishedContent != null;
+    }
+}</code></pre>
+<p>Currently the code just looks for a news node which matches the name of the last part of the URL. That could probably be improved, but for this example it's fine.</p>
+<h3>Part 3: Clear the cache</h3>
+<p>After the node is found it's also added in a custom cache layer. Because of that the ContentFinder doesn't need to look for the node each time the page is requested. Make sure to clear the cache after save and publish because otherwise you'll get a cached node which is not up to date:</p>
+<pre class="language-csharp"><code>ContentService.Published += Content_Published;
+private void Content_Published(IPublishingStrategy sender, PublishEventArgs&lt;IContent&gt; e)
+{
+    //Clear the content finder cache.
+    HttpContext.Current.Cache.Remove("CachedNewsNodes");
+}</code></pre>
+<h3>Part 4: Register the UrlProvider and ContentFinder</h3>
+<p>The above code won't work just yet. It needs to be registered in the ApplicationStarting event.</p>
+<pre class="language-csharp"><code>protected override void ApplicationStarting(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+{
+    //With the url providers we can change node urls.
+    UrlProviderResolver.Current.InsertTypeBefore&lt;DefaultUrlProvider, HomeUrlProvider&gt;();
+    UrlProviderResolver.Current.InsertTypeBefore&lt;DefaultUrlProvider, NewsUrlProvider&gt;();
+
+    //With the content finder we can match nodes to urls.
+    ContentFinderResolver.Current.InsertTypeBefore&lt;ContentFinderByNotFoundHandlers, NewsContentFinder&gt;();
+}</code></pre>
+<p><span>After this your news items will have the date in the URL and visiting the modified URL will still return the correct news item.</span></p>
+<p><span>The </span><a href="https://github.com/jbreuer/Hybrid-Framework-for-Umbraco-v7-Best-Practises/blob/master/Umbraco.Extensions/UrlProvider/NewsUrlProvider.cs" target="_blank">NewsUrlProvider</a><span> and <a href="https://github.com/jbreuer/Hybrid-Framework-for-Umbraco-v7-Best-Practises/blob/master/Umbraco.Extensions/ContentFinder/NewsContentFinder.cs" target="_blank">NewsContentFinder</a> are also part of the </span><a href="https://github.com/jbreuer/Hybrid-Framework-for-Umbraco-v7-Best-Practises" target="_blank">Hybrid Framework best practises</a> so you can find a working example there<span>.</span></p>
+<h2>The possibilities</h2>
+<p>With the UrlProvider and ContentFinder nothing is impossible with URLs in Umbraco. On a big project at work we even completly replaced the default UrlProvider and ContentFinder that Umbraco uses. By default Umbraco only supports setting a domain at a single level. If you have domains at multiple levels only the URLs for the deepest domain in the tree are generated. For this website we needed all URLs for all the domains at multiple levels. For example a page needed to be accessible at www.website.com/level1/level2/level3/, but also at www.level2-website.com/level3/. So the website node has a domain and also the level2 node. Without changing the source code we were able to support this. The following code switched the default UrlProvider and ContentFinder with our own:</p>
+<pre class="language-csharp"><code>protected override void ApplicationStarting(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+{
+    //With the url providers we can change node urls.
+    UrlProviderResolver.Current.InsertTypeBefore&lt;DefaultUrlProvider, DomainUrlProvider&gt;();
+
+    //Remove the DefaultUrlProvider because our DomainUrlProvider should take care of all the urls.
+    UrlProviderResolver.Current.RemoveType&lt;DefaultUrlProvider&gt;();
+            
+    //With the content finder we can match nodes to urls.
+    ContentFinderResolver.Current.InsertTypeBefore&lt;ContentFinderByNiceUrl, DomainContentFinder&gt;();
+
+    //Remove the ContentFinderByNiceUrl because our DomainContentFinder should find all the content.
+    ContentFinderResolver.Current.RemoveType&lt;ContentFinderByNiceUrl&gt;();
+}</code></pre>
+<h2>The downside</h2>
+<p>Modifying URLs is easy, but currently there is a downside. Packages like the <a href="http://our.umbraco.org/projects/developer-tools/301-url-tracker" target="_blank">301 URL Tracker</a> and <a href="http://our.umbraco.org/projects/website-utilities/seo-checker" target="_blank">SEO Checker</a> don't do a 301 redirect from the old URL to the new URL. So if you change the node name of a news item from the above example you need to add a 301 manually from the old URL. </p>
+<p>It might be possible to automate this with some events, but I haven't tried that yet. </p>
+<h2>Thanks</h2>
+<p>I would like thank <a href="https://twitter.com/zpqrtbnk" target="_blank">Stephan Gay</a> for making all of this possible in Umbraco. In the last couple of months he's been a great help and I couldn't have done this without him. <a href="http://h5yr.com/" target="_blank">#h5yr</a></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/caching/" title="See all articles tagged with Caching">Caching</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jeroen Breuer"><img src="//gravatar.com/avatar/093beed29b447cc589b5c1abeb4ff309.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/093beed29b447cc589b5c1abeb4ff309.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jeroen Breuer</h1>
+        <p>Jeroen is on Twitter as <a href="//twitter.com/j_breuer" title="Jeroen Breuer on Twitter" rel="author">@j_breuer</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li class="selected"><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

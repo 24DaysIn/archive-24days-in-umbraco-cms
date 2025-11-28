@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Developing similar solutions through different approaches</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Similar Solutions - Different Approaches</h1>
+      <p class="byline"> by Nathan Woulfe, <span class="pubdate">posted on <time datetime="2017-12-12">Dec 12, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">When I started the first draft of this yarn, I had grand plans of exploring how I structured my workflow package, Plumber. Given it’s a reasonably large piece of work, there’s a whole lot of interesting bits and pieces to explore – a custom section, custom trees, overlays, dashboards, poco mapping and so on.</p>
+<p class="intro">Umbraco provides a heap of handy endpoints and sensible defaults to help speed up developing backoffice extensions, and since I was using a range of these, I thought my insights might be helpful for other package developers.</p>
+<p>I started writing and reviewing my code, and quickly came to realise the way I building my trees wasn't quite right. Draft went in the bin, and the time I’d put aside for writing was instead spent refactoring.</p>
+<p>Call this take two – a look at how custom sections and trees work, how I’d built mine incorrectly, and how building them correctly gives much more control over how they are routed.</p>
+<p>Perhaps more importantly (especially since there are plenty of examples of tree and section registration out there on the web already), this tale is also a look at how Umbraco gives us multiple ways of achieving similar results, but leaves it to us as developers to choose the most appropriate for our situation.</p>
+<h2>Custom sections</h2>
+<p>Adding a custom section to an Umbraco install is quick and easy – a new class inheriting from <span class="code">IApplication</span>, decorated with the <span class="code">Application</span> attribute, in which we give the section an alias, a name, and icon and a sort order.</p>
+<pre><code class="language-csharp">﻿using umbraco.businesslogic;
+using umbraco.interfaces;
+
+namespace Workflow.Trees
+{
+    [Application("workflow", "Workflow", "icon-path", 10)]
+    public class WorkflowApplication : IApplication { }
+}</code></pre>
+<p>Already we hit an option - we can achieve the same using the <span class="code">SectionService</span>. My preference is to define the class, since I feel it's more obvious in it's purpose than adding an event handler to call the service.</p>
+<p>This registers the new section on startup, but you’ll still need to grant individual users permission to see it in the backoffice. You could also do this programmatically for all users or particular types/groups, but that’s beyond the scope of this discussion. Another option!</p>
+<h2>Custom tree</h2>
+<p>The tree is added in much the same manner – either via a class or the <span class="code">ApplicationTreeService</span>. The <span class="code">Tree</span> attribute defines the section, tree alias and tree name. The <span class="code">PluginController</span> associates our new tree with our plugin/extension (more on this in a second).</p>
+<p>The controller has two required methods – <span class="code">GetTreeNodes</span> and <span class="code">GetMenuForNode</span> – which are responsible for populating the tree.</p>
+<p>If the example below doesn't feel right, that's because it's not. We'll come back to that, but for now, it's an example of how we can populate a tree in a custom section.</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Net.Http.Formatting;
+using Umbraco.Core;
+using Umbraco.Web.Models.Trees;
+using Umbraco.Web.Mvc;
+using Umbraco.Web.Trees;
+
+namespace Workflow.Trees
+{
+    [Tree("workflow", "tree", "Workflow")]
+    [PluginController("Workflow")]
+    public class WorkflowTreeController : TreeController
+    {
+        protected override TreeNodeCollection GetTreeNodes(string id, FormDataCollection queryStrings)
+        {
+            if (id == Constants.System.Root.ToInvariantString())
+            {
+                var nodes = new TreeNodeCollection();
+                
+                // add nodes to the root level of the tree
+
+                return nodes;
+            }
+
+            if (id == "approval-groups")
+            {
+                // removed for brevity - populates child nodes of approval-groups node
+            }
+            throw new NotSupportedException();
+        }
+
+        protected override MenuItemCollection GetMenuForNode(string id, FormDataCollection queryStrings)
+        {
+            var menu = new MenuItemCollection();
+            
+            // populate the children for the selected node
+
+            return menu;
+        }
+    }
+}</code></pre>
+<h2>The plugin folders</h2>
+<p>A shiny new section and tree is worth nought if we don’t fill it with data. To do so, we need to define a new plugin in the App_Plugins folder. This will store the JS, HTML and CSS assets required by our plugin.</p>
+<p>Umbraco sets some sane defaults for backoffice routing, which for our new plugin are defined by the values in the attributes set on our section and tree controllers.</p>
+<p>By default, Umbraco will search for HTML views in <span class="code">/App_Plugins/{plugin name}/BackOffice/{tree alias}/{method}.html</span>, where the default method is edit.</p>
+<p>We also need a folder for language definitions, at <span class="code">/App_Plugins/{plugin name}/Lang</span>, where we add language files for our plugin. In those language files we also need to set the displayed name for our custom section:</p>
+<p><span class="code"> &lt;area alias="sections"&gt;</span><br><span class="code">  &lt;key alias="workflow"&gt;Workflow&lt;/key&gt;</span><br><span class="code"> &lt;/area&gt;</span></p>
+<p>This is enough to generate a new section, with a simple tree, using the default routing.</p>
+<p>The next bit is where I went wrong.</p>
+<p>The Plumber application has three root nodes – one for settings, one for approval groups, and one for history. Only approval groups has child nodes, the other two simply display a default view. To create the nodes, I created a single tree, added the required root-level nodes and wired up the required functions for populating sub menus:</p>
+<pre><code class="language-csharp">using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http.Formatting;
+using Umbraco.Core;
+using Umbraco.Core.Models;
+using Umbraco.Web;
+using Umbraco.Web.Models.Trees;
+using Umbraco.Web.Mvc;
+using Umbraco.Web.Trees;
+using Workflow.Models;
+
+namespace Workflow.Trees
+{
+    [Tree("workflow", "tree", "Workflow")]
+    [PluginController("Workflow")]
+    public class WorkflowTreeController : TreeController
+    {
+        protected override TreeNodeCollection GetTreeNodes(string id, FormDataCollection queryStrings)
+        {
+            if (id == Constants.System.Root.ToInvariantString())
+            {
+
+                var nodes = new TreeNodeCollection();
+                const string route = "workflow/tree/view/";
+                var treeNodes = new List&lt;SectionTreeNode&gt;();
+
+                var user = UmbracoContext.Current.Security.CurrentUser;
+
+                if (user.IsAdmin())
+                {
+                    treeNodes.Add(new SectionTreeNode { Id = "settings", Title = "Settings", Icon = "icon-umb-settings", Route = $"{route}settings" });
+                    treeNodes.Add(new SectionTreeNode { Id = "approval-groups", Title = "Approval groups", Icon = "icon-users", Route = $"{route}approval-groups" });
+                }
+                treeNodes.Add(new SectionTreeNode { Id = "history", Title = "History", Icon = "icon-directions-alt", Route = $"{route}history" });
+
+                nodes.AddRange(treeNodes.Select(n =&gt; CreateTreeNode(n.Id, id, queryStrings, n.Title, n.Icon, n.Id == "groups", n.Route)));
+
+                return nodes;
+            }
+
+            if (id == "approval-groups")
+            {
+                // removed for brevity - populates child nodes of approval-groups node
+            }
+            throw new NotSupportedException();
+        }
+
+        protected override MenuItemCollection GetMenuForNode(string id, FormDataCollection queryStrings)
+        {
+            var menu = new MenuItemCollection();
+            int result;
+
+            if (id == "approval-groups")
+            {
+                menu.Items.Add(new MenuItem()
+                {
+                    Alias = "add",
+                    Name = "Create",
+                    Icon = "add"
+                });
+                menu.Items.Add&lt;RefreshNode, umbraco.BusinessLogic.Actions.ActionRefresh&gt;("Reload nodes", true);
+            }
+            else if (int.TryParse(id, out result))
+            {
+                menu.Items.Add&lt;umbraco.BusinessLogic.Actions.ActionDelete&gt;("Delete group");
+            }
+
+            return menu;
+        }
+    }
+}</code></pre>
+<p>Given that means a single tree controller, everything was using a common route as defined by the attributes decorating the tree controller:</p>
+<p><span class="code">[Tree("workflow", "tree", "Workflow")]</span><br><span class="code"> [PluginController("Workflow")]</span></p>
+<p>And the route property added to each <span class="code">SectionTreeNode</span>:</p>
+<p><span class="code">// the route param is defined earlier, as 'workflow/tree/view'<br>treeNodes<span class="token punctuation">.</span><span class="token function">Add</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">SectionTreeNode</span> <span class="token punctuation">{</span> Id <span class="token operator">=</span> <span class="token string">"settings"</span><span class="token punctuation">,</span> Title <span class="token operator">=</span> <span class="token string">"Settings"</span><span class="token punctuation">,</span> Icon <span class="token operator">=</span> <span class="token string">"icon-umb-settings"</span><span class="token punctuation">,</span> Route <span class="token operator">=</span> $<span class="token string">"{route}settings"</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span><span> </span></p>
+<p>Which translated into routes looked like:</p>
+<p><span class="code">/App_Plugins/workflow/Backoffice/tree/view/settings</span></p>
+<p><span>All my routes are sent through /tree/view so that I have a central controller from which to manage menu and loading state, so they </span>then translate into URLs similar to this one:</p>
+<p><span class="code">/umbraco#/workflow/tree/view/settings</span></p>
+<p>Not great, is it? In the interest of looking after our users, the visible URL should be logical, concise, and follow a format similar to Umbraco’s default sections. We've currently got URL segments which mean absolutely nothing.</p>
+<p>Why? Because somewhere along the line, I’d interpreted the three root nodes as one tree, when it should be three. Refactoring the single tree controller into one each for settings, approval groups and history means we have a lot more control over routing, as each tree has its own attributes and hence its own route. While this means three separate controllers, each one is concise and contains only the logic required to render that particular tree.</p>
+<p>For example, the settings tree controller:</p>
+<pre><code class="language-csharp">﻿using System.Net.Http.Formatting;
+using Umbraco.Web.Models.Trees;
+using Umbraco.Web.Mvc;
+using Umbraco.Web.Trees;
+
+namespace Workflow.Trees
+{
+    [Tree("workflow", "settings", "Settings")]
+    [PluginController("Workflow")]
+    public class WorkflowSettingsTreeController : TreeController
+    {
+
+        protected override TreeNode CreateRootNode(FormDataCollection queryStrings)
+        {
+            var root = base.CreateRootNode(queryStrings);
+
+            root.RoutePath = "workflow/settings";
+            root.Icon = "icon-umb-settings";
+            root.HasChildren = false;
+
+            return root;
+        }
+
+        protected override TreeNodeCollection GetTreeNodes(string id, FormDataCollection queryStrings)
+        {
+            return new TreeNodeCollection();
+        }
+
+        protected override MenuItemCollection GetMenuForNode(string id, FormDataCollection queryStrings)
+        {
+            return new MenuItemCollection();
+        }
+    }
+}</code></pre>
+<p>Much better, right? Notice the lack of logic, for starters. It's concise, and does one job - building the settings tree.</p>
+<p>We're defining a tree with a single node, and giving it the route <span class="code">/workflow/settings</span>, which will resolve to a particular view in my plugin folders. It's still defined as part of the Workflow section (or application, choose your own nomenclature), but in its own tree.</p>
+<p>But it won't load, at least not yet. Umbraco defines a set of default routes, but not one to handle <span class="code">:section/:tree</span> (AKA /workflow/settings). We can easily remedy this by adding the route to the Umbraco AngularJs application, to manage the root node in each of the three trees:</p>
+<pre><code class="language-javascript">﻿(function() {
+  'use strict';
+
+  var app = angular.module('umbraco');
+
+  app.config(function ($routeProvider) {
+    $routeProvider.when('/workflow/:tree',
+      {
+        template: '&lt;div ng-include="\'/app_plugins/workflow/backoffice/tree/view.html\'"&gt;&lt;/div&gt;'
+      });
+  });
+}());</code></pre>
+<p>All my routes are still sent through <span class="code">.../tree/view/</span>, where the AngularJs controller takes the tree name from $routeParams and builds the correct URL for the required view.</p>
+<p>With the new route configured, Plumber now has clean, simple tree registration and tidy backoffice routes:</p>
+<ul>
+<li>/umbraco#/workflow/settings</li>
+<li>/umbraco#/workflow/approval-groups</li>
+<li>/umbraco#/workflow/approval-groups/edit/{id}</li>
+<li>/umbraco#/workflow/history</li>
+</ul>
+<p>Is it a change the end user will notice? Maybe not, but it keeps the plugin code clean and readable.</p>
+<p>Even though defining a single tree works acceptably, breaking it out into distinct trees means we can modify one in the future without breaking another.</p>
+<p>The extensible nature of Umbraco means a given goal can often be achieved through multiple different coding approaches, each with its own benefits and trade-offs. The responsibility ultimately falls to us as developers to identify those differences, and find the solution which best solves our particular problem.</p>
+<p>If anyone cares to fill me in on the differences between registering custom sections and/or trees via the service compared to a class declaration, please, do.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Nathan Woulfe"><img src="//gravatar.com/avatar/a67c246df6e07b54f92e0cac03a6a1ba.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/a67c246df6e07b54f92e0cac03a6a1ba.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Nathan Woulfe</h1>
+        <p>Nathan is on Twitter as <a href="//twitter.com/nathanwoulfe" title="Nathan Woulfe on Twitter" rel="author">@nathanwoulfe</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

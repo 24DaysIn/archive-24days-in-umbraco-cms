@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Configuring Umbraco load balancer with two Azure Web Apps (Frontend &amp; Backend)</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Azure Load Balancing</h1>
+      <p class="byline"> by Dhanesh Kumar &amp; Muhammad Ansar, <span class="pubdate">posted on <time datetime="2021-12-14">Dec 14, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">We will be deploying a website with two Azure Web Apps - one for the frontend website with auto scaling enabled and one for the backend without auto scaling.</p>
+<p class="intro">This article collects a lot of different technical setups and will refer to several concepts that we can’t go into detail with here. To get the most out of it, it’s best to have some Azure tools and Web Apps experience. We will link to more information where it is relevant.</p>
+<h2>Setting up Azure</h2>
+<p>The first thing to do is to make sure you have created all the Azure resources and configured them. Follow the steps below to ensure you have created all the necessary items for the auto scaling environment:</p>
+<ol>
+<li>Create a Web App for the front-end website. Please ensure auto scaling is enabled. You can see step by step instructions for creating an Azure Web App in <a rel="noopener" href="https://microsoftlearning.github.io/20532-DevelopingMicrosoftAzureSolutions/Instructions/Labs/Mod03/LAB_AK_03.html#exercise-1-creating-an-azure-web-app-and-function-app" target="_blank" data-anchor="#exercise-1-creating-an-azure-web-app-and-function-app">this Microsoft Learning tutorial.</a></li>
+<li>Create another Web App for the Umbraco backend website. Auto scaling should not be enabled for this Web App as the backend will not work properly if you enable auto scale here.</li>
+<li>Create an <a rel="noopener" href="https://docs.microsoft.com/en-us/azure/azure-sql/database/single-database-create-quickstart?tabs=azure-portal" target="_blank" data-anchor="?tabs=azure-portal">Azure SQL database</a>. This database will be shared with the frontend and backend websites.</li>
+<li>Create an <a rel="noopener" href="https://docs.microsoft.com/en-us/azure/storage/common/storage-account-create?tabs=azure-portal" target="_blank" data-anchor="?tabs=azure-portal">Azure Storage Account</a> for the Umbraco media files.</li>
+</ol>
+<p>Now you are ready to set up the Umbraco media files with Azure storage.</p>
+<h3>Setting up Umbraco media files with Azure Storage</h3>
+<p>You can set up Umbraco media files to be stored and served from Azure Blob storage with the following steps:</p>
+<ol>
+<li>Open Visual Studio</li>
+<li>Install the UmbracoFileSystemProviders.Azure using the <a rel="noopener" href="https://www.nuget.org/packages/UmbracoFileSystemProviders.Azure/3.0.2/" target="_blank">nuget package.</a></li>
+<li>Install UmbracoFileSystemProviders.Azure.Media using the <a rel="noopener" href="https://www.nuget.org/packages/UmbracoFileSystemProviders.Azure.Media/3.0.2/" target="_blank">nuget package</a>. This will be installed on top of UmbracoFileSystemProviders.Azure but all the settings will be maintained.</li>
+<li>Copy the storage account name and access key from the Azure portal and follow the config update instructions given <a rel="noopener" href="https://github.com/umbraco-community/UmbracoFileSystemProviders.Azure/tree/develop-version-3" target="_blank">here in this guide by Jeavon.</a></li>
+</ol>
+<p>If the settings are done correctly, you will be able to see the files in Azure Blob, when you create a media file in the Umbraco media section.</p>
+<h3>Install SSL certificate for the App Service</h3>
+<p>Now you need to install the SSL certificate so the applications will be secure:</p>
+<ol>
+<li>Select App Services in the left menu in the Azure portal and click on the relevant app.</li>
+<li>From the left navigation of your app, select TLS/SSL settings.</li>
+<li>Click on Private Key Certificates (.pfx)</li>
+<li>Click on Create App Service Managed Certificate.</li>
+<li>Select the custom domain to create a certificate for it and click on Create. (Note that you can only create one certificate for each supported custom domain.)</li>
+</ol>
+<p>The certificate can now be found in the Private Key Certificates list.</p>
+<p><img style="width: 500px; height: 131.35593220338984px;" src="/archive/media/2021/01-private-key-certficates.png?width=500&amp;height=131.35593220338984" alt="Private Key Certificates list" data-udi="umb://media/a00e07aa3db84ba5b7955a0da82d69a0"></p>
+<h3>Setting up Application Insights for Monitoring</h3>
+<p>We recommend installing Application Insights so you can monitor the availability, performance and usage of your web applications. You can also then track live metrics streams, requests and response times and events.</p>
+<p>Read more about this <a rel="noopener" href="https://our.umbraco.com/documentation/Umbraco-Cloud/Set-Up/Application-Insights/" target="_blank">here</a>.</p>
+<h3>Configure CDN endpoints</h3>
+<p>You then need to set up the CDN endpoints for the media files path to work properly as media files are now served from the Azure Blob storage.</p>
+<p>We recommend following the detailed steps in this <a rel="noopener" href="https://github.com/CrumpledDog/Umbraco-AzureCDNToolkit/blob/develop/docs/Azure-Setup.md" target="_blank">guide written by Jeavon on GitHub</a> &amp; the <a rel="noopener" href="https://our.umbraco.com/Documentation/Extending/FileSystemProviders/Azure-Blob-Storage/index-v8" target="_blank">Umbraco documentation</a>.</p>
+<h3>Configure the scale out rules in the Azure Web App</h3>
+<ol>
+<li>Select App Services in the left menu in the Azure portal and click on the relevant app.</li>
+<li>From the left navigation of your app, select Scale out (App Service plan)</li>
+<li>Set up the the two rules as shown in the screenshot below</li>
+</ol>
+<p><a rel="noopener" data-udi="umb://media/622dda019c014c9ca27c599d624c3e63" href="/archive/media/2021/02-scale-out-rules-azure-web-app.jpg" target="_blank"><img style="width: 500px; height: 326.27484874675883px;" src="/archive/media/2021/02-scale-out-rules-azure-web-app.jpg?width=500&amp;height=326.27484874675883" alt="Scale out rules in the Azure Web App" data-udi="umb://media/622dda019c014c9ca27c599d624c3e63"></a></p>
+<h3>Staging Environment</h3>
+<p>Setting up your staging environment to be the same as your live environment is ideal for testing, so we recommend you make both load balanced.</p>
+<p>Repeat all the above steps to set up an identical Staging environment.</p>
+<h3>Setting up Azure DevOps</h3>
+<p>At this point, we highly recommend setting up Azure DevOps so the deployment can be done seamlessly to each environment.</p>
+<p>You can see the DevOps pipeline workflow we follow below:</p>
+<p><a rel="noopener" data-udi="umb://media/1d91c446f215418980aeb4f3402ef741" href="/archive/media/2021/03-umbraco-azure-devops.png" target="_blank"><img style="width: 500px; height: 247.802734375px;" src="/archive/media/2021/03-umbraco-azure-devops.png?width=500&amp;height=247.802734375" alt="DevOps pipeline workflow" data-udi="umb://media/1d91c446f215418980aeb4f3402ef741"></a></p>
+<h2>Azure Specific Configuration</h2>
+<p>It’s time to head into the web.config to make special configurations to prevent several issues. We’ve compiled the important steps below, but you can read more about this <a rel="noopener" href="https://our.umbraco.com/Documentation/Fundamentals/Setup/Server-Setup/Load-Balancing/file-system-replication-v8" target="_blank">here</a>.</p>
+<h3>Examine Directory Factory Options</h3>
+<p>To avoid issues with Examine indexes becoming locked and corrupt add the following appSettings within Web.config</p>
+<p><strong>Frontend website web.config:</strong></p>
+<pre><code class="language-markup">
+&lt;add key="Umbraco.Examine.LuceneDirectoryFactory" 
+	value="Examine.LuceneEngine.Directories.TempEnvDirectoryFactory, Examine" /&gt;
+
+</code></pre>
+<p><strong>Backend website web.config:</strong></p>
+<pre><code class="language-markup">
+&lt;add key="Umbraco.Examine.LuceneDirectoryFactory" 
+	value="Examine.LuceneEngine.Directories.SyncTempEnvDirectoryFactory, Examine" /&gt;
+
+</code></pre>
+<p>Once the above configurations are added, then we need to verify that Examine is working. You can check this by using the backend search. If the backend search works, then Examine is working.</p>
+<p>You can also check the path of the Examine indexes via the Examine dashboard.</p>
+<p><a rel="noopener" data-udi="umb://media/209f33d4e0f747e5bb092277cb155ae9" href="/archive/media/2021/04-examine-backoffice-configuration.jpg" target="_blank"><img style="width: 500px; height: 242.47491638795987px;" src="/archive/media/2021/04-examine-backoffice-configuration.jpg?width=500&amp;height=242.47491638795987" alt="Examine dashboard" data-udi="umb://media/209f33d4e0f747e5bb092277cb155ae9"></a></p>
+<h3>Configure Umbraco to use the Environment Temporary folder</h3>
+<p>To avoid several servers sharing the same temporary files, move any Umbraco temp files to the non-synced environment temp storage.</p>
+<ol>
+<li>Add the following to appSettings within Web.config of the backend webapp:<br>
+<pre><code class="language-markup">
+&lt;add key="Umbraco.Core.LocalTempStorage" value="EnvironmentTemp"  /&gt;
+
+</code></pre>
+</li>
+<li>Delete the /App_Data/TEMP folder</li>
+</ol>
+<h3>Umbraco MainDom locking</h3>
+<p>You want to avoid the Published Cache locking when the Azure Web Apps auto transitions between hosts. This can be done by configuring the app to use SQL for MainDom locking</p>
+<p>Add the following to appSettings within the Web.config of the backend:</p>
+<pre><code class="language-markup">
+&lt;add key="Umbraco.Core.MainDom.Lock" value="SqlMainDomLock"  /&gt;
+
+</code></pre>
+<h2><br>Configure an explicit master scheduling server</h2>
+<p>Umbraco recommends configuring an explicit master scheduling server as it will reduce the amount of complexity performed by the master election process. You can <a rel="noopener" href="https://our.umbraco.com/Documentation/Fundamentals/Setup/Server-Setup/Load-Balancing/flexible-advanced-v8#explicit-master-scheduling-server" target="_blank" data-anchor="#explicit-master-scheduling-server">read more about that here</a>.</p>
+<p>There’s two ways to achieve this: <em>IServerRegistrar</em> or editing the UmbracoSettings.config file.</p>
+<h3>Option 1 - Using IServerRegistrar</h3>
+<p>You need to create a couple of classes for the front-end servers and master server:</p>
+<pre><code class="language-csharp">
+public class MasterServerRegistrar : IServerRegistrar
+{
+    public IEnumerable&lt;IServerAddress&gt; Registrations
+    {
+        get { return Enumerable.Empty&lt;IServerAddress&gt;(); }
+    }
+    public ServerRole GetCurrentServerRole()
+    {
+        return ServerRole.Master;
+    }
+    public string GetCurrentServerUmbracoApplicationUrl()
+    {
+        // NOTE: If you want to explicitly define the URL that your application is running on,
+        // this will be used for the server to communicate with itself, you can return the
+        // custom path here and it needs to be in this format:
+        // https://www.website.com/umbraco
+
+        return null;
+    }
+}
+
+public class FrontEndReadOnlyServerRegistrar : IServerRegistrar
+{
+    public IEnumerable&lt;IServerAddress&gt; Registrations
+    {
+        get { return Enumerable.Empty&lt;IServerAddress&gt;(); }
+    }
+    public ServerRole GetCurrentServerRole()
+    {
+        return ServerRole.Replica;
+    }
+    public string GetCurrentServerUmbracoApplicationUrl()
+    {
+        return null;
+    }
+}
+
+</code></pre>
+<p>Once the above classes are created then you need to register them in the backend and the frontend.</p>
+<p><strong>Backend registration</strong></p>
+<pre><code class="language-csharp">
+[RuntimeLevel(MinLevel = RuntimeLevel.Run)]
+public class OurComposer : IUserComposer
+{
+	public void Compose(Composition composition)
+	{
+		composition.SetServerRegistrar(new MasterServerRegistrar());
+	}
+}
+
+</code></pre>
+<p><strong>Frontend registration</strong></p>
+<pre><code class="language-csharp">
+[RuntimeLevel(MinLevel = RuntimeLevel.Run)]
+public class OurComposer : IUserComposer
+{
+	public void Compose(Composition composition)
+	{
+		composition.SetServerRegistrar(new FrontEndReadOnlyServerRegistrar());
+	}
+}
+
+</code></pre>
+<h3>Option 2 - Using UmbracoSettings.config</h3>
+<p>Another option is to set the UmbracoApplicationUrl via configuration rather than using a ServerRegistrar.</p>
+<p>To do this you need to edit the umbracoSettings.config and add the URL of the web app with the trailing “/umbraco” to the umbracoApplicationUrl attribute of the web.routing element (change the URL https://backend.azurewebsites.net/ to the URL of your backend website):</p>
+<pre><code class="language-markup">&lt;web.routing 
+	trySkipIisCustomErrors="false" 
+	internalRedirectPreservesTemplate="false" 
+	disableAlternativeTemplates="false" 
+	disableFindContentByIdPath="false" 
+	umbracoApplicationUrl="https://backend.azurewebsites.net/umbraco"&gt; 
+&lt;/web.routing&gt;
+
+</code></pre>
+<h2>Restrict accessing umbraco backend from the frontend website</h2>
+<p>Once the two Web Apps are set up, the backend should only be accessed via a single instance.</p>
+<p>Add the following rule in the web config file to ensure this (change the URL https://backend.azurewebsites.net/ to the URL of your backend website):</p>
+<pre><code class="language-markup">
+&lt;rewrite&gt; 
+	&lt;rules&gt; &lt;!-- Restrict access to Umbraco --&gt; 
+		&lt;rule name="Restrict access" stopProcessing="true"&gt;
+			&lt;match url="umbraco$|umbraco/(?!surface\/)(?!api\/)(?!webservices\/)" /&gt; 
+			&lt;conditions logicalGrouping="MatchAll" trackAllCaptures="false"&gt; 
+				&lt;add input="{HTTP_HOST}" pattern="(([^.]+)\.)?frontend\.azurewebsites\.net" negate="true" /&gt; 
+				&lt;add input="{HTTP_HOST}" pattern="(([^.]+)\.)?localhost" negate="true" /&gt; 
+			&lt;/conditions&gt; 
+			&lt;action type="Redirect" url="https://backend.azurewebsites.net/umbraco/" appendQueryString="false" /&gt; 
+		&lt;/rule&gt; 
+	&lt;/rules&gt; 
+&lt;/rewrite&gt;
+
+</code></pre>
+<p> </p>
+<h2>Custom Index in scaling environment</h2>
+<p>If your application uses <a rel="noopener" href="https://our.umbraco.com/documentation/reference/searching/examine/indexing/" target="_blank">custom indexes</a> then you should use a <em>CacheRefresher</em> to tell the other servers to also index the data.</p>
+<p>Add the following event handler to a composer In order to use CacheRefresher event</p>
+<pre><code class="language-csharp">
+ContentCacheRefresher.CacheUpdated += ContentCacheRefresher_CacheUpdated; 
+
+</code></pre>
+<p><a rel="noopener" href="https://github.com/umbraco/Umbraco-CMS/blob/a0695850cbf7200f096e4ca094b007a6518dc091/src/Umbraco.Web/Search/ExamineComponent.cs#L120" target="_blank" data-anchor="#L120">Refer to this ExamineComponent source code</a> to understand how CacheRefresher refresh events can be used.</p>
+<p>In the handler populate/remove the custom index items as required (as opposed to using ContentService_Published for example).</p>
+<h2>Thank you for reading!</h2>
+<p>In this article we compiled several tutorials and documentations to help you configure load balancer for your Umbraco website with two Azure Web Apps.</p>
+<p>You can read more about load balancing with Umbraco in the <a rel="noopener" href="https://our.umbraco.com/Documentation/Fundamentals/Setup/Server-Setup/Load-Balancing/" target="_blank">Umbraco documentation</a>.</p>
+<p>We hope you found this article helpful. Should you have any questions, you are always welcome to reach out to us through our website contact form.</p>
+<p>Happy holidays from Phases :)</p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/azure/" title="See all articles tagged with Azure">Azure</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Dhanesh Kumar"><img src="//gravatar.com/avatar/4a74042c5a56a50f857e3494871253ed.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/4a74042c5a56a50f857e3494871253ed.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Dhanesh Kumar</h1>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="Muhammad Ansar"><img src="//gravatar.com/avatar/1f6eda366cc8e78f91c743ca922bcc50.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/1f6eda366cc8e78f91c743ca922bcc50.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Muhammad Ansar</h1>
+        <p>Muhammad is on Twitter as <a href="//twitter.com/anzer" title="Muhammad Ansar on Twitter" rel="author">@anzer</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

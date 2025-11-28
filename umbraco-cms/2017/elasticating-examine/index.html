@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Elasticating Examine - an experimental Examine provider</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Elasticating Examine</h1>
+      <p class="byline"> by Tristan Thompson, <span class="pubdate">posted on <time datetime="2017-12-06">Dec 6, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">For those of you that are unfamiliar with <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/reference/searching/examine/" target="_blank">Examine</a>, it's the Umbraco wrapper for <a rel="noopener noreferrer" href="https://lucenenet.apache.org/" target="_blank">Lucene</a> that automatically indexes your content and provides you with an API to search against it out of the box. You can configure how it indexes things and write advanced queries to search the data. It does this by creating and maintaining file-based indexes in your App_Data folder. This can sometimes cause problems with corrupted or locked files, which can be increased in cloud-based environments (though Umbraco have done a <em>lot</em> of work to improve this).</p>
+<p class="intro">I was involved in a project last year whereby the client wanted to be able to do some pretty sophisticated searching over a large amount of content. The tech-lead went with <a rel="noopener noreferrer" href="https://www.elastic.co/products/elasticsearch" target="_blank">Elasticsearch</a> to try and avoid the aforementioned Examine issues; Elasticsearch has a centralised, RESTful interface (with C# nuget packages available) which usually sits on top of a cluster of Elasticsearch nodes. It's meant to be very reliable, fast and has the added bonus of avoiding the file-based issues that Examine can sometimes have. It's (a little bit) like the search equivalent of using Azure Blob storage to centralise your media library when you have more than one web server in the mix. For the project, the developer hooked into the Umbraco <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/reference/events/ContentService-Events" target="_blank">ContentService Events</a> to add and remove data from Elasticsearch. I wasn't heavily involved in the Elasticsearch side on that project, but recently I've been working on an MVC project where I've had the opportunity to get my hands dirty setting up an Elasticsearch index.  This made me wonder...</p>
+<h2>Is it possible to implement an Examine provider that uses Elasticsearch?</h2>
+<p>Examine isn't just used for site search, it's used for indexing internal data too. If I could implement a provider, then it might be possible to negate some of the issues Examine faces in some scenarios. So, I decided to do what any sane developer would do: I googled it to see if someone else had already done it. And, to my surprise, I found pretty much nothing...I couldn't even find anything about implementing the Examine providers!</p>
+<p>So I started with what little I knew: the <span class="code">ExamineSettings.config</span> was where I'd come across the Examine providers previously:</p>
+<pre><code class="language-markup">&lt;?xml version="1.0"?&gt;
+&lt;Examine&gt;
+    &lt;ExamineIndexProviders&gt;
+        &lt;providers&gt;
+            &lt;add name="InternalIndexer" type="UmbracoExamine.UmbracoContentIndexer, UmbracoExamine"
+                 supportUnpublished="true"
+                 supportProtected="true"
+                 analyzer="Lucene.Net.Analysis.WhitespaceAnalyzer, Lucene.Net"/&gt;
+
+            &lt;add name="InternalMemberIndexer" type="UmbracoExamine.UmbracoMemberIndexer, UmbracoExamine"
+                 supportUnpublished="true"
+                 supportProtected="true"
+                 analyzer="Lucene.Net.Analysis.Standard.StandardAnalyzer, Lucene.Net"/&gt;
+
+            &lt;!-- default external indexer, which excludes protected and unpublished pages--&gt;
+            &lt;add name="ExternalIndexer" type="UmbracoExamine.UmbracoContentIndexer, UmbracoExamine"/&gt;
+
+        &lt;/providers&gt;
+    &lt;/ExamineIndexProviders&gt;
+
+    &lt;ExamineSearchProviders defaultProvider="ExternalSearcher"&gt;
+        &lt;providers&gt;
+            &lt;add name="InternalSearcher" type="UmbracoExamine.UmbracoExamineSearcher, UmbracoExamine"
+                 analyzer="Lucene.Net.Analysis.WhitespaceAnalyzer, Lucene.Net"/&gt;
+
+            &lt;add name="InternalMemberSearcher" type="UmbracoExamine.UmbracoExamineSearcher, UmbracoExamine"
+                 analyzer="Lucene.Net.Analysis.Standard.StandardAnalyzer, Lucene.Net" enableLeadingWildcard="true"/&gt;
+
+            &lt;add name="ExternalSearcher" type="UmbracoExamine.UmbracoExamineSearcher, UmbracoExamine" /&gt;
+
+        &lt;/providers&gt;
+    &lt;/ExamineSearchProviders&gt;
+
+&lt;/Examine&gt;</code></pre>
+      <p class="snippet-caption">The default ExamineSettings.config file</p>
+<p>This is split into 2 sections:</p>
+<ul>
+<li><span class="code">&lt;ExamineIndexProviders /&gt;</span> - for configuring how data is stored in the index using either the <span class="code">UmbracoContentIndexer</span> or the <span class="code">UmbracoMemberIndexer</span></li>
+<li><span class="code">&lt;ExamineSearchProviders /&gt;</span> - for configuring how you'd like to search the data in the index using the <span class="code">UmbracoExamineSearcher</span></li>
+</ul>
+<p>There is also the <span class="code">ExamineIndex.config</span> file:</p>
+<pre><code class="language-markup">&lt;?xml version="1.0"?&gt;
+&lt;ExamineLuceneIndexSets&gt;
+    &lt;!-- The internal index set used by Umbraco back-office - DO NOT REMOVE --&gt;
+    &lt;IndexSet SetName="InternalIndexSet" IndexPath="~/App_Data/TEMP/ExamineIndexes/Internal/"/&gt;
+
+    &lt;!-- The internal index set used by Umbraco back-office for indexing members - DO NOT REMOVE --&gt;
+    &lt;IndexSet SetName="InternalMemberIndexSet" IndexPath="~/App_Data/TEMP/ExamineIndexes/InternalMember/"&gt;
+        &lt;IndexAttributeFields&gt;
+            &lt;add Name="id" /&gt;
+            &lt;add Name="nodeName"/&gt;
+            &lt;add Name="updateDate" /&gt;
+            &lt;add Name="writerName" /&gt;
+            &lt;add Name="loginName" /&gt;
+            &lt;add Name="email" /&gt;
+            &lt;add Name="nodeTypeAlias" /&gt;
+        &lt;/IndexAttributeFields&gt;
+    &lt;/IndexSet&gt;
+
+    &lt;!-- Default Indexset for external searches, this indexes all fields on all types of nodes--&gt;
+    &lt;IndexSet SetName="ExternalIndexSet" IndexPath="~/App_Data/TEMP/ExamineIndexes/External/" /&gt;
+&lt;/ExamineLuceneIndexSets&gt;</code></pre>
+      <p class="snippet-caption">The default ExamineIndex.config file</p>
+<p>This contains a single <span class="code">&lt;ExamineLuceneIndexSets /&gt;</span> section which defines "index sets" for indexes.  These configure what fields should be indexed and where on the file system the index files should be stored.</p>
+<p>A single index's configuration is spread across the three configuration sections using naming conventions; "<strong><span style="text-decoration: underline;">IndexName</span></strong>Indexer", "<strong><span style="text-decoration: underline;">IndexName</span></strong>Searcher" and "<strong><span style="text-decoration: underline;">IndexName</span></strong>IndexSet". Out of the box, three indexes are defined by default; the "Internal" &amp; "InternalMember" indexes are for back-office use and the "External" index, which automatically indexes all fields on all site content nodes, so that developers have a starting point for any site search they might want to implement.</p>
+<h2>The Plan</h2>
+<p>From what I could see above, it looked like I would need to:</p>
+<ol>
+<li>Implement the indexer - I would need to write my own Umbraco content indexer - <span class="code">DefaultPublishedContentIndexer</span></li>
+<li>Implement the searcher - I would need to write my own Umbraco content searcher - <span class="code">DefaultPublishedContentSearcher</span></li>
+<li>Configure Umbraco to use my new providers in <span class="code">ExamineSettings.config</span> and <span class="code">ExamineIndex.config</span></li>
+</ol>
+<h3>Implementing the Indexer</h3>
+<p>After Examine-ing (pun intended) the source (and hitting a number of dead-ends), I settled on implementing the <span class="code">UmbracoExamine.BaseUmbracoIndexer</span> abstract class and overriding its public methods as this was the one Umbraco needed in order to interact with it properly. These are the methods I needed to implement, which were very straight-forward using the <a rel="noopener noreferrer" href="https://www.elastic.co/guide/en/elasticsearch/client/net-api/current/introduction.html" target="_blank">Elasticsearch NEST client</a>:</p>
+<ul>
+<li><span class="code">Initialize()</span> - Initialize my NEST client - this should be a singleton.</li>
+<li><span class="code">IndexExists()</span> - Check if an index exists in Elasticsearch.</li>
+<li><span class="code">RebuildIndex()</span> &amp; <span class="code">IndexAll()</span> - get all published content in Umbraco and send it to be indexed in Elasticsearch</li>
+<li><span class="code">DeleteFromIndex()</span> - remove a content item from the index</li>
+<li><span class="code">ReIndexNode()</span> - adds/updates a content item in the index</li>
+</ul>
+<p>Here are the bare-bones of the class (<a rel="noopener" href="https://github.com/tristanjthompson/Test.ElasticExamineProvider/blob/article/24days-article/src/Test.ElasticExamineProvider/Indexers/DefaultPublishedContentIndexer.cs" target="_blank">full implementation available here</a>):</p>
+<pre><code class="language-csharp">﻿namespace Test.ElasticExamineProvider.Indexers
+{
+    public class DefaultPublishedContentIndexer : UmbracoExamine.BaseUmbracoIndexer
+    {
+        // let Umbraco know that we only support content (as opposed to media, etc.)
+        private static List&lt;string&gt; _supportedTypes = new List&lt;string&gt;() { UmbracoExamine.IndexTypes.Content };
+
+        protected override IEnumerable&lt;string&gt; SupportedTypes =&gt; _supportedTypes;
+        
+
+        public override void Initialize(string name, NameValueCollection config);
+        {
+            base.Initialize(name, config);
+
+            // Initialize Elastic client, read in the name of the index, etc...
+        }
+
+        public override bool IndexExists()
+        {
+            // check Elasticsearch to see if the current index exists
+        }
+
+        public override void IndexAll(string type)
+        {
+            // index all documents of the "type" specified (can be "content", "media", etc..)
+        }
+
+        public override void RebuildIndex()
+        { 
+            // rebuild the entire index
+        }
+
+        public override void DeleteFromIndex(string nodeId)
+        {
+            // delete the specified node from the index
+        }
+        
+        public override void ReIndexNode(XElement node, string type)
+        {
+            // add/update the specified node in the index
+        }
+    }
+}
+</code></pre>
+<p>This took a few attempts to get working, but once I did I could see that Umbraco was checking the index on startup (by writing lines to the log file) and calling <span class="code">RebuildIndex()</span> which was, in turn, pushing everything into Elasticsearch!</p>
+<p>There are a couple of points to note about this:</p>
+<ul>
+<li>Umbraco was checking to see whether the Examine index files were available when it started up. As the files weren't getting created it was triggering <span class="code">RebuildIndex()</span> on <em>every</em> startup which I definitely didn't want! I added <span class="code">RebuildOnAppStart="false"</span> to the root node in <span class="code">ExamineSettings.config</span> which stopped this, but this stops the application doing any kind of full rebuild when it's starting up. That's not such a big issue as Elasticsearch should rarely need to be fully re-indexed and it can easily be manually triggered by going into the "Examine Management" tab in the Developers section (NB - when you do this the spinner goes forever, but I could see from the logs that the re-indexing was being triggered and completed).</li>
+<li>The base indexer has a field on it called <span class="code">IndexerData</span> which has the values from the configuration specified in <span class="code">ExamineIndex.config</span>. Ideally I should be respecting this configuration and only including the document types/fields specified; however, for the purposes of this experiment I ignored it as I just wanted to prove the idea.</li>
+</ul>
+<p>To index the content, I created a class called <span class="code">PublishedContent</span> to represent the Umbraco content which I then passed into the Elasticsearch NEST client to be indexed. It's a simple class which has some basic document metadata and a <span class="code">Dictionary&lt;string,string&gt;</span> list of key/value pairs to represent all of the Umbraco node's properties:</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using Umbraco.Core.Models;
+using Nest;
+
+namespace Test.ElasticExamineProvider.DocumentTypes
+{
+    [ElasticsearchType(Name = DocumentTypeName)]
+    public class PublishedContent
+    {
+        public const string DocumentTypeName = "content";  
+        public int Id { get; set; }
+        public string DocumentTypeAlias { get; set; }
+        public int DocumentTypeId { get; set; }
+        public DateTime CreateDate { get; set; }
+        public DateTime UpdateDate { get; set; }
+        public string Url { get; set; }
+        public Dictionary&lt;string, string&gt; Properties { get; set; } = new Dictionary&lt;string, string&gt;();
+
+        public PublishedContent()
+        {
+
+        }
+
+        public PublishedContent(IPublishedContent item)
+        {
+            Id = item.Id;
+            DocumentTypeAlias = item.DocumentTypeAlias;
+            DocumentTypeId = item.DocumentTypeId;
+            CreateDate = item.CreateDate;
+            UpdateDate = item.UpdateDate;
+            Url = item.Url;
+
+            foreach(var prop in item.Properties)
+            {
+                if (prop == null || string.IsNullOrWhiteSpace(prop.PropertyTypeAlias) || !prop.HasValue)
+                    continue;
+
+                Properties.Add(prop.PropertyTypeAlias, prop.DataValue?.ToString());
+            }
+        }
+    }
+}
+</code></pre>
+<p>The NEST client will serialize this to JSON and store it in Elasticsearch for indexing (Elasticsearch can use schema-less JSON in its index), so all fields on all documents get indexed this way.</p>
+<h3>Implementing the Searcher</h3>
+<p>Now that I had some content indexed in Elasticsearch, it was time to implement my searcher. Initially I was going to implement the <span class="code">Examine.Providers.BaseSearchProvider</span> which needed me to fully implement <span class="code">CreateSearchCriteria()</span> methods which handled the generation of fluent API queries, as well as <span class="code">Search()</span> methods...which I wasn't going to have time to do. Since Examine is based on Lucene I made the assumption that the default <span class="code">UmbracoExamineSearcher</span> would, eventually, need to convert its fluent search query into a string-based Lucene query. As Elasticsearch is also based on Lucene, I took a guess that if I could extract the query string being generated by Examine from the fluent query I could pass it straight into Elasticsearch, and save a whole load of effort for the purposes of my experiment. With this in mind I created my searcher class by inheriting from the default <span class="code">UmbracoExamineSearcher</span> implementation (which implemented the <span class="code">CreateSearchCritera()</span> methods) so that I only had to override the <span class="code">Search()</span> methods:</p>
+<ul>
+<li><span class="code">Initialize()</span> - initalizing the NEST client, although this time I grabbed the singleton instance that was initialized in the indexer.</li>
+<li><span class="code">GetSearchFields()</span> - this returns a list of available fields to search. Rather than attempt to query Elasticsearch for this, I just hard-coded it to return <span class="code">_all</span>, which is a special field name for Elasticsearch which lets it search across all indexed fields.</li>
+<li><span class="code">Search(ISearchCriteria searchParams)</span> - this is an implementation of search which passes in a fluent API query. I'm certainly not advanced enough to convert that to an NEST fluent query so I cheated. I extracted the Lucene string term from the <span class="code">ISearchCriteria</span> field and passed the search term straight into the NEST client. I don't know how well this would work for a complex query, but it worked well enough for the purposes of this experiment.</li>
+<li><span class="code">Search(string searchText, ...)</span> - an implementation which allows search text to be passed in. For this, I generated a simple Elasticsearch query to search across all fields for whatever was passed in.</li>
+</ul>
+<p>After looking (yet again!) through the Examine source-code to try and figure out how to extract the Lucene search string, here are the bare-bones of a searcher implementation (<a rel="noopener" href="https://github.com/tristanjthompson/Test.ElasticExamineProvider/blob/article/24days-article/src/Test.ElasticExamineProvider/Searchers/DefaultPublishedContentSearcher.cs" target="_blank">full implementation here</a>):</p>
+<pre><code class="language-csharp">﻿namespace Test.ElasticExamineProvider.Searchers
+{
+    public class DefaultPublishedContentSearcher : UmbracoExamine.UmbracoExamineSearcher
+    {	
+        public override void Initialize(string name, NameValueCollection config)
+        {
+            base.Initialize(name, config);
+            
+			// Initialize Elastic client, read in the name of the index, etc...
+        }
+		
+        protected override string[] GetSearchFields();
+        {
+			// provide a list of all searchable fields - NB - "_all" will search all fields within the Elastic document
+            return new[] { "_all" };
+        }
+
+        public override ISearchResults Search(ISearchCriteria searchParams, int maxResults)
+        {
+            // implement the search using fluent syntax, starting with ISearchCriteria
+        }
+
+        public override ISearchResults Search(string searchText, bool useWildcards, string indexType)
+        {
+            // implement the search using a the raw search text
+        }
+    }
+}
+</code></pre>
+<p>I tested this by going to "Developer Section" &gt; "Examine Management" and scrolling down to "Searchers" area - this has a sort of test harness to let you search a given index using its search provider using a "Lucene" search (which would use my hacky "fluent" methods) or a "Text" search. After a bit of fiddling and debugging, I managed to get it to work; both options were searching and returning results across all fields on all content!</p>
+<h3>Configuration</h3>
+<p>To pull all of this together I configured a new index called "Elastic" and updated <span class="code">ExamineSettings.config</span> and <span class="code">ExamineIndex.config</span> as follows:</p>
+<pre><code class="language-markup">﻿&lt;!-- ExamineSettings.config --&gt;
+&lt;Examine RebuildOnAppStart="false"&gt;
+    &lt;ExamineIndexProviders&gt;
+        &lt;providers&gt;
+            ...
+            &lt;!-- Elastic Indexer--&gt;
+            &lt;add name="ElasticIndexer" type="Test.ElasticExamineProvider.Indexers.DefaultPublishedContentIndexer, Test.ElasticExamineProvider"/&gt;
+            ...
+        &lt;/providers&gt;
+    &lt;/ExamineIndexProviders&gt;
+
+    &lt;ExamineSearchProviders defaultProvider="ElasticSearcher"&gt;
+        &lt;providers&gt;
+            ...
+            &lt;!-- Elastic Searcher--&gt;
+            &lt;add name="ElasticSearcher" type="Test.ElasticExamineProvider.Searchers.DefaultPublishedContentSearcher, Test.ElasticExamineProvider"/&gt;
+            ...
+        &lt;/providers&gt;
+    &lt;/ExamineSearchProviders&gt;
+&lt;/Examine&gt;
+
+&lt;!-- ExamineIndex.config --&gt;
+&lt;ExamineLuceneIndexSets&gt;
+    ...
+    &lt;IndexSet SetName="ElasticIndexSet"  IndexPath="~/App_Data/TEMP/ExamineIndexes/Elastic/"/&gt;
+    ...
+&lt;/ExamineLuceneIndexSets&gt;</code></pre>
+<p>There's not much to explain here other than saying that I added the <span class="code">RebuildOnAppStart</span> attribute at the top of the <span class="code">ExamineSettings.config</span> file (to stop it detecting the non-existent Examine files). I also had to specify an <span class="code">IndexPath</span> against the <span class="code">ElasticIndexSet</span> - this is because, if I didn't, Umbraco would complain with an instant yellow screen of death!</p>
+<p>Once I'd finished configuring the new providers I tried creating, deleting, publishing and unpublishing to make sure the Elasticsearch index updated properly...which it did! Searching in the test harness in the developer area worked, but I didn't manage to get around to using the new search provider with a complex fluent query, so I don't know how resilient/compatible my convert-to-Lucene-text hack really is.</p>
+<h2><strong>Where Do We Go From Here?</strong></h2>
+<p><span>I think it </span><em>could</em><span> be in the realms of possibility to write some kind of package which could fully replace Examine with Elasticsearch, but there are certainly some considerations for this to be package-able and production-ready:</span></p>
+<ul>
+<li>The index provider I've written currently only has one document structure which indexes all document types &amp; properties with the default analyzer - for more sophisticated searching, work would need to be done to read the configuration out of the configuration files, as well as creating overridable methods to allow people to specify their own document types/indexes/Elasticsearch configuration.</li>
+<li>The search provider is really, really basic and work/testing would need to be done to make sure it works with complex fluent API queries.</li>
+<li>Indexers/searchers would need to be implemented to replace the default internal searchers that Umbraco uses to index media, members &amp; unpublished content.</li>
+<li>The singleton NEST client would need to be a bit more centralised so it could be shared amongst all types of indexers/searchers.</li>
+<li>Ensuring that it works well in the cloud and on multiple web servers - only brief consideration has been given to this only allowing the "rebuild all" methods to be called by a master web server which can be configured in the <span class="code">web.config</span>.</li>
+<li>All the usual dependency issues that come with making a package; the versions of .NET, Umbraco and other nuget packages that it's built against. To add more complications into the mix, there are multiple versions of Elasticsearch that pair up with different versions of the NEST nuget package!</li>
+</ul>
+<h3>Final Thoughts</h3>
+<p>Overall, I'm quite pleased with how the experiment went - I managed to replace the default Examine index and search providers with Elasticsearch implementations, generate an index of all of my site content and query it in a basic way. I've also learned a lot about how the Examine providers work in terms of their interaction with Umbraco. That's about as much as I could have hoped for in a couple of days worth of hacking! It's certainly shown me that it's straight-forward enough to write your own Examine provider to index site search content in a different search provider. If I were working on another project which combined Umbraco and Elasticsearch, I would definitely prefer to implement the index provider myself so that Examine can manage keeping the index up to date.  Then I would probably query the data directly using the NEST client rather than fully implement the search provider myself; however, that wouldn't allow replacement of the two internal indexes upon which Umbraco relies.  That means there's definitely a gap whereby this could be packaged up to replace Examine and, for any queries the package couldn't handle, the NEST client could be called directly.  If a proper implementation of the provider were created, there's also the possibility of hot-swapping the provider out in existing Umbraco installs that want to switch to Elasticsearch.</p>
+<h3>Resources</h3>
+<ul>
+<li>Full experiment source code - <a rel="noopener" href="https://github.com/tristanjthompson/Test.ElasticExamineProvider/tree/article/24days-article" target="_blank">https://github.com/tristanjthompson/Test.ElasticExamineProvider/tree/article/24days-article</a></li>
+<li>This was developed against Elasticsearch 5.6.4 - I downloaded the zip file, unzipped it and ran <span class="code">bin\elasticsearch.bat</span> in Windows from the command line - <a rel="noopener noreferrer" href="https://www.elastic.co/downloads/past-releases/elasticsearch-5-6-4" target="_blank">https://www.elastic.co/downloads/past-releases/elasticsearch-5-6-4</a></li>
+</ul>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/examine/" title="See all articles tagged with Examine">Examine</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/search/" title="See all articles tagged with Search">Search</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Tristan Thompson"><img src="//gravatar.com/avatar/ef088994232ae8286d2740c85f9563a7.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/ef088994232ae8286d2740c85f9563a7.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Tristan Thompson</h1>
+        <p>Tristan is on Twitter as <a href="//twitter.com/TristanCoder" title="Tristan Thompson on Twitter" rel="author">@TristanCoder</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

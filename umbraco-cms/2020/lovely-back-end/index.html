@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Make your custom back-end lovely</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Lovely Back-end</h1>
+      <p class="byline"> by Richard Ockerby, <span class="pubdate">posted on <time datetime="2020-12-06">Dec 6, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">To be clear here, we’re talking about backoffice extensions covering content apps, dashboards, property editors or anything else visual you want to put into the backoffice. There’s plenty of ways to extend functionality in C# but your editor won’t really care about that!</p>
+<p class="intro">If you're unfamiliar with these concepts, the idea is that you produce reusable code that can be installed on an Umbraco instance to provide better or enhanced functionality. This is a big subject in itself but there's some good documentation on <a href="https://our.umbraco.com/documentation/Extending/">extending the backoffice on Our</a> to get you started.</p>
+<p>Let’s run through an example to illustrate the difference you can make once you have access to the right tools. For this, we have a content app with some basic functionality that we want our editors to have access to. We’ve done the hard work; we’ve thought about what we want our content app to do, how our editors interact with it and how we're going to make it. After some graft and custom styling we end up with the below:</p>
+<pre><code class="language-markup">&lt;div ng-controller="moreInfoAppController as vm"&gt;
+    &lt;div ng-if="vm.loading"&gt;Loading...&lt;/div&gt;
+    &lt;div ng-if="!vm.loading" class="mia_container"&gt;
+        &lt;h2&gt;Live Content Preview&lt;/h2&gt;
+        &lt;a href="{{ vm.iframeSrc }}" target="_blank" class="mia_button"&gt;View in browser&lt;/a&gt;
+        &lt;div class="mia_content"&gt;
+            &lt;p&gt;Don't forget to save your changes to see them in the preview window.&lt;/p&gt;
+            &lt;iframe src="{{ vm.iframeSrc }}" class="mia_iframe"&gt;&lt;/iframe&gt;
+        &lt;/div&gt;
+        &lt;h2&gt;Maybe some more pieces&lt;/h2&gt;
+        &lt;div class="mia_content"&gt;
+            &lt;p&gt;Current user: {{ vm.userName }}&lt;/p&gt;
+            &lt;p&gt;Last person to edit: {{ vm.contentNode.updater.name }}&lt;/p&gt;
+            
+            &lt;p&gt;Content Name: {{ vm.contentNode.variants[0].name }}&lt;/p&gt;
+            &lt;p&gt;Content Type: {{ vm.contentNode.contentTypeName }} [{{ vm.contentNode.contentTypeAlias }}]&lt;/p&gt;
+            &lt;p&gt;Number of properties: {{ vm.numberOfProperties }}&lt;/p&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p><img style="width: 500px; height: 244.6586763939552px;" src="/archive/media/2020/unstyled.png?width=500&amp;height=244.6586763939552" alt="Unstyled Content App" data-udi="umb://media/2b204a4fe2ef4331bbac12d96ae7ab82"></p>
+<p><a rel="noopener" href="https://raw.githubusercontent.com/Rockerby/24d_Package/main/img/unstyled.png" target="_blank"><em>Click to view the image</em></a></p>
+<p>Now, this doesn’t look too bad. It responds to the user’s browser window and does what we want it to do. It just looks a bit… <em><strong>*meh*</strong></em>. So how do we get it looking like it belongs in Umbraco without inspecting, copying and pasting the stylings from Umbraco CSS? Well, we can use the Angular directives that Umbraco use to build up the rest of the CMS UI.</p>
+<p>Simply put, Angular directives are custom tags that reference capsulated chunks of code (usually containing both visual and functional code). There are a bunch of these at our disposal ranging from simple layout markup to treeviews and other interactive components.</p>
+<h3>Let’s get styling</h3>
+<p>The first step is to properly look at an existing page setup and see how that is made up. For our inspiration, we can take a look at the content page. This is quite similar in the fact we have a full-width box that we want to encase our work, plus it’s split up into different sections which is what we’re looking for. Here’s what we’re using to go off:</p>
+<p><img style="width: 500px; height: 277.5689223057644px;" src="/archive/media/2020/content.png?width=500&amp;height=277.5689223057644" alt="How the content looks" data-udi="umb://media/cd48fafad2e24b9c9723085a17fd51b4"></p>
+<p><em><a rel="noopener" href="https://raw.githubusercontent.com/Rockerby/24d_Package/main/img/content.png" target="_blank">Click to view the image</a></em></p>
+<p>Let’s start restyling our app from the top down - so the first thing we can improve is the loading visual. Currently, we just have the word <strong>Loading</strong> but we can swap this out for the full-screen loading gif. Here’s what we do and what we see.</p>
+<p>Before:</p>
+<pre><code class="language-markup">&lt;div ng-if="vm.loading"&gt;Loading...&lt;/div&gt;</code></pre>
+<p>After:</p>
+<pre><code class="language-markup">&lt;umb-load-indicator ng-if="vm.loading"&gt;&lt;/umb-load-indicator&gt;</code></pre>
+<p><img style="width: 500px; height: 187.65664160401002px;" src="/archive/media/2020/loading_visual.png?width=500&amp;height=187.65664160401002" alt="Loading screen" data-udi="umb://media/9aac68a4b78a4bc2aa73500c78676f82"></p>
+<p><a rel="noopener" href="https://raw.githubusercontent.com/Rockerby/24d_Package/main/img/loading_visual.png" target="_blank"><em>Click here to view the image</em></a></p>
+<p>Next we’ll tackle how the container around the actual content app looks, this is the wrapper with class <span class="code">mia_container</span>. We have a couple of things we could do here, we could add tabs to split the content out but what we want is to list it all out into a single page so let’s use a box instead.</p>
+<p>Swapping out our <span class="code">div</span> for an <span class="code">umb-box</span> gives us a nice margin around the box, along with a white background to give our content some definition.</p>
+<p>Before:</p>
+<pre><code class="language-markup">&lt;div ng-if="!vm.loading" class="mia_container"&gt;
+    ...
+&lt;/div&gt;</code></pre>
+<p>After:</p>
+<pre><code class="language-markup">&lt;umb-box ng-if="!vm.loading"&gt;
+    ...
+&lt;/umb-box&gt;</code></pre>
+<p>Going down the page the next thing we have is the header <strong>Live Content Preview</strong>. Let’s bring this inline using an <span class="code">umb-box-header</span>. Now the really neat thing with this directive is that you can throw things inside it which appear in the header bar too! We’ll use this to our advantage and pop that <strong>View in browser</strong> button there using another directive <span class="code">umb-button</span>.</p>
+<p>Before:</p>
+<pre><code class="language-markup">&lt;h2&gt;Live Content Preview&lt;/h2&gt;
+&lt;a href="{{ vm.iframeSrc }}" target="_blank" class="mia_button"&gt;View in browser&lt;/a&gt;</code></pre>
+<p>After:</p>
+<pre><code class="language-markup">&lt;umb-box-header title="Live Content Preview"&gt;
+    &lt;umb-button action="vm.viewIframe()"
+                label="View in browser"
+                type="button"
+                button-style="info"&gt;
+    &lt;/umb-button&gt;
+&lt;/umb-box-header&gt;</code></pre>
+<p><img style="width: 500px; height: 183.92969240426868px;" src="/archive/media/2020/boxheader_visual.png?width=500&amp;height=183.92969240426868" alt="Adding a box header" data-udi="umb://media/6e64c3c9585140739045107bb37e411e"></p>
+<p><em><a rel="noopener" href="https://raw.githubusercontent.com/Rockerby/24d_Package/main/img/boxheader_visual.png" target="_blank">Click here to view the image</a></em></p>
+<p>So far so good, we’ve not changed a lot and can see a massive improvement in how the app looks. Moving on we have the actual content which doesn’t need much doing - maybe just some padding around the edges. Swapping out our <span class="code">div</span> for an <span class="code">umb-box-content</span> sorts this out for us.</p>
+<p>Before:</p>
+<pre><code class="language-markup">&lt;div class="mia_content"&gt;
+    &lt;p&gt;Don't forget to save your changes to see them in the preview window.&lt;/p&gt;
+    &lt;iframe src="{{ vm.iframeSrc }}" class="mia_iframe"&gt;&lt;/iframe&gt;
+&lt;/div&gt;
+</code></pre>
+<p>After:</p>
+<pre><code class="language-markup">&lt;umb-box-content&gt;
+    &lt;p&gt;Don't forget to save your changes to see them in the preview window.&lt;/p&gt;
+    &lt;iframe src="{{ vm.iframeSrc }}" class="mia_iframe"&gt;&lt;/iframe&gt;
+&lt;/umb-box-content&gt;
+</code></pre>
+<p><img style="width: 500px; height: 187.8125px;" src="/archive/media/2020/boxcontent_visual.png?width=500&amp;height=187.8125" alt="Adding a box content wrapper" data-udi="umb://media/9e73fbb62c7f463387e58b9296077843"></p>
+<p><a rel="noopener" href="https://raw.githubusercontent.com/Rockerby/24d_Package/main/img/boxcontent_visual.png" target="_blank"><em>Click here to view the image</em></a></p>
+<p>Next, we have the other information at the bottom of the page. Following the same path as above, we get something that looks a bit better and we can add a description to the <span class="code">umb-box-header</span> to give some more info to the editor.</p>
+<p>Before:</p>
+<pre><code class="language-markup">&lt;h2&gt;Maybe some more pieces&lt;/h2&gt;
+&lt;div class="mia_content"&gt;
+	...
+&lt;/div&gt;</code></pre>
+<p>After:</p>
+<pre><code class="language-markup">&lt;umb-box ng-if="!vm.loading"&gt;
+    &lt;umb-box-header title="Maybe some more pieces"
+                    description="Something more meaningful could go here"&gt;
+    &lt;/umb-box-header&gt;
+    &lt;umb-box-content&gt;
+        ...
+    &lt;/umb-box-content&gt;
+&lt;/umb-box&gt;</code></pre>
+<p><img style="width: 500px; height: 86.35794743429287px;" src="/archive/media/2020/box2_visual.png?width=500&amp;height=86.35794743429287" alt="Box content for the second block" data-udi="umb://media/0e2439881a91419aae8353853c52a0bd"></p>
+<p><a rel="noopener" href="https://raw.githubusercontent.com/Rockerby/24d_Package/main/img/box2_visual.png" target="_blank"><em>Click here to view the image</em></a></p>
+<h3>Go further with CSS</h3>
+<p>Alongside the directives there are also a lot of Umbraco CSS classes that you can use to help you out with your custom layouts. The classes themselves aren’t documented but the great thing about open source software is that you can go take a look for yourself! A good starting place for this would be the <a href="https://github.com/umbraco/Umbraco-CMS/tree/v8/contrib/src/Umbraco.Web.UI.Client/src/less/utilities" data-gener8="tracked">utilities folder in the Umbraco source</a>. By way of example, we could add two classes to our second <span class="code">umb-box-content</span> to display our info in a row, rather than a column:</p>
+<pre><code class="language-markup">&lt;umb-box-content class="flex justify-between"&gt;
+    &lt;p&gt;Current user: {{ vm.userName }}&lt;/p&gt;
+    &lt;p&gt;Last person to edit: {{ vm.contentNode.updater.name }}&lt;/p&gt;
+     
+    &lt;p&gt;Content Name: {{ vm.contentNode.variants[0].name }}&lt;/p&gt;
+    &lt;p&gt;Content Type: {{ vm.contentNode.contentTypeName }} [{{ vm.contentNode.contentTypeAlias }}]&lt;/p&gt;
+    &lt;p&gt;Number of properties: {{ vm.numberOfProperties }}&lt;/p&gt;
+&lt;/umb-box-content&gt;
+</code></pre>
+<p><img style="width: 500px; height: 62.57822277847309px;" src="/archive/media/2020/box2-class_visual.png?width=500&amp;height=62.57822277847309" alt="Updates with classes" data-udi="umb://media/aae95cfaa577498b9b24c767d61be455"></p>
+<p><a rel="noopener" href="https://raw.githubusercontent.com/Rockerby/24d_Package/main/img/box2-class_visual.png" target="_blank"><em>Click here to view the image</em></a></p>
+<p>There we have it; without changing a vast amount of code in our content app we’ve got something that has gone from <em><strong>*meh*</strong></em> to <em><strong>*wow, did someone at Umbraco HQ make this?*</strong></em> (might be pushing it a bit, but you get the idea).</p>
+<h3>Where can I find out more?</h3>
+<p>The API documentation for the Angular directives can be found in the <a href="https://our.umbraco.com/apidocs/v8/ui/#/api" data-anchor="#/api" data-gener8="tracked">official documentation</a> which has a list of what’s available plus more information around other useful Umbraco Angular areas. As good as the documentation is, there are areas which are lacking and some directives, services and components which haven't been documented. Also worth noting is UmbSense; a Visual Studio plugin which brings IntelliSense for Umbraco into Visual Studio and is very useful if you’re doing a lot of this sort of dev work. You can find out more about that in the <a href="https://marketplace.visualstudio.com/items?itemName=KevinJump.UmbSense-1" data-anchor="?itemName=KevinJump.UmbSense-1" data-gener8="tracked">Visual Studio Marketplace</a>.</p>
+<p>This is just a toe in the water of what can be done but hopefully gives a great place to start on creating your styled up backoffice extensions. You can find all the source code shown in this article over on my <a href="https://github.com/Rockerby/24d_Package" data-gener8="tracked">24d_Package repo on GitHub</a>.<br><br></p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content-apps/" title="See all articles tagged with Content Apps">Content Apps</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Richard Ockerby"><img src="//gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/d41d8cd98f00b204e9800998ecf8427e.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Richard Ockerby</h1>
+        <p>Richard is on Twitter as <a href="//twitter.com/therealrockerby" title="Richard Ockerby on Twitter" rel="author">@therealrockerby</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

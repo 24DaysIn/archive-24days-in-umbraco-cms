@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Use CDNs and HTTP caching for a speedy Umbraco website</title>
+<meta name="description" content="A walkthrough for how to use a CDN and HTTP caching (cache-control and modified-since) to create a much faster Umbraco site with minimal effort.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Using a CDN with Umbraco</h1>
+      <p class="byline"> by David Peck, <span class="pubdate">posted on <time datetime="2015-12-09">Dec 9, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I recently started using a CDN to get my website loading faster. What surprised me was how easy it was to do, so I thought I'd share my experience.</p>
+<p class="intro">A fast loading page is great for your client, whether they know it or not, because it will have a better PageRank (Google's version of a h5yr), a lower bounce rate and a happier user. From a developer's perspective there are benefits but mostly I just get a kick from knowing that my page will fly through the Internet faster than Santa on Christmas Eve (look, I made it all festive!). Perhaps because specific page load times are rarely specified in a project's requirements, a lot of page speed improvements remain on that ill-fated list of 'nice-to-have' tickets that never quite make it to Live.</p>
+<h2>Plain ol' good development</h2>
+<p>A CDN will help your website run faster but there is no replacement for good development and sparkly servers. This post is intended to encourage you to take the next step after you've covered the basics of minification, bundling, sprites etc. If you want to know more about these then there is plenty of information around but Scott Hanselman has a <a href="http://www.hanselman.com/blog/TheImportanceAndEaseOfMinifyingYourCSSAndJavaScriptAndOptimizingPNGsForYourBlogOrWebsite.aspx" target="_blank" title="Blog: The Importance (and Ease) of Minifying your CSS and JavaScript and Optimizing PNGs for your Blog or Website">pretty comprehensive post</a> and also <a href="https://our.umbraco.org/projects/developer-tools/optimus" target="_blank" title="Umbraco project: Optimus">check out Optimus</a> by Tim Geyssens and <a href="http://vswebessentials.com/" target="_blank" title="Visual Studio extension: Web Essentials">Web Essentials</a> by Mads Kristensen. I'm not going to cover these topics as you're hopefully already using them, but if you're not then do pay them the attention they deserve. </p>
+<p>Using the techniques that Scott Hanselman suggests, <a href="https://umbracofreelancer.uk" target="_blank" title="Website: Umbraco Freelancer">my website</a> gets a grade B (88%) from <a href="http://yslow.org/" target="_blank" title="Browser extension: YSlow">YSlow</a>, which is actually already pretty good. However I've now managed to get a grade A (98%) using the techniques I'm about to outline. And <em>yes</em> having an outstanding 2% does get right up my nose, but it relates to Google Analytics and Google Fonts for which I have no control.</p>
+<figure>
+  <a href="/archive/media/2015/yslow.png">
+    <img src="/archive/media/2015/yslow.png" width="713" alt="YSlow results">
+  </a>
+  <figcaption>YSlow results</figcaption>
+</figure>
+<h2>What is a CDN?</h2>
+<p>A <a href="http://www.webopedia.com/TERM/C/CDN.html" target="_blank" title="Definition: Content Delivery Network">Content Delivery Network</a> (CDN) is a network of proxy web servers that replicate your content to locations around the world. They are responsible for delivering your content, instead of your web server, because they are faster, more reliable, don't use cookies or superfluous headers, and are designed for high loads.</p>
+<p>Each CDN needs an origin for the content that it is delivering. The first time one of your files is requested from the CDN, the nearest proxy server to the requester will grab the file from the origin, cache it and send it back to the requester. The next time the file is requested the file is sent straight back to the requester, using the cache. The cache builds up over time and the origin gets fewer and fewer requests for files.</p>
+<p>Setting up a CDN on <a href="https://umbracofreelancer.uk" target="_blank" title="Website: Umbraco Freelancer">my website</a> makes it load in real terms at least 25% faster, and that is when compared to an already fast web server. In addition to the increased speed and decreased server load, CDNs also often offer the following benefits:</p>
+<ul>
+<li>Spam and DoS/DDoS protection</li>
+<li>GZipping of assets</li>
+<li>Your files are always online</li>
+<li>Cheaper bandwidth costs</li>
+<li>Usage statistics</li>
+</ul>
+<p>There are loads of CDN suppliers, including:</p>
+<ul>
+<li><a href="https://aws.amazon.com/cloudfront/" target="_blank" title="CDN provider: Amazon Cloudflare">Amazon CloudFront</a></li>
+<li><a href="https://www.akamai.com/us/en/cdn.jsp" target="_blank" title="CDN provider: Akamai">Akamai</a></li>
+<li><a href="https://www.cdn77.com/" target="_blank" title="CDN provider: CDN77">CDN77</a></li>
+<li><a href="https://www.cloudflare.com/features-cdn/" target="_blank" title="CDN provider: Cloudflare">Cloudflare</a></li>
+<li><a href="https://www.incapsula.com/cdn-content-delivery-network/" target="_blank" title="CDN provider: Incapsula">Incapsula</a></li>
+<li><a href="https://www.maxcdn.com/" target="_blank" title="CDN provider: MaxCDN">MaxCDN</a></li>
+</ul>
+<p>I've not used most of these so feel free to make recommendations. I'm going to focus on how you can use Windows Azure's CDN, because that is where I host the majority of my sites.</p>
+<h2>CDN your static files</h2>
+<p>Static files are the most sensible files to serve from a CDN, because they change rarely, make up the majority of the server requests and changes to them can easily be identified.</p>
+<h3>Setup the CDN</h3>
+<p>When setting up a CDN you need to identify the origin, which is the source of the content to be delivered. Typically you have the option of supplying a URL to your website, or uploading content to some file storage manually.</p>
+<p>Windows Azure is no different and through the Azure portal you can pick from a list of your Web Apps and Cloud Services hosted on Windows Azure, or select a storage account (cloud based file storage similar to AWS S3). If you're not using Azure, or are using Azure Virtual Machines, then you'll need to use a storage account or an alternative CDN provider.</p>
+<p>Selecting a website as a source for the CDN is the simplest solution, but you then lose control over what content is available through the CDN as all content that is accessible through IIS will be available through the CDN. An Azure storage account also provides you with the ability to set the cache control on a file-by-file basis.</p>
+<p>If you want to use a storage account then uploading the files to the storage account is easy through <a href="http://storageexplorer.com/" target="_blank" title="Download: Windows Azure Storage Explorer">Azure Storage Explorer</a> or <a href="http://www.cloudberrylab.com/free-microsoft-azure-explorer.aspx" target="_blank" title="Software: Cloudberry Explorer">Cloudberry Explorer</a> but, as you'll see later, just uploading the files isn't enough and we need to set a cache control for each file. To help with this I have created <a href="https://umbracofreelancer.uk/azurestoragesync" target="_blank" title="Download: AzureStorageSync">a console app</a> which will synchronise a local directory with a container on your storage account, and set the cache control. This code could be run on each deployment and is easily refactored to change the length of caching or build into part of an automated deployment.</p>
+<pre class="language-markup"><code>  &lt;appSettings&gt;
+    &lt;!-- Specify settings here or as console arguments--&gt;
+    &lt;add key="LocalPath" value="{{local_path_here}}"/&gt;
+    &lt;add key="ContainerName" value="{{container_name}}"/&gt;
+    &lt;add key="AccountName" value="{{account_name_here}}"/&gt;
+    &lt;add key="KeyValue" value="{{key_value_here}}"/&gt;
+    &lt;add key="ForceBlobProperties" value="False" /&gt;
+  &lt;/appSettings&gt;
+</code></pre>
+      <p class="snippet-caption">AzureStorageSync settings</p>
+<p>You'll need to <a href="https://www.youtube.com/watch?v=KMjeSDa_2AE" target="_blank" title="Video: Where can I find the storage access key">grab the storage account name and access key</a> from the Azure portal.</p>
+<h3>Control the cache</h3>
+<p>Managing this cache is important because you want to set a long enough cache to make the setup worth while, which won't happen by default.</p>
+<p>Please keep in mind that both the user's browser, each CDN proxy server and potentially other miscellaneous proxy servers will maintain a cache of your files, but we can set up rules about what to cache and how long for.</p>
+<p>If your CDN is pointed at a website as its origin then it will look to the Cache-Control response header to tell it if it should cache the file and if so how long for. If we're using a file storage origin then, for Azure, these headers will need to be set up on the file properties of each file. The CDN will supply the user with the same Cache-Control as the origin provided, except where none was specified. In these circumstances some CDNs will allow a default to be setup. Azure does not.</p>
+<p>When the cache period has expired the browser/ CDN proxy server will do what's called conditional caching. It will send a request asking if the file has changed. This query is done by sending a date and/or an etag (a tiny bit like a hash of the file). The response will either be a 304 status code, which means "Yes, it is the same" and has a header but no body, or the new file will be returned (a 200 status code). If the source doesn't support conditional caching then the file will always be returned whether it has changed or not.</p>
+<p>For static file, IIS can manage conditional caching just fine, but we need to tell it to allow client caching and how long to cache the file for before checking back. This can be done through IIS or in the web.config, and it is best to avoid applying it to the Umbraco folder E.g:</p>
+<pre class="language-markup"><code>  &lt;location path="scripts"&gt;
+    &lt;system.webServer&gt;
+      &lt;staticContent&gt;
+        &lt;clientCache cacheControlMode="UseMaxAge" cacheControlCustom="public" cacheControlMaxAge="7.00:00:00" /&gt;
+      &lt;/staticContent&gt;
+    &lt;/system.webServer&gt;
+  &lt;/location&gt;
+  &lt;location path="css"&gt;
+    &lt;system.webServer&gt;
+      &lt;staticContent&gt;
+        &lt;clientCache cacheControlMode="UseMaxAge" cacheControlCustom="public" cacheControlMaxAge="7.00:00:00" /&gt;
+      &lt;/staticContent&gt;
+    &lt;/system.webServer&gt;
+  &lt;/location&gt;
+  &lt;location path="media"&gt;
+    &lt;system.webServer&gt;
+      &lt;staticContent&gt;
+        &lt;clientCache cacheControlMode="UseMaxAge" cacheControlCustom="public" cacheControlMaxAge="7.00:00:00" /&gt;
+      &lt;/staticContent&gt;
+    &lt;/system.webServer&gt;
+  &lt;/location&gt;</code></pre>
+      <p class="snippet-caption">7 days of caching for files in the scripts, css and media folders</p>
+<h3>CDN your media</h3>
+<p>I'm not sure if you'd classify Umbraco media as static or not, but certainly it makes sense to serve this from your CDN if possible. The complication with media is if you're using ImageProcessor (GetCroppedUrl()) to create cropped versions of images. If the CDN's origin is a file source then the cropped versions won't exist and the uncropped version will be returned. If your origin is your website then the CDN will request each cropped version of each image from the website, which will work fine. It is for this reason that I prefer to have the origin of my CDN as my website.</p>
+<p>For those of you using the UmbracoFileSystemProvider (see <a href="https://github.com/JimBobSquarePants/UmbracoFileSystemProviders.Azure" target="_blank" title="Github: UmbracoFileSystemProviders.Azure">here</a> and <a href="https://azure.microsoft.com/en-us/blog/scalable-umbraco-cms-solution-for-azure-web-apps/" target="_blank" title="Blog: Scalable Umbraco CMS solution for Azure Web Apps">here</a>), a CDN is an even more sensible choice as it will get around the issue that the Virtual Path Provider "may affect performance/caching".</p>
+<h2>Link to your CDN</h2>
+<p>Assuming your CDN content has a matching file path to your web server, which I would highly advise as it makes life a lot easier, then we just need to replace the hostname of our web server with the one of your CDN. We'll need to do this for every reference to a file you want to serve from your CDN. To simplify this I've written a UrlProvider <a href="https://msdn.microsoft.com/en-gb/library/bb383977.aspx" target="_blank" title="Article: Extension Methods">extension method</a> that I like to use. It works very similarly to the native Content method.</p>
+<pre class="language-csharp"><code>public static class UrlHelperExtensions
+    {
+        public static string CdnContent(this UrlHelper url, string contentPath)
+        {
+            var localPath = url.Content(contentPath);
+            if (string.IsNullOrWhiteSpace(CdnHost) || url.RequestContext.HttpContext.Request.Url == null)
+                return localPath;
+
+            //Use the same scheme as the current page to avoid browser warnings in HTTPS
+            var scheme = url.RequestContext.HttpContext.Request.Url.Scheme;
+            var uriBuilder = new UriBuilder
+            {
+                Scheme = scheme,
+                Port = -1,
+                Host = CdnHost,
+                Path = localPath,
+            };
+
+            //Apply a version number to help avoid override caching
+            if (VersionNumber &gt; 0)
+                uriBuilder.Query = "v=" + VersionNumber;
+
+            return uriBuilder.ToString();
+        }
+
+        //Use a property to avoid repeated calls to ConfigurationManager
+        private static string _cdnHost;
+        //An empty string is used to identify an unspecified value
+        private static string CdnHost
+        {
+            get { return _cdnHost ?? (_cdnHost = ConfigurationManager.AppSettings["CdnHost"] ?? string.Empty); }
+        }
+
+        //Use a property to avoid repeated calls to ConfigurationManager
+        private static int? _versionNumber;
+        private static int VersionNumber
+        {
+            get
+            {
+                if (!_versionNumber.HasValue)
+                {
+                    int foundNo;
+                    int.TryParse(ConfigurationManager.AppSettings["CdnVersion"], out foundNo);
+                    _versionNumber = foundNo;
+                }
+
+                return _versionNumber.Value;
+            }
+        }
+    }
+</code></pre>
+      <p class="snippet-caption">UrlProvider extension: CdnContent</p>
+<p>As you can see from this code it looks to the web.config for the hostname of the CDN and only changes the hostname if a CDN hostname is supplied. This means that when in development the website can link to all files on the local server, and then in production it can easily be toggled to link to files on the CDN. Other features are that it will detect whether it needs to use the HTTPS scheme and also a version number is added to the querystring of the url when specified as an AppSetting in the web.config. The querystring is important as your CDN and browser will treat a URL with a different querystring as a different file, so the version number will allow us to bypass any cache when we do a deployment. As such we can set long cache lengths of 365 days if we like, because as soon as the version number changes the CDN and browser will re-download our files.</p>
+<p>To use the extension method just call it with your asset's app relative paths, media paths or GetCroppedUrl() calls, much like you might for @Url.Content. Of course also make sure your code has referenced the namespace of the extension method. I <a href="http://www.devtrends.co.uk/blog/importing-namespaces-into-razor-views-in-asp.net-mvc-3" target="_blank" title="Blog: IMPORTING NAMESPACES INTO RAZOR VIEWS IN ASP.NET MVC 3">put a reference in my /views/web.config</a> to a common namespace used by my extension methods.</p>
+<pre class="language-javascript"><code>&lt;link rel="icon" type="image/x-icon" href='@Url.CdnContent("~/assets/images/favicon.ico")'&gt;</code></pre>
+      <p class="snippet-caption">CdnContent usage</p>
+<h2><span>What about your dynamic content?</span></h2>
+<p>You can put your entire website behind a CDN, and set up your DNS so that your website's hostname maps straight to your CDN. The CDN would then be called for your web pages as well as any other dynamic content. I don't love this idea, even if the website is suitable, because you lose the ability to invalidate the cache with a version number change. There might be justification to do this if you were expecting some very heavy traffic for a short period of time.</p>
+<p>My preferred approach is to continue serving all page requests from my web server, but setting up a short cache period for pages that don't change regularly and are the same for all users.</p>
+<p>To add a cache control to a page you'll need to have your page rendered using a <a href="https://our.umbraco.org/documentation/reference/routing/custom-controllers" title="Umbraco documentation: Custom controllers (Hijacking Umbraco Routes)">custom controller</a>. The simplest solution is then to use the OutputCacheAttribute to <a href="http://www.asp.net/mvc/overview/older-versions-1/controllers-and-routing/improving-performance-with-output-caching-cs" target="_blank" title="Blog: Output caching">set a cache period for the client</a>. This gets you part of the way, but conditional caching of dynamic content is not supported by IIS, so after the cache has expired your page will always be returned (200 status) even if the page is unchanged (304 status).</p>
+<p>Fortunately you can manage the conditional caching yourself. The following example will do just that by using the page content's UpdateDate property as an indicator of freshness.</p>
+<pre class="language-csharp"><code>    public class MyUmbracoEventHandler : ApplicationEventHandler
+    {
+        protected override void ApplicationStarting(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+        {
+            DefaultRenderMvcControllerResolver.Current.SetDefaultControllerType(typeof(DefaultController));
+        }
+    }
+</code></pre>
+      <p class="snippet-caption">MyUmbracoEventHandler.cs</p>
+<pre class="language-csharp"><code>
+    /*Max age of one hour*/
+    [OutputCache(Duration = 3600, VaryByParam = "*", Location = OutputCacheLocation.Client)]
+    public class DefaultController : RenderMvcController
+    {
+        public override ActionResult Index(RenderModel model)
+        {
+            //Set when the current page was last modified
+            Response.Cache.SetLastModified(model.Content.UpdateDate);
+
+            //Check if the content has changed since the cached version
+            if (!IsModifiedSince(model.Content.UpdateDate))
+                return new HttpStatusCodeResult(304, "Not Modified");
+
+            return base.Index(model);
+        }
+
+        protected bool IsModifiedSince(DateTime contentModified)
+        {
+            var header = Request.Headers["If-Modified-Since"];
+
+            if (header != null)
+            {
+                DateTime headerValue;
+                if (DateTime.TryParse(header, out headerValue))
+                {
+                    return headerValue &lt; contentModified;
+                }
+            }
+
+            return true;
+        }
+    } 
+</code></pre>
+      <p class="snippet-caption">DefaultController.cs</p>
+<p>Do note that the above example implements the default controller so the code will be applied to all pages that don't have their own controller which you may well not want. Additionally, the returned HTML may change without the relevant the page's content being republished if the page displays external content. Instead of the UpdateDate property, you may prefer to use the last write date on the umbraco.config as a freshness indicator or to return a 200 status if the 'Last-Modified' date is older than 1 day previous (for example).</p>
+<h2>Conclusion</h2>
+<p>Here are a few screenshots to show how performance of my site changed as a result of the CDN work, along with the caching of dynamic content.</p>
+<h3>Before</h3>
+<figure>
+  <a href="/archive/media/2015/b4first.png">
+    <img src="/archive/media/2015/b4first.png" width="677" alt="First page load - 516KB / 541ms">
+  </a>
+  <figcaption>First page load - 516KB / 541ms</figcaption>
+</figure>
+<figure>
+  <a href="/archive/media/2015/b4second.png">
+    <img src="/archive/media/2015/b4second.png" width="677" alt="Second page load - 7.5KB / 436ms">
+  </a>
+  <figcaption>Second page load - 7.5KB / 436ms</figcaption>
+</figure>
+<h3>After</h3>
+<figure>
+  <a href="/archive/media/2015/afterfirst.png">
+    <img src="/archive/media/2015/afterfirst.png" width="677" alt="First page load - 518KB / 394ms">
+  </a>
+  <figcaption>First page load - 518KB / 394ms</figcaption>
+</figure>
+<figure>
+  <a href="/archive/media/2015/aftersecond.png">
+    <img src="/archive/media/2015/aftersecond.png" width="677" alt="Second page load - 73KB / 255ms">
+  </a>
+  <figcaption>Second page load - 73KB / 255ms</figcaption>
+</figure>
+<p>Using Windows Azure, and a minimal amount of code, you can have a much faster site, a more robust hosting environment, a happier user and a happier client. There is a small added complexity to the solution, but I believe CDNs are a 'no brainer' and should be part of the standard solution for any public facing website.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/caching/" title="See all articles tagged with Caching">Caching</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="David Peck"><img src="//gravatar.com/avatar/33266f85fe7c730b29b8662fc368cfe5.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/33266f85fe7c730b29b8662fc368cfe5.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>David Peck</h1>
+        <p>David is on Twitter as <a href="//twitter.com/davidpeckuk" title="David Peck on Twitter" rel="author">@davidpeckuk</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li class="selected"><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

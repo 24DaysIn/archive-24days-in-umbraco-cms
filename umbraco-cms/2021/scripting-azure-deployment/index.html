@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Scripting an Azure deployment of Umbraco 9</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Scripting Azure Deployment</h1>
+      <p class="byline"> by Emmanuel Tissera, <span class="pubdate">posted on <time datetime="2021-12-02">Dec 2, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Would you like to spin up the latest Umbraco version for a client demo in less than 10 minutes on Azure? Want to do it from your mobile phone? Want to kill that same demo and manage your hosting costs? Do you want to venture into infrastructure as code? Want to do this with three lines of code? If so, read on.</p>
+<h2>Disclaimer</h2>
+<p class="intro"><em>This script is provided 'as is' and 'with all faults'. The author is not liable for any costs or deletions of resources within your Azure subscription. The code is not production-ready and has many improvements in the pipeline.</em></p>
+<h2>Instructions</h2>
+<p><strong>1.</strong> Log in to <a rel="noopener" href="https://shell.azure.com" target="_blank" title="Opens Azure Cloud Shell">https://shell.azure.com</a>, set up your cloud shell in your preferred region, and select bash as your environment.</p>
+<p><img style="width: 500px; height: 140.98837209302326px;" src="/archive/media/2021/010-azure-cloud-shell.jpg?width=500&amp;height=140.98837209302326" alt="Azure Cloud Shell with a Bash environment" data-udi="umb://media/7f0fce6a64374f3f99b61b7f6b38a002"></p>
+<p><strong>2.</strong> Copy and paste the following code into the cloud shell. Note that all new Azure resources will be created in your default subscription.</p>
+<pre><code class="language-bash">wget https://www.speedycmsinstall.com/scripts/azure/create-umbraco-v9-demo.sh
+chmod +x create-umbraco-v9-demo.sh
+./create-umbraco-v9-demo.sh
+
+</code></pre>
+      <p class="snippet-caption">download-umbraco-v9-demo-script.sh</p>
+<p>You can also find <a rel="noopener" href="https://github.com/emmanueltissera/speedycmsinstall/blob/main/scripts/azure/download-umbraco-v9-demo-script.sh" target="_blank" title="The shell script which automates Umbraco V9 deployment">this code on Github</a>.</p>
+<p><strong>3. </strong>Answer the two prompts regarding a name for your demo and whether to display/save the generated credentials.</p>
+<p><img style="width: 500px; height: 306.56108597285066px;" src="/archive/media/2021/020-cloud-script-start.jpg?width=500&amp;height=306.56108597285066" alt="Running the creation script on Azure Cloud Shell" data-udi="umb://media/ba64faa06f2244589e389c9ff69e98f0"></p>
+<p>In less than 10 minutes, you would have a running Umbraco demo on Azure.</p>
+<p><img style="width: 500px; height: 336.9980879541109px;" src="/archive/media/2021/100-final-site.jpg?width=500&amp;height=336.9980879541109" alt="Umbraco demo running on Azure" data-udi="umb://media/da357d7f562d4ff4aac8e975e4f456e7"></p>
+<p>You can see this script in action on <a rel="noopener" href="https://youtu.be/QPXGohxgI-8" target="_blank" title="Video of a scripted Azure deployment of Umbraco 9">this 17-second video.</a></p>
+<p>
+        <iframe width="533" height="300" src="https://www.youtube.com/embed/QPXGohxgI-8?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>
+      </p>
+<h2>So what do these three lines do?</h2>
+<p>The first line downloads the script file to the local drive of the Azure Cloud Shell. The second line assigns the permissions to make the script executable, and the third line runs the script file.</p>
+<h2>Prerequisites</h2>
+<p>You need to have access to an Azure Subscription where you can create resources. Other than that, you just need a browser to access the <a rel="noopener" href="https://docs.microsoft.com/en-us/azure/cloud-shell/overview" target="_blank" title="Azure Cloud Shell overview">Azure Cloud Shell</a>. You don’t need a local development machine 🤩</p>
+<h2>Your default subscription </h2>
+<p>All the scripts here utilise your default subscription. Most of the Azure resources created by this script incur a cost and you need to make sure that you have the authority to spend before you run this script.</p>
+<p>You can run '<span class="code">az account show</span>' in the Cloud Shell to figure out the subscription in use.</p>
+<p>You can use '<span class="code">az account set --subscription &lt;name or id&gt;</span>' to change your default subscription. </p>
+<h2>Costing considerations</h2>
+<p>The script creates resources in the Australia East region which is a bit costly. According to the <a rel="noopener" href="https://azure.microsoft.com/en-au/pricing/calculator/" target="_blank" title="Azure Pricing Calculator">Azure Pricing Calculator</a>, running this demo for a month would cost USD30.06 (AUD40.05).</p>
+<p><img style="width: 500px; height: 268.9614935822637px;" src="/archive/media/2021/030-azure-resources.jpg?width=500&amp;height=268.9614935822637" alt="Azure Resources which are created for this demo" data-udi="umb://media/00443869bbd3465bb40a099bb1eb0ba0"></p>
+<p>You can find the cost for this demo via <a rel="noopener" href="https://azure.com/e/6217fcc5f5e74fe09acac54dd8075749" target="_blank" title="Azure pricing estimate for this demo">this estimate</a>. </p>
+<h2>Script source</h2>
+<p>The <a rel="noopener" href="https://github.com/emmanueltissera/speedycmsinstall/blob/main/scripts/azure/create-umbraco-v9-demo.sh" target="_blank" title="The shell script for Umbraco V9 install on Github">create-umbraco-v9-demo.sh script</a> is on Github and can be downloaded via <a rel="noopener" href="https://www.speedycmsinstall.com/scripts/azure/create-umbraco-v9-demo.sh" target="_blank" title="Donwload the shell script">speedycmsinstall.com/scripts/azure/create-umbraco-v9-demo.sh</a>.</p>
+<h2>Dissecting the script</h2>
+<p>The script is over 180 lines of code. But it is not that complicated, and it has inline comments to make it easier to understand. We will dissect the entire script in the following sections.</p>
+<h3>Demo name</h3>
+<p>The following snippet of code requests a name for the demo from the user. If a name is not supplied, it uses a generated name that has a random number at the end.</p>
+<pre><code class="language-bash">#!/bin/bash
+echo "UMBRACO 9 DEMO INSTALL"
+
+# Set the default name for this demo
+demoNameDefault='umbracov9-demo-'$RANDOM
+
+# Get the demo name from the user
+echo 
+echo "Demo name should only contain alphanumerics and hyphens. It Can't start or end with a hyphen. It should be less than 15 characters in length and globally unique. This will be the name of your web app."
+read -p "Enter demo name [$demoNameDefault]: " input
+demoName="${input:-$demoNameDefault}"
+echo "Demo name in use: $demoName"</code></pre>
+      <p class="snippet-caption">Demo name (Step 1 of 18)</p>
+<h3>Output credentials</h3>
+<p>This next snippet gets input from the user as to whether the randomly generated passwords should be displayed and/or saved.</p>
+<pre><code class="language-bash"># Check if the random passwords should be saved or displayed on screen
+echo
+echo "Passwords are created with a random value. Do you want to view or save them to a file?"
+read -p "Credentials (save/display/both/none)[both]: " input
+outputCredentials="${input:-both}"
+echo "Output credentials: $outputCredentials"</code></pre>
+      <p class="snippet-caption">Output credentials (Step 2 of 18)</p>
+<h3>Demo folder</h3>
+<p>A single folder is created to contain the files from this demo. The folder is named after the supplied demo name.</p>
+<pre><code class="language-bash"># Run everything inside this folder for easy clean-up
+mkdir "$demoName"
+cd "$demoName" || exit</code></pre>
+      <p class="snippet-caption">Demo folder (Step 3 of 18)</p>
+<h3>Setting variables</h3>
+<p>All the variables used throughout the script are then set. Most variables use the demo name as an identifier. This is the best place to customise your own script to make it more secure in terms of usernames and passwords.</p>
+<pre><code class="language-bash"># Set variables
+groupName="rg-"$demoName
+location=australiaeast
+serverName="sqlServer-"$demoName
+adminUser="serveradmin"
+adminPassword="High5Ur0ck#"$RANDOM
+dbName="sqlDb-"$demoName
+appServiceName="app-"$demoName
+deployUserName="u9deployer"
+deployPassword="woofW00F#9"$RANDOM
+umbracoAdminUserName="DemoUser"
+umbracoAdminEmail="demo.user@monumentmail.com"
+umbracoAdminPassword="UNatt3nd3d#dotnet5"$RANDOM
+deleteScriptFile="delete-demo-$demoName.sh"</code></pre>
+      <p class="snippet-caption">Setting variables (Step 4 of 18)</p>
+<h3>Resource Group</h3>
+<p>This snippet creates an Azure Resource Group concatenating the demo name. For example, a resource group with the name 'rg-umbracov9-demo-1431' will be created. This resource group will hold all the resources for this demo and makes it easier for clean-up.</p>
+<pre><code class="language-bash"># Create a resource group to contain this demo
+echo "Creating Resource Group $groupName..."
+az group create --name "$groupName" --location "$location"</code></pre>
+      <p class="snippet-caption">Resource Group (Step 5 of 18)</p>
+<h3>SQL Server logical instance and firewall</h3>
+<p>The next line in the script file creates a new SQL server instance. Then the script adds a firewall rule to allow other Azure Resources to access the SQL server.</p>
+<pre><code class="language-bash"># Create a SQL server instance
+echo "Creating SQL server instance..."
+az sql server create --admin-password "$adminPassword" --admin-user "$adminUser" --location "$location" --name "$serverName" --resource-group "$groupName"
+
+az sql server firewall-rule create --resource-group "$groupName" --server "$serverName" --name AllowAzureIps --start-ip-address 0.0.0.0 --end-ip-address 0.0.0.0</code></pre>
+      <p class="snippet-caption">SQL Server logical instance and firewall (Step 6 of 18)</p>
+<h3>SQL Database and connection string</h3>
+<p>The next part of the script creates a SQL database instance in the Standard SO Tier. This tier provides 10 DTUs (Database throughput units), 250 GB storage and standard geo-replication. </p>
+<p>Once the database is created, we use a query to retrieve the connection string. Then we replace the username and password with the values in our script variables.</p>
+<pre><code class="language-bash"># Create the SQL server database
+echo "Creating SQL database instance..."
+az sql db create --name "$dbName" --resource-group "$groupName" --server "$serverName" --service-objective S0
+
+# Get the connection string for the database
+connectionString=$(az sql db show-connection-string --name "$dbName" --server "$serverName" --client ado.net --output tsv)
+
+# Add credentials to the connection string
+connectionString=${connectionString//&lt;username&gt;/$adminUser}
+connectionString=${connectionString//&lt;password&gt;/$adminPassword}</code></pre>
+      <p class="snippet-caption">SQL Database and connection string (Step 7 of 18)</p>
+<h3>Create a Web App</h3>
+<p>Next, we create a Linux App Service plan to host our Web App. Note that the Linux App Service plan is five times cheaper than the Windows App Service plan in the same tier. </p>
+<p>Then we create the Web App with a .NET 5 runtime and set up a user to handle deployments.</p>
+<pre><code class="language-bash"># Create a Linux App Service plan in the B1 (Basic small) tier.
+echo "Creating Linux App Service plan..."
+az appservice plan create --name "$appServiceName" --resource-group "$groupName" --sku B1 --is-linux
+
+# Create a web app
+echo "Creating Web App..."
+az webapp create --name "$demoName" --resource-group "$groupName" --plan  "$appServiceName" --runtime "DOTNET|5.0"
+
+# Set WebApp Deployment User
+echo "Setting WebApp deployment user..."
+az webapp deployment user set --user-name "$deployUserName" --password "$deployPassword"</code></pre>
+      <p class="snippet-caption">Create a Web App (Step 8 of 18)</p>
+<h3>Install the .NET 5 SDK</h3>
+<p>The default .NET Core runtime for the Azure Cloud Shell is currently 3.1.403. This does not allow us to build or publish the Umbraco solution. So we need to install the latest version of .NET 5 (currently 5.0.403).</p>
+<p>The script downloads the .NET 5 SDK from Microsoft and unzips it to a folder within our demo folder. Then this .NET SDK path is added to the current PATH. </p>
+<pre><code class="language-bash"># Install the .NET 5 SDK
+echo "Installing .NET 5 SDK on this cloud shell..."
+mkdir dotnetinstall
+cd dotnetinstall || exit
+
+wget https://download.visualstudio.microsoft.com/download/pr/b77183fa-c045-4058-82c5-d37742ed5f2d/ddaccef3e448a6df348cae4d1d271339/dotnet-sdk-5.0.403-linux-x64.tar.gz
+
+DOTNET_FILE=dotnet-sdk-5.0.403-linux-x64.tar.gz
+DOTNET_ROOT=$(pwd)/dotnet
+export DOTNET_ROOT
+
+mkdir -p "$DOTNET_ROOT" &amp;&amp; tar zxf "$DOTNET_FILE" -C "$DOTNET_ROOT"
+
+export PATH=$DOTNET_ROOT:$PATH
+
+cd ..</code></pre>
+      <p class="snippet-caption">Install the .NET 5 SDK (Step 9 of 18)</p>
+<p><strong>Caution:</strong> Many examples ask you to '<span class="code">export PATH=$PATH:$DOTNET_ROOT</span>'. But this does not change the .NET SDK and keeps pointing it to the default 3.1.403 version on the Azure Cloud Shell. Inverting the code to  '<span class="code">export PATH=$DOTNET_ROOT:$PATH</span>' gives access to the .NET 5 SDK. I spent almost a day trying to figure this one out. 🤦‍♂️</p>
+<h3>Set Umbraco Unattended install variables</h3>
+<p>As the initial bootstrap run of this demo will happen on the Web App, we need to make sure that the connection string and all other variables are set on the Web App configuration.</p>
+<p>The following lines add the connection string and app settings from the variables in our script. As a security precaution, we avoid adding these values to the local config files.</p>
+<pre><code class="language-bash"># Set Umbraco Unattended install variables
+echo "Setting unattended install variables on the web app config..."
+az webapp config connection-string set --resource-group "$groupName" --name "$demoName" --settings umbracoDbDSN="$connectionString" --connection-string-type SQLAzure
+
+az webapp config appsettings set --resource-group "$groupName" --name "$demoName" --settings UMBRACO__CMS__GLOBAL__INSTALLMISSINGDATABASE=true UMBRACO__CMS__UNATTENDED__INSTALLUNATTENDED=true UMBRACO__CMS__UNATTENDED__UNATTENDEDUSERNAME="$umbracoAdminUserName" UMBRACO__CMS__UNATTENDED__UNATTENDEDUSEREMAIL="$umbracoAdminEmail" UMBRACO__CMS__UNATTENDED__UNATTENDEDUSERPASSWORD="$umbracoAdminPassword"</code></pre>
+      <p class="snippet-caption">Set Umbraco Unattended install variables (Step 10 of 18)</p>
+<h3>Create Umbraco solution</h3>
+<p>Next, we run '<span class="code">dotnet new -i Umbraco.Templates::*</span>' to install the project templates. Then we create a new Umbraco solution, switch to that directory and add the Umbraco StarterKit.</p>
+<pre><code class="language-bash"># Create Umbraco Solution
+echo "Create a new Umbraco solution on this cloud shell..."
+dotnet new -i Umbraco.Templates::*
+dotnet new umbraco -n UmbracoUnattended
+cd UmbracoUnattended || exit
+
+dotnet add package Umbraco.TheStarterKit</code></pre>
+      <p class="snippet-caption">Create Umbraco solution (Step 11 of 18)</p>
+<h3>Publish and Zip up site</h3>
+<p>In the next step, we use the '<span class="code">dotnet</span>' command to publish the site to a folder named release. Then all content from that release folder is zipped up to a file named release.zip.</p>
+<pre><code class="language-bash"># Publish the Umbraco sample site
+echo 
+echo "Publish the Umbraco site..."
+dotnet publish --output release
+cd ./release || exit
+zip -r ../release.zip .
+cd ..</code></pre>
+      <p class="snippet-caption">Publish and Zip up site (Step 12 of 18)</p>
+<h3>Deploy to Web App</h3>
+<p>Next, the release.zip file is deployed to the Azure Web App.</p>
+<pre><code class="language-bash"># Deploy the Umbraco sample site
+echo 
+echo "Deploy site to Azure Web App..."
+az webapp deploy --resource-group "$groupName" --name "$demoName" --src-path ./release.zip</code></pre>
+      <p class="snippet-caption">Deploy to Web App (Step 13 of 18)</p>
+<h3>Get the site URL</h3>
+<p>Using a <a rel="noopener" href="https://jmespath.org/" target="_blank" title="Learn more about JMESPath">JMESPath query</a> we retrieve the default hostname for the web app and concatenate it with the schema.</p>
+<pre><code class="language-bash"># Get the site URL
+siteUrl="https://"$(az webapp show --resource-group "$groupName" --name "$demoName" --query defaultHostName --output tsv)</code></pre>
+      <p class="snippet-caption">Get the site URL (Step 14 of 18)</p>
+<h3>Output credentials</h3>
+<p>The prompt at the beginning of this script checks if the credentials should be displayed and/or saved.</p>
+<ul>
+<li>If the user enters 'none', the credentials are not displayed nor saved.</li>
+<li>If the user enters 'save', the credentials are saved in a file named “credentials.txt” in the demo folder. A <a href="#credentials" title="Sample credentials file">sample 'credentials.txt' file</a> can be found later on in this article. At this point, the credentials are not displayed to the user.</li>
+<li>If the user enters 'display', the credentials are displayed on the screen but not saved in a file.</li>
+<li>If the user enters 'both', the credentials are saved as well as displayed on the screen.</li>
+</ul>
+<pre><code class="language-bash"># Output credentials if requested
+cd ..
+echo
+if [[ "$outputCredentials" == "none" ]];
+then
+echo "Credentials are NOT saved/displayed as requested"
+fi
+
+if [[ "$outputCredentials" == "save" || "$outputCredentials" == "both" ]];
+then
+echo 
+echo "Saving credentials as requested"
+{
+  echo "Site URL: $siteUrl"
+  echo 
+  echo "Database Admin Username: $adminUser"
+  echo "Database Admin Password: $adminPassword"
+  echo "Deployment Username: $deployUserName"
+  echo "Deployment Password: $deployPassword"
+  echo "Umbraco Admin Username: $umbracoAdminEmail"
+  echo "Umbraco Admin Password: $umbracoAdminPassword"
+} &gt; credentials.txt
+echo "Saved $demoName/credentials.txt file"
+fi
+
+if [[ "$outputCredentials" == "display" || "$outputCredentials" == "both" ]];
+then
+echo 
+echo "Displaying credentials as requested"
+echo "Site URL: $siteUrl"
+echo "Database Admin Username: $adminUser"
+echo "Database Admin Password: $adminPassword"
+echo "Deployment Username: $deployUserName"
+echo "Deployment Password: $deployPassword"
+echo "Umbraco Admin Username: $umbracoAdminEmail"
+echo "Umbraco Admin Password: $umbracoAdminPassword"
+fi</code></pre>
+      <p class="snippet-caption">Output credentials (Step 15 of 18)</p>
+<h3>Deletion/clean-up script</h3>
+<p>The script creates a deletion script so that all the Azure resources and the demo folder can be deleted. This keeps costs down on Azure and the file system on your Cloud Shell clean. The following snippet only creates a new .sh file to be used later on. The deletion script is not executed at this point.</p>
+<pre><code class="language-bash"># Write script for deletion
+cd ..
+echo 
+echo "Writing script to help deletion later..."
+{
+  echo "#!/bin/bash"
+  echo "echo UMBRACO 9 DEMO CLEAN UP"
+  echo
+  echo "# Once done, delete the entire resource group to keep costs down"
+  echo "echo Deleting resource group..."
+  echo "az group delete --name $groupName --yes"
+  echo 
+  echo "# delete the folder"
+  echo "echo Deleting install folder..."
+  echo "rm -r $demoName"
+} &gt; "$deleteScriptFile"
+chmod +x "$deleteScriptFile"
+echo "Delete script location - $deleteScriptFile"</code></pre>
+      <p class="snippet-caption">Deletion/clean-up script (Step 16 of 18)</p>
+<h3>Bootstrap/unattended install</h3>
+<p>A curl request is made to retrieve the home page of the site. This will trigger an unattended install since we provided all the app settings in the Web App.</p>
+<pre><code class="language-bash"># Bootstrap the site with an initial request
+echo 
+echo "Trying to access the site for the first time..."
+curl -s -o /dev/null -w "%{http_code}" "$siteUrl"</code></pre>
+      <p class="snippet-caption">Bootstrap/unattended install (Step 17 of 18)</p>
+<h3>Display site URL</h3>
+<p>The final step of the script displays the site URL which can be clicked through to load the site on a new tab of your browser.</p>
+<pre><code class="language-bash"># Provide the site URL to click through
+echo 
+echo "Demo site install complete. Go to $siteUrl"</code></pre>
+      <p class="snippet-caption">Display site URL (Step 18 of 18)</p>
+<p><img style="width: 500px; height: 254.82406356413165px;" src="/archive/media/2021/090-script-done.jpg?width=500&amp;height=254.82406356413165" alt="Completed script" data-udi="umb://media/0134122a36ab465885db71139bf4cf66"></p>
+<p>That’s it for the script! As I mentioned previously, the <a rel="noopener" href="https://github.com/emmanueltissera/speedycmsinstall/blob/main/scripts/azure/create-umbraco-v9-demo.sh" target="_blank" title="The shell script which automates Umbraco V9 deployment">entire deployment script</a> is available on Github.</p>
+<h2><a id="credentials"></a>Credentials</h2>
+<p>The script creates a credentials.txt file in a folder with the project name. You can opt out of saving and/or displaying the credentials.</p>
+<pre><code class="language-markup">Site URL: https://umbracov9-demo-1431.azurewebsites.net
+
+Database Admin Username: serveradmin
+Database Admin Password: High5Ur0ck#9883
+Deployment Username: u9deployer
+Deployment Password: woofW00F#92977
+Umbraco Admin Username: demo.user@monumentmail.com
+Umbraco Admin Password: UNatt3nd3d#dotnet57885</code></pre>
+      <p class="snippet-caption">credentials.txt</p>
+<h2>Cleaning up</h2>
+<p>Whenever the script is run, it creates a script file that allows for easy deletion of all Azure resources and folders on the Cloud Shell. This will allow you to manage your resource costs. The name of the script file will be the supplied demo name prefixed by '<span class="code">delete-demo-</span>' and suffixed by a '<span class="code">.sh</span>' extension. The file will reside next to the '<span class="code">create-umbraco-v9-demo.sh</span>' file.</p>
+<p>For example, delete-demo-umbracov9-demo-1431.sh will contain the following.</p>
+<pre><code class="language-bash">#!/bin/bash
+echo UMBRACO 9 DEMO CLEAN UP
+
+# Once done, delete the entire resource group to keep costs down
+echo Deleting resource group...
+az group delete --name rg-umbracov9-demo-1431 --yes
+
+# delete the folder
+echo Deleting install folder...
+rm -r umbracov9-demo-1431</code></pre>
+      <p class="snippet-caption">Sample deletion script - delete-demo-umbracov9-demo-1431.sh</p>
+<p>To clean up, you should run the following:</p>
+<pre><code class="language-bash">./delete-demo-umbracov9-demo-1431.sh</code></pre>
+      <p class="snippet-caption">Executing clean up</p>
+<h3>Deleting the scripts</h3>
+<p>To clean up the downloaded creation script and the generated deletion script, run the following.</p>
+<pre><code class="language-bash">rm delete-demo-umbracov9-demo-1431.sh
+rm create-umbraco-v9-demo.sh</code></pre>
+      <p class="snippet-caption">Deleting the script files</p>
+<p>An example of a full clean up can be seen here.</p>
+<p><img style="width: 500px; height: 182.1983273596177px;" src="/archive/media/2021/120-clean-up.jpg?width=500&amp;height=182.1983273596177" alt="Full clean up in action" data-udi="umb://media/dd6c04a4c08b40c8b27b94e70dadecba"></p>
+<h2>Improvements/next steps</h2>
+<p>There are quite a few improvements that could be made to this shell script. A few ideas off the top of my head:</p>
+<ul>
+<li>Robust error handling</li>
+<li>Better security practices</li>
+<li>Passing arguments to the shell script</li>
+<li>A Powershell version of this shell script</li>
+<li>Using Azure Blob Storage for storing Umbraco media items</li>
+<li>Asynchronous creation of Azure resource (--no-wait option) to speed up this process</li>
+</ul>
+<h2>Contributions are welcome</h2>
+<p>Got some time to improve this script? Contributions are welcome. You can find this <a rel="noopener" href="https://github.com/emmanueltissera/speedycmsinstall/blob/main/scripts/azure/create-umbraco-v9-demo.sh" target="_blank" title="The shell script which automates Umbraco V9 deployment">code on Github</a>. Don’t be shy to submit a PR.</p>
+<h2>Make it your own</h2>
+<p>Consider this shell script as a starting point and customise it to suit your needs. Share it with the wider Umbraco community for some <a rel="noopener" href="https://twitter.com/search?q=%23h5yr&amp;src=typed_query" target="_blank" title="#H5YR on Twitter" data-anchor="?q=%23h5yr&amp;src=typed_query">#H5YR appreciation</a>. At Luminary, we are passionate <a rel="noopener" href="https://www.luminary.com/umbraco" target="_blank" title="Umbraco Gold Partner">Umbraco</a> and <a rel="noopener" href="https://www.luminary.com/blog/luminary-microsoft-cloud-platform-gold-partner" target="_blank" title="Azure Gold Partner">Azure</a> Gold partners. Making them work hand-in-hand is our mission and you can join us on that journey.</p>
+<h2>References</h2>
+<p>I used the following as references and you could delve into them as you customise this script.</p>
+<ul>
+<li><a rel="noopener" href="https://docs.microsoft.com/en-us/azure/cloud-shell/overview" target="_blank" title="Azure Cloud Shell">Azure Cloud Shell</a></li>
+<li><a rel="noopener" href="https://github.com/Azure-Samples/azure-cli-samples" target="_blank" title="Azure CLI Samples">Azure CLI Samples</a></li>
+<li><a rel="noopener" href="https://gist.github.com/nul800sebastiaan/1553316fda85011270ce2bde35243e5b" target="_blank" title="Sebastiaan’s unattended local install script">Sebastiaan’s unattended local install script</a></li>
+<li><a rel="noopener" href="https://our.umbraco.com/documentation/Fundamentals/Setup/Install/Unattended-Install" target="_blank" title="Umbraco unattended installs">Umbraco unattended installs</a></li>
+<li><a rel="noopener" href="https://www.javatpoint.com/bash" target="_blank" title="Bash Tutorial on JavaTpoint">Bash Tutorial on JavaTpoint</a></li>
+<li><a rel="noopener" href="https://docs.microsoft.com/en-au/cli/azure/" target="_blank" title="Azure Command-Line Interface (CLI) - Overview">Azure Command-Line Interface (CLI) - Overview</a></li>
+</ul>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/azure/" title="See all articles tagged with Azure">Azure</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/devops/" title="See all articles tagged with Devops">Devops</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/net-5/" title="See all articles tagged with .NET 5">.NET 5</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/net-core/" title="See all articles tagged with .NET Core">.NET Core</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/powershell/" title="See all articles tagged with PowerShell">PowerShell</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Emmanuel Tissera"><img src="//gravatar.com/avatar/6c8916d04e60f7c64785f023b85a6328.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/6c8916d04e60f7c64785f023b85a6328.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Emmanuel Tissera</h1>
+        <p>Emmanuel is on Twitter as <a href="//twitter.com/dAmazingNut" title="Emmanuel Tissera on Twitter" rel="author">@dAmazingNut</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

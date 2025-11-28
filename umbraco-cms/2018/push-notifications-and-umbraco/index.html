@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Push notifications and Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Push Notifications and Umbraco</h1>
+      <p class="byline"> by Mark McDonald, <span class="pubdate">posted on <time datetime="2018-12-10">Dec 10, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span style="font-weight: 400;">If you take a look at Mozilla’s page that lists Web APIs (shown in the screenshot below), it is understandable how easy it is to be overwhelmed by all of the functionality and features available. This feeling of being overwhelmed is exasperated when discovering incredible sites that utilise these APIs to their full extent. How often have you seen something amazing on another site and thought</span><span style="font-weight: 400;"> “I have no idea how they managed to code that”</span><span style="font-weight: 400;">? I often find myself thinking this, and then I start inspecting the page in the developer tools, fiddling with the code and googling specific technologies to learn more. In other cases, there is a specific problem that occurs where one of the Web APIs would provide a perfect solution. </span></p>
+<p class="intro"><span style="font-weight: 400;">This happened with a website that I built for a local swimming club. The problem that arose involved communication to parents about unforeseen cancellations to swimming sessions. One part of the solution was to move the club’s mailing list to an online provider and promote sign up to the list so that parents were notified of any alterations to sessions. However, there was another opportunity that would notify parents on their devices via the website and push notifications. Push notifications have the advantage of being instantly delivered to the user’s device and could make the difference between a parent seeing an announcement or not. </span></p>
+<p><img style="width: 404.37158469945354px; height: 500px;" src="/archive/media/2018/mdn-web-api-list.png?width=404.37158469945354&amp;height=500" alt="" data-udi="umb://media/1bfd406290884f66a47492330d11d98c"></p>
+<p> </p>
+<h2><span style="font-weight: 400;">Push Notifications</span></h2>
+<p><span style="font-weight: 400;">What is a push notification? You have probably encountered push notifications if you have a mobile device. Push notifications are designed to immediately grab your attention and provide you with essential, or sometimes completely useless information from the apps and sites you use regularly. Android and iOS notifications via apps are provided as part of the native OS, but push notifications are also supported in modern browsers via the HTML5 APIs.</span></p>
+<p><span style="font-weight: 400;">Push notifications use a number of the Web APIs to deliver notifications to desktop and mobile devices via the user’s chosen browser. The support for push notifications is steadily growing and at the time of writing Chrome, Firefox, Edge (the user needs to explicitly enable the feature), Opera, as well as, a number of Android browsers all offer support. For now, iOS and Safari continue to avoid support for this feature but <a rel="noopener" href="https://developer.apple.com/notifications/safari-push-notifications/" target="_blank">Safari has its own custom implementation</a></span><span style="font-weight: 400;">.</span></p>
+<p><span style="font-weight: 400;">The notifications depend on messaging services provided by browsers, for example, Chrome provides </span><a rel="noopener" href="https://firebase.google.com/docs/cloud-messaging/" target="_blank"><span style="font-weight: 400;">Firebase Cloud Messaging</span></a><span style="font-weight: 400;">. When a user subscribes to notifications in the browser, the browser returns an endpoint URL for its specific messaging platform. Once you send a message to the endpoint, the messaging service handles the delivery of the message to the user’s browser or device. The service worker listens to this message and can then use the Notification API to display the content of the message to the user. Each messaging platform handles failed deliveries differently, but most will continue to retry until the message is delivered (within a reasonable time frame, determined by the platform). This means that if your device is offline when the notification is sent, you will receive it the next time it is online.</span></p>
+<p><img style="width: 500px; height: 245.12670565302142px;" src="/archive/media/2018/push-notification-flow.png?width=500&amp;height=245.12670565302142" alt="" data-udi="umb://media/184234dde7df4e129b53a52216afd8a4"></p>
+<p><a rel="noopener" href="/archive/media/2018/push-notification-flow.png" target="_blank" title="Umbraco Push Notification Flow diagram">See the full sized version of the Umbraco push notifications flow diagram here</a>. It may not mean much right now, but come back and look at it after you finish reading and it should help to visually reiterate the main flow. </p>
+<p><span style="font-weight: 400;">There are three key concepts to understand when adding push notifications to a website: </span></p>
+<ul>
+<li style="font-weight: 400;"><a href="https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API"><span style="font-weight: 400;">Service Workers</span></a></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Push and Notification APIs</span></li>
+<li style="font-weight: 400;"><a href="https://tools.ietf.org/html/draft-ietf-webpush-vapid-01"><span style="font-weight: 400;">VAPID keys</span></a></li>
+</ul>
+<p><span style="font-weight: 400;">Unfortunately, I don’t have the word space to cover all of these concepts in great detail, but will provide an overview of each one and links for further reading if you are interested. If you're interested in the details of service workers, the APIs and VAPID keys, Google has a great <a href="https://developers.google.com/web/ilt/pwa/introduction-to-push-notifications#vapid" data-anchor="#vapid">introduction</a> that goes into more detail, particularly about VAPID keys. </span></p>
+<h3><span style="font-weight: 400;">Service Workers</span></h3>
+<p><span style="font-weight: 400;">A service worker is a script that runs in your browser and is separate from the main website. They are completely separate from the DOM and cannot interact with elements on the page directly, but there are ways to respond to certain events triggered by scripts running in the DOM. One of the features of Service Workers, the key feature when being used in Progressive Web Apps, is that it can act as a proxy to control network requests. This feature allows it to intercept network requests and, as an example, return cached responses if the browser’s state is currently offline. It's important to note that in order to use service workers on your site, your site must be running on HTTPS otherwise the browser will ignore it.</span></p>
+<p><span style="font-weight: 400;">To register a service worker, you must call the </span>register()<span style="font-weight: 400;"> method at page load. This method checks if there is a service worker file on the server, based on the parameter name that you provide, then registers the worker once the page has loaded. </span></p>
+<p><span style="font-weight: 400;">After registration, use the </span>navigator.serviceworker.ready <span style="font-weight: 400;">promise callback to configure other features to run after your service worker has finished installing. </span></p>
+<h3><span style="font-weight: 400;">Push and Notification APIs</span></h3>
+<p><span style="font-weight: 400;">The Push and Notification APIs depend on the Service Worker being installed and ready to use. These are two separate APIs that handle different parts of the push notification process. The Push API enables a client to receive messages from the server, even when the website is not open in a browser. Each browser has its own service for sending push messages. I’ll touch on this in more detail in the next section about VAPID keys, but there are libraries that handle the subscriptions to different messaging platforms for you, making it easy to provide push services across multiple browser vendors. </span></p>
+<p><span style="font-weight: 400;">The Notification API is utilised in the service worker code after a push message is received from the service and can be used to display notifications to the user. On desktop, this will appear as an overlay in the OS and on mobile devices (read as Android for now), this will be in the form of a native notification. The data sent in the push message can include text which can then be used as part of the notification displayed to the user. There are other options too, such as setting logos for the notification, a URL and a click handler for when, or if, the user clicks or interacts with the notification.</span></p>
+<p><img style="width: 500px; height: 257.8125px;" src="/archive/media/2018/windows-10-push-notification.png?width=500&amp;height=257.8125" alt="" data-udi="umb://media/a108e9cc98fc4f6e874abe8af56fccbf"></p>
+<p>I would stress the importance of how you initiate the prompt that asks the user for permission to send push notifications. All too often, websites are asking for this before the site has even finished loading. As a user of the internet, and putting my developer hat to one side for a moment, I find this to be a really bad experience and absurdly annoying. I'd be interested to see some stats about how many people actually accept the push permissions when they are prompted on page load, but I imagine it would be quite low. Right, rant over and developer hat back on; my point was to stress the importance of being empathetic to what a user wants to see when they first visit a site. Popups (of any kind, but push notifications for the sake of this article) are unlikely to be top of their agenda. Furthermore, if a user blocks notifications in a browser, they generally don't get a chance to enable them again - it's a lose, lose situation. An alternative approach, and one that is shown later on in this article, is to hand control back to the user and let them opt in, through a button click, to receiving notifications. </p>
+<p><span style="font-weight: 400;">If you are interested in learning more, the MDN documentation describes these APIs (<a rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/API/Push_API" target="_blank">push</a> and <a rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/API/notification" target="_blank">notification</a>) in much more detail. </span></p>
+<h3><span style="font-weight: 400;">VAPID keys</span></h3>
+<p><span style="font-weight: 400;">Voluntary Application Server Identification keys, or VAPID for short, completely confused me for a while when I began researching into push notifications. They are optional when sending notifications, but it is advisable to implement VAPID to ensure that the messaging platforms can validate that notifications are being sent from your website and not being impersonated (it uses a public and private key pair between your server and the messaging provider). This restricts the validity of a subscription to a particular URL (you must subscribe to the push service - a user creates a subscription in the browser using the push manager and then you store these generated keys to use when sending your messages). The second benefit of using VAPID is to provide information about your website to the push services. This information can then, in theory, be used to contact you if there is a problem with your message. A prime example of this is if your server starts spamming push messages, the operator would have the information to contact and notify you of the issue. </span></p>
+<h2><span style="font-weight: 400;">Implementation with Umbraco</span></h2>
+<p><span style="font-weight: 400;">The above information is an overview of the concepts involved in push notifications and I would recommend reading further if you plan to use them in your website. In particular, the VAPID </span>specification<span style="font-weight: 400;"> is worth reading to really understand its purpose. </span></p>
+<p><span style="font-weight: 400;">This section will explain how to implement this for the Umbraco backoffice, but you could adapt the example code to send notifications from a standard MVC website using APIs. I chose to integrate the interface for sending notifications into the backoffice because editors are already familiar with Umbraco and how to interact with it. Furthermore, Umbraco is easily extensible for developers, has great documentation and by integrating into the backoffice, it keeps all admin features in one location, removing the need for developing a custom management section in the site. There are multiple ways to add custom features to Umbraco, such as Sections and Dashboards. Since push notifications are a small, encapsulated feature, a dashboard is the perfect extension point. </span></p>
+<p><span style="font-weight: 400;">The steps for sending push notifications from the Umbraco backoffice can be outlined as: </span></p>
+<ol>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Create a custom dashboard in Umbraco for editors to send and manage the notifications</span></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Set up the client-side website scripts to handle the subscription to push messages and displaying the notifications</span></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Add the server side code, hooked into the Umbraco dashboard to send the push notifications</span></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Something extra: Track the number of subscribers to your push messages</span></li>
+</ol>
+<p> </p>
+<h3><span style="font-weight: 400;">1. Creating the Dashboard</span></h3>
+<p><span style="font-weight: 400;">The Umbraco documentation is a thing of beauty these days, so it would be a disservice to everyone (particularly <a href="https://twitter.com/marcemarc">@marcemarc</a>’s screenshots) if I explained how to create a custom dashboard in this post. This amazing </span><a rel="noopener" href="https://our.umbraco.com/Documentation/Tutorials/Creating-a-Custom-Dashboard/" target="_blank" title="Creating a Custom Umbraco Dashboard"><span style="font-weight: 400;">guide</span></a><span style="font-weight: 400;"> will provide all the information you need, in addition to the documentation for the Angular </span><a rel="noopener" href="https://our.umbraco.com/apidocs/ui/#/api" target="_blank" title="Umbraco Angular Directives" data-anchor="#/api"><span style="font-weight: 400;">directives</span></a><span style="font-weight: 400;"> that come packaged with Umbraco. I followed those steps, tweaked a few parts and created a dashboard that looked like this (the code for this is in the GitHub repository reference at the end): </span></p>
+<p><img style="width: 500px; height: 245.57291666666669px;" src="/archive/media/2018/backoffice-dashboard.png?width=500&amp;height=245.57291666666669" alt="" data-udi="umb://media/044a42941e104907b222a60121cfbb01"></p>
+<p><span style="font-weight: 400;">The subscriber count is an aggregation of the number of subscriptions in the push subscription database (explained shortly). The past notifications are displayed as a table with the data for this coming from a JSON file that is updated after each new notification is created. The “new notification” button opens a drawer (as shown below) from the right-side and provides an interface where Editors can input the message to be sent in the push notifications. There is also a tooltip there to explain what a push notification is and how it will work for editors new to the terminology. </span></p>
+<p><img style="width: 500px; height: 245.57291666666669px;" src="/archive/media/2018/backoffice-dashboard-drawer.png?width=500&amp;height=245.57291666666669" alt="" data-udi="umb://media/36abd122f6804332995ac3c96bc3de69"></p>
+<h3><span style="font-weight: 400;">2. Create the service worker and subscription UI</span></h3>
+<p><span style="font-weight: 400;">There are different approaches to how a website can gain permission from the user to send push messages; it can either ask by default without any interactions from the user, or, it can allow the user to explicitly opt in to the messages. I opted for the latter method due to the fact that websites that use the former approach tend to get their push notification permission request habitually declined by users sick of having them pop up. My chosen approach is less intrusive and presumptuous, and thus more user friendly. </span></p>
+<p><strong>Service worker, notifications and UI events</strong></p>
+<p><span style="font-weight: 400;">I explained earlier that the service worker is the key feature that enables the browser to receive the push notifications asynchronously from the server. The code to register the service worker should run on page load: </span></p>
+<pre><code class="language-javascript">function initialiseServiceWorker() {
+    if ('serviceWorker' in navigator &amp;&amp; 'PushManager' in window) {
+        navigator.serviceWorker.register('/sw.js')
+            .catch(function (error) {
+                console.error('Service Worker Error', error);
+            });
+    }
+};</code></pre>
+      <p class="snippet-caption">JavaScript code to register a service worker.</p>
+<p><span style="font-weight: 400;">It has two main responsibilities in the push notification flow. First, it receives the push message from the server. Second, it maps the data in the message and displays the notification to the user. The code for doing this is as follows:</span></p>
+<pre><code class="language-javascript">self.addEventListener('push', function (event) {
+    //check if the user has granted permission for us to show notifications
+    if (!(self.Notification &amp;&amp; self.Notification.permission === 'granted')) {
+        return;
+    }
+
+    var data = {};
+    if (event.data) {
+        data = event.data.json(); //method on the PushMessageData object: https://developer.mozilla.org/en-US/docs/Web/API/PushMessageData/json 
+    }
+
+    var title = data.title;
+    var options = {
+        body: data.message,
+        icon: 'assets/images/Logo.png',
+        badge: 'assets/images/Logo.png',
+        tag: 'announcement',
+        data: {
+            url: data.url
+        }
+    };
+
+    //keep the service worker alive until the notification has shown
+    event.waitUntil(self.registration.showNotification(title, options));
+});</code></pre>
+      <p class="snippet-caption">JavaScript code to map push message data to a Notification and display the notification to the user.</p>
+<p><span style="font-weight: 400;">The final piece of the client-side jigsaw is to add a button and event handler, in this case, a click handler, to allow the user to subscribe (and unsubscribe!) from the push notifications. The JavaScript for this is listed below: </span></p>
+<pre><code class="language-javascript">//the full code containing the function for requestNotificationPermission, urlB64ToUint8Array and base64Encode are in the GitHub repository
+function subscribeToPush() {
+    var registration = null;
+    return navigator.serviceWorker.ready
+        .then(function (reg) {
+            registration = reg;
+            return requestNotificationPermission();
+        })
+        .then(function () {
+            var subscribeParams = { userVisibleOnly: true };
+            var applicationServerKey = urlB64ToUint8Array(applicationServerPublicKey); 
+            subscribeParams.applicationServerKey = applicationServerKey;
+
+            return registration.pushManager.subscribe(subscribeParams);
+        })
+        .then(function (subscription) {
+            var p256dh = base64Encode(subscription.getKey('p256dh'));
+            var auth = base64Encode(subscription.getKey('auth'));
+
+            $.post('/umbraco/api/push/add', {
+                PushEndpoint: subscription.endpoint,
+                PushP256DH: p256dh,
+                PushAuth: auth,
+                Token: $('#pushToken').val()
+            })
+            .done(function () {
+                $toggleButton.text('Enabled!');
+            });
+        })
+        .catch(function (e) {
+            console.log('Unable to subscribe to push', e);
+        });
+};</code></pre>
+      <p class="snippet-caption">JavaScript code sample for handling a user's push subscription. It gets the subscription and passes the details back to the server via an API call.</p>
+<p><span style="font-weight: 400;">The UI to enable the notifications and trigger this subscription code consists of a button and some text describing a push notification and its purpose:</span></p>
+<p><img style="width: 500px; height: 245.57291666666669px;" src="/archive/media/2018/push-notification-sign-up.png?width=500&amp;height=245.57291666666669" alt="" data-udi="umb://media/98086192a4e44a18b5ce75808cd1dbc4"></p>
+<p> </p>
+<p><strong>Handling the push subscriptions</strong></p>
+<p>When I was originally writing this code and researching push notifications, I’ll admit that it failed to occur to me that I would need to store the user subscriptions in a database. The information returned from the subscribe() call on the client is needed for sending the messages to the relevant cloud messaging platform that the user subscribed to. When a user subscribes in the browser, they are subscribing to the messaging platform, which then returns an endpoint URL, an auth value and a public key. This took a while to figure out but was worth it for the light bulb moment that happened when everything finally came together and made sense!</p>
+<p><span style="font-weight: 400;">With my new found knowledge, let me explain the steps involved in storing the subscriptions.</span></p>
+<p> </p>
+<p><em><span style="font-weight: 400;">Disclaimer: I don’t claim that this approach is the best, but it works for a small site and the Umbraco forums provided useful steps as a starting <a href="https://our.umbraco.com/forum/using-umbraco-and-getting-started/92117-extend-database-and-save-data-in-a-new-table">point</a>.</span></em></p>
+<ol>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Create a table to store the Subscriptions. A subscription contains a private </span><span style="font-weight: 400;"><em>auth</em> </span><span style="font-weight: 400;">value, a </span><em><span style="font-weight: 400;">public key</span></em><span style="font-weight: 400;"> and an </span><span style="font-weight: 400;"><em>endpoint URL</em> </span><span style="font-weight: 400;">for the messaging service. I opted to add a new table to the Umbraco database for this and hook into the startup pipeline to ensure the table gets created and exists. </span></li>
+</ol>
+<pre><code class="language-csharp">public class RegisterEvents : ApplicationEventHandler
+{
+    protected override void ApplicationStarted(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+    {
+        var ctx = applicationContext.DatabaseContext;
+        var db = new DatabaseSchemaHelper(ctx.Database, applicationContext.ProfilingLogger.Logger, ctx.SqlSyntax);
+
+        //Create the subscriptions table if it doesn't exist
+        if (!db.TableExist("PushSubscriptions"))
+        {
+            db.CreateTable&lt;PushSubscription&gt;(false);
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">A C# event that runs after the application has started. This event ensures that the custom database table for storing subscriptions is created.</p>
+<ol start="2">
+<li><span style="font-weight: 400;"> Create an Umbraco API controller with an action to add a subscription. In the code sample below, there is a throttle attribute that restricts how many times this method can be called by an IP address over a certain amount of time to prevent abuse. </span></li>
+</ol>
+<pre><code class="language-csharp">public class PushController: UmbracoApiController {
+    
+    // GET: /umbraco/api/push/add
+    [Throttle(Name = "PushSubscription", Message = "Subscription rate violated.", Seconds = 3600)]
+    public void Add(AddPushSubscriptionRequest request)
+    {
+        //validate the anti-forgery CSRF token to ensure the request comes from our site
+        var tokenParts = request.Token.Split(':');
+        ValidateToken(tokenParts[0], tokenParts[1]);
+
+        PushSubsciptions.CreateSubscription(request.PushEndpoint, request.PushP256DH, request.PushAuth);
+    }
+}</code></pre>
+      <p class="snippet-caption">A C# API controller to handle adding push subscriptions.</p>
+<h3>3. Umbraco Dashboard APIs</h3>
+<p><span style="font-weight: 400;">This section will focus on how to send the push notifications. To find out how to retrieve the subscription count and history log, there is a GitHub repository linked at the end of the article that contains a complete working version. </span></p>
+<p><span style="font-weight: 400;">When an Umbraco user clicks on “Add announcement”, the angular controller submits a POST request to an API controller with the information for the push message. The server then processes the data, maps it to a push message and uses the <a rel="noopener" href="https://github.com/web-push-libs/web-push-csharp" target="_blank">.Net Push </a></span><a rel="noopener" href="https://github.com/web-push-libs/web-push-csharp" target="_blank"><span style="font-weight: 400;">library</span></a><span style="font-weight: 400;"> to send the push notifications to all subscriptions that are stored in the data subscription table. </span></p>
+<pre><code class="language-csharp">    public class PushService: IPushService
+    {
+        //these can be generated online by tools such as https://tools.reactpwa.com/vapid
+        private readonly string vapidPublicKey;
+        private readonly string vapidPrivateKey;
+
+        public async Task SendNotificationsAsync(string title, string message, string clickUrl)
+        {
+            var payload = JsonConvert.SerializeObject(new { title, message, url = clickUrl });
+            var vapidDetails = new VapidDetails("mailto:contact@mysite.com", vapidPublicKey, vapidPrivateKey);
+            var webPushClient = new WebPushClient();
+
+            foreach (var subscription in PushSubsciptions.GetSubscriptions())
+            {
+                var pushSubscription = new PushSubscription(subscription.PushEndpoint, subscription.PushP256DH, subscription.PushAuth);
+
+                try
+                {
+                    await webPushClient.SendNotificationAsync(pushSubscription, payload, vapidDetails);
+                }
+                catch(WebPushException e)
+                {
+                    switch(e.StatusCode)
+                    { 
+                        //the subscription has been cancelled, remove it from the database
+                        case HttpStatusCode.NotFound:
+                        case HttpStatusCode.Gone:
+                            PushSubsciptions.RemoveSubscription(subscription);
+                            break;
+                    }
+                }
+            }
+        }
+    }</code></pre>
+      <p class="snippet-caption">A C# class that uses the .Net push library to send push notifications to subscriptions stored in a database table.</p>
+<p><span style="font-weight: 400;">The steps involved are: </span></p>
+<ol>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Set your VAPID details and Push message data (a JSON serialised object containing a title, message and an optional URL). This is encrypted using the keys stored in the subscription table. </span></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Retrieve all subscription details from the database and send the push notification to each one.</span></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">If the push message fails to send (returns a particular status code), the client (user) has removed their subscription. When the user unsubscribes from the notifications in their browser, there is no callback on the client-side to hook in to. Thus, no way of knowing when a user unsubscribes. The only way to know if a subscription is no longer valid is to check the HTTP status code when sending a message. If the code returned is either </span><span style="font-weight: 400;">NotFound</span><span style="font-weight: 400;"> or </span><span style="font-weight: 400;">Gone</span><span style="font-weight: 400;">, then you can assume that the subscription has been cancelled by the user and remove their subscription from the table.</span><span style="font-weight: 400;"></span></li>
+</ol>
+<h2><span style="font-weight: 400;">Wrapping it up</span></h2>
+<p><span style="font-weight: 400;">That is all of the steps involved, but I realise that there are probably more questions than answers raised in this article. So, <a rel="noopener" href="https://github.com/markmc27/UmbracoPushNotifications" target="_blank">this GitHub repository</a> contains a fully working version of the Dashboard and flow described in this article, along with the slide deck from the first time I presented this at the Umbraco Liverpool meetup. The slide deck contains some useful links for further reading that will provide extra context and information to the concepts section. </span></p>
+<h3><span style="font-weight: 400;">Why is this not a package?</span></h3>
+<p><span style="font-weight: 400;">To finish, I want to preempt the inevitable question about why this isn’t a package yet. I’ve been asking myself the same question, and there are two reasons (read: excuses): </span></p>
+<ol>
+<li style="font-weight: 400;"><span style="font-weight: 400;">Does it need to be a package? I’d love to hear feedback on this. It seems like a niche piece of functionality that would be so rarely needed, does it warrant the time and effort to maintain as a package? I’ll let you decide. </span></li>
+<li style="font-weight: 400;"><span style="font-weight: 400;">This would be the first package that I’ve created and I haven’t found the time or energy to research how to go about making it happen. </span></li>
+</ol>
+<p> </p>
+<p><span style="font-weight: 400;">I hope this has proven useful and you maybe learned a thing or two along the way. The web is an incredibly powerful tool today, but we need to be mindful not to abuse that power...such as sending push notifications every 5 minutes to tell you that you have 10 unread notifications to play Candy Crush. </span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Have a great Christmas!</span></p>
+<p> </p>
+<h3><span style="font-weight: 400;">Useful Links and Further Reading</span></h3>
+<p><span style="font-weight: 400;">If you'd like to learn more about service workers or push notifications, there are some great resources out there, with a few coming directly from the Umbraco community: </span></p>
+<ul>
+<li><span style="font-weight: 400;">Matthew Wise (<a href="https://twitter.com/waltza86" class="ProfileHeaderCard-screennameLink u-linkComplex js-nav"><span class="username u-dir">@waltza86</span></a>) gave a great talk at the Umbraco UK Festival this year about service workers: <a href="https://www.slideshare.net/MatthewWise7/service-workers-what-and-why-umbukfest-2018">https://www.slideshare.net/MatthewWise7/service-workers-what-and-why-umbukfest-2018</a></span></li>
+<li><span style="font-weight: 400;">The Matt Brailsford (<span class="username u-dir"><a href="https://twitter.com/mattbrailsford">@mattbrailsford</a>)</span> presented a talk about Progressive Web Apps at CodeGarden 2017: <a href="http://mattbrailsford.github.io/presentations/2017/06/09/progressive-web-apps/index.html#/" data-anchor="#/">http://mattbrailsford.github.io/presentations/2017/06/09/progressive-web-apps/index.html#/</a></span></li>
+<li><span style="font-weight: 400;">Majid Hajian took a dive into service workers at this year's CodeGarden: <a href="https://codegarden18.com/sessions/lets-dive-into-service-worker/">https://codegarden18.com/sessions/lets-dive-into-service-worker/</a></span></li>
+<li><span style="font-weight: 400;">And finally, a real in-depth case study on making a service worker from Lyza Danger Gardner (<span class="username u-dir"><a href="https://twitter.com/lyzadanger" class="ProfileHeaderCard-screennameLink u-linkComplex js-nav">@lyzadanger</a>)</span>: <a href="https://www.smashingmagazine.com/2016/02/making-a-service-worker/">https://www.smashingmagazine.com/2016/02/making-a-service-worker/</a></span><span style="font-weight: 400;"></span></li>
+</ul>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Mark McDonald"><img src="//gravatar.com/avatar/fe3d5af020c9672ee3aca3039dd7858e.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/fe3d5af020c9672ee3aca3039dd7858e.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Mark McDonald</h1>
+        <p>Mark is on Twitter as <a href="//twitter.com/MarkMcD27" title="Mark McDonald on Twitter" rel="author">@MarkMcD27</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

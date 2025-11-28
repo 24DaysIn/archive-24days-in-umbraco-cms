@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>How to take full advantage of macros within the Umbraco 7 grid.</title>
+<meta name="description" content="In this post we will see how to take full advantage of the macros in the Umbraco 7 grids.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">How to take full advantage of macros within the Umbraco 7.2 grid</h1>
+      <p class="byline"> by Antoine Giraud &amp; John Fisher, <span class="pubdate">posted on <time datetime="2014-12-10">Dec 10, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span>With the new Umbraco Grid, </span>macros have been given a new breath of life, no longer condemned to oblivion as they have been since the advent of MVC.</p>
+<p class="intro">In this post we will see how to take full advantage of these amazing components. The result will be versatile and attractive grids for content editors.</p>
+<h2>Grid vs Macro</h2>
+<p>Macros are one of the components that can be included in a grid.</p>
+<p><img src="/archive/media/2014/1_498x205.jpg" width="498" height="205" alt="1" style="border: 1px solid #d2d2d2;"></p>
+<p>Their main role is to display contents in the grid with a defined format and behavior. Their parameters are used to specify the different display options, behaviors and data sources.<br>The main attraction of macros is the capacity to be used in several places on a website and to be parameterized in different ways.</p>
+<p>So far, nothing unusual or out of the ordinary from normal use of a macro.</p>
+<p>But in some cases, we may need in our Grid some simple and short information with a given behavior but without redundancy.<br>The kind of content that is only used once, in only one grid and in only one page, for example:</p>
+<ul>
+<li>An image or text slider</li>
+<li>A dynamic list of slogans</li>
+<li>A list of information with some special markup</li>
+<li>...</li>
+</ul>
+<p>Sometimes, those cases can be solved using a Rich Text Editor, but then we would be forced to edit complex HTML into the editor, which is not a very versatile solution for the content editor.<br>We may also create new properties and document types for it, but this has the risk of bloating the structure of document types and make it more complex for the editor.</p>
+<p><span>Another option, much more elegant, would be use to a macro as an editor for this information.</span><br><span>It may sound a bit contradictory, since the essence of the macro is to be re-used, whereas we only want to use the example macro in one place. What we are going to reuse here will be the macro's ability to be parameterized.</span></p>
+<h2>How?</h2>
+<p>Property Editors, another big new feature of Umbraco 7,<span> can be used as parameters types for Umbraco macros</span> in addition to being used as datatypes. This great feature, often forgotten, leads to an endless number of possibilities for our Grid configuration.</p>
+<p>All that has to be done is to specify in the Property Editor's manifest file that it will be used as parameters type, with <strong>isParameterEditor = true</strong>.</p>
+<pre class="language-javascript"><code>{   
+    propertyEditors: [      
+        {
+            alias: "SimpleSliderEditor",
+            name: "Simple Slider Editor",
+			isParameterEditor: true,
+			hideLabel: true,
+			...
+            }
+        }
+    ]
+}</code></pre>
+<h2>An example is better than a thousand words</h2>
+<p>To illustrate this, we are going to create a simple slider editor that will be used directly into our grid.</p>
+<p>First, we need a fresh Umbraco 7.2 instance with a grid datatype ready to use. We will use the new Fanoe starter kit.</p>
+<p>Next, we need a simple Property Editor that will allow us to create a list of slides with the following attributes:</p>
+<ul>
+<li>name</li>
+<li>image</li>
+<li>text</li>
+<li>link</li>
+</ul>
+<p>Since <a href="http://umbraco.github.io/Belle/#/tutorials/CreatingAPropertyEditor" target="_blank" title="Property editor documentación">Property Editor</a> development is beyond the scope of this post, we have prepared <a href="/archive/media/2014/SimpleSliderEditor.zip">a zip archive</a> for you with all the needed files. The <span>code </span>is also available on <a href="https://github.com/agiraud/SimpleSliderEditor">GitHub</a>.</p>
+<p>Unzip the archive into the root of your test Umbraco site. Once it is copied, restart the website by adding a blank line to the web.config file and saving it. This will allow Umbraco to pick up the new Property editor.</p>
+<p>Then, in Umbraco's backoffice, go to the Developer section and right click on Data Types. Click on Create and set the name to <strong>Simple Slider Editor</strong>. In the Property editor dropdown, select <strong>Simple Slider Editor</strong> and click on the Save button.</p>
+<p>Then, right click on Macros and <span>create</span> a new macro called <strong>Simple Slider</strong>. For the <span>MVC Partial view, c</span>hoose <strong>~/Views/MacroPartials/SimpleSlider.cshtml</strong>. In the Parameters tab, create one called <strong>SliderData</strong> of type <strong>SimpleSliderEditor</strong>. <span>If </span><strong>SimpleSliderEditor</strong><span> does not appear in the list, restart the application again.</span></p>
+<p><img src="/archive/media/2014/2.png" alt="2" style="border: 1px solid #d2d2d2; width: 100%;"></p>
+<p>We also need to specify that this macro can be used within Grids. Check <strong>Use in rich text editor and the grid</strong> and uncheck <strong>Render in rich text editor and the grid</strong>.</p>
+<p><img src="/archive/media/2014/3__500x234.jpg" width="500" height="234" alt="3" style="border: 1px solid #d2d2d2;"></p>
+<p>From the grid settings, we will also need to set as enable the macros into an area. In the tree on the right hand side, expand the Data Types element and select the <strong>Grid Frontpage</strong> data type. Under the Row configurations section, click on the row preview icon to the left of <strong>Banner</strong>. In the drawer that appears, click on the top row, shaded in blue in the image below. Check the <strong>Macro</strong> box and click the Ok button to close the drawer and finally the Save button.</p>
+<p><img src="/archive/media/2014/4__500x423.jpg" width="500" height="423" alt="4" style="border: 1px solid #d2d2d2;"></p>
+<p><span>Go to the Content section and click on the </span><strong>Home</strong><span> node. Click on the + button that appears below <strong>Welcome to Fanoe</strong> and its tagline. </span>We are now able to insert our new macro within the grid.</p>
+<p><img src="/archive/media/2014/5__500x285.jpg" width="500" height="285" alt="5" style="border: 1px solid #d2d2d2;"></p>
+<p>And even better, we can <span>edit our slider directly from here, adding and editing slides.</span></p>
+<p><span><img src="/archive/media/2014/6__500x334.jpg" width="500" height="334" alt="6" style="border: 1px solid #d2d2d2;"></span></p>
+<p>The data will be stored as macro parameters with the same format as a property editor data (JSON in this case). </p>
+<p>We can then access this data in the macro's MacroPartials view (<strong>~/Views/MacroPartials/SimpleSlider.cshtml</strong>):</p>
+<pre class="language-javascript"><code>@inherits Umbraco.Web.Macros.PartialViewMacroPage
+
+@{
+    dynamic sliderData = (!String.IsNullOrEmpty(Model.MacroParameters["SliderData"].ToString())) ?
+        Json.Decode((dynamic)HttpUtility.HtmlDecode(Model.MacroParameters["SliderData"].ToString())) : null;
+}
+
+&lt;div class="slider"&gt;
+	&lt;div class="slider-wrapper"&gt;
+		@foreach (var slide in sliderData)
+		{
+			...
+		}
+	&lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<h2>Dressing up the macro</h2>
+<p>Now, let's dress up the macro within the Umbraco backoffice, to give content editors an idea of how the final result will look once published.</p>
+<p>While macros can be rendered as preview within rich text editors, they can also be rendered within the grid.</p>
+<p>This option can be enabled within the macro's configuration area:</p>
+<p><img src="/archive/media/2014/7_.png" width="433" height="334" alt="7" style="border: 1px solid #d2d2d2;"></p>
+<p>If this option is not enabled, only the name of the macro will appear in the grid during content editing.</p>
+<p>It would be much more attractive for the content editor to have an idea of how the content will look.</p>
+<p>The problem is that when rendering macros within a Grid, there is no chance to natively inject styles into the grid and give them a better style.</p>
+<h3>First alternative</h3>
+<p>A first approach can be to show a static, generic, image of the macro. This will improve the general look of the grid. Nevertheless, the real content is not showed, which might be confusing for the content editor.</p>
+<p>To do that, <span>the PartialView </span>just has to control when we are in the Umbraco backoffice and display the static image of the macro.</p>
+<pre class="language-javascript"><code>@if (Request.Url.AbsolutePath.Contains("GetMacroResultAsHtmlForEditor")) { 
+    &lt;img src="~/App_Plugins/SimpleSliderEditor/assets/slide1.png" style="width:100%" /&gt;
+}
+else
+{ 
+    &lt;div class="slider"&gt;
+		...
+    &lt;/div&gt;
+}</code></pre>
+<p><br><span>You can uncomment lines 8-12 and 24 in SimpleSlider.cshtml to see an example. Save the changes and reload the backoffice. </span>In our example, this will be the result:</p>
+<p><img src="/archive/media/2014/8__497x440.jpg" width="497" height="440" alt="8" style="border: 1px solid #d2d2d2;"></p>
+<h3>A better alternative</h3>
+<p>[Update 15/01/2015] </p>
+<p>The better alternative is to display the macro in the grid as the same way of the frontend side and give it the same styles.</p>
+<p>The better and easy way to inject styles within Umbraco is to add the stylesheet path into a manifest file.</p>
+<p>Obviously, with this alternative, we will need to make the additional effort of styling. But we can achieve a useful and attractive result for the content editor.</p>
+<p><img src="/archive/media/2014/11__500x395.jpg" width="500" height="395" alt="11"></p>
+<p><span style="text-decoration: line-through;">Until the Umbraco team can give us a native solution to inject styles within the grid, there is an easy and isolated way to do it: creating another very simple Property Editor that allows us to load a stylesheet into the Umbraco backoffice using the angular assetsService.</span></p>
+<pre class="language-javascript"><code>assetsService.loadCss (....)</code></pre>
+<p style="text-decoration: line-through;">This simple <strong>GridInjector</strong> Property Editor was copied into your App_Plugins directory along with the SimpleSliderEditor.</p>
+<p style="text-decoration: line-through;">All you have to do is create a new Datatype, selecting <strong>Grid Injector</strong> as the Property editor and specifying the path of the CSS you would like to load. An example <strong>/css/backend.css</strong> file was also copied with the SimpleSliderEditor, which we will use.</p>
+<p><img src="/archive/media/2014/9__496x245.jpg" width="496" height="245" alt="9" style="border: 1px solid #d2d2d2;"></p>
+<p style="text-decoration: line-through;">The last step will be to add a new property of this type into the Home DocumentType.</p>
+<p><img src="/archive/media/2014/10__499x265.jpg" width="499" height="265" alt="10" style="font-size: 10px;"></p>
+<p style="text-decoration: line-through;">Finally, comment<span> lines 8-12 and 24 in SimpleSlider.cshtml before visiting the Home node in Content, otherwise the static image will be displayed.</span></p>
+<p><strong>Important note</strong></p>
+<p>We have to be especially careful because this loaded stylesheet is applied across the whole of Umbraco's backoffice. So it is very important not to use the main stylesheet of your website here and to always add a specific prefix to your styles (e.g. .usky-grid).</p>
+<p><strong>Potential Error</strong></p>
+<p>When you have a lot of data stored in the macro, the backend macro rendering service may return an error <strong>HTTP Error 404.15 - Not Found The request filtering module is configured to deny a request Where the query string is too long</strong>. In this case, we just have to change the query string size limit in the <strong>web.config</strong></p>
+<pre class="language-markup"><code>&lt;system.webServer&gt;
+	&lt;security&gt;
+		&lt;requestFiltering&gt;
+			&lt;requestLimits MaxQueryString="5000" /&gt;
+		&lt;/requestFiltering&gt;
+	&lt;/security&gt;
+&lt;/system.webServer&gt;</code></pre>
+<p>and</p>
+<pre class="language-markup"><code>&lt;system.web&gt;
+	&lt;httpRuntime maxUrlLength="10999" maxQueryStringLength="2097151" ...</code></pre>
+<h2>As a Conclusion</h2>
+<p>The main idea here, and what we have to remember, is how we can -and have to- always strive to make content editors' lives easier.<br>The Umbraco Grid is very young and we have still to learn a lot about how to get the most out of it.<br>I hope that this post will be useful and give new ideas for the Grid's uses.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Antoine Giraud"><img src="//gravatar.com/avatar/c6dafc5d4a0a631e0a396fba3b5fd1a4.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c6dafc5d4a0a631e0a396fba3b5fd1a4.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Antoine Giraud</h1>
+        <p>Antoine is on Twitter as <a href="//twitter.com/aaantoinee" title="Antoine Giraud on Twitter" rel="author">@aaantoinee</a></p>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="John Fisher"><img src="//gravatar.com/avatar/d12f0737af0de356c44b9ced869eb826.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/d12f0737af0de356c44b9ced869eb826.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>John Fisher</h1>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li class="selected"><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

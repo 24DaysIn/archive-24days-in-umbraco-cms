@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Made for each other: Pipeline CRM ♥ Umbraco Forms</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Pipeline CRM and Umbraco Forms</h1>
+      <p class="byline"> by Theo Paraskevopoulos, <span class="pubdate">posted on <time datetime="2016-12-03">Dec 3, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Umbraco Forms has come a long way. With a shiny new UI, a wide range of customisation and integration options, it is now one of the stronger aspects of the Umbraco ecosystem. But to be effective, your website owners will also need tools to handle submissions in an organised and collaborative manner.</p>
+<p class="intro">This is the job of a Customer Relationship Management system (CRM). If your website owners are in the market for a new piece of kit, consider <a href="http://pipelinecrm.co.uk/">Pipeline CRM</a> by <a href="https://growcreate.co.uk/">GrowCreate</a>: it's free, <a href="https://github.com/theotron/PipelineCRM">open-source</a> and a bit awesome (I might be a bit biased here). Pipeline is fully embedded in the Umbraco 7 back-office and pre-integrated with the Content, Media and Members areas.</p>
+<p>In this article I will show you how to integrate Pipeline CRM with Umbraco Forms, creating Opportunities and Contacts from form submissions. To do this, we will create a configurable Workflow Type, allow the editor to map fields, and use the helpers to send data to Pipeline.</p>
+<h3>Before we start</h3>
+<p>Before we start, make sure you got the basics in place: you will need Umbraco Forms and Pipeline CRM installed on a v7 Umbraco website. All this can be achieved by the power of Nuget:</p>
+<p>PM &gt; Install-Package UmbracoForms<br>PM &gt; Install-Package PipelineCRM</p>
+<p>We now need to plan our integration. When a new submission comes in to Umbraco Forms, it gets saved in the database and one or more workflows get triggered. Workflows have access to the data and can execute custom .NET code, so this is the natural 'hook' for our integration. Make sure you <a href="https://our.umbraco.org/documentation/Add-ons/UmbracoForms/Developer/Extending/Adding-a-Type">have a look at the documentation</a>, as it will help you with the specifics. </p>
+<p>A new WorkflowType will get data into Pipeline, however not all Forms have the same fields. We need a way for form designers to map which fields in the current form correspond to the ones that Pipeline needs, and for that we need a mapper SettingType. </p>
+<p>The steps we will follow are:</p>
+<ol>
+<li>Create a Workflow Type</li>
+<li>Create a mapper that connects form fields with Pipeline fields</li>
+<li>Hook the mapper to the Workflow Type, to send data to Pipeline</li>
+<li>Create a form, attach and configure the Workflow Type</li>
+<li>Add the form to a page, and fire out a test</li>
+</ol>
+<h2>Let’s do this</h2>
+<h3>Creating the Workflow Type</h3>
+<p>Start a new class in a new Project or in the App_Code, make it inherit from Umbraco.Forms.Core.WorkflowType and add the settings so that users can customise the Opportunity name, value and field mappings, as well as and the identifiers for the Workflow Type.</p>
+<p>Also, <span></span>Every WorkflowType needs an Execute class that describes what happens when the workflow is triggered. For now, leave that blank and we will come back to it in the next section. <span></span>Finally, add a ValidateSettings class - for now we will just check that there are values for the mandatory settings. You starter WorkflowType should look like this: </p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using Umbraco.Core.Logging;
+using Umbraco.Forms.Core;
+using Umbraco.Forms.Core.Attributes;
+using Umbraco.Forms.Core.Enums;
+using GrowCreate.PipelineCRM.Helpers;
+using Newtonsoft.Json.Linq;
+using System.Linq;
+
+namespace GrowCreate.PipelineCRM.FormWorkflows
+{
+    public class CreateOpportunity : WorkflowType
+    {
+        [Setting("Title", prevalues = "New website enquiry", description = "Opportunity title - {name} will be subbed", view = "textstring")]
+        public string OpportunityTitle { get; set; }
+
+        [Setting("Value", prevalues = "1000", description = "Value of the new oppotunity", view = "textstring")]
+        public string OpportunityValue { get; set; }
+
+        [Setting("Mappings", prevalues = "", description = "Map form fields to Pipeline", view = "pipelinemapper")]
+        public string MappingsField { get; set; }    
+        
+        public CreateOpportunity()
+        {
+            this.Id = new Guid("d991fe7c-03cf-45fb-ad56-0d2fe1fa48f2");
+            this.Name = "Create an opportunity in Pipeline CRM";
+            this.Description = "Creates a new CRM opportunity based on the form input.";
+            this.Icon = "icon-inbox";
+        }
+
+        public override WorkflowExecutionStatus Execute(Record record, RecordEventArgs e)
+        {
+            try
+            {
+                // magic will go here
+
+                return WorkflowExecutionStatus.Completed;
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WarnWithException(this.GetType(), string.Format("Unable to create Opportunity: {0}", ex.Message), ex);
+                return WorkflowExecutionStatus.Failed;
+            }
+        }
+
+        public override List&lt;Exception&gt; ValidateSettings()
+        {
+            List&lt;Exception&gt; exceptions = new List&lt;Exception&gt;();
+
+            // some workflow fields are mandatory
+            if (string.IsNullOrEmpty(OpportunityTitle) || string.IsNullOrEmpty(MappingsField))
+            {
+                exceptions.Add(new Exception("Opportunity title and mappings must be set."));
+            }
+
+            return exceptions;
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Srtarting out: \App_Code\CreatePipelineOpportunity.cs</p>
+<h3>Create a mapper</h3>
+<p>The most complex part of the integration is to map the Form fields to Pipeline fields. Umbraco Forms already includes a mapper Setting Type (\App_Plugins\UmbracoForms\Backoffice\Common\SettingTypes\fieldmapper.html), which we will happily copy and customise.</p>
+<p>Copy the the View in the same folder and customise as shown below. The only difference with the built-in mapper is that we have Pipeline fields are predetermined, so we can remove the Add/Remove buttons and change the mapping.alias from an &lt;input&gt; to a &lt;span&gt;.  </p>
+<pre><code class="language-markup">﻿&lt;div ng-controller="UmbracoForms.SettingTypes.PipelineMapperController"&gt;
+
+    &lt;div class="umb-forms-mappings" ng-if="mappings.length &gt; 0"&gt;
+
+        &lt;div class="umb-forms-mapping-header"&gt;
+            &lt;div class="umb-forms-mapping-field -no-margin-left"&gt;Pipeline field&lt;/div&gt;
+            &lt;div class="umb-forms-mapping-field"&gt;Form value&lt;/div&gt;
+            &lt;div class="umb-forms-mapping-field"&gt;Static value&lt;/div&gt;
+        &lt;/div&gt;
+
+        &lt;div class="umb-forms-mapping" ng-repeat="mapping in mappings"&gt;
+
+            &lt;div class="umb-forms-mapping-field -no-margin-left"&gt;
+                &lt;span&gt;{{ mapping.alias }}&lt;/span&gt;
+            &lt;/div&gt;
+
+            &lt;div class="umb-forms-mapping-field"&gt;
+                &lt;select class="-full-width"
+                    ng-options="field.id as field.value for field in fields"
+                    ng-model="mapping.value"
+                    ng-change="stringifyValue()"&gt;
+                    &lt;option value=""&gt;Map a field&lt;/option&gt;
+                &lt;/select&gt;
+            &lt;/div&gt;
+
+            &lt;div class="umb-forms-mapping-field"&gt;
+                &lt;input
+                    class="-full-width-input"
+                    type="text"
+                    placeholder="Static value"
+                    ng-model="mapping.staticValue"
+                    on-blur="stringifyValue()" /&gt;
+            &lt;/div&gt;
+
+        &lt;/div&gt;
+
+    &lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+      <p class="snippet-caption">Complete listing: \App_Plugins\UmbracoForms\Backoffice\Common\SettingTypes\pipelinemapper.html</p>
+<p>Next, we need to wire up the Controller - you can either append the code in umbraco.forms.js, or create a new .js file and add it to the package.manifest. Either way, the code is a copy of the UmbracoForms.SettingTypes.FieldMapperController controller, but with the Add/Remove functions removed, and a pre-set mappings array:</p>
+<pre><code class="language-javascript">angular.module("umbraco").controller("UmbracoForms.SettingTypes.PipelineMapperController",
+	function ($scope, $routeParams, pickerResource) {
+
+	    function init() {
+	       
+	        if (!$scope.setting.value) {
+	            $scope.mappings = [
+                    { alias: "Name" }, 
+                    { alias: "Email" }, 
+                    { alias: "Telephone" },
+                    { alias: "Organisation" },
+                    { alias: "Message" }];
+	        } else {
+	            $scope.mappings = JSON.parse($scope.setting.value);
+	        }
+
+	        var formId = $routeParams.id;
+
+	        if (formId === -1 &amp;&amp; $scope.model &amp;&amp; $scope.model.fields) {
+
+	        } else {
+
+	            pickerResource.getAllFields($routeParams.id).then(function (response) {
+	                $scope.fields = response.data;
+	            });
+	        }
+	    }
+
+	    $scope.stringifyValue = function () {
+	        $scope.setting.value = JSON.stringify($scope.mappings);
+	    };
+
+	    init();
+
+	});</code></pre>
+      <p class="snippet-caption">Complete listing: \PipelineTest\App_Plugins\UmbracoForms\js\pipeline.mapper.js</p>
+<p>To test the mapper, go to the back-office and Create a simple form with fields like Name, Email, Company, Telephone and Your question. Attach the new Workflow and you should be able to set the settings and map fields:</p>
+<p><img style="width: 500px; height: 395.3488372093023px;" src="/archive/media/2016/growcreate-formdesigner.png?width=500&amp;height=395.3488372093023" alt="Design an Umbraco Form and configure the Pipeline mapping" rel="1418" data-id="1418"></p>
+<h3>Hook up the mapper</h3>
+<p>Our mapper ready, so let’s hook it up to our Workflow Type. Before doing so, it is worth looking at the JSON file that is generated to plan our approach - your file will have a unique name, but you can find it in \App_Plugins\UmbracoForms\Data\workflows.</p>
+<p>Notice how the MappingsField is saved as a JSON string. The plan is to parse it with JSON.NET, extract the field Guids for each required field alias, use the Guid to grab the data from the Form Record and send it our to Pipeline. It makes more sense in code!</p>
+<p>The heart of the mapper is in a new method called GetFormValue, which returns the value from a Record based on a field alias. It's only 3 lines of code, which the comments hopefully explain. Use this  in your Execute method, to grab the values we need from the Form and send them to Pipeline.</p>
+<p>In this case, you’ve used the CreatePipeline Helper, which also creates Contact and Organisation in a single go. If you want more granular control, you can go straight to the <a href="https://github.com/theotron/Using-Pipeline-CRM/wiki/5.-Services:-full-integration">Services</a> - for more documentation on how to integrate with Pipeline head on to the <a href="https://github.com/theotron/Using-Pipeline-CRM/wiki">GitHub wiki</a>.</p>
+<p>A little house-keeping to finish off: adjust the Execute and ValidateSettings class, to ensure the Mappings and Record have for the fields that Pipeline requires. The complete listing for your WorkflowType should look like this:</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using Umbraco.Core.Logging;
+using Umbraco.Forms.Core;
+using Umbraco.Forms.Core.Attributes;
+using Umbraco.Forms.Core.Enums;
+using GrowCreate.PipelineCRM.Helpers;
+using Newtonsoft.Json.Linq;
+using System.Linq;
+
+namespace GrowCreate.PipelineCRM.FormWorkflows
+{
+    public class CreateOpportunity : WorkflowType
+    {
+        [Setting("Title", prevalues = "New website enquiry", description = "Opportunity title - {name} will be subbed", view = "textstring")]
+        public string OpportunityTitle { get; set; }
+
+        [Setting("Value", prevalues = "1000", description = "Value of the new oppotunity", view = "textstring")]
+        public string OpportunityValue { get; set; }
+
+        [Setting("Mappings", prevalues = "", description = "Map form fields to Pipeline", view = "pipelinemapper")]
+        public string MappingsField { get; set; }    
+        
+        public CreateOpportunity()
+        {
+            this.Id = new Guid("d991fe7c-03cf-45fb-ad56-0d2fe1fa48f2");
+            this.Name = "Create an opportunity in Pipeline CRM";
+            this.Description = "Creates a new CRM opportunity based on the form input.";
+            this.Icon = "icon-inbox";
+        }
+
+        public override WorkflowExecutionStatus Execute(Record record, RecordEventArgs e)
+        {
+            try
+            {
+                // make sure opp value is an integer
+                int oppValue = int.TryParse(OpportunityValue, out oppValue) ? oppValue : 0;
+
+                // get the correct values from the form
+                var name = GetFormValue(record, "name");
+                var email = GetFormValue(record, "email");
+                var telephone = GetFormValue(record, "telephone");
+                var organisation = GetFormValue(record, "organisation");
+                var message = GetFormValue(record, "message");
+
+                // check we have data for all required fields
+                if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name) || string.IsNullOrEmpty(OpportunityTitle))
+                {
+                    LogHelper.Warn(this.GetType(), string.Format("Unable to create Opportunity: Missing name, email or messagre"));
+                    return WorkflowExecutionStatus.Failed;
+                }
+
+                // use the helper to create a new opportunity
+                // this also creates a contact and organisation if content is found
+                var pipelineHelper = PipelineHelper.CreatePipeline(
+                    Title: OpportunityTitle.Replace("{name}", name),
+                    contactName: name, 
+                    contactEmail: email,
+                    contactTelephone: telephone,
+                    organisationName: organisation,
+                    comments: message,
+                    opportunityValue:oppValue
+                    );
+                    
+                return WorkflowExecutionStatus.Completed;
+            }
+            catch (Exception ex)
+            {
+                LogHelper.WarnWithException(this.GetType(), string.Format("Unable to create Opportunity: {0}", ex.Message), ex);
+                return WorkflowExecutionStatus.Failed;
+            }
+        }
+
+        public override List&lt;Exception&gt; ValidateSettings()
+        {
+            List&lt;Exception&gt; exceptions = new List&lt;Exception&gt;();
+
+            // some workflow fields are mandatory
+            if (string.IsNullOrEmpty(OpportunityTitle) || string.IsNullOrEmpty(MappingsField))
+            {
+                exceptions.Add(new Exception("Opportunity title and mappings must be set."));
+            }
+
+            // we also need certain mappings to be set
+            var settings = JArray.Parse(MappingsField) as IEnumerable&lt;dynamic&gt;;
+            if (!settings.Any(x =&gt; x.alias.ToString().ToLower() == "name") || !settings.Any(x =&gt; x.alias.ToString().ToLower() == "email") || !settings.Any(x =&gt; x.alias.ToString().ToLower() == "message"))
+            {
+                exceptions.Add(new Exception("Mappings for name, email and message must be set."));
+            }
+
+            return exceptions;
+        }
+
+        public string GetFormValue(Record record, string alias)
+        {
+            // parse the mappings JSON string
+            var settings = JArray.Parse(MappingsField) as IEnumerable&lt;dynamic&gt;;
+
+            // get the field guid for the given alias
+            var fieldGuid = (Guid)settings.FirstOrDefault(x =&gt; x.alias.ToString().ToLower() == alias.ToLower()).value;
+
+            // get and return the corresponding value from the record
+            return fieldGuid == null ? "" : record.GetRecordField(fieldGuid).ValuesAsString();
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">Complete listing: \App_Code\CreateOpportunity.cs</p>
+<h3>Et voila!</h3>
+<p>To test our integration, hook up the Form to a web page, and fire a test:</p>
+<p><img style="width: 500px; height: 397.10610932475885px;" src="/archive/media/2016/growcreate-formdesignerwebform.png?width=500&amp;height=397.10610932475885" alt="Hook up the form and fire a test" rel="1419" data-id="1419"></p>
+<p>Back into the back office, go to Pipeline CRM and browse at the new Opportunity which your website owners can start working on.</p>
+<p><img style="width: 500px; height: 389.63607594936707px;" src="/archive/media/2016/growcreate-pipelineresult.png?width=500&amp;height=389.63607594936707" alt="PipelineCRM screenshot with Form input" rel="1420" data-id="1420"></p>
+<h2>Conclusion</h2>
+<p>Umbraco Forms and Pipeline CRM are natural partners. Combining a powerful form designer with comprehensive CRM functionality can make for fantastic user experiences. As both systems are fitted with APIs and integration hooks, you can get started quickly and inexpensively.</p>
+<h2>Taking it further</h2>
+<p>What else can you build with this functionality? Here are some ideas:</p>
+<ul>
+<li>Track basket abandonments by connecting to a Checkout form</li>
+<li>Save more complex Forms using <a href="https://github.com/theotron/Using-Pipeline-CRM/wiki/3.-Customise">Pipeline custom properties</a></li>
+<li>Personalise content based on the user's form history</li>
+<li>Send automated emails - see <a href="http://24days.in/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/">Marc's excellent article</a></li>
+</ul>
+<h2>Shameless plug</h2>
+<p>Pipeline open-source and funded by a commercial version which includes modules not available in the open-source version, including multi-step workflows, automation and reporting. If you have more complex requirements, get in touch with <a href="https://growcreate.co.uk/">GrowCreate</a>.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/webforms/" title="See all articles tagged with Webforms">Webforms</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Theo Paraskevopoulos"><img src="//gravatar.com/avatar/700718081cfab03f192962e3317c6134.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/700718081cfab03f192962e3317c6134.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Theo Paraskevopoulos</h1>
+        <p>Theo is on Twitter as <a href="//twitter.com/theotron" title="Theo Paraskevopoulos on Twitter" rel="author">@theotron</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Creating a Login form with Umbraco MVC SurfaceController</title>
+<meta name="description" content="Get the scoop on building a Login form in Umbraco, using the MVC SurfaceController.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Creating a Login form with Umbraco MVC SurfaceController</h1>
+      <p class="byline"> by Jonas Eriksson, <span class="pubdate">posted on <time datetime="2012-12-20">Dec 20, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><strong>I really like the new support for MVC in Umbraco. It's certainly great to be able to use the standard Razor Layout system instead of old Masterpages. And together with the new strongly typed API, I think it's now quicker and nicer than ever to build the front end of an Umbraco site.</strong></p>
+<p class="intro">Some time ago I built a RazorLogin package for Umbraco, using "WebPages style" = "throw logic and view into the same file". It does still work in Umbraco 4.10. But, as Mr. Sebastiaan Janssen rightfully commented in a twitter dialogue about RazorLogin:</p>
+<blockquote>
+<p>"Would recommend a REAL (Surface)Controller in 4.11 though. Views shouldn't really have logic."</p>
+</blockquote>
+<p>Ok, I don't want to promote bad habits (well, not too often anyway), so here we go:</p>
+<p><em>Note that some of the code is abbreviated to keep the article a bit shorter, see the Gist link below for the complete source code.</em></p>
+<p><strong>The Model</strong></p>
+<p>In MVC we use a Model to describe our data, a model is simply a class. For the login form we need strings for username and password and a bool for a "remember me" checkbox.</p>
+<pre class="language-csharp"><code>public class MemberLoginModel
+{
+    public string Username { get; set; }
+    public string Password { get; set; }
+    public bool RememberMe { get; set; }
+}</code></pre>
+<p><strong>The Controller</strong></p>
+<p>The C in MVC is as we know the Controller. It deals with user actions which returns a result, normally a view or a redirection. In our case we write one function to handle the <em>initial get request</em>, one to handle <em>logout</em> and one to handle a <em>login form post</em> from the user.</p>
+<p>To make it work as a surface controller we simply inherit the class from <span class="code">SurfaceController</span>:</p>
+<pre class="language-csharp"><code>public class MemberLoginSurfaceController : Umbraco.Web.Mvc.SurfaceController
+{
+
+    // The MemberLogin Action returns the view, which we will create later. It also instantiates a new, empty model for our view:
+
+    [HttpGet]
+    [ActionName("MemberLogin")]
+    public ActionResult MemberLoginGet()
+    {
+        return PartialView("MemberLogin", new MemberLoginModel());
+    }
+
+    // The MemberLogout Action signs out the user and redirects to the site home page:
+
+    [HttpGet]
+    public ActionResult MemberLogout()
+    {
+        Session.Clear();
+        FormsAuthentication.SignOut();
+        return Redirect("/");
+    }
+
+    // The MemberLoginPost Action checks the entered credentials using the standard Asp Net membership provider and redirects the user to the same page. Either as logged in, or with a message set in the TempData dictionary:
+
+    [HttpPost]
+    [ActionName("MemberLogin")]
+    public ActionResult MemberLoginPost(MemberLoginModel model)
+    {
+        if (Membership.ValidateUser(model.Username, model.Password))
+        {
+            FormsAuthentication.SetAuthCookie(model.Username, model.RememberMe);
+            return RedirectToCurrentUmbracoPage();
+
+        }
+        else
+        {
+            TempData["Status"] = "Invalid username or password";
+            return RedirectToCurrentUmbracoPage();
+        }
+    }
+}</code></pre>
+<p>TempData is an UmbracoMVC thing that can be used to add data to a view without adding it to the view model. In standard MVC we're used to ViewData (or the dynamic ViewBag). <em>(In standard MVC we would probably return the ModelState and the model to the view on failed login with a message. But I could not get that to work in Umbraco currently. See also below. TempData works nice though.)</em></p>
+<p><strong>The View</strong></p>
+<p>The last letter in our acronym is V for View. It is a Razor file, and a<span>s opposed to our class files, it is saved directly in the web site. </span>In the /Views/Partials folder with the name MemberLogin.cshtml:</p>
+<pre class="language-javascript"><code>@model UmbracoLogin.MemberLoginModel
+@if (User.Identity.IsAuthenticated)
+{
+    &lt;p&gt;Logged in: @User.Identity.Name&lt;/p&gt;
+    &lt;p&gt;@Html.ActionLink("Log out", "MemberLogout", "MemberLoginSurface")&lt;/p&gt;
+}
+else
+{
+    using (Html.BeginUmbracoForm("MemberLogin", "MemberLoginSurface"))
+    {
+    @Html.EditorFor(x =&gt; Model)
+    &lt;input type="submit" /&gt;
+    }
+    
+    &lt;p&gt;@TempData["Status"]&lt;/p&gt;
+}   </code></pre>
+<p>By defining a strongly typed model we get nice intellisense when we create our view.</p>
+<p>We're having the form created for us automatically with the <span class="code">BeginUmbracoForm</span> method together with the <span class="code">EditorFor</span> MVC method. The latter adds a label and a suitable input field for each property on the model.</p>
+<p><strong>Placing the login form in an actual template</strong></p>
+<p>The final piece to the puzzle is to render our HTML in the right place in a suitable template. To do that, just add this line of code:</p>
+<p class="code">@Html.Action("MemberLogin","MemberLoginSurface")</p>
+<p><em><strong>And there you go - a working login form using MVC with SurfaceController!</strong></em></p>
+<p><strong>Spice it up with DataAnnotations</strong></p>
+<p>It's really easy to add custom label texts, and validation just by adding some attributes to our model. Let's check that out. First add a reference to <span class="code">System.ComponentModel.DataAnnotations</span>. Then add some data annotations to the model:</p>
+<pre class="language-csharp"><code>public class MemberLoginModel
+{
+    [Required, Display(Name = "Enter your user name")]
+    public string Username { get; set; }
+
+    [Required, Display(Name = "Password"), DataType(DataType.Password)]
+    public string Password { get; set; }
+
+    [Display(Name = "Remember me")]
+    public bool RememberMe { get; set; }
+
+}</code></pre>
+<p>With these in place the password box will be rendered as an HTML password input, and the labels will be a bit nicer than simply the propertynames.</p>
+<p><strong>Add some validation</strong></p>
+<p>The <span class="code">DataAnnotations</span> attributes also adds validation rules, such as "Required". To let MVC check those for us we need to add one line in our controller:</p>
+<p class="code">if (ModelState.IsValid)<br>{ <br>    if (...</p>
+<p>before the actual password validation. Unfortunately, like I mentioned, I could not make the ModelState work with the SurfaceController. Otherwise we would get validation messages back to the form automatically.</p>
+<p>The good news is that client side validation works as expected by using default MVC unobtrusive validation (with jQuery validate).</p>
+<p><strong>Automatic client side validation</strong></p>
+<p>Add three JavaScript libraries to your layout:</p>
+<p class="code">&lt;script src="/scripts/jquery-1.8.2.js"&gt;&lt;/script&gt;<br>&lt;script src="/scripts/jquery.validate.js"&gt;&lt;/script&gt;<br>&lt;script src="/scripts/jquery.validate.unobtrusive.js"&gt;&lt;/script&gt;</p>
+<p>Then enable client side validation just by adding these two lines in your web.config <span class="code">&lt;appSettings&gt;</span>:</p>
+<p class="code">&lt;add key="ClientValidationEnabled" value="true"/&gt;<br>&lt;add key="UnobtrusiveJavaScriptEnabled" value="true"/&gt;</p>
+<p>Thats it! With these in place the user will get nice messages if he/she forgot to enter text in either of the fields.</p>
+<p><strong>Customize your form</strong></p>
+<p>If you like to define your form manually it is also easily possible - just the standard MVC behaviour. You can use either or combine:<em><br></em></p>
+<ul>
+<li><em>write the raw HTML (use the same names as the model properties):</em></li>
+</ul>
+<p><em><em class="code">&lt;input type="text" name="Username"/&gt;</em><br></em></p>
+<ul>
+<li><em>define each tag individually using Html helpers: </em></li>
+</ul>
+<p><em><span class="code">@Html.LabelFor(model =&gt; model.UserName, "Friendly Name")<br>@Html.TextBoxFor(model =&gt; model.UserName, new { style = "width: 500px;" })</span></em></p>
+<ul>
+<li><em>create custom EditorTemplates (see references below).</em></li>
+</ul>
+<p> </p>
+<p><strong><em>Happy holidays everyone!</em></strong></p>
+<p> </p>
+<p> </p>
+<p><strong>The full source for the login control :</strong></p>
+<p><a href="https://gist.github.com/4336141">https://gist.github.com/4336141</a> </p>
+<p><strong>References and further reeding :</strong></p>
+<p>About MVC in Umbraco 4.10+</p>
+<p><a href="http://umbraco.com/follow-us/blog-archive/2012/10/30/getting-started-with-mvc-in-umbraco-410.aspx">http://umbraco.com/follow-us/blog-archive/2012/10/30/getting-started-with-mvc-in-umbraco-410.aspx</a></p>
+<p><a href="http://our.umbraco.org/documentation/Reference/Mvc/forms">http://our.umbraco.org/documentation/Reference/Mvc/forms</a></p>
+<p><a href="http://our.umbraco.org/forum/developers/api-questions/36614-411-Using-SurfaceController-Child-Action-with-Post">http://our.umbraco.org/forum/developers/api-questions/36614-411-Using-SurfaceController-Child-Action-with-Post</a></p>
+<p>About DataAnnotations</p>
+<p><a href="http://weblogs.asp.net/srkirkland/archive/2011/02/23/introducing-data-annotations-extensions.aspx">http://weblogs.asp.net/srkirkland/archive/2011/02/23/introducing-data-annotations-extensions.aspx</a></p>
+<p>Custom EditorTemplates in MVC</p>
+<p><a href="http://coding-in.net/asp-net-mvc-3-how-to-use-editortemplates/">http://coding-in.net/asp-net-mvc-3-how-to-use-editortemplates/</a></p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jonas Eriksson"><img src="//gravatar.com/avatar/a4c598c2981c982de92e01e8d5f1ce47.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/a4c598c2981c982de92e01e8d5f1ce47.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jonas Eriksson</h1>
+        <p>Jonas is on Twitter as <a href="//twitter.com/joeriks" title="Jonas Eriksson on Twitter" rel="author">@joeriks</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li class="selected"><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

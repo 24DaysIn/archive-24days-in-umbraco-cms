@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Multilingual websites in Umbraco 8</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Multilingual websites in Umbraco 8</h1>
+      <p class="byline"> by Harriet Lawrie, <span class="pubdate">posted on <time datetime="2019-12-14">Dec 14, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I am a full stack developer for Cogent, an agency based in the small village of Meriden not far from Birmingham Airport. I have been working with Umbraco CMS for about 3 years.</p>
+<p class="intro">My multilingual website adventures began back in 2015 whilst I was studying a master’s degree in IT at Loughborough University. I sat a module called ‘International Computing’ which at the time I didn’t really appreciate, however it taught me many important things about making software suitable for a global audience, like supporting character sets, localisation, internationalised domain names and setting up databases with the right encodings. So, when the opportunity to put my newly gained knowledge into practice, I jumped at it!</p>
+<p>The first multilingual Umbraco website I built was on version 7, at the time it was huge improvement over the PHP based multilingual website I built for the ‘International Computing’ module, however I still felt like the process of building and editing the website could have been easier.</p>
+<p>Fast forward to working at Cogent and I am currently working on a multilingual website for one of our clients which could eventually be translated in up to 7 languages. It is also the first Umbraco 8 website that we have worked on.</p>
+<p>Until now we have been holding off moving to Umbraco 8 for multiple reasons:</p>
+<ul>
+<li>Umbraco 8 is new, and we wanted to give it a few months for major bugs, if any, to be patched.</li>
+<li>The documentation is still limited compared to the wealth of information there currently is for Umbraco 7. We wanted to wait for it to be a bit more documented, so it is easier for us to transition.</li>
+<li>Umbraco 8 will require us to rewrite a lot of code for functionality we have written previously for Umbraco 7, so we wanted to start with a project this is going to benefit a lot from using Umbraco 8 over Umbraco 7.</li>
+</ul>
+<p>News that the <a href="https://umbraco.com/blog/umbraco-8-language-variants/">translation features had been improved</a> in Umbraco 8 made this project a good candidate to be our first website on this version.</p>
+<p>One of the first things I did was quickly throw together an Umbraco 8 installation just to see what using Umbraco 8 involves and how the translation functionality works. It didn’t take me long to realise that there are many improvements over v7.</p>
+<h2>There only needs to be one node tree for all the languages</h2>
+<p>Adding new content to the Umbraco 7 website was a time consuming task, each language had it's own separate node tree, and each time a page was added to the website I had to add it to each of these node trees. This wasn't so bad with the three languages that the website initially started with, but if more were to be added at a later date it would become a much more time consuming task for the content editor. Even with just three languages, adding content felt a bit monotonous particularly when adding content that is the same across each languages like images.</p>
+<p>I could have worked around this by adding a ‘tab’ for each language on the page but this would have required a lot of repeated properties in the doctypes, and each time a language was added to the website I would have to manually add more properties to the doctypes. This method would also require a lot of work to get the page URLs to display correctly for each language, as the slug would have been in the default language.</p>
+<p>In Umbraco 8 only one node needs to be created for a page that is translated into multiple languages, within this node I can switch between languages and edit content, and upon publishing it asks which of the languages I want to publish. If I were to add another language to the website I don't have to create any new nodes or doctypes, I just add the language to the culture settings and it creates a new language variant based on the content I already have there, I just have to add the translation and publish. Umbraco also automatically creates all the translated URL slugs when each of the languages is published.</p>
+<p><img style="width: 500px; height: 288.2059800664452px;" src="/archive/media/2019/image1.png?width=500&amp;height=288.2059800664452" alt="Ready to publish modal box showing the languages that can be published" data-udi="umb://media/27e68f047c5a4dad98a72bb85f0ac543"></p>
+<h2>Easier navigation and editing</h2>
+<p>Umbraco 8 is overall a better editing experience generally, but there are a few things specifically that work well for multilingual websites. Allowing the nodes to have varying languages allows a relationship between the content of different languages.</p>
+<p>In Umbraco 7, for example, the 'contact us' page for each language would have been a completely separate page, with no relation to the 'contact us' pages of other languages. This can make the editing experience difficult because if you had to remove the 'contact us' page for each language, you would have to first know what 'contact us' is in each of the languages (hello Google Translate!), and then manually delete them all.</p>
+<p>In Umbraco 8 I can use the dropdown to switch the content to English, find the page I want to remove and delete it across all languages in one go. Or if it only needs to be removed from one language, just un-publish the node for that language. Easy!</p>
+<p><img style="width: 500px; height: 230.18867924528303px;" src="/archive/media/2019/image2.png?width=500&amp;height=230.18867924528303" alt="The language dropdown showing the available languages" data-udi="umb://media/8778c0b5091a4dd6a71b6b37432b674c"></p>
+<h2>I can edit the content of two languages side by side</h2>
+<p>A person writing the content for the website can see the content in one language whilst they are writing the content for another. This was only possible in Umbraco 7 if two browser tabs were open side by side.</p>
+<p><img style="width: 500px; height: 234.21926910299004px;" src="/archive/media/2019/image3.png?width=500&amp;height=234.21926910299004" alt="The side by side editor which allows two languages to be compared." data-udi="umb://media/c18c64b8a8754b1797bc33eac9036c96"></p>
+<h2>I can choose which properties and doctypes can be translated</h2>
+<p>To allow a doctype to be translated into multiple language variants I simply check a box under the permissions for ‘Allow varying by culture’ and then for each property in the doctype I enable this also.</p>
+<p><img style="width: 392px; height: 116px;" src="/archive/media/2019/image5.png?width=392&amp;height=116" alt="The varying by culture toggle" data-udi="umb://media/1e985a3e4c424fa09bb388d3e7cdcb84"></p>
+<p>You might be thinking, ‘which nodes don’t have to be translated? Surely you want all the content to be translated?’  I have some nodes in the website which I use for configuration that will be global to all the translated variants of the site, it would be unnecessary to ‘translate’ these properties because they are the same across all the languages.</p>
+<h2>Conclusion</h2>
+<p>Overall, I have found the Umbraco 8 translation experience so much easier than 7. Umbraco 7 didn’t feel as if it was built for multilingual websites, it was like I was squashing multiple separate websites into one installation rather than having a single translated website. Umbraco 8 allows a fluid editing experience from one language to another.</p>
+<h2>Code Snippets</h2>
+<p>If you are thinking of translating an Umbraco website I have a few code snippets that may help you:</p>
+<h3>String Replace variables in the Dictionary</h3>
+<p>Sometimes variables are added into text like below:</p>
+<p><span class="code">Showing @startNum - @endNum of @totalNum Products</span></p>
+<p>This could be translated by the Umbraco dictionary by adding 3 separate words in there “Showing”, “of” and “Products” which would produce the following code:</p>
+<pre><code class="language-javascript">@umbHelper.GetDictionaryValue(“Showing”) @startNum - 
+@endNum @umbHelper.GetDictionaryValue(“of”) 
+@totalNum @umbHelper.GetDictionaryValue(“Products”)</code></pre>
+<p>There are a few issues with this:</p>
+<ul>
+<li>It may not be obvious in the translate section the context of these three words, which may lead to them being incorrectly translated.</li>
+<li>The sentence structure (and therefore order of the variables) may change when translated into another language. This cannot be fixed by the translator.</li>
+</ul>
+<p>I solved these issues by doing a simple string replace on the variables in the sentence.</p>
+<pre><code class="language-javascript">&lt;div class="item-count"&gt;
+@umbHelper.GetDictionaryValue("Showing {startNum}-{endNum} of {totalNum} Products")
+.Replace("{startNum}", startNum.ToString())
+.Replace("{endNum}", endNum.ToString())
+.Replace("{totalNum}", productCount.ToString())
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">Interpolated variables in the translation section</p>
+<p>This allows translators to see the context of what they are translating in Umbraco, and if they need to can alter the order of the variables.</p>
+<p><img style="width: 500px; height: 238.76871880199667px;" src="/archive/media/2019/image4.png?width=500&amp;height=238.76871880199667" alt="The translated sections showing interpolated variables" data-udi="umb://media/e53c47a501264619aca3663cb91c85f3"></p>
+<h3>Localising DateTime properties</h3>
+<p>Date formatting can vary from region to region. Umbraco makes it very easy to change the formatting of any dates with the following code:</p>
+<p>Long date:</p>
+<p><span class="code">@Model.Content.CreateDate.ToString("D")</span></p>
+<p>Short Date:</p>
+<p><span class="code">@Model.Content.CreateDate.ToString("d")</span></p>
+<p>Here is a table of examples that this code prints out:</p>
+<table border="1">
+<tbody>
+<tr>
+<td width="150">
+<p> </p>
+</td>
+<td width="150">
+<p>En-gb</p>
+</td>
+<td width="150">
+<p>En-us</p>
+</td>
+<td width="150">
+<p>fr</p>
+</td>
+</tr>
+<tr>
+<td width="150">
+<p>Short Datetime</p>
+</td>
+<td width="150">
+<p>01/10/2019</p>
+</td>
+<td width="150">
+<p>10/1/2019</p>
+</td>
+<td width="150">
+<p>01/10/2019</p>
+</td>
+</tr>
+<tr>
+<td width="150">
+<p>Long Datetime</p>
+</td>
+<td width="150">
+<p>01 October 2019</p>
+</td>
+<td width="150">
+<p>Tuesday, October 1, 2019</p>
+</td>
+<td width="150">
+<p>mardi 1 octobre 2019</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p>Apparently, the British don’t care for the day of the week…</p>
+<p>I created a new method to correct this:</p>
+<pre><code class="language-csharp">        public static string ConvertDateTimeLong(this DateTime date, string culture)
+        {
+            CultureInfo location = new CultureInfo(culture);
+            string format = location.DateTimeFormat.LongDatePattern;
+            switch (culture.ToLower())
+            {
+                case "en-gb":
+                    return date.ToString("dddd "+format);
+                default:
+                    return date.ToString(format);
+            }
+        }</code></pre>
+      <p class="snippet-caption">A method that localises the long date</p>
+<p>Further links:</p>
+<p><a href="https://our.umbraco.com/documentation/Getting-Started/Backoffice/Variants/">https://our.umbraco.com/documentation/Getting-Started/Backoffice/Variants/</a></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/dictionary/" title="See all articles tagged with Dictionary">Dictionary</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Harriet Lawrie"><img src="//gravatar.com/avatar/e5ee7cc6d3606af52278f9be53762cc8.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/e5ee7cc6d3606af52278f9be53762cc8.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Harriet Lawrie</h1>
+        <p>Harriet is on Twitter as <a href="//twitter.com/Harriet_Lawrie" title="Harriet Lawrie on Twitter" rel="author">@Harriet_Lawrie</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

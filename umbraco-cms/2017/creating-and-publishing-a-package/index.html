@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>How to create and publish a simple Umbraco package</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Creating and Publishing a Package</h1>
+      <p class="byline"> by Paul Seal, <span class="pubdate">posted on <time datetime="2017-12-19">Dec 19, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I have been working with Umbraco for 4 or 5 years now. I  find Umbraco so enjoyable to work with. There are 2 main reasons for me.</p>
+<ul>
+<li>There is a fantastic community of Umbracians out there who are willing to help you.</li>
+<li>There are some fantastic packages available for you to install and use.</li>
+</ul>
+<p class="intro">When I was new to Umbraco, a contractor once showed me the packages section and he said <strong><em>"when you get used to Umbraco, you should write one of these packages one day"</em></strong>.</p>
+<p>I thought to myself <strong><em>"no chance, I wouldn't know where to start"</em></strong>. I was struggling to get to grips the basics of Umbraco and MVC, learning the current best practises etc. How would I ever be able to write a package for others to use?</p>
+<p>Well time has passed and I learned how to create packages in Umbraco.</p>
+<p>For this article, I thought it would be good to create a package from scratch, that others could find useful, and show you how I got it into the Our Umbraco projects directory.</p>
+<h2>Where to start?</h2>
+<p>Before you create an Umbraco package, you need an idea. You need to have something reusable that either you or at least one other person will find useful in another project.</p>
+<p>Working for an agency, I build a lot of websites, and most of them are in Umbraco. I would say I've built 40 - 50 sites in Umbraco. I find that I do a lot of the same things in all of my sites. Wouldn't it be good to have a starting point which has all of these basic concepts in one package. A starter kit, if you will.</p>
+<h3>TL;DR</h3>
+<p>I show you how I created this <a rel="noopener noreferrer" href="https://our.umbraco.org/projects/starter-kits/codeshare-starter-kit/" target="_blank">Umbraco Package</a>.</p>
+<p>Here is the <a rel="noopener noreferrer" href="http://codesharestarterkit.azurewebsites.net/" target="_blank">Demo site</a>.</p>
+<h2>What functionality do I want to include?</h2>
+<p>Before building it, I needed to stop and think about what functionality I wanted to include in this starter kit. What best practices am I trying to share? Here is a list of functionality I decided to include:</p>
+<ul>
+<li>Automatic site navigation menu using Bootstrap with dropdowns (I've been asked to do a blog post on this quite a few times)</li>
+<li>A carousel using Nested Content. (I needed to start using this now that Archetype has been sunsetted)</li>
+<li>A news or blog section with a list of latest articles on the home page</li>
+<li>A working contact form which uses Ajax</li>
+<li>A search page which uses Umbraco's built-in search functionality</li>
+<li>Pretty links. Pages which act like links to internal or external pages</li>
+<li>Social links in the footer</li>
+<li>Page links in the footer</li>
+<li>Grid editor for the content</li>
+<li>Use of Client Dependency for bundling and minifying CSS and JavaScript.</li>
+</ul>
+<h2>Okay I know what I want to build, what now?</h2>
+<p>So to build this starter kit, I decided to use Bootstrap Studio to create the front end build. I made a video which shows you <a rel="noopener noreferrer" href="https://www.youtube.com/watch?v=lM0HtVljgQ8" target="_blank">What is Bootstrap Studio and How do you use it?</a>  <span>Bootstrap Studio</span> has a great drag and drop interface so I was up and running with a static site in no time.</p>
+<p>Next I created a new Umbraco project using the latest version of Umbraco (7.7.6 at the time of creating it). I got to work on building all of these features and I had a working site running in a fairly short amount of time. Mainly because I'd done these things before (that's why I'm building it, right).</p>
+<h2>Okay, enough waffle, how do I create a package in Umbraco?</h2>
+<p>Just to be clear, there is a difference between creating a package and publishing it on Our Umbraco. This first part shows you how to create the package using the Umbraco backoffice Create Pacakge screens. If you already know how to do this, you can skip down to <a href="#our">find out how to get it into the Our Umbraco projects directory</a>.</p>
+<h3>Lets start by creating the package in the Developer section of Umbraco.</h3>
+<p>There are various ways of creating packages in Umbraco. The way I'm showing you is the simplest way I have found.</p>
+<ul>
+<li>In the project where you want to create the package, go to the Developer section.</li>
+<li>The first item in the menu should be Packages. <br><br><img style="width: 500px; height: 379.8751950078003px;" src="/archive/media/2017/1.png?width=500&amp;height=379.8751950078003" alt="" data-udi="umb://media/902f4c4601c14fd5b44b260cd542fac3"><br><br>Right click on it, or click on the three dots next to it and choose 'Create'.<br><br></li>
+<li>Enter a name for your package and click on the Create button.</li>
+<li>There are 4 tabs:
+<ul>
+<li>Package Properties</li>
+<li>Package Contents</li>
+<li>Package Files</li>
+<li>Package Actions</li>
+</ul>
+<p><img style="width: 500px; height: 41.856925418569254px;" src="/archive/media/2017/2.png?width=500&amp;height=41.856925418569254" alt="" data-udi="umb://media/e475ea5f06384d7098fdf59cc9ad7a4d"></p>
+</li>
+</ul>
+<h3>Package Properties</h3>
+<ul>
+<li>The package name will already be there.</li>
+<li>Enter a url for the package. I like to enter the GitHub repository address in here.</li>
+<li>Package Version is important. Use semantic versioning, like how Umbraco does, so start with version 1.0.0</li>
+<li>Package Icon Url. I don't add one at this stage, I usually set this up when it is in the Our Umbraco Project directory.<br><br><img style="width: 500px; height: 209.72644376899697px;" src="/archive/media/2017/3.png?width=500&amp;height=209.72644376899697" alt="" data-udi="umb://media/d45322bd75fb4c2f9d5b0aeded89ee65"><br><br></li>
+<li>Package file (.zip) This will show as a link when you have saved and published your package. (Don't worry published doesn't mean submitted to Umbraco)</li>
+<li>Umbraco Target Version. This is the lowest version of Umbraco you are saying it will work on. As mine is a starter kit I will leave it as 7.7.6 because who installs a a fresh older version of Umbraco?</li>
+<li>Author Name is pretty obvious</li>
+<li>Author url is too, I put my website address <a rel="noopener noreferrer" href="http://www.codeshare.co.uk" target="_blank">codeshare.co.uk</a> in there.<br><br><img style="width: 500px; height: 402.05562273276905px;" src="/archive/media/2017/4.png?width=500&amp;height=402.05562273276905" alt="" data-udi="umb://media/cb8543205f294cfcb62d209e6dec337b"><br><br></li>
+<li>License Name I always leave this as MIT because I'm happy for people to re-use it however they want.</li>
+<li>License url is filled in by default, but if you change the license name be sure to include a url to the license.</li>
+<li>Readme. I Just enter some basic text in here about the project. Apparently you can enter HTML in there, but I believe you can format it later.</li>
+</ul>
+<h3>Package Contents</h3>
+<p>As I am intending on sharing a full site with all of the content I need to choose the home page and all of it's children</p>
+<p><img style="width: 500px; height: 121.25748502994013px;" src="/archive/media/2017/5a1.png?width=500&amp;height=121.25748502994013" alt="" data-udi="umb://media/c7df3100879e4678ad45384720d00486"></p>
+<p>Click on Choose, then click on the home page</p>
+<p><img style="width: 500px; height: 408.6715867158672px;" src="/archive/media/2017/5a.png?width=500&amp;height=408.6715867158672" alt="" data-udi="umb://media/e50107eee6c747239550fddcbbfec80e"></p>
+<p>You will see it selected, and if you want to include all child pages, you need to tick the box underneath it.</p>
+<p><img style="width: 500px; height: 140.0304414003044px;" src="/archive/media/2017/5b.png?width=500&amp;height=140.0304414003044" alt="" data-udi="umb://media/0a1e669bb6aa4ae4b9c494aacabfb339"></p>
+<p>Next I needed to add all of the document types I had created.</p>
+<p><img style="width: 430.05181347150256px; height: 500px;" src="/archive/media/2017/6a.png?width=430.05181347150256&amp;height=500" alt="" data-udi="umb://media/a508c19bbce4483c8ac03690a91dfc97"></p>
+<p>With all of them selected I could move on to selecting the templates and stylesheets.</p>
+<p><img style="width: 471.4285714285715px; height: 500px;" src="/archive/media/2017/7.png?width=471.4285714285715&amp;height=500" alt="" data-udi="umb://media/4609f06ecb6044c6993f86ea75cdca8a"></p>
+<p>This is pretty easy, right? And the last part on this tab is to select the custom data types that I had created</p>
+<p><img style="width: 415.94022415940225px; height: 500px;" src="/archive/media/2017/8.png?width=415.94022415940225&amp;height=500" alt="" data-udi="umb://media/e29aa09b07d34e4fbebae49cc8b57df5"></p>
+<p>That's everything on this tab. I like to press save now and again so I don't lose my work.</p>
+<h3>Package Files</h3>
+<p>This tab is a bit trickier. If you miss some files here, it could mean your package doesn't install properly.</p>
+<p>Here are the files I included:</p>
+<p><img style="width: 500px; height: 308.5603112840467px;" src="/archive/media/2017/9.png?width=500&amp;height=308.5603112840467" alt="" data-udi="umb://media/c1eed53dfc374015af85690e13c400e2"></p>
+<p>You can add files or folders by click on the black folder icon</p>
+<p><img style="width: 455px; height: 96px;" src="/archive/media/2017/10.png?width=455&amp;height=96" alt="" data-udi="umb://media/7f93abab51384d53b70303996e5cf5ce"></p>
+<p>Then you click through to select individual files or you can click on the link to the right to include the entire folder.</p>
+<p><img style="width: 228.59116022099448px; height: 500px;" src="/archive/media/2017/11.png?width=228.59116022099448&amp;height=500" alt="" data-udi="umb://media/169e5abccb5448179d01ce1c32583d3a"></p>
+<p>I included a library in my package which has the code for the contact controller and model. It also has the code for some package actions, but we will get on to that on the next tab.</p>
+<p><img style="width: 437px; height: 96px;" src="/archive/media/2017/12.png?width=437&amp;height=96" alt="" data-udi="umb://media/2ac262e229fc4c4c9365172bdcc3206e"></p>
+<p> </p>
+<h3>What about Media?</h3>
+<p>At this point we could click on Save and then click on Publish and we would be able to download the package, but there would be no media included in the package and it would ruin the effect of the package. We want the package to look like a working site. So before we get onto the Package Actions tab, we need to write a package action to add the media.</p>
+<h2>Package Actions</h2>
+<p>I created a new Class Library called CSUSK.Library and in there I created a folder called Package Actions. In the folder I added a class called CreateMediaHandler.cs</p>
+<p> </p>
+<pre><code class="language-csharp">using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Web;
+using System.Xml;
+using umbraco.interfaces;
+using Umbraco.Core;
+using Umbraco.Core.Logging;
+using Umbraco.Core.Models;
+using Umbraco.Core.Services;
+using Umbraco.Web;
+
+namespace CSUSK.Library.PackageActions
+{
+    public class CreateMediaHandler : IPackageAction
+    {
+        IMediaService _mediaService = ApplicationContext.Current.Services.MediaService;
+
+        public string Alias()
+        {
+            return "CreateMediaHandler";
+        }
+
+        public bool Execute(string packageName, XmlNode xmlData)
+        {
+            try
+            {
+                LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().GetType(), "Executing CreateMediaHandler");
+                return CreateMediaItems();
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().GetType(), "INSTALL Package Error", ex);
+                return false;
+            }
+        }
+
+        public bool CreateMediaItems()
+        {
+            const string SLIDE_IMAGE_ALIAS = "slideImage";
+            const string MAIN_IMAGE_ALIAS = "mainImage";
+
+            try
+            {
+                IContentService _contentService = ApplicationContext.Current.Services.ContentService;
+
+
+                int parentId = -1;
+                IMedia codeImage = CreateMediaItem(parentId, "code.jpg");
+                IMedia carouselImage = CreateMediaItem(parentId, "carousel.jpg");
+                IMedia navigationImage = CreateMediaItem(parentId, "navigation.jpg");
+                IMedia partyImage = CreateMediaItem(parentId, "party.jpg");
+
+                Guid homeId = new Guid("6352118a-8432-4a53-9572-b5555b9cf3e3");
+                IContent homePage = _contentService.GetById(homeId);
+                string carouselData = homePage.GetValue&lt;string&gt;("mainCarousel");
+
+                JArray carouselObject = JArray.Parse(carouselData);
+
+                carouselObject[0][SLIDE_IMAGE_ALIAS] = codeImage.GetUdi().ToString();
+                carouselObject[1][SLIDE_IMAGE_ALIAS] = navigationImage.GetUdi().ToString();
+                carouselObject[2][SLIDE_IMAGE_ALIAS] = carouselImage.GetUdi().ToString();
+
+                homePage.SetValue("mainCarousel", carouselObject.ToString());
+                _contentService.SaveAndPublishWithStatus(homePage);
+
+                IContent aboutPage = homePage.Children().Where(x =&gt; x.Name == "About").FirstOrDefault();
+                aboutPage.SetValue(MAIN_IMAGE_ALIAS, partyImage.GetUdi().ToString());
+                _contentService.Save(aboutPage);
+
+                IContent blog = homePage.Children().Where(x =&gt; x.Name == "Blog").FirstOrDefault();
+
+                IContent article1 = blog.Children().Where(x =&gt; x.Name == "CodeShare Starter Kit is released").FirstOrDefault();
+                article1.SetValue(MAIN_IMAGE_ALIAS, partyImage.GetUdi().ToString());
+                _contentService.Save(article1);
+
+                IContent article2 = blog.Children().Where(x =&gt; x.Name == "Something interesting").FirstOrDefault();
+                article2.SetValue(MAIN_IMAGE_ALIAS, codeImage.GetUdi().ToString());
+                _contentService.Save(article2);
+
+                IContent article3 = blog.Children().Where(x =&gt; x.Name == "Another blog post").FirstOrDefault();
+                article3.SetValue(MAIN_IMAGE_ALIAS, carouselImage.GetUdi().ToString());
+                _contentService.Save(article3);
+
+
+                SaveAndPublishChildPages(homePage.Children(), _contentService);
+
+                LogHelper.Info(System.Reflection.MethodBase.GetCurrentMethod().GetType(), "Created Media Items");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Error(System.Reflection.MethodBase.GetCurrentMethod().GetType(), "Error when creating media items.", ex);
+                return false;
+            }
+        }
+
+        private void SaveAndPublishChildPages(IEnumerable&lt;IContent&gt; items, IContentService _contentService)
+        {
+            foreach(IContent item in items)
+            {
+                _contentService.SaveAndPublishWithStatus(item);
+                if(item.Children() != null &amp;&amp; item.Children().Any())
+                {
+                    SaveAndPublishChildPages(item.Children(), _contentService);
+                }
+            }
+        }
+
+        private IMedia CreateMediaItem(int parentId, string fileName)
+        {
+            IMedia newFile = _mediaService.CreateMedia(fileName, parentId, "Image");
+            string filePath = HttpContext.Current.Server.MapPath("~/img/" + fileName);
+            using (FileStream stream = System.IO.File.Open(filePath, FileMode.Open))
+            {
+                newFile.SetValue("umbracoFile", fileName, stream);
+            }
+            _mediaService.Save(newFile);
+            return newFile;
+        }
+
+        public XmlNode SampleXml()
+        {
+            const string sample = "&lt;Action runat=\"install\" undo=\"true\" alias=\"CreateMediaHandler\"&gt;&lt;/Action&gt;";
+            return ParseStringToXmlNode(sample);
+        }
+
+        private static XmlNode ParseStringToXmlNode(string value)
+        {
+            var xmlDocument = new XmlDocument();
+            var xmlNode = AddTextNode(xmlDocument, "error", "");
+
+            try
+            {
+                xmlDocument.LoadXml(value);
+                return xmlDocument.SelectSingleNode(".");
+            }
+            catch
+            {
+                return xmlNode;
+            }
+        }
+
+        private static XmlNode AddTextNode(XmlDocument xmlDocument, string name, string value)
+        {
+            var node = xmlDocument.CreateNode(XmlNodeType.Element, name, "");
+            node.AppendChild(xmlDocument.CreateTextNode(value));
+            return node;
+        }
+
+        public bool Undo(string packageName, XmlNode xmlData)
+        {
+            return true;
+            //Can't really undo this.
+        }
+    }
+}</code></pre>
+<p>The main code here is in the CreateMediaItems() method.</p>
+<p>It uploads 4 images from the /img/ folder to the Umbraco Media section. It the uses the unique ids of these items and sets some media picker values in the content items. Like in the carousel, or the page header images.</p>
+<p>Then it saves and publishes the pages in the site. There is probably a more efficient method for saving and publish all content items, but as there aren't many in the package, this works fine.</p>
+<p>To call this Package Action on install, in the Package Actions tab we enter this command in the Text Area</p>
+<p><img style="width: 500px; height: 287.0919881305638px;" src="/archive/media/2017/14a.png?width=500&amp;height=287.0919881305638" alt="" data-udi="umb://media/8b28c46f1ea0415086b97193ac7782f1"></p>
+<h2>How to Add App Settings in your package</h2>
+<p>You may have noticed this dll in the Package Files list</p>
+<p><img style="width: 455px; height: 94px;" src="/archive/media/2017/13.png?width=455&amp;height=94" alt="" data-udi="umb://media/37aa7f3868554f0aa0cf649ae1156b8c"></p>
+<p>It is from this package made by Richard Soetman <a rel="noopener noreferrer" href="https://our.umbraco.org/projects/backoffice-extensions/package-actions-contrib/" target="_blank">Package Actions Contrib</a></p>
+<p>It has lots of Package Actions you can use, such as adding app settings to the web.config file.</p>
+<p>To learn more about Package Actions in greater detail see this <a rel="noopener noreferrer" href="http://www.codeshare.co.uk/blog/how-to-create-a-custom-404-page-handler-via-a-package-action-in-umbraco/" target="_blank">blog post</a> by Jon Humphrey</p>
+<p>But for now we add the app settings using these Package Actions:</p>
+<p><img style="width: 500px; height: 165.18936341659952px;" src="/archive/media/2017/15.png?width=500&amp;height=165.18936341659952" alt="" data-udi="umb://media/d2355cbe65fc490c81820796fd823a50"></p>
+<p>Now it's time to save, publish and download the zip file.</p>
+<p><img style="width: 500px; height: 323.1114435302917px;" src="/archive/media/2017/16.png?width=500&amp;height=323.1114435302917" alt="" data-udi="umb://media/4a1788c439464a0ab66f4a725a4d3750"></p>
+<p> </p>
+<p> </p>
+<h2>Get testing</h2>
+<p>Now you have created your pacakage locally, you need to start testing it. </p>
+<p>I set up a <a rel="noopener noreferrer" href="https://github.com/prjseal/776" target="_blank">clean install of Umbraco 7.7.6 on GitHub</a> so I could test installing packages onto it. You can use it too if you want. Just don't commit any changes, revert them each time you want to start again. </p>
+<p>I also asked members of the Umbraco community to help me test the package. I got really valuable feedback from them so I would recommend doing that too.</p>
+<h2 id="our">Adding the package to <a rel="noopener noreferrer" href="https://our.umbraco.org/projects" target="_blank">our.umbraco.org/projects</a></h2>
+<p>Now that we have tested the package and we are ready to share it with the Umbraco community we can create a project on Our Umbraco.</p>
+<p>Go to <a rel="noopener noreferrer" href="https://our.umbraco.org/member/profile/projects/" target="_blank">https://our.umbraco.org/member/profile/projects/</a> and click on the Add Package button</p>
+<p><img style="width: 500px; height: 204.6082949308756px;" src="/archive/media/2017/17.png?width=500&amp;height=204.6082949308756" alt="" data-udi="umb://media/127f379822a54306b3a37dbdb460ac8d"></p>
+<p>To start with, enter Title of your package, the version number, and the category you want it to be included in, in the packages directory.</p>
+<p>Be careful not to use the word Umbraco in your package name as it will probably be rejected.</p>
+<p><img style="width: 500px; height: 374.56242707117855px;" src="/archive/media/2017/18.png?width=500&amp;height=374.56242707117855" alt="" data-udi="umb://media/8eec79ce6e994cc0b43bca06855810f8"></p>
+<p>Enter a description like I have done here:</p>
+<p><img style="width: 500px; height: 373.53629976580794px;" src="/archive/media/2017/19.png?width=500&amp;height=373.53629976580794" alt="" data-udi="umb://media/8c13d36e8e3e463c86d7cb3d6c58bc5c"></p>
+<p>The next set of fields are similar to the ones we've already completed when creating the package, so enter the license information etc.</p>
+<p><img style="width: 417.55319148936167px; height: 500px;" src="/archive/media/2017/20.png?width=417.55319148936167&amp;height=500" alt="" data-udi="umb://media/aa8c9346734f423cb33b7442474896f5"></p>
+<p>The last fields on this page are where you can add a bug tracking link, Google Analytics code and tick to say you are happy for others to contribute to this project.</p>
+<p><img style="width: 500px; height: 403.948772678762px;" src="/archive/media/2017/21.png?width=500&amp;height=403.948772678762" alt="" data-udi="umb://media/877f360356b646cc9e7221545a7c641c"></p>
+<p>Click on Next to go to the next section where you will upload the package zip file.</p>
+<p>On this screen, click on the file upload button and choose the zip file which you downloaded earlier, then click on Open.</p>
+<p>Choose the file type, I chose Package, then choose the versions of Umbraco it is compatible with and the version of .NET it is compatible with, then click on Save File</p>
+<p><img style="width: 500px; height: 445.280437756498px;" src="/archive/media/2017/23.png?width=500&amp;height=445.280437756498" alt="" data-udi="umb://media/904a7381ca03432bb824ab506baae874"></p>
+<p>Once the file has saved, you need to go to the list of files above and click on Make Current. </p>
+<p><img style="width: 500px; height: 104.98046875px;" src="/archive/media/2017/24.png?width=500&amp;height=104.98046875" alt="" data-udi="umb://media/8dc23497646240caaf5e2890f6c6c9f8"></p>
+<p><img style="width: 500px; height: 119.35110081112398px;" src="/archive/media/2017/25.png?width=500&amp;height=119.35110081112398" alt="" data-udi="umb://media/ab9b62bfe5f04229b1403e929f61abd2"></p>
+<p>Click on Next to go the Screenshots tab.</p>
+<p>On this screen you will need to upload screenshot images to give people a look at what they will see with your package.</p>
+<p>As with the previous screen, click on the file upload button</p>
+<p><img style="width: 261px; height: 220px;" src="/archive/media/2017/26.png?width=261&amp;height=220" alt="" data-udi="umb://media/8549b34223d642b789a3394e83201de0"></p>
+<p>Choose your images, click on Open and then press Save file.</p>
+<p>When the images have uploaded, if you want to use one as your main image, click on the Make Current button.</p>
+<p><img style="width: 500px; height: 318.2957393483709px;" src="/archive/media/2017/27.png?width=500&amp;height=318.2957393483709" alt="" data-udi="umb://media/0a274f09196546cda85e30980f9b4845"></p>
+<p>Now click on Next and go to the last screen.</p>
+<p>On this list screen, you choose if you want the package to be live by ticking the box and pressing Save.</p>
+<p><img style="width: 500px; height: 201.1802575107296px;" src="/archive/media/2017/28.png?width=500&amp;height=201.1802575107296" alt="" data-udi="umb://media/84ae380c2f9748479149d9792f3a2015"></p>
+<p>When you do this it will be reviewed by Umbraco HQ and if it passes their rules, your package will be live in the list of projects <a rel="noopener noreferrer" href="https://our.umbraco.org/projects/" target="_blank">https://our.umbraco.org/projects/</a></p>
+<h2>Summary</h2>
+<p>To summarise what we have done in this post, we have had an idea, built something useful, created an Umbraco package in the Developer tab and then submitted it to Our Umbraco.</p>
+<p>Here is a link to the package I created for this article. <a rel="noopener noreferrer" href="https://our.umbraco.org/projects/starter-kits/codeshare-starter-kit/" target="_blank">CodeShare Starter Kit</a></p>
+<p>Here is the demo site for this package so you can see what you get when you install it. <a rel="noopener noreferrer" href="http://codesharestarterkit.azurewebsites.net/" target="_blank">Demo site</a></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/community/" title="See all articles tagged with Community">Community</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Paul Seal"><img src="//gravatar.com/avatar/9c3d4a8d013127be260fef5866fff5c0.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/9c3d4a8d013127be260fef5866fff5c0.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Paul Seal</h1>
+        <p>Paul is on Twitter as <a href="//twitter.com/CodeSharePaul" title="Paul Seal on Twitter" rel="author">@CodeSharePaul</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

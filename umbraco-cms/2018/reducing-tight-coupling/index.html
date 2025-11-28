@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Reducing Tight-Coupling in Umbraco Applications</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Reducing Tight-Coupling</h1>
+      <p class="byline"> by Callum Whyte, <span class="pubdate">posted on <time datetime="2018-12-23">Dec 23, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Over the past few years awareness of various software development “best practices” has improved. Increasingly developers are actively thinking and talking about writing “clean code” that follows <a rel="noopener" href="https://en.wikipedia.org/wiki/SOLID" target="_blank">SOLID principles</a> and utilising patterns such as the service / repository pattern, builders and handlers to better structure their applications. Through the prominence of distributed systems and microservice based architectures there’s a growing trend of writing more logically isolated code to decrease dependencies and build more extendable and reliable systems.</p>
+<p class="intro">These trends have filtered into the Umbraco Community as well, through talks on “Inversion of Control” by <a rel="noopener" href="https://twitter.com/bleedo" target="_blank">Lars-Erik Aabech</a> or the super in-depth <a rel="noopener" href="https://skrift.io/articles/archive/solid-cms-solid-principles-in-cms-development/" target="_blank">“SOLID CMS: SOLID Principles in CMS Development”</a> article by the fantastic <a rel="noopener" href="https://twitter.com/emmagarland" target="_blank">Emma Garland</a> to name just a few.</p>
+<p>While this is an encouraging movement to see, I believe we can still create cleaner solutions. So often I see Umbraco implementations where code is tightly ingrained with other features or parts of the application that it makes changing anything very difficult. It’s not difficult to realise that increased development difficulty also therefore means increased cost in the long run.</p>
+<hr>
+<p>Commonly the “well built” Visual Studio solutions I see for Umbraco websites might look something a bit like this:</p>
+<p><img style="width: 453px; height: 492px;" src="/archive/media/2018/solution.jpg?width=453&amp;height=492" alt="" data-udi="umb://media/b9a7b55b4b0449e089854e4ec33f68f7"></p>
+<ul>
+<li><span class="code">*.Web</span>: the entry point to the application and contains presentation-layer code (CSS, JS, Views)
+<ul>
+<li>Umbraco is installed here</li>
+</ul>
+</li>
+<li><span class="code">*.Core</span>: the application’s business logic, helpers and services
+<ul>
+<li>Referenced by controllers in *.Web</li>
+</ul>
+</li>
+<li><span class="code">*.Data</span>: database interaction, repositories
+<ul>
+<li>Referenced by services in *.Core</li>
+</ul>
+</li>
+<li><span class="code">*.Common</span>: shared data, structures, interfaces, constants
+<ul>
+<li>Referenced in every layer</li>
+</ul>
+</li>
+<li><span class="code">*.Tests</span>: automated tests <em>(if we’re lucky!)</em></li>
+</ul>
+<p>This is a good start as it separates the application into distinct logical layers – certainly better than putting everything in the <span class="code">*.Web</span> project – but if we're not careful these projects can easily get bloated and messy as the codebase grows.</p>
+<p>The downside of overly generic multi-purpose projects that are home to the large amounts of logic (like <span class="code">*.Core</span>) is they can quickly become a dumping ground for all kinds of code. There’s nothing specifically wrong with the structure of each project (folders for helpers, services, etc), more the broad undefined scope of what's expected to reside within it. There’s little physical separation between code for individual features (beyond folders and naming) making it easy to misinterpret the purpose of a piece of code before changing it.</p>
+<p>Because of the minimal physical separation between code it becomes easy to reference code from a separate feature within another thus creating a dependency on each other. As features become more intermingled bad habits like multiple classes per file emerge too, making things harder to find in the solution.</p>
+<p>The moment you realise you’ve built something like this is when you set out to make one tiny change in one feature and ending up touching several classes containing other features and unrelated tests start failing… Chances are most developers have been guilty of building projects like this at some point, myself included…</p>
+<p>Generic sounding class names, for example <span class="code">ContentHelper</span>, that were once created for a given purpose are often morphed into a god-class spanning many different purposes. It seems a “helper” is the go-to place when a developer can’t think of the right place <em>(read: too lazy to...)</em> to put something!</p>
+<p><img style="width: 400px; height: 400px;" src="/archive/media/2018/ship-it.jpg?width=400&amp;height=400" alt="" data-udi="umb://media/8c2087f954c8438a9a361e774d5b9b79"></p>
+<p>Additionally as more code gets added to a project the number of dependencies that each of these projects has on external libraries likely grows too. These external libraries may actually only be needed by one class in that entire project, thus further bloating the project with things that don’t relate to 98% of its contents. The more dependencies installed the harder it is to keep track of what is being used, what needs upgrading and what that might impact, and can also make debugging assembly binding errors harder.</p>
+<p> </p>
+<h2>Scenario: eCommerce Store</h2>
+<p>Imagine the logic for a <em>24 Days In Umbraco</em> eCommerce store selling festive t-shirts... We’ll need a way to find and purchase products, the site might have a search, and it should allow for credit card payments. It should probably also have a way of recording our customer’s contact details, and a way to update our CRM when they make a purchase.</p>
+<p><span class="code">24DaysStore.Web</span> is our presentation layer where our CSS / JS / views sit, as well as where Umbraco is installed. The project has a dependency on <span class="code">24DaysStore.Core</span> for the business logic, models, services and helpers.</p>
+<p><span class="code">24DaysStore.Core</span> probably looks something like this:</p>
+<p><img style="width: 303px; height: 412px;" src="/archive/media/2018/store-core.jpg?width=303&amp;height=412" alt="" data-udi="umb://media/d51d2bf2e2804c70b7fc90fff0bc5d1c"></p>
+<p>Even though this is a small project it already raises some questions about how easy it is to locate specific features or code. What does the <span class="code">ProductHelper</span> class do? Where is the code that pushes data to the CRM? What should the <span class="code">Customer</span> model be used for? Which classes depend on each other? As the complexity and size of this project grows these issues will be compounded.</p>
+<p> </p>
+<h2>Domain / Feature Projects</h2>
+<p>To combat these issues we can follow principles from <a rel="noopener" href="https://en.wikipedia.org/wiki/Domain-driven_design" target="_blank">Domain Driven Design</a> (DDD) and separate each of our features into individual projects. These individual projects should only contain what is necessary for a given feature and should not depend on other projects in the system.</p>
+<p>Better separation makes finding specific code easier, it aids sharing code between solutions and reusability of solutions and, done right, works to reduce inter-project dependencies. Furthermore the dependency tree for each of these domain / feature projects can be as small as possible, given only the libraries required for the specific feature's code to run are installed in it's project.</p>
+<p>If we need the same functionality in another solution - no longer do we need to duplicate and maintain multiple variations of the same piece of code, it can instead be distributed as a standalone library and used in as many places as necessary. If we want to remove a specific feature from the application entirely it’s merely a case of removing the project from the solution, opposed to previously where we'd unpick several files across a whole project (potentially affecting other unrelated things unintentionally!).</p>
+<p>Many other public libraries and products (including CMS!) on the market advocate similar practices to help developers keep dependencies between features to a minimum. Sitecore <em>(yes… sorry… I said the S word!)</em> has one of the most comprehensive examples of separating code into granular libraries with their recommended “<a rel="noopener" href="https://helix.sitecore.net/" target="_blank">Helix</a>” design-principles, aimed at making it easier to develop, test and maintain applications.</p>
+<p><img style="width: 498px; height: 444px;" src="/archive/media/2018/store-features.jpg?width=498&amp;height=444" alt="" data-udi="umb://media/ee9401a9fe764f70a338798b7bbcd698"></p>
+<p>While for a small solution like in this example it may seem overkill to have so many projects I would argue getting in to the practice of creating properly separated / isolated features is healthy – plus you can avoid the inevitable messy refactor / restructure task further down the line once your codebase has grown.</p>
+<p> </p>
+<h2>Sharing Data</h2>
+<p>There are some scenarios where our features need to talk to each other, such as for passing the output / result of one action to another feature. Now our code is isolated in it’s own projects without dependencies on anything else we’re not able to call our other services directly – adding the project we wish to share data with as a reference would be a violation of the separation we have created.</p>
+<p>Following the eCommerce store scenario; currently our <span class="code">CustomerService</span> has a <span class="code">CreateCustomer</span> method which we use to store customer data in to our database (via a repository class) and then post it off to our CRM (via a helper class).</p>
+<pre><code class="language-csharp">public class CustomerService
+{
+    public void CreateCustomer(Customer customer)
+    {
+        // create in database
+        _customerRepository.CreateCustomer(customer);
+
+        // post to CRM
+        crmHelper.Post(customer);
+    }
+}</code></pre>
+<p>This code works and is very clear, but the method is doing far more than it’s name would imply... The <a rel="noopener" href="https://en.wikipedia.org/wiki/Single_responsibility_principle" target="_blank">Single Responsibility Principle</a> <em>(the S in <strong>S</strong>OLID)</em> says our code should serve a single purpose; in this case it’s to create a customer, but the code is also telling the CRM about that new customer. In reality the CRM interaction here is a separate feature as it’s not directly necessary in order for the customer to be created, more an additional consequence.</p>
+<p>To avoid creating a tight coupling in scenarios like this we can use an application event containing the necessary data for another part of the application to perform what it needs to do – in this case passing the customer that the service creates to the CRM code running elsewhere within the application. Events are defined and “raised” within our services then the code to be triggered defined elsewhere. Most Umbraco developers will be quite familiar with hooking into CMS events such as onPublish, but perhaps won’t have raised and consumed events from their own code before – this works in the same way!</p>
+<p>Even better, exposing an event means any part of the application can subscribe and listen to perform an action accordingly without the need to modify the logic of our service. Similarly if in future we decided the CRM call is no longer needed removing it is simply a case of unsubscribing from the event, rather than deleting code from our service.</p>
+<p> </p>
+<h2>Events</h2>
+<p>The “pattern” for what the output of your event should look like is defined in a <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/delegate" target="_blank">delegate</a>. Here we’ve created a delegate that passes our <span class="code">Customer</span> model as a parameter so we use it whenever we need to pass a customer’s record along in an event.</p>
+<pre><code class="language-csharp">public delegate void CustomerEvent(Customer customer);</code></pre>
+<p>We define your <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/keywords/event" target="_blank">event</a> within our service class, specifying the <span class="code">CustomerCreated</span> delegate we just created as its type.</p>
+<pre><code class="language-csharp">public static event CustomerEvent CustomerCreated;</code></pre>
+<p>Finally, we can raise the event in our service.</p>
+<pre><code class="language-csharp">public class CustomerService
+{
+    public static event CustomerEvent CustomerCreated;
+
+    public void CreateCustomer(Customer customer)
+    {
+        // create in database
+        customerRepository.CreateCustomer(customer);
+
+        if (CustomerCreated != null)
+        {
+            // trigger event
+            CustomerCreated(customer);
+        }
+    }
+}</code></pre>
+<p>The null check around the event is necessary as if there are no subscribers to our <span class="code">CustomerCreated</span> event it will be null and won’t be able to execute.</p>
+<p>We can now subscribe to your applications custom events within an <span class="code">ApplicationEventHandler</span>. Our calls to the CRM code can be decoupled from all the unrelated logic in our <span class="code">CustomerService</span> and instead performed when the <span class="code">CustomerCreated</span> event fires.</p>
+<pre><code class="language-csharp">public class 24DaysStore : ApplicationEventHandler
+{
+    protected override void ApplicationStarted(...)
+    {
+        CustomerService.CustomerCreated += CustomerService_CustomerCreated;
+    }
+
+    private void CustomerService_CustomerCreated(Customer customer)
+    {
+        // post record to CRM
+        // send a welcome email
+        // ...
+    }
+}</code></pre>
+<p><em><strong>Pro-tip:</strong> After a great chat with Lars-Erik at Umbraco Sweden Festival, he proposed using a <a rel="noopener" href="http://udidahan.com/2009/06/14/domain-events-salvation/" target="_blank">handler pattern</a> for raising and consuming events to make things even more decoupled!</em></p>
+<p> </p>
+<h2>Content Models</h2>
+<p>In an ideal scenario we would keep all of the models needed for a given feature within the corresponding projects, that includes Content Models representing document types in Umbraco.</p>
+<p>By default Umbraco ships with <a rel="noopener" href="https://github.com/zpqrtbnk/Zbu.ModelsBuilder" target="_blank">ModelsBuilder</a> enabled – it works by generating C# classes to represent document type configuration on the fly. When using Compositions it will generate an interface to represent the properties and ensure that the resulting class representing a document type implements that interface. The models it generates are available as a DLL, strongly typed objects in memory, or as <span class="code">*.cs</span> files in your Visual Studio solution.</p>
+<p>Within generated models there can be multiple dependencies on other Content Models, such as where a property returns another Content Model. The <strong>Umbraco.Web</strong> assembly (which brings with it a large number of other dependencies) is required to be installed in order for models to operate – we don’t want to be installing these everywhere Content Models are needed!</p>
+<p>Given this, ModelsBuilder does not perfectly lend itself to spitting individual generated models out into their specific feature projects. But perhaps there’s a compromise that can be made... Content Models could be treated as a feature of our application in their own right, and therefore reside in their own project (e.g. <span class="code">24DaysStore.Models.ContentModels</span>) that can be referenced by individual features where need.</p>
+<p>The <strong>Umbraco.ModelsBuilder.ModelsMode</strong> appsetting defines the format ModelsBuilder should output. When set to <span class="code">AppData</span>, rather than producing a pre-built DLL, ModelsBuilder will generate <span class="code">*.generated.cs</span> files inside the <span class="code">App_Code</span> folder of our website that need to be compiled to be built.</p>
+<p>An added benefit of storing physical files for the model definitions in the Visual Studio solution is being able to include then in source control and track changes over time – something that's not easily doable in either of the other "ModelsModes".</p>
+<pre><code class="language-markup">&lt;add key="Umbraco.ModelsBuilder.ModelsMode" value="AppData" /&gt;</code></pre>
+<p>As we don’t want our models within the website but rather a separate project, we need to define which path our classes should be generated into. We can define an alternative path to the default <span class="code">~/App_Code</span> directory in the <strong>Umbraco.ModelsBuilder.ModelsDirectory</strong> appsetting. Set the path to the location in the project you wish for the models to be generated.</p>
+<p><em><strong>Pro-tip:</strong> I personally prefer to keep my generated models within folder in the project, to make space in the root of the project and clearly separate them from any custom models I need to create.</em></p>
+<p>The <strong>Umbraco.ModelsBuilder.AcceptUnsafeModelsDirectory</strong> appsetting must also be set to "true" in order to store the models outside of the website root (which in this case we do!)</p>
+<pre><code class="language-markup">&lt;add key="Umbraco.ModelsBuilder.ModelsDirectory" value="~/../24DaysStore.Models.ContentModels/Generated" /&gt;
+&lt;add key="Umbraco.ModelsBuilder.AcceptUnsafeModelsDirectory" value="true" /&gt;</code></pre>
+<p>Now we have our models within our separated project you may notice the namespace does not match the namespace of the project. The default namespace <strong>Umbraco.Web.PublishedContentModels</strong> is used. This can also be configured via an appsetting, like so:</p>
+<pre><code class="language-markup">&lt;add key="Umbraco.ModelsBuilder.ModelsNamespace" value="24DaysStore.Models.ContentModels" /&gt;</code></pre>
+<p>If you don't use ModelsBuilder or want a potentially purer solution for mapping Umbraco content to Content Models without relying on a shared library there are of course alternatives! Perhaps manually assigning properties from <span class="code">IPublishedContent</span> to properties on the custom Content Model is sufficient, or maybe view-model mappers like <a rel="noopener" href="https://github.com/umco/umbraco-ditto" target="_blank">Ditto</a> or <a rel="noopener" href="https://github.com/JimBobSquarePants/UmbMapper" target="_blank">UmbMapper</a> can help automate the process.</p>
+<p> </p>
+<h2>Takeaways</h2>
+<p>In summary: despite the ever growing awareness of better coding practices most Umbraco solutions still contain code that violates these principles, large numbers of dependencies, and messy inter-dependent code.</p>
+<p>In short, my 3 takeaways for better architected solutions are:</p>
+<ol>
+<li>Ditch <span class="code">*.Core</span>, <span class="code">*.Data</span>, etc, projects! They make it hard to find code and can quickly become a place where anything goes. <strong>Instead</strong> isolate all the code for a specific feature by creating individual projects</li>
+<li>Don’t pass data / output between methods directly! Code with direct dependencies on other code is potentially error prone and can . Eliminating calls to unrelated code helps keep code cleaner too. <strong>Instead</strong> raise custom events to share the data you need and consume it elsewhere in the application</li>
+<li>Store your Content Model definitions in the Visual Studio solution! Separate models out into a separate project that can be shared across projects</li>
+</ol>
+<p>There are still many additional ways solution architecture can be improved so don’t take this as a definitive list. It’s definitely a topic I feel is worth discussing more in-depth throughout 2019!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Callum Whyte"><img src="//gravatar.com/avatar/05c1efd28f84ee7ebe5da188e220a47f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/05c1efd28f84ee7ebe5da188e220a47f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Callum Whyte</h1>
+        <p>Callum is on Twitter as <a href="//twitter.com/callumbwhyte" title="Callum Whyte on Twitter" rel="author">@callumbwhyte</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

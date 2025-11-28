@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Feeding Xamarin Forms with Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Feeding a Companion App with Umbraco</h1>
+      <p class="byline"> by Emma Garland, <span class="pubdate">posted on <time datetime="2017-12-07">Dec 7, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Overview</h2>
+<p> </p>
+<p class="intro">Earlier this year, <a rel="noopener noreferrer" href="https://rocksolidknowledge.com/" target="_blank" title="Rock Solid Knowledge">Rock Solid Knowledge</a> were proud to build a brand new Umbraco festival website and associated cross-platform companion app for <a rel="noopener noreferrer" href="https://gloucesterhistoryfestival.co.uk/" target="_blank" title="Gloucester History Festival">Gloucester History Festival</a>. The festival is an annual, two-week long celebration of the history of the English Cathedral city of <a rel="noopener noreferrer" href="https://en.wikipedia.org/wiki/Gloucester" target="_blank" title="Gloucester">Gloucester</a>. It encompasses hundreds of events including talks, workshops, performances and tours of historic buildings.</p>
+<p>When hosting a festival (no mean feat), inevitably you’ll need a website to allow people to browse events, reserve tickets and to find the venues, too - especially if they’re in 15th-century buildings. The festival site allows people to peruse events, search and filter - <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/reference/searching/examine/" target="_blank" title="Examine">Examine</a>-backed of course - and allows users to progress to a <a rel="noopener noreferrer" href="https://www.gloucesterticketshop.co.uk/" target="_blank" title="Ticket Shop">ticket shop</a> to reserve tickets.</p>
+<p>We chose <a rel="noopener noreferrer" href="https://umbraco.com/" target="_blank" title="Umbraco">Umbraco CMS</a> for our tech stack. We love it - the flexibility of it, the <a rel="noopener noreferrer" href="https://our.umbraco.org/" target="_blank" title="Our Umbraco">community</a> involvement, and the beautiful, well-planned UI. It’s like a <a rel="noopener noreferrer" href="https://theportalwiki.com/wiki/Weighted_Companion_Cube" target="_blank" title="Companion Cube">Companion Cube</a>, letting you pick it up and use it to help you wherever you need, slotting neatly into your dev stack and opening doors for you.</p>
+<p><img style="width: 225px; height: 225px;" src="/archive/media/2017/companioncube.jpg?width=225&amp;height=225" alt="Please don’t incinerate it" data-udi="umb://media/3c05eee21d50444da0c4de38236ff97a"></p>
+<p>We hosted the website on <a rel="noopener noreferrer" href="https://azure.microsoft.com/" target="_blank" title="Azure">Azure</a> (following <a rel="noopener noreferrer" href="https://github.com/Jeavon" target="_blank" title="Jeavon Leapold Git">Jeavon Leopold’s</a> excellent guidelines), and launched successfully to deadline with over 10,000 unique users hitting the site since launch. But talking of companions... before this website launched, we already knew we wanted more. More than just a lovely, responsive website. What we wanted was a <strong>companion app</strong> - a native app for users to download for Android or iOS, to accompany them as they gambolled around Gloucester, helping them to escape using their local device location data when bad signal got them stuck in the cellars of ancient buildings.</p>
+<p>For this article, I wanted to share our successful development process of building the Gloucester History Festival website and powering up the companion app with Umbraco, and to provide guidance for those looking to achieve a similar task, utilising Umbraco as a multiple-use content management platform - both for the main website, and as a headless CMS to feed a native app.</p>
+<p>I'll cover this:</p>
+<ul>
+<li>How we undertook <strong>content modelling</strong> in advance to develop a strong data model</li>
+<li>The advantage of writing a clear <strong>specification</strong></li>
+<li>The basics of building the <strong>web API</strong></li>
+<li>Building the App in <strong>Xamarin.Forms</strong></li>
+</ul>
+<h2><span style="font-weight: 400;">Getting Started</span></h2>
+<p>After the initial requirements capture with the client, the creation of a backlog of user stories, and the splitting of functionality into themed fortnightly sprints (we ran this in an agile fashion), it was time to get cracking.</p>
+<h3>Content Modelling</h3>
+<p>Initially we undertook <a rel="noopener noreferrer" href="https://en.wikipedia.org/wiki/Domain_model" target="_blank" title="Domain modelling">domain modelling</a> of data, mapping out the structure of the business domain (a festival) and the relevant data that applied to it. A <strong>domain model</strong> helps us understand the relationships between domain objects... like a planet and a moon, a guitar and a string, a wheel and a spoke. The relationship between the two is the <strong>taxonomy</strong> - the “connective tissue” that defines relationships within this network of content objects.</p>
+<p>Next, we considered how the <strong>content types</strong> relate together, whether by inheritance, association or as a whole. We then took this domain model and evolved it into a formalised <strong>content model</strong> - a representation of structured content with meaning. We undertook <a rel="noopener noreferrer" href="http://www.clevegibbon.com/content-modeling/what-is-content-modeling/" target="_blank" title="Content Modelling">content modelling</a> in advance of any development, which allowed us to create a strong collection of content types and their relationships.</p>
+<p>Understanding the content model in advance helps lead to a better CMS and author experience, a shared language for businesses to speak, and the definition of a strong data structure. This exercise would ideally be carried out with all key stakeholders, from a product owner to a designer to a business analyst.</p>
+<p>One of Umbraco’s key strengths is the ability to carefully define and structure the data as you require by crafting <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/tutorials/creating-basic-site/document-types" target="_blank" title="Document Types">document types</a>. You can then choose to export these document types into strongly-typed models to utilise through code - perhaps by using a <a rel="noopener noreferrer" href="https://github.com/zpqrtbnk/Zbu.ModelsBuilder" target="_blank" title="ModelsBuilder">models builder</a>, one example being Umbraco’s built-in Models Builder tool (as described in last year’s <a rel="noopener noreferrer" href="https://24days.in/umbraco-cms/2016/getting-started-with-modelsbuilder/" target="_blank" title="24 Days in Umbraco 2016">24 Days in Umbraco</a> article). This fits neatly with a content modelling approach and means you’re working with tasty strongly-typed models (so many reasons why this is better such as type safety, intellisense and testability).</p>
+<p>For Gloucester History Festival, we first modelled the objects and relationships that existed in the festival domain. The “domain universe” of the festival is a high level view of all areas involved. The initial, basic domain model we created was enough to ultimately show the key relationships:</p>
+<ul>
+<li>An event associated with a person</li>
+<li>An event associated with a location</li>
+<li>A festival sponsor, independent to the event itself</li>
+</ul>
+<p><span style="font-weight: 400;"><img style="width: 475.5944931163954px; height: 500px;" src="/archive/media/2017/eventcontentmodel.png?width=475.5944931163954&amp;height=500" alt="Festival Domain Model" data-udi="umb://media/4d92177d578345d7823bddabeab04763"></span></p>
+<p><span style="font-weight: 400;">After this mapping exercise, we turned these into content models by “zooming in” on the individual areas to start to map out the details of the domain object - including all required attributes - adding the detail required. The example of our Event content model is shown below:<br></span></p>
+<p><span style="font-weight: 400;"><img style="width: 272px; height: 372px;" src="/archive/media/2017/eventcontentmodel1.png?width=272&amp;height=372" alt="Event Model" data-udi="umb://media/0ae2d85022844cda8cc888762410e869"></span></p>
+<p><span style="font-weight: 400;">We then converted these into true, Umbracified™ content types. We achieved this by <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/tutorials/creating-basic-site/document-types" target="_blank" title="Creating Document Types">creating the document types</a> in Umbraco (I won’t go into that here - the awesome <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/" target="_blank" title="Documentation">Umbraco docs</a> explain that well enough already). </span></p>
+<p><span style="font-weight: 400;"><br>We were then able to create an Event as a <strong>document type</strong> with the required Umbraco-specific properties for the field types. For example, an Image field becomes a Media Picker, a Text field becomes a Text-string and so on:<br></span></p>
+<h3><img style="width: 500px; height: 430.8401639344262px;" src="/archive/media/2017/eventdoctype.png?width=500&amp;height=430.8401639344262" alt="Umbraco Event Document Type" data-udi="umb://media/b2523950afff4647861693c2c418dcb6"></h3>
+<p> </p>
+<p>We repeated this process for all content models and their relevant properties. We structured the site content as follows - note the separation of site content from the global <em>data</em> and site <em>content</em>:</p>
+<p> <img style="width: 165.78389830508476px; height: 500px;" src="/archive/media/2017/contenttree.png?width=165.78389830508476&amp;height=500" alt="" data-udi="umb://media/36fe52c93c2440ce864d427a8acec770"></p>
+<p> </p>
+<p><a rel="noopener noreferrer" href="https://twitter.com/umBristol/status/740983369610219520" target="_blank" title="Jonathan Richards umBristol">Jonathan Richards</a> has convinced people to follow this path many a time - by separating the presentation content and the shared data into a Site and Global node, the content tree itself has a <strong>separation of concerns</strong>, and sharing of globally used data becomes far easier in future. Only the content document types need <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/getting-started/design/templates/" target="_blank" title="Templates">templates</a> - they are used for presentation, whereas the global items are retrieved for data purposes and can be shared between multiple sites and used by various data feeds.</p>
+<p><br>Once we had a strong representation of the content model, we could then rapidly prototype the content model and data into a wireframe, as this <a rel="noopener noreferrer" href="https://balsamiq.com/" target="_blank" title="Balsamiq">Balsamiq</a> example by front-end developer Barnaby Turner shows for an Event:</p>
+<p><img style="width: 437.43257820927727px; height: 500px;" src="/archive/media/2017/eventbalsamiq.png?width=437.43257820927727&amp;height=500" alt="Event Wireframe" data-udi="umb://media/995c25416a304f16b20d2e9ed0f0e344"></p>
+<h2>Specification</h2>
+<p>Prior to starting development, we wrote a clear <strong>API specification</strong>. This included documentation of the API requirements and the JSON data structures that we would be returning. The JSON responses were built up from on the content modelling exercise - for example, we knew the object for an Event would include <em>Title</em>, <em>Event Code</em>, <em>Location</em> and so on.</p>
+<p>We documented:</p>
+<ul>
+<li>All <strong>API methods</strong> required</li>
+<li>Expected <strong>JSON</strong> responses</li>
+<li><strong>Error responses</strong> required</li>
+<li><strong>Media headers</strong> to use</li>
+</ul>
+<p>The clarity of the document prior to build reduced the risk of misunderstandings in terms of API responses required, for example the following section of the document demonstrates the request, expected status codes and the structure of the JSON to be returned</p>
+<h3>Sample API Specification</h3>
+<p><img style="width: 386.1607142857143px; height: 500px;" src="/archive/media/2017/feedapispecsample.png?width=386.1607142857143&amp;height=500" alt="Location Feed API Documentation" data-udi="umb://media/f8a6ed44971b41babe78f346c5a9b823"></p>
+<p>Us Umbraco developers took the document and built the API to spec, while the Xamarin devs could start simultaneously writing their <strong>Xamarin.Forms</strong> delights knowing exactly what we were going to be providing them. No messing.</p>
+<h2>Web API</h2>
+<p>Firstly, we recommend installing <a rel="noopener noreferrer" href="https://www.getpostman.com/" target="_blank" title="Postman">Postman</a>, or a similar tool, for testing the API responses. </p>
+<p>Now, follow along as we describe our approach - you’ve maybe seen this before, but as part of the whole process, I wanted to include the whole #!</p>
+<ul>
+<li>Open Visual Studio 2017 (or your preferred IDE!)</li>
+<li>My personal preference is to create at least a Data and a Web project, in order to separate out the data models and the main website build. It isn’t a must have...though if you do follow this approach...</li>
+<li>...reference the data project from the Web project</li>
+</ul>
+<p>This will initially setup your Umbraco website. Build and run and follow the happy <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/getting-started/setup/install" target="_blank" title="Umbraco Installation path">Umbraco installation path</a> of choice (mine’s <a rel="noopener noreferrer" href="https://www.nuget.org/" target="_blank" title="Nuget">Nuget</a>).</p>
+<p>Now you’re up and running, let us generate the strongly-typed models created from the Umbraco content modelling exercise earlier. This is also personal preference, but I usually install the <a rel="noopener noreferrer" href="https://marketplace.visualstudio.com/items?itemName=ZpqrtBnk.UmbracoModelsBuilderCustomTool" target="_blank" title="Umbraco ModelsBuilder Tool">Umbraco.ModelsBuilder Visual Studio Tool</a> and add the API version to the data project, creating a ModelsBuilder.cs class in the data project to right-click and generate models (after setting up the custom tool). This is all documented thoroughly on the <a rel="noopener noreferrer" href="https://github.com/zpqrtbnk/Zbu.ModelsBuilder/wiki/Install-And-Configure" target="_blank" title="ModelsBuilder GitHub">Umbraco.ModelsBuilder Github</a>....but as long as you’re creating strongly-typed models from the content types, your preferred way is fine!</p>
+<p><img style="width: 260px; height: 336px;" src="/archive/media/2017/generatedmodels.png?width=260&amp;height=336" alt="Generated Models in Models Builder" data-udi="umb://media/780fb3d17ab64d61bf2ecd8441bd76cd"></p>
+<p>You’ll next need to setup your preferred configuration for your application. Think - what preferences or requirements do you have for your API? Here you can format the JSON output for standards and best practices you require.</p>
+<p>In order to setup a custom <em>GlobalConfiguration</em> object, we create a new <em>CustomApplicationEventHandler</em> class that inherits from the <em>ApplicationEventHandler</em> and overrides the <em>ApplicationStarting</em> method. You can then add any custom JSON formatting you require (just ensure there are no ill-effects on any other APIs being used in the project):</p>
+<pre><code class="language-csharp">using System.Web.Http;
+using Umbraco.Core;
+
+public class CustomApplicationEventHandler : ApplicationEventHandler
+{
+    protected override void ApplicationStarting(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext)
+    {
+        SetupConfig();
+    }
+
+    public void SetupConfig()
+    {
+        HttpConfiguration config = GlobalConfiguration.Configuration;
+        config.Formatters.JsonFormatter.UseDataContractJsonSerializer = false;
+    }
+}</code></pre>
+      <p class="snippet-caption">Custom Application Event Handler</p>
+<p>If you would like to use your own routes, rather than the standard <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/reference/routing/webapi/" target="_blank" title="Umbraco WebApi">/umbraco/api</a>, you will need to ensure that Umbraco routes are overridden.</p>
+<p>The way we did this was to create a static WebApiConfig class that will first register the <em>HTTPConfiguration</em> for your API responses, for example adding the supported media types as a custom <em>MediaTypeHeaderValue</em>. Then, the <em>MapHttpAttributeRoutes</em> method will ensure that any of the routes you specify on your API methods (<a rel="noopener noreferrer" href="https://msdn.microsoft.com/en-us/library/dn479134(v=vs.118).aspx" target="_blank" title="Route Attributes">via the Route attribute</a>) will be honoured:</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Net.Http.Headers;
+using System.Web.Http;
+
+public class WebApiConfig
+{
+    /// &lt;summary&gt;
+    /// Register config
+    /// &lt;/summary&gt;
+    /// &lt;param name="config"&gt;&lt;/param&gt;
+    public static void Register(HttpConfiguration config)
+    {
+        config.Formatters.JsonFormatter.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/json+festival-events-v1"));
+        config.Formatters.JsonFormatter.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/json+festival-people-v1"));
+        config.Formatters.JsonFormatter.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/json+festival-locations-v1"));
+        config.Formatters.JsonFormatter.SupportedMediaTypes.Add(new MediaTypeHeaderValue("application/json+festival-branding-v1"));
+
+        GlobalConfiguration.Configuration.MapHttpAttributeRoutes();
+    }
+}</code></pre>
+      <p class="snippet-caption">WebApiConfig</p>
+<p>Next we created a custom class (call it what you prefer), and inherit from <em>UmbracoApplication, </em>overriding the <em>OnApplicationStarted</em> method. This class should register the custom global configuration you have just created, <em>WebApiConfig</em>:</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Web.Http;
+using Umbraco.Web;
+
+public class CustomApplication : UmbracoApplication
+{
+    /// &lt;summary&gt;
+    /// Overrides the on application started event
+    /// &lt;/summary&gt;
+    /// &lt;param name="umbracoApplication"&gt;&lt;/param&gt;
+    /// &lt;param name="applicationContext"&gt;&lt;/param&gt;
+    protected override void OnApplicationStarted(object sender, EventArgs e)
+    {
+        base.OnApplicationStarted(sender, e);
+        GlobalConfiguration.Configure(WebApiConfig.Register);
+    }
+}</code></pre>
+      <p class="snippet-caption">CustomApplication</p>
+<p>Make the Umbraco website's <em>global.asax</em> file inherit from this <em>CustomApplication</em> class, instead of the default <em>UmbracoApplication</em> class. Make sure to match the class name exactly:</p>
+<pre><code class="language-markup">﻿&lt;%@ Application Inherits="rsk.ghf.umbraco.web.CustomApplication" Language="C#" %&gt;
+          </code></pre>
+      <p class="snippet-caption">Global.asax</p>
+<p> </p>
+<p>Now we’re creating our API feed controllers!</p>
+<h3>API Feed Controllers</h3>
+<p>We followed <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/reference/routing/webapi/" target="_blank" title="Umbraco WebApi Best Practice">Umbraco best practice</a> when building the Web API, naturally. We created a Web API controller that inherited from an <em>UmbracoApiController</em>, as we knew we’d be working with Umbraco data (such as, when the content was last updated) - otherwise we would have probably just built a standard <a rel="noopener noreferrer" href="https://www.asp.net/web-api" target="_blank" title="Web API">.NET API</a>. Using this Umbraco API approach gave us access to various Umbraco dependencies, like the <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/reference/querying/umbracohelper/" target="_blank" title="UmbracoHelper">UmbracoHelper</a>.</p>
+<p>Create a new controller in the website project, ensuring that it inherits from the <em>Umbraco.Web.WebApi.UmbracoApiController</em>, and specifying the API route that you require for Umbraco to use, instead of the default Umbraco routing (we overrode this earlier). Here is an example of starting to flesh out the Branding API call, where we gathered branding data from the <em>Site</em> node for the app:</p>
+<pre><code class="language-csharp">﻿using System.Net;
+using System.Net.Http;
+using System.Web.Http;
+using Umbraco.Web.WebApi;
+
+public class FeedControllerBranding : UmbracoApiController
+{
+    /// &lt;summary&gt;
+    /// Return the branding information for the site
+    /// &lt;/summary&gt;
+    /// &lt;param name="changesFrom"&gt;&lt;/param&gt;
+    /// &lt;returns&gt;&lt;/returns&gt;
+    [HttpGet, Route("api/branding")]
+    public HttpResponseMessage BrandingResponse([FromUri] string changesFrom = null)
+    {
+        return Request.CreateResponse(HttpStatusCode.OK, "Returning branding data");
+    }
+}</code></pre>
+      <p class="snippet-caption">Feed Controller Branding</p>
+<p>We created a method for the API response we wanted, returning a <em>HttpResponseMessage. </em>This is just a sample, so to initially check that this has worked, we have just returned a test response. Now:</p>
+<ul>
+<li>Rebuild everything (and check-in your work so far! Source control for the win!)</li>
+<li>Check that you can hit the API URL you are expecting</li>
+<li>You can also add custom action filter attributes to the method, for example we added one to validate that the "changesfrom" date was formatted correctly, called <em>DateValidatorActionFilterAttribute</em></li>
+</ul>
+<p>In the sample, this will currently just return a default message, of course. What we actually want is some real data from Umbraco.</p>
+<h3>Controller Returning Umbraco Data</h3>
+<p>So, next is a sample of the data being retrieved for the location data on the app. When you’re wandering around a city trying to check off as many historical buildings as possible (or even undertaking an <a rel="noopener noreferrer" href="https://gloucesterhistoryfestival.co.uk/events/sheriff-s-assize-of-ale/" target="_blank" title="Ale Tour">Ale tour</a>!), the most important thing you probably want is to know how far away from your next event you are, and what is nearest to your location. As you know from our earlier Event content model, each Gloucester History Festival Event has an associated <em>Location</em> as part of the object.</p>
+<p>In our Umbraco instance, a <em>Location</em> model includes a map pin. We created the content type for this property using Jonathan Richard’s lovely <a rel="noopener noreferrer" href="https://our.umbraco.org/projects/backoffice-extensions/terratype/" target="_blank" title="Terratype">Terratype</a> package, which lets us pin the map in Umbraco and get back latitude and longitude (amongst other useful Geo-thingamys), whilst also allowing it to display in Razor templates:</p>
+<p> <img src="/archive/media/2017/gloucester.jpg?width=500&amp;height=171.73112338858195" alt="Gloucester map using Terratype" data-udi="umb://media/1d407f2bbfa4426eba716edf90ea490e"></p>
+<p>Below is a fairly fleshed-out example of our API method for the latitude/longitude distance calculation for us to find events near the user by querying Umbraco content. Note that we use the excellent model mapping package <a rel="noopener noreferrer" href="https://our.umbraco.org/projects/developer-tools/ditto/" target="_blank" title="Ditto">Our.Umbraco.Ditto</a> (thanks to the collaborators and Umbraco legends <a rel="noopener noreferrer" href="https://our.umbraco.org/member/3042" target="_blank" title="Lee Kelleher">Lee Kelleher</a>, <a rel="noopener noreferrer" href="https://our.umbraco.org/member/5518" target="_blank" title="Matt Brailsford">Matt Brailsford</a>, <a rel="noopener noreferrer" href="https://our.umbraco.org/member/63579" target="_blank" title="James Jackson-South">James Jackson-South</a> and <a rel="noopener noreferrer" href="https://our.umbraco.org/member/5640" target="_blank" title="Richie Green">Rich Green</a>) and the previously mentioned map package <a rel="noopener noreferrer" href="https://our.umbraco.org/projects/backoffice-extensions/terratype/" target="_blank" title="Terratype">Terratype</a> - both can be installed in your preferred way (we used Nuget).</p>
+<p>We firstly define <a rel="noopener noreferrer" href="https://docs.microsoft.com/en-us/dotnet/framework/wcf/feature-details/using-data-contracts" target="_blank" title="Data Contract">DataContracts</a> for our EventsFeed in order to enable the returned data to be serializable. Here are the ones we'll be using in this example, and all should have already been specified in the API documentation. Note the attributes required to make this work:</p>
+<p> </p>
+<pre><code class="language-csharp">﻿using System;
+using System.Runtime.Serialization;
+using System.Globalization;
+using Umbraco.Web.Models;
+
+[DataContract]
+public class EventEntry
+{
+    [DataMember(Name = "id")]
+    public Guid ID { get; set; }
+
+    [DataMember(Name = "eventCode")]
+    public string EventCode { get; set; }
+
+    [DataMember(Name = "title")]
+    public string Title { get; set; }
+
+    [DataMember(Name = "description")]
+    public string Description { get; set; }
+
+    [DataMember(Name = "heroImage")]
+    public string HeroImage { get; set; }
+
+    [DataMember(Name = "when")]
+    public EventDateTime[] When { get; set; }
+
+    [DataMember(Name = "eventType")]
+    public int EventType { get; set; }
+
+    [DataMember(Name = "additionalImages")]
+    public string[] AdditionalImages { get; set; }
+
+    [DataMember(Name = "tags")]
+    public string[] Tags { get; set; }
+
+    [DataMember(Name = "associatedPeople")]
+    public Guid[] AssociatedPeople { get; set; }
+
+    [DataMember(Name = "location")]
+    public Guid Location { get; set; }
+
+    [DataMember(Name = "meetingPoint")]
+    public string MeetingPoint { get; set; }
+
+    [DataMember(Name = "ticketLink")]
+    public RelatedLink TicketLink { get; set; }
+
+    [DataMember(Name = "price")]
+    public string Price { get; set; }
+
+    [DataMember(Name = "paidEvent")]
+    public bool PaidEvent { get; set; }
+
+    [DataMember(Name = "wheelchairAccessible")]
+    public bool WheelchairAccessible { get; set; }
+
+    [DataMember(Name = "familyFriendly")]
+    public bool FamilyFriendly { get; set; }
+
+    [DataMember(Name = "prebookingRequired")]
+    public bool PrebookingRequired { get; set; }
+
+    [DataMember(Name = "soldOut")]
+    public bool SoldOut { get; set; }
+}
+
+[DataContract]
+public class EventDateTime
+{
+    public DateTime FromDateTime { get; set; }
+
+    [DataMember(Name = "from")]
+    public string From { get; set; }
+
+    public DateTime ToDateTime { get; set; }
+
+    [DataMember(Name = "to")]
+    public string To { get; set; }
+
+    [DataMember(Name = "notes")]
+    public string Notes { get; set; }
+
+    [OnSerializing]
+    void OnSerializing(StreamingContext context)
+    {
+        this.From = this.FromDateTime.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+        this.To = this.ToDateTime.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+    }
+
+    [OnDeserialized]
+    void OnDeserializing(StreamingContext context)
+    {
+        if (this.From == null)
+        {
+            this.FromDateTime = default(DateTime);
+        }
+        else
+        {
+            this.FromDateTime = DateTime.ParseExact(this.From, "yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+        }
+
+        if (this.To == null)
+        {
+            this.ToDateTime = default(DateTime);
+        }
+        else
+        {
+            this.ToDateTime = DateTime.ParseExact(this.To, "yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+        }
+    }
+}
+
+/// &lt;summary&gt;
+/// Events Feed
+/// &lt;/summary&gt;
+[DataContract]
+public class EventsFeed
+{
+    [OnSerializing]
+    void OnSerializing(StreamingContext context)
+    {
+        this.ChangesTo = this.ChangesToDateTime.ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
+    }
+
+    public DateTime ChangesToDateTime { get; set; }
+
+    [DataMember(Name = "events")]
+    public EventEntry[] Events { get; set; }
+
+    [DataMember(Name = "changesTo")]
+    public string ChangesTo { get; set; }
+}</code></pre>
+      <p class="snippet-caption">Sample Data Contracts</p>
+<p> </p>
+<p>The sample Events Feed controller code is as follows. Note this code is just for demonstration purposes and you'll need to adjust the logic according to your own requirements, however I've tried to include everything you need for it to work (after you install the required packages). You could also alter this to use <a rel="noopener noreferrer" href="https://our.umbraco.org/documentation/reference/searching/examine/" target="_blank" title="Examine">Examine</a> to search and return events - especially for high quantities of data and for faster performance - however, the logic that you use to query Umbraco is up to you. This example is predominantly an example to demonstrate how we used Web API to retrieve the data.</p>
+<p>We run the logic to get the Umbraco data from various nodes - we reference the <em>Events</em> root node in Umbraco from within the <em>Site</em> node, essentially saying "get the events from here" by using a content picker called "Events Repository". Once we have our Events collection, we can return this with the content type defined as per spec:</p>
+<p> </p>
+<pre><code class="language-csharp">﻿using System;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Web.Http;
+using Umbraco.Web.WebApi;
+using System.Collections.Generic;
+using System.Net.Http.Headers;
+using Our.Umbraco.Ditto;
+using rsk.ghf.data;
+
+public class FeedController : UmbracoApiController
+{
+    public FeedController()
+    {
+        ContentFetcher = new UmbracoContentFetcher(Umbraco);
+    }
+
+    /// &lt;summary&gt;
+    /// The content fetcher
+    /// &lt;/summary&gt;
+    public IUmbracoContentFetcher ContentFetcher { get; set; }
+
+    /// &lt;summary&gt;
+    /// Returns events near to the user by device location
+    /// &lt;/summary&gt;
+    /// &lt;param name="origin"&gt;&lt;/param&gt;
+    /// &lt;param name="radius"&gt;&lt;/param&gt;
+    /// &lt;param name="hours"&gt;&lt;/param&gt;
+    /// &lt;param name="date"&gt;&lt;/param&gt;
+    /// &lt;returns&gt;&lt;/returns&gt;
+    [HttpGet, Route("api/events/near")]
+    public HttpResponseMessage GetEventsNearMe([FromUri] string origin, [FromUri]double radius, int hours, [FromUri] DateTime date)
+    {
+        if (radius &lt;= 0)
+        {
+            return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "radius should be a positive number");
+        }
+
+        if (hours &lt;= 0)
+        {
+            return Request.CreateErrorResponse(HttpStatusCode.BadRequest, "hours should be a positive number");
+        }
+
+        var toDateTime = date.AddHours(hours);
+        var geoOrigin = origin.ToCoordinate();
+
+        var rootNode = ContentFetcher.TypedContentAtRoot().FirstOrDefault() as Site;
+        if (rootNode != null)
+        {
+            var eventsRepo = ContentFetcher.TypedContent(rootNode.EventsRepo.Id) as EventsRepository;
+            if (eventsRepo != null)
+            {
+                List&lt;EventEntry&gt; eventCollection = new List&lt;EventEntry&gt;();
+                var children = eventsRepo.Children;
+                foreach (EventModel eventModel in children.As&lt;EventModel&gt;())
+                {
+                    try
+                    {
+                        foreach (var location in eventModel.Location)
+                        {
+                            if (geoOrigin.GetDistanceTo(location.Map.Position.ToString().ToCoordinate()).ToMiles() &lt;= radius
+                                &amp;&amp; eventModel.DateTimeRange.FirstOrDefault(
+                                    x =&gt; (x.StartDate &gt;= date &amp;&amp; x.StartDate &lt;= toDateTime)
+                                    || x.EndDate &gt;= date &amp;&amp; x.EndDate &lt;= toDateTime) != null)
+                            {
+                                eventCollection.Add(CreateEvent(eventModel));
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Error(typeof(FeedController), "\nException creating event: " + ex.Message, ex);
+                    }
+                }
+
+                if (eventCollection.Any())
+                {
+                    var events = new EventsFeed
+                    {
+                        Events = eventCollection.ToArray(),
+                    };
+
+                    var response = Request.CreateResponse(HttpStatusCode.OK, events);
+                    response.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json+festival-events-v1");
+                    response.Headers.CacheControl = new CacheControlHeaderValue { NoStore = true };
+                    return response;
+                }
+
+                return Request.CreateResponse(HttpStatusCode.NoContent);
+            }
+        }
+
+        return Request.CreateErrorResponse(HttpStatusCode.InternalServerError, string.Empty);
+    }
+
+    /// &lt;summary&gt;
+    /// Create Event - fill this out for the entire Event model you require
+    /// &lt;/summary&gt;
+    /// &lt;param name="eventModel"&gt;&lt;/param&gt;
+    /// &lt;param name="rootNode"&gt;&lt;/param&gt;
+    /// &lt;returns&gt;&lt;/returns&gt;
+    private EventEntry CreateEvent(EventModel eventModel)
+    {
+        return new EventEntry
+        {
+            ID = eventModel.Id,
+            EventCode = eventModel.EventCode,
+            Title = eventModel.EventTitle,
+            Description = eventModel.Description,
+            EventType = eventModel.EventType
+            //TODO: continue mapping in preferred mapping fashion
+        };
+    }
+}</code></pre>
+      <p class="snippet-caption">Custom Controller example for FeedController</p>
+<p>You might notice that we set the response header content type to the appropriate media type header value (in this example we have "<em>application/json+festival-events-v1")</em>. We also utilise the device data for the location (latitude and longitude), so users didn’t have to rely on having a constantly active data connection for the app to know what their distance to an event was. If you see us at the next Umbraco event, feel free to ask us how we did this behind the scenes!</p>
+<p>You'll also need to reference the strongly-typed Umbraco models - I've referenced them here in some fake classes, however the real code should use the strongly-typed models in your preferred fashion (e.g. generated by ModelsBuilder, for example):</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using Umbraco.Core.Models;
+using Umbraco.Core.Models.PublishedContent;
+
+namespace rsk.ghf.data
+{
+    /// &lt;summary&gt;
+    /// Replace with real generated Events model
+    /// &lt;/summary&gt;
+    public class EventModel
+    {
+        public IEnumerable&lt;Location&gt; Location { get; internal set; }
+        public IEnumerable&lt;NcDateTimeRange&gt; DateTimeRange { get; internal set; }
+        public string EventCode { get; internal set; }
+        public string EventTitle { get; internal set; }
+        public string Description { get; internal set; }
+        public Guid Id { get; internal set; }
+        public int EventType { get; internal set; }
+    }
+
+    /// &lt;summary&gt;
+    /// Replace with real generated Location model
+    /// &lt;/summary&gt;
+    public class Location
+    {
+        public Terratype.Models.Model Map
+        {
+            get; set;
+        }
+    }
+
+    /// &lt;summary&gt;
+    /// Replace with real generated DateTimeRange model
+    /// &lt;/summary&gt;
+    public class NcDateTimeRange
+    {
+        public DateTime StartDate { get; internal set; }
+        public DateTime EndDate { get; internal set; }
+    }
+
+    /// &lt;summary&gt;
+    /// Replace with real generated Events Repository model
+    /// &lt;/summary&gt;
+    public class EventsRepository : PublishedContentModel
+    {
+        public EventsRepository(IPublishedContent content) : base(content)
+        { }
+    }
+
+    /// &lt;summary&gt;
+    /// Replace with real generated Site model
+    /// &lt;/summary&gt;
+    public class Site
+    {
+        public IPublishedContent EventsRepo { get; internal set; }
+    }
+}</code></pre>
+      <p class="snippet-caption">Fake Generated Models</p>
+<p>Also note that we use our ContentFetcher, which wraps the <a rel="noopener noreferrer" href="https://our.umbraco.org/apidocs/csharp/api/Umbraco.Web.UmbracoContext.html" target="_blank" title="UmbracoContext">UmbracoContext</a>, to fetch the various content nodes. This content fetcher is instantiated in the controller constructor like so, and aids with unit testing:</p>
+<pre><code class="language-csharp">﻿using System.Collections.Generic;
+using Umbraco.Core.Models;
+using Umbraco.Web;
+/// &lt;summary&gt;
+/// Umbraco content fetcher to retrieve content via the Umbraco helper
+/// &lt;/summary&gt;
+public class UmbracoContentFetcher : IUmbracoContentFetcher
+{
+    private readonly UmbracoHelper _umbracoHelper;
+
+    /// &lt;summary&gt;
+    /// Instantiate the Umbraco Helper
+    /// &lt;/summary&gt;
+    /// &lt;param name="umbracoHelper"&gt;&lt;/param&gt;
+    public UmbracoContentFetcher(UmbracoHelper umbracoHelper)
+    {
+        _umbracoHelper = umbracoHelper;
+    }
+
+    /// &lt;summary&gt;
+    /// Return typed root node content
+    /// &lt;/summary&gt;
+    /// &lt;returns&gt;&lt;/returns&gt;
+    public IEnumerable&lt;IPublishedContent&gt; TypedContentAtRoot()
+    {
+        return _umbracoHelper.TypedContentAtRoot();
+    }
+
+    /// &lt;summary&gt;
+    /// Return typed content by Id
+    /// &lt;/summary&gt;
+    /// &lt;param name="id"&gt;&lt;/param&gt;
+    /// &lt;returns&gt;&lt;/returns&gt;
+    public IPublishedContent TypedContent(int id)
+    {
+        return _umbracoHelper.TypedContent(id);
+    }
+}
+
+/// &lt;summary&gt;
+/// Interface for the Umbraco Content Fetcher (unit testing, DI)
+/// &lt;/summary&gt;
+public interface IUmbracoContentFetcher
+{
+    IEnumerable&lt;IPublishedContent&gt; TypedContentAtRoot();
+    IPublishedContent TypedContent(int id);
+}</code></pre>
+      <p class="snippet-caption">UmbracoContentFetcher</p>
+<p>The above code is an example for you to follow, but you’ll no doubt configure this and customise it as you require for your own API requirements and spec.</p>
+<p>You now should have the ability to create an Umbraco API controller using custom routes and with the required JSON configuration and response as per spec, along with some examples of Umbraco code you can use inside it!</p>
+<h3>Xamarin.Forms</h3>
+<p>Now, the bit you may not have seen before if you’ve not worked in app development. The app was built using Xamarin.Forms by our internal app development team, with the build headed up by Christopher Myhill. And now for the delicious technical details you’re looking for:</p>
+<ul>
+<li>We used version 2.3.4 of <a rel="noopener noreferrer" href="https://www.xamarin.com/forms" target="_blank" title="Xamarin.Forms">Xamarin.Forms</a></li>
+<li><a rel="noopener noreferrer" href="http://www.mvvmlight.net/" target="_blank" title="MVVM Light">MVVM Light</a> was used to provide the MVVM architecture (v5.3) - the <a rel="noopener noreferrer" href="https://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93viewmodel" target="_blank" title="MVVM Pattern">Model-view-viewmodel</a> pattern</li>
+<li><a rel="noopener noreferrer" href="https://www.sqlite.org/" target="_blank" title="SQLite">SQLite</a> was used to provide the data store on the phone</li>
+<li>We used <a rel="noopener noreferrer" href="https://developer.xamarin.com/guides/xamarin-forms/user-interface/map/" target="_blank" title="Xamarin.Forms Maps">Xamarin.Forms Maps</a>, which provide a cross platform framework for the mapping functionality we required</li>
+</ul>
+<p>If you’ve never used or heard of <a rel="noopener noreferrer" href="https://www.xamarin.com/forms" target="_blank" title="Xamarin.Forms">Xamarin.Forms</a> before, it is a way to build native apps for iOS, Android and Windows from a single, shared C# codebase (the language most of Umbraco is written in). Basically put, you can quickly build the app using the Xamarin.Forms controls, and at run-time, each page and control is mapped to platform-specific native UI elements (e.g. different text field types for iOS versus Android).</p>
+<p>Xamarin.Forms uses <a rel="noopener noreferrer" href="https://msdn.microsoft.com/en-us/library/cc295302.aspx" target="_blank" title="XAML">XAML</a> to describe its UI, the same markup originally created by Microsoft to drive their WPF and Windows Phones applications (still in used today in <a rel="noopener noreferrer" href="https://docs.microsoft.com/en-us/windows/uwp/layout/design-and-ui-intro" target="_blank" title="UWP">UWP</a> applications). Although the user interface is described using a common language, we can still leverage platform specific look-and-feel. Happily, with recent advancements, native controls from iOS and Android can be brought directly into the XAML using extension methods. Ultimately the use of Xamarin.Forms does not remove access to any native functionality available in iOS or Android… in fact, using Xamarin.Forms allows developers to get an application to market much quicker. It was the key fact that allowed us to get our first version of the companion application created and ready for delivery within <em><strong>4 weeks</strong></em>!</p>
+<p>To access the WebAPI from the Xamarin.Forms project, we used a command pattern:</p>
+<pre><code class="language-csharp">﻿public class EventsListCommand : ApiCommand&lt;EventItemsResponse&gt;
+{
+    public EventsListCommand() : base(HttpMethod.Get,
+        "api/events",
+        "application/json+festival-events-v1")
+    {
+
+    }
+
+    public override async Task&lt;EventItemsResponse&gt; Execute()
+    {
+        return await RequestHandler.Send(this);
+    }
+
+    public override EventItemsResponse CreateResponse(string rawResponse, HttpStatusCode? statusCode, Exception error = null)
+    {
+        return new EventItemsResponse(rawResponse, statusCode, error);
+    }
+}
+</code></pre>
+      <p class="snippet-caption">EventsListCommand</p>
+<p>This was then used by our handler to create a connection to the Umbraco WebAPI. As the API was defined in our specification ahead of time, this meant that a lot of these commands were created and tested before the WebAPI was ready to be called, saving more development time.</p>
+<p>Once the data was received we could then bind it to the XAML using the following code (sample of the ListView shown):</p>
+<pre><code class="language-markup">﻿&lt;ListView x:Name="eventsList" ItemsSource="{Binding Events}" HasUnevenRows="True"&gt;&lt;/ListView&gt;
+</code></pre>
+      <p class="snippet-caption">ListView</p>
+<p>We’re using Umbraco data in Xamarin.Forms. Yum!!!</p>
+<h2>SUMMARY</h2>
+<p>While this year’s Gloucester History Festival has now finished, it is back next year, and you can download the free app in both the iOS and Android app-store if you want to have a gander (compare the events data to the website, go on I dare ya.. It’s the same!)</p>
+<p>In summary, a combination of data from Umbraco CMS is utilised by both the website and the companion app using Web API. Building the app using Xamarin.Forms helped us to develop a cross-platform app, end-to-end, in only 4 weeks. We will most certainly be doing it again, and as we evolve more ideas of how to combine and mesh the data...you’ll be the first to know.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/android/" title="See all articles tagged with Android">Android</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/app/" title="See all articles tagged with App">App</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/ios/" title="See all articles tagged with iOS">iOS</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Emma Garland"><img src="//gravatar.com/avatar/d86012bb27ff74b1287f548040ce14be.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/d86012bb27ff74b1287f548040ce14be.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Emma Garland</h1>
+        <p>Emma is on Twitter as <a href="//twitter.com/emmagarland" title="Emma Garland on Twitter" rel="author">@emmagarland</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>What's in a Document Type anyway?</title>
+<meta name="description" content="A very simple and short article to help newbies understand one of the main areas of Umbraco.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">What's in a Document Type anyway?</h1>
+      <p class="byline"> by Simon Steed, <span class="pubdate">posted on <time datetime="2013-12-20">Dec 20, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Umbraco, we all love it in some way, shape or another - however there are some people that get really frustrated with it, in particular the mysterious Document Type - is this you? This article is aimed at people like you and will hopefully demystify it somewhat and have some simple examples for you to use in your projects. </p>
+<p class="intro">I'm not going to touch templates, CSS, scripts, Data Types etc. - they may come in a future article if people want them - we are here for one thing and one thing only...</p>
+<p class="p1"><strong><span class="s1">Document Types - what's in a name?</span></strong></p>
+<p class="p2">In short, this is the core of Umbraco - yes we have MVC, Webforms, DataTypes, Templates, CSS, Properties, Shenanigans and more but without a Document Type, you don't really have a content editable site!</p>
+<p class="p2">In short, a Doctype (short name from now on, I'm lazy!), is a storage container for your data on the pages in your website.</p>
+<p class="p2">There you go, that's it - dead simple - it stores stuff... well, sort of.</p>
+<p class="p2"><strong>What do they do?</strong></p>
+<p class="p2">What it allows you to do is compartmentalise (big word) your pages into silos of information that your website uses to display data to your users.</p>
+<p class="p2">Within a Doctype, you can: </p>
+<ul>
+<li>Set icons to identify to the user what it typically is, i.e. for a News Article, you may have a newspaper icon. User sees this icon in the content area and knows it's a News Article.</li>
+<li>Set a friendly name and description for it</li>
+<li>Define what other Doctypes can be created underneath that type, i.e. you may have a folder and want to only allow a News Article Doctype to be created under that - no problem, tick the item in the Structure tab</li>
+<li>Choose which templates are allowed; Note I mention templates in plural, not singular - you can create many templates or layouts that can represent your data in many different ways</li>
+<li>Setup tabs to categorise your content pages, i.e. SEO, Umbraco, Content, Media etc.</li>
+<li>Finally you can setup properties which are mini data items that store your data within the Doctype</li>
+</ul>
+<p class="p2">The Doctype effectively brings all the above together in one single unit and presents to the user in the guise of allowing them to create a content page. </p>
+<p class="p1"><strong><span class="s1">Let's get cracking</span></strong></p>
+<p class="p1"><span class="s1">Let's create one here for a typical Homepage:</span> </p>
+<ul>
+<li>Go to your Umbraco installation, click on Settings and right click on Document Types to select Create</li>
+</ul>
+<p> </p>
+<p><img src="/archive/media/2013/1_500x320.jpg" width="500" height="320" alt="1"></p>
+<ul>
+<li>Add one called Homepage - tick the box to create a matching template and leave the master to None</li>
+<li>Set a friendly name and description and hell, change the icon as well whilst you are at it</li>
+</ul>
+<p><img src="/archive/media/2013/2_498x275.jpg" width="498" height="275" alt="2"></p>
+<ul>
+<li>On the Structure tab, set Allow at Root - this means you can create this page at the root level of your content area</li>
+</ul>
+<p><img src="/archive/media/2013/3_497x300.jpg" width="497" height="300" alt="3"></p>
+<ul>
+<li>Now go to the Tabs page and create some tabs, call one Content, another Media and one SEO</li>
+</ul>
+<p><img src="/archive/media/2013/4_496x245.jpg" width="496" height="245" alt="4"></p>
+<ul>
+<li>Hit the save button.</li>
+</ul>
+<p class="p1"><span class="s1">Now you could actually go to the content area of your site and create a new page using this document type - go on try it and see what you get.</span> </p>
+<p class="p1"><img src="/archive/media/2013/5_500x360.jpg" width="500" height="360" alt="5"></p>
+<p class="p1"><span class="s1">Welcome back... You did try it didn't you? Ok, what you should have seen was a new node (geek talk for a content item or web page in the content area). When you clicked on this node with it's new fancy icon etc., you would have seen a few tabs, i.e. Content, Media, SEO and Properties.</span></p>
+<p class="p1"><span class="s1">The only one that would have anything there would be Properties - these are the default Umbraco properties and some useful ones there too - learn them, you will use them, trust me.</span></p>
+<p class="p1"><span class="s1">OK that's good but it doesn't do anything - BINGO, you must be listening! </span></p>
+<p class="p2"><strong>Expanding our Doctype</strong> </p>
+<p class="p2"><span>Let's add something useful like some data properties you can set. Back to our Settings section, open the Doctype you just created and then hit the Generic Properties tab.</span></p>
+<p class="p1"><span class="s1">Click 'Click here to add a new property' - <em>tip:</em> you can hit the text which is usually easier than hitting the drop down arrow - it is for me anyway.</span> </p>
+<p class="p1"><span class="s1">Now fill in the following:</span> </p>
+<p class="p1"><span class="s1">Name: My First Property</span></p>
+<p class="p1"><span class="s1">Alias: myFirstProperty (this will be automatic when you add the Name)</span></p>
+<p class="p1"><span class="s1">Type: TextString</span></p>
+<p class="p1"><span class="s1">Tab: Content</span></p>
+<p class="p1"><span class="s1">Mandatory: unchecked</span></p>
+<p class="p1"><span class="s1">Validation: leave empty</span></p>
+<p class="p1"><span class="s1">Description: A funky doody property item</span></p>
+<p class="p2"> </p>
+<p class="p1"><span class="s1">Now hit Save then head back to the Content section and the new page you created earlier. Notice you can now see a textbox called My First Property with the description alongside it?</span> </p>
+<p class="p1"><img src="/archive/media/2013/6_498x149.jpg" width="498" height="149" alt="6" style="font-size: 10px;"></p>
+<p class="p1"><span class="s1">Cool eh? - well basically you can add as many different types of properties into the Generic Properties tab of your Doctype as you wish. So go ahead, add some properties with different types and see what they all do. </span></p>
+<p class="p1"><span class="s1">Notice that if you add some and set the Tab to be Media or SEO etc., when you visit the content page, they are kept nicely together for you. This is a good way for you to present logical data to your users - throw things like Page Title, Meta Keywords, Meta Description into the SEO tab, once it's set it's infrequently updated again so why have them in the content area?</span></p>
+<p class="p1"><span class="s1">Heres what a more populated one would look like both from the Doctype and the Content page views:</span></p>
+<p class="p1"><span class="s1"><img src="/archive/media/2013/7_500x390.jpg" width="500" height="390" alt="7"></span></p>
+<p class="p1"><img src="/archive/media/2013/8_500x453.jpg" width="500" height="453" alt="8"></p>
+<p class="p1"><img src="/archive/media/2013/9_500x210.jpg" width="500" height="210" alt="9"></p>
+<p class="p1"><img src="/archive/media/2013/10_500x353.jpg" width="500" height="353" alt="10"></p>
+<p class="p1"> </p>
+<p class="p2"><strong>In a nutshell</strong></p>
+<p class="p2">A very simple and short article to help newbies to understand one of the main areas of Umbraco. Doctypes are extremely powerful; you can nest them, which inherit properties from the parents through to all the children. You can setup complex data structures to store your data. Adding packages like "Document Type Fieldsets" allows you to group your properties into their own mini containers in the Content area - mega useful and so on. </p>
+<p class="p2">Think of a Doctype in the context of building a new house. </p>
+<p class="p1"><span class="s1">Architect = Doctype - defines the structure of the page, what properties it will contain etc.</span></p>
+<p class="p1"><span class="s1">House = Page in the content area.</span></p>
+<p class="p1"><span class="s1">Windows, Doors, Window Sills, Roof tiles - all properties</span></p>
+<p class="p1"><span class="s1">Red tile, round window - specific data stored for the property in the Doctype</span></p>
+<p class="p1"><span class="s1">Have a very merry xmas and an even more productive new year!</span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Simon Steed"><img src="//gravatar.com/avatar/979461379061083753dd60ebf75defef.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/979461379061083753dd60ebf75defef.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Simon Steed</h1>
+        <p>Simon is on Twitter as <a href="//twitter.com/simonantony" title="Simon Steed on Twitter" rel="author">@simonantony</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li class="selected"><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

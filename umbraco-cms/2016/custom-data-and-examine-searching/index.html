@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>A love story of custom data and Examine searching</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Custom data and Examine searching</h1>
+      <p class="byline"> by Rasmus Fjord, <span class="pubdate">posted on <time datetime="2016-12-08">Dec 8, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Oh, Hello! It's me again, you might remember me from such classics as <a href="http://24days.in/umbraco-cms/2013/getting-started-with-examine/" target="_blank">"The worlds friendliest post on getting started with Examine"</a>, so now I'm back to bring you some "fresh meat" (Diablo pun intended) on how to extend Examine with your own custom data. </p>
+<p class="intro"> </p>
+<p><img style="width: 306px; height: 231px;" src="/archive/media/2016/coolness.gif?width=306&amp;height=231" alt="" width="306" height="231" rel="1284" data-id="1284"></p>
+<p> </p>
+<h3>Who is this article for?</h3>
+<p>It is of course for everyone who wants to learn, but it is mainly for people who want to get custom data into a custom Examine index, and if you have tried to write a Lucene/Examine query before and is not afraid to create a class file in Visual Studio, then you will feel right at home :)</p>
+<p>We are going to go through the following:</p>
+<ol>
+<li>Setting up our Index/Provider/Searcher</li>
+<li>Creating our class library</li>
+<li>Creating the indexer (here we pull down the JSON and index it)</li>
+<li>Extra goodies (a webapi controller to reindex on your demand)</li>
+</ol>
+<p>So the example we are going to follow is actually a real life example, it's from a customer who supplies different kinds of courses, like if you want to become better in a special area as a carpenter, bricklayer, accountant or anything else they've got you covered. The issue is that they control their courses in an external system, but we want to make it searchable on their webpage. We will recieve data from the system as JSON.</p>
+<h2>Setup your Index/Provider/Searcher</h2>
+<p>So first step to get this snowball rollin’ is that we need to setup our indexer, provider and searcher. So starting off we need to open the following files:</p>
+<ul>
+<li>/config/ExamineIndex.Config</li>
+<li>/config/ExamineSettings.Config</li>
+</ul>
+<h3> /config/ExamineIndex.Config</h3>
+<p>So inside ExamineIndex.Config you should add this in between &lt;ExamineLuceneIndexSets&gt;</p>
+<pre><code class="language-markup">&lt;IndexSet SetName="ExternalCourseIndexSet" IndexPath="~/App_Data/TEMP/ExamineIndexes/{machinename}/ExternalCourse/"&gt;
+	&lt;IndexUserFields&gt;
+		&lt;add Name="id" /&gt;
+		&lt;add Name="name" /&gt;
+		&lt;add Name="createDate" /&gt;
+		&lt;add Name="nodeTypeAlias" /&gt;
+		&lt;add Name="urlName" /&gt;
+		&lt;add Name="teaser" /&gt;
+		&lt;add Name="hideFromSearch" /&gt;
+	&lt;/IndexUserFields&gt;
+&lt;/IndexSet&gt;</code></pre>
+      <p class="snippet-caption">An example of Examineindex.config with custom index defined</p>
+<p> So in the file above we just specify which fields we want in our index.</p>
+<p> </p>
+<h3>/config/ExamineSettings.Config</h3>
+<p>So inside ExamineSettings.Config we need to do 2 things, first thing is here.</p>
+<p><strong>Part #1 - ExamineIndexProviders/Providers</strong></p>
+<p>Inside the file we should go to the &lt;Examine&gt;&lt;ExamineIndexProviders&gt;&lt;providers&gt; area, in here we should add the following:</p>
+<pre><code class="language-markup"> &lt;add name="ExternalCourseIndexer" type="Examine.LuceneEngine.Providers.SimpleDataIndexer, Examine"
+dataService="myCodeProject.Indexers.DetachedCourseIndexer, myCodeProject" indexTypes="CourseContentType" /&gt;</code></pre>
+<p>In the provider here we need to notice 2 things, first the "type" is set to the "SimpleDataIndexer", also the dataService is set to our class, we will come to the class in a second. This is the connection from our index to our code.</p>
+<p> <strong>Part #2 - ExamineSearchProviders/Providers</strong></p>
+<p>Now in the same file we've got a bit further down. Inside the file we should go to the &lt;Examine&gt;&lt;ExamineSearchProviders&gt;&lt;providers&gt; area, in here we should add the following:</p>
+<pre><code class="language-markup">&lt;add name="ExternalCourseSearcher" type="Examine.LuceneEngine.Providers.LuceneSearcher, Examine"
+analyzer="Lucene.Net.Analysis.Standard.StandardAnalyzer, Lucene.Net"
+enableLeadingWildcards="true"
+indexSets="ExternalCourseIndexSet"/&gt;</code></pre>
+<p>So what to notice here is of course that we have set our IndexSet to the IndexSet we just created. </p>
+<p>Now we have setup our 3 core parts, lets move on to some real code.</p>
+<p>---</p>
+<p class="graf graf--p">So now let's spin up Visual Studio, if you don't have a Class Library for your code, go create one. I add my Class Library besides my web project (where Umbraco is installed inside) and name it <strong class="markup--strong markup--p-strong">myCodeProject.</strong> First you should add UmbracoCms.Core through Nuget, you do this by opening the <em>Package manager console</em> and write: Install-Package UmbracoCms.Core. </p>
+<p class="graf graf--p">Inside our freshly created project you create a folder named “<strong class="markup--strong markup--p-strong">Indexers</strong>”, in this folder I create a class named “<strong class="markup--strong markup--p-strong">DetachedCourseIndexer</strong>”.</p>
+<p class="graf graf--p">So here is what we do in our new class:</p>
+<ul class="postList">
+<li class="graf graf--li">Inherit <strong class="markup--strong markup--li-strong">ISimpleDataService </strong>on our class “<strong class="markup--strong markup--li-strong">DetachedCourseIndexer</strong>”</li>
+<li class="graf graf--li">Ensure UmbracoContext</li>
+<li class="graf graf--li">Get externaldata from your datasource</li>
+<li class="graf graf--li">Turning your data into a SimpleDataSet </li>
+<li class="graf graf--li">Put our SimpleDataSet into our index</li>
+</ul>
+<p class="graf graf--p">Things to think about here is, ID, DocTypeAlias and URL, in my example here I just use a fake id, incrementing integer, and I use an Umbraco node as my URL combined with the courseId field. So I can display some course data like “/my-course?courseid=1”. </p>
+<pre><code class="language-csharp">using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Hosting;
+using Examine;
+using Examine.LuceneEngine;
+using learnmark.Models.Website.Course;
+using learnmark.Models.Website.Items;
+using Newtonsoft.Json;
+using umbraco;
+using Umbraco.Core;
+using Umbraco.Core.Logging;
+using Umbraco.Web;
+using Umbraco.Web.Security;
+
+namespace myCodeProject.Indexers
+{
+    public class DetachedCourseIndexer : ISimpleDataService
+    {
+        public IEnumerable&lt;SimpleDataSet&gt; GetAllData(string indexType)
+        {
+
+            //Ensure that an Umbraco context is available
+            if (UmbracoContext.Current == null)
+            {
+                var dummyContext =
+                    new HttpContextWrapper(
+                        new HttpContext(new SimpleWorkerRequest("/", string.Empty, new StringWriter())));
+                UmbracoContext.EnsureContext(
+                    dummyContext,
+                    ApplicationContext.Current,
+                    new WebSecurity(dummyContext, ApplicationContext.Current),
+                    false);
+            }
+
+            var dataSets = new List&lt;SimpleDataSet&gt;();
+
+            try
+
+            {
+                //Get data from external source
+                string json = "";
+                using (var webClient = new WebClient())
+                {
+                    webClient.Encoding = Encoding.UTF8;
+                    json = webClient.DownloadString("Some url that returns course data as json");
+                }
+
+                //Parsing data to raw model 
+                List&lt;CourseRaw&gt; coursesRaw = JsonConvert.DeserializeObject&lt;List&lt;CourseRaw&gt;&gt;(json);
+
+                //Getting a node in umbraco to use as a url
+                var coursePage = UmbracoContext.Current.ContentCache.GetById(2159); //CoursePage
+
+                //Looping all the raw models and adding them to the dataset
+                foreach (var cr in coursesRaw)
+                {
+                    var simpleDataSet = new SimpleDataSet { NodeDefinition = new IndexedNode(), RowData = new Dictionary&lt;string, string&gt;() };
+                    
+                    string url =coursePage.Url + "?courseid=" + cr.Id;
+                    simpleDataSet = ExamineHelper.CourseRawToIndexItem(cr, simpleDataSet, indexType, url);
+                    dataSets.Add(simpleDataSet);
+                 
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Error&lt;DetachedCourseIndexer&gt;("error indexing:", ex);
+            }
+
+            return dataSets;
+        }
+    }
+}
+</code></pre>
+<p>The sharp eye would say "Hey my code says that I'm missing something called "ExamineHelper" and also "CourseRaw", so lets quickly take a look at those, first of all "CourseRaw" is just a Model that I Deserialize my JSON to.</p>
+<pre><code class="language-csharp">public class CourseRaw
+    {
+        public int Id { get; set; }
+        public string Kode { get; set; }
+        public string Navn { get; set; }
+        public DateTime Startdato { get; set; }
+        public string Url { get; set; }
+        public string TilmeldingsUrl { get; set; }
+        public string Type { get; set; }
+        public string varighed { get; set; }
+        public string Kategoristi { get; set; }
+        public int Pladser { get; set; }
+        public int OptagedePladser { get; set; }
+        public bool Optaget { get; set; }
+        public bool ErGarantikursus { get; set; }
+        public object Skolefag { get; set; }
+        public string Sted { get; set; }
+    }</code></pre>
+<p>As you see nothing exciting there, but now you have the full picture. The ExamineHelper is pretty much the same, it takes our various properties and maps it to our simpleDataSet, which then becomes indexed, like this:</p>
+<pre><code class="language-csharp"> public class ExamineHelper
+    {
+
+        public static SimpleDataSet CourseRawToIndexItem(CourseRaw cr, SimpleDataSet simpleDataSet, string indexType, string url)
+        {
+            simpleDataSet.NodeDefinition.NodeId = cr.Id;
+            simpleDataSet.NodeDefinition.Type = indexType;
+            simpleDataSet.RowData.Add("id", cr.Id.ToString());
+            simpleDataSet.RowData.Add("kode", cr.Kode);
+            simpleDataSet.RowData.Add("name", cr.Navn);
+            simpleDataSet.RowData.Add("createDate", DateTime.Now.ToString("yyyy-MM-dd-HH:mm:ss"));
+            simpleDataSet.RowData.Add("nodeTypeAlias", "courseRaw");
+            simpleDataSet.RowData.Add("urlName", url);
+            simpleDataSet.RowData.Add("teaser",cr.Sted);
+            simpleDataSet.RowData.Add("hideFromSearch", "0");
+
+
+            return simpleDataSet;
+        }
+    }</code></pre>
+<p>These fields are the ones I have defined in the start of my post.</p>
+<p> </p>
+<p>And this is actually it. Now you're like, what!?! When you go into the developer section of Umbraco and hit the "Examine Management" dashboard, you should see the ExternalCourseIndexer, and if you open it and push "Rebuild index" it will now go to your datasource and index it.</p>
+<p>But hey! that is fine and all but neither I, nor the customer wants to go in and hit Rebuild index whenever some data is updated, how can we fix that?</p>
+<p>So the way we solved it for these type of situations is to have an UmbracoApiController that we can call every X minute/hour through either the ScheduleTask area of UmbracoSettings.config or some other service hitting it.</p>
+<p>The ApiController could look like this:</p>
+<pre><code class="language-csharp">  [JsonOnlyConfiguration]
+    public class CourseApiController : UmbracoApiController
+    {
+        [HttpGet]
+        public object Run()
+        {
+            try
+            {
+                DateTime timeSpendTime = DateTime.Now;
+                var response = ExamineHelper.PostRebuildIndex("ExternalCourseIndexer");
+                var TimeSpend = DateTime.Now.Subtract(timeSpendTime).TotalSeconds.ToString();
+
+                LogHelper.Info&lt;ContentDefaultValues&gt;("CourseIndex msg: " + response);
+                LogHelper.Info&lt;ContentDefaultValues&gt;("CourseIndex indexed at time: " + TimeSpend);
+
+                return "Courses got index at " + TimeSpend + " secounds";
+            }
+            catch (Exception ex)
+            {
+                Error error = new Error("Der skete en fejl på serveren");
+                LogHelper.Error&lt;CourseApiController&gt;(error.ToString(), ex);
+                return Request.CreateResponse(JsonMetaResponse.GetError(HttpStatusCode.InternalServerError, error.Message, error));
+            }
+        }
+    }</code></pre>
+<p>And to finish this off you can put this method into your ExamineHelper, it's the method that tries to rebuild your examine index.</p>
+<pre><code class="language-csharp">   /// &lt;summary&gt;
+        /// Rebuilds the index
+        /// &lt;/summary&gt;
+        /// &lt;param name="indexerName"&gt;&lt;/param&gt;
+        /// &lt;returns&gt;&lt;/returns&gt;
+        public static string PostRebuildIndex(string indexerName)
+        {
+            LuceneIndexer indexer;
+            string returnmsg = "";
+            var msg = ValidateLuceneIndexer(indexerName, out indexer);
+            if (msg)
+            {
+                //remove it in case there's a handler there alraedy
+                indexer.IndexOperationComplete -= Indexer_IndexOperationComplete;
+                //now add a single handler
+                indexer.IndexOperationComplete += Indexer_IndexOperationComplete;
+
+                var cacheKey = "temp_indexing_op_" + indexer.Name;
+                //put temp val in cache which is used as a rudimentary way to know when the indexing is done
+                UmbracoContext.Current.Application.ApplicationCache.RuntimeCache.InsertCacheItem(cacheKey, () =&gt; "tempValue", TimeSpan.FromMinutes(5), isSliding: false);
+
+                try
+                {
+                    indexer.RebuildIndex();
+                    returnmsg = indexerName + " er blevet genopbygget";
+                }
+                catch (Exception ex)
+                {
+                    //ensure it's not listening
+                    indexer.IndexOperationComplete -= Indexer_IndexOperationComplete;
+                    LogHelper.Error&lt;ExamineManagementApiController&gt;("An error occurred rebuilding index", ex);
+                    returnmsg = string.Format("The index could not be rebuilt at this time, most likely there is another thread currently writing to the index. Error: {0}", ex);
+
+                    return returnmsg;
+                }
+            }
+            return returnmsg;
+        }</code></pre>
+<p> I think that is it, so good luck, throw a message if something is off.</p>
+<p> <img id="__mcenew" style="display: inline-block; width: 30%; margin: 0.5em;" src="/archive/media/2016/yxd.gif" alt="" rel="1391" data-id="1391"></p>
+<p>If you want to learn more check out some of these pages:</p>
+<p><a href="http://shazwazza.com/post/using-examine-to-index-search-with-any-data-source/">http://shazwazza.com/post/using-examine-to-index-search-with-any-data-source/</a><br><a href="http://thecogworks.co.uk/blog/2013/02/11/examiness-hints-and-tips-from-the-trenches-part-8-custom-indexing">http://thecogworks.co.uk/blog/2013/02/11/examiness-hints-and-tips-from-the-trenches-part-8-custom-indexing</a></p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/examine/" title="See all articles tagged with Examine">Examine</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/search/" title="See all articles tagged with Search">Search</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Rasmus Fjord"><img src="//gravatar.com/avatar/e7d55389f3fdb83fa4438562819e71c9.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/e7d55389f3fdb83fa4438562819e71c9.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Rasmus Fjord</h1>
+        <p>Rasmus is on Twitter as <a href="//twitter.com/Rasmusfjord" title="Rasmus Fjord on Twitter" rel="author">@Rasmusfjord</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

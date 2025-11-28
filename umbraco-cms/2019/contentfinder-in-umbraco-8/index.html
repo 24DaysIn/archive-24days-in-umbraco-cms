@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Abstracting content with ContentFinder in Umbraco 8</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">ContentFinder in Umbraco 8</h1>
+      <p class="byline"> by Peter Bridger, <span class="pubdate">posted on <time datetime="2019-12-16">Dec 16, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span style="font-weight: 400;">Umbraco prides itself on providing a first class editor experience. Anyone who has delved into the back-office can testify that adding content is straightforward.</span></p>
+<p class="intro"> </p>
+<p><span style="font-weight: 400;">Like most CMS platforms Umbraco presents a treeview of the content that makes up a website that shows the direct mapping of how each page of content will be shown publically on the website.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">For example the root node is most likely accessed at </span><a href="https://www.website.com/"><span style="font-weight: 400;">https://www.website.com/</span></a><span style="font-weight: 400;"> and a child page would be available on </span><a href="https://www.website.com/child"><span style="font-weight: 400;">https://www.website.com/child</span></a></p>
+<p> </p>
+<p><span style="font-weight: 400;">The simple hierarchy a treeview presents is easily understood by most people without explanation and serves the needs of many websites.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">However there are some cases when purely relying on a rigid hierarchy of content which maps exactly to the published content can become hard to manage.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">I worked on a project for </span><span style="font-weight: 400;"><a href="https://www.greeneking-pubs.co.uk/">Greene King</a> which </span><span style="font-weight: 400;">had a requirement to create multiple child pages for each of their 1,500 or so pubs scattered across a variety of brands like </span><a href="https://www.hungryhorse.co.uk/"><span style="font-weight: 400;">Hungry Horse</span></a><span style="font-weight: 400;"> or </span><a href="https://www.chefandbrewer.com/"><span style="font-weight: 400;">Chef &amp; Brewer</span></a><span style="font-weight: 400;">.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Greene King regularly run campaigns and promotions across a large number of their pubs, resulting in a need to add pages of content that will appear in several places.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">The most basic way to approach this need would be to create a single campaign page of content and then copy and paste it under the other pubs it needs to appear on.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Although this approach will produce the desired results, it comes at a high setup and maintenance cost. It’s going to take a long time to copy the content into multiple pages and then even longer to make any edits that may be required in the future.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Thankfully Umbraco provides a better way of dealing with situations like this through the use of a custom </span>Content Finder. </p>
+<p> </p>
+<p><span style="font-weight: 400;">The concept and implementation is deceptively simple for something that can introduce an extreme amount of flexibility on how website content is served up.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">For a standard Umbraco installation whenever a public request comes in Umbraco uses it’s own default Content Finder to determine which content should be returned for the request.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">This is typically as simple as a request for https://www.website.com/about-us/directions returning the About us &gt; Directions content node. If a request cannot be matched to content, then a 404 will be returned.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">However this native process can be augmented through the introduction of custom Content Finders. Once created they can be inserted into the request pipeline to retrieve content based upon custom logic.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">If a custom Content Finder does not return any content, Umbraco will let the request fall through into the next Content Finder until it will finally be handled by the default Umbraco Content Finder.</span></p>
+<p><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/e2b68c2fa7704d8eb37f9a17b9a7103e"><br><span style="font-weight: 400;">Writing your own custom Content Finder is very straightforward and the </span><a href="https://our.umbraco.com/documentation/reference/routing/request-pipeline/icontentfinder"><span style="font-weight: 400;">official documentation</span></a><span style="font-weight: 400;"> provides a good explanation and simple example.</span></p>
+<p><span style="font-weight: 400;">To demonstrate how this works on a real website I’ve </span><a href="https://our.umbraco.com/documentation/getting-started/setup/install/"><span style="font-weight: 400;">installed a fresh Umbraco 8</span></a><span style="font-weight: 400;"> site including the default starter kit.</span></p>
+<p><img style="width: 500px; height: 268.2291666666667px;" src="/archive/media/2019/starter-kit.png?width=500&amp;height=268.2291666666667" alt="Umbraco starter kit homepage" data-udi="umb://media/434ed297b4d24ae6a24452dc74344ee0"></p>
+<p><span style="font-weight: 400;">If we navigate to the </span>Products <span style="font-weight: 400;">page we’ll see a number of Umbraco related goodies listed out</span></p>
+<p><img style="width: 0px; height: 0px;" src="/umbraco/nothing.jpg" alt="" data-udi="umb://media/e057fd24de784e5c91fd5e0f0a14bc0a"><br><br></p>
+<p><span style="font-weight: 400;">We want to extend the starter kit so that a page exists underneath every product with information about the shipping costs specifically for that product. Rather than create a physical copy of the shipping page under each product node, we’re going to use a custom Content Finder to clone a single page of content.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Within the back-office I’ve created a new document type that acts purely as a container for our virtual content. In the following screenshot you can see a node called </span>Virtual product child page <span style="font-weight: 400;">which is of document type </span>VirtualContent<span style="font-weight: 400;">. </span></p>
+<p><img style="width: 500px; height: 268.2291666666667px;" src="/archive/media/2019/backoffice.png?width=500&amp;height=268.2291666666667" alt="Umbraco back-office" data-udi="umb://media/d5a032567f9b433b82b0949710ba289b"><br><br></p>
+<p><span style="font-weight: 400;">Under this I’ve allowed content nodes of type </span>Content Page<span style="font-weight: 400;"> to be added. This is an existing document type within the starter kit.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">We can now create a new page of content called </span>Shipping costs<span style="font-weight: 400;">. This is the page of content we’d like returned if requested under each product. E.g. </span><a href="http://localhost:58162/products/biker-jacket/shipping-costs"><span style="font-weight: 400;">/products/biker-jacket/shipping-costs</span></a></p>
+<p> </p>
+<p><span style="font-weight: 400;">For this to happen we need to create our custom Content Finder so that Umbraco will orchestrate this non-stock approach for this type of request.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">The code below is commented to explain what is happening. </span></p>
+<p> </p>
+<pre><code class="language-csharp">using System;
+using System.Linq;
+using Umbraco.Core;
+using Umbraco.Core.Composing;
+using Umbraco.Core.Services;
+using Umbraco.Web;
+using Umbraco.Web.Routing;
+
+namespace Umbraco_8.ContentFinder
+{
+    public class DemoContentFinder : IContentFinder
+    {
+        private readonly IContentTypeService _contentTypeService;
+
+        public DemoContentFinder(IContentTypeService contentTypeService)
+        {
+            _contentTypeService = contentTypeService;
+        }
+
+        public bool TryFindContent(PublishedRequest request)
+        {
+            // Abort if not enough URL segments found
+            if (request.Uri.Segments.Length &lt;= 1)
+            {
+                return false;
+            }
+
+            var virtualSegment = request.Uri.Segments.Last();
+
+            var parentUri = request.Uri.Segments.Take(request.Uri.Segments.Length - 1);
+            var parent = request.UmbracoContext.Content.GetByRoute(string.Join("/",parentUri));
+
+            // Abort if parent of requested content is not of type "Product"
+            if (!parent.ContentType.Alias.Equals("product", StringComparison.InvariantCultureIgnoreCase))
+            {
+                return false;
+            }
+
+            // Find the virtual content container (This holds all our virtual content)
+            var virtualContentType = request.UmbracoContext.Content.GetContentType("virtualContent");
+            var virtualContent = request.UmbracoContext.Content.GetByContentType(virtualContentType).FirstOrDefault();
+
+            if (virtualContent == null)
+            {
+                return false;
+            }
+
+            // Find the virtual content
+            var content = virtualContent.Descendants().FirstOrDefault(x =&gt;
+                x.IsPublished() &amp;&amp; x.UrlSegment.Equals(virtualSegment, StringComparison.InvariantCultureIgnoreCase));
+
+            if (content == null)
+            {
+                return false;
+            }
+
+            // Finally return the virtual content
+            request.PublishedContent = content;
+            request.TrySetTemplate(content.GetTemplateAlias());
+            return true;
+        }
+    }
+
+    [RuntimeLevel(MinLevel = RuntimeLevel.Run)]
+    public class UpdateContentFindersComposer : IUserComposer
+    {
+        public void Compose(Composition composition)
+        {
+            // Add our custom MyContentFinder just before the core ContentFinderByUrl...
+            composition.ContentFinders().InsertBefore&lt;ContentFinderByUrl, DemoContentFinder&gt;();
+        }
+    }
+}
+</code></pre>
+<p><span style="font-weight: 400;">In essence there are two underlying parts to the code above. </span></p>
+<p> </p>
+<p><span style="font-weight: 400;">The first is that we’ve created some logic to identify when an incoming request is for a child of a products page. If so, we find and return the  appropriate page of virtual content.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">The second is we've registered our custom Custom Finder, which in our case is a single line to instruct Umbraco to use it for incoming requests before it’s own default Content Finder.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Now if we try our request to /products/biker-jacket/shipping-costs we see the following.</span></p>
+<p><img style="width: 500px; height: 268.2291666666667px;" src="/archive/media/2019/virtual-page.png?width=500&amp;height=268.2291666666667" alt="Virtual page of content" data-udi="umb://media/ae5ec81129bb45f489b251b3a4f5571d"><br><br></p>
+<p><span style="font-weight: 400;">Success, we are seeing an abstract page of content that doesn’t actually exist in the content tree in that position.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">I’ve put together quite a contrived example for this article that makes use of the Umbraco 8 starter kit, mostly as a way to make trying to present using a custom Content Finder in an approachable way.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">We've only scratched the surface of what can be achieved through custom Content Finders. I mentioned at the start of this article that I’ve successfully used this approach for a number of websites operated by Greene King to enable their editors to much more easily manage content at scale without duplication.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">For that project we extended the concept further with abilities like filtering. This means that a piece of virtual content can be configured to only be shown in specific places across the website, rather than always being shown as a child of certain content.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">We also added tokenisation into Umbraco so that a page of virtual content could contain tokens that would be replaced when it was rendered. This means that information about the parent page can be pulled in to further customise the experience based upon the context of where the content is being viewed.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Hopefully this article has given you some idea about what is possible through the use of custom Content Finders and the type of approaches it can unlock. Stay abstract!</span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/seo/" title="See all articles tagged with SEO">SEO</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Peter Bridger"><img src="//gravatar.com/avatar/3751f2cfdef276c78476b82321d5f5a8.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/3751f2cfdef276c78476b82321d5f5a8.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Peter Bridger</h1>
+        <p>Peter is on Twitter as <a href="//twitter.com/PeterBridger" title="Peter Bridger on Twitter" rel="author">@PeterBridger</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

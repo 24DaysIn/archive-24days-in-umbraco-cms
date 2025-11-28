@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Moving 24 Days into the cloud</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Into the Cloud</h1>
+      <p class="byline"> by Chriztian Steinmeier, <span class="pubdate">posted on <time datetime="2016-12-24">Dec 24, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">This year we finally got our act together and did two of those to-do-thingies we'd really been wanting to do for a least a couple of years:</p>
+<ol>
+<li>Upgrade the site to (or start over in) Umbraco 7</li>
+<li>Move to Umbraco Cloud</li>
+</ol>
+<h2>Umbraco 7</h2>
+<p class="intro">We actually tried setting up a version of the site on Umbraco 7 in October/November of last year (2015) but never managed to finish it before we had to execute on all the usual stuff needed when ramping up for a new calendar.</p>
+<p> </p>
+<p>The original site was built on Umbraco 4.10.1 and never got upgraded - but this year, we even managed to squeeze in a redesign!</p>
+<p> </p>
+<h3>Packages</h3>
+<p> </p>
+<p>Let me just take a moment here and praise a couple of packages we use in the backoffice, that I really think you should know about:</p>
+<p> </p>
+<ol>
+<li><a href="https://our.umbraco.org/projects/backoffice-extensions/switcher/">Switcher</a> from <a href="https://twitter.com/bfyrstenborg">Bjarne Fyrstenborg</a> is one of my favorites. It's a fabulous replacement for the standard <strong>True/False</strong> checkbox, with dual labels, a default value and a color setting. Try it!<br><img style="width: 500px; height: 114.72742066720912px;" src="/archive/media/2016/switcher-off.png?width=500&amp;height=114.72742066720912" alt="" rel="1576" data-id="1576"><br><img style="width: 500px; height: 114.72742066720912px;" src="/archive/media/2016/switcher-on.png?width=500&amp;height=114.72742066720912" alt="" rel="1575" data-id="1575"></li>
+<li><a href="https://our.umbraco.org/projects/backoffice-extensions/styled-textbox/">Styled Textbox</a> from <a href="https://twitter.com/kevinjump">Kevin Jump</a> serves as a great replacement for the <strong>Textstring</strong> editor when you need to add placeholder text or if you want to style it just a little teeny-tiny bit. Oh, and it does character count as well!<br><img style="width: 500px; height: 122.05731832139202px;" src="/archive/media/2016/styled-textbox.png?width=500&amp;height=122.05731832139202" alt="" rel="1574" data-id="1574"></li>
+</ol>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>Umbraco Cloud</h2>
+<p> </p>
+<p>This year has already seen a <a href="http://24days.in/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/">couple of</a> <a href="http://24days.in/umbraco-cms/2016/first-time-with-umbraco-cloud/">great articles</a> about this new awesome thing, but I'll just cover some of my own experiences...</p>
+<p> </p>
+<h3>Deployment</h3>
+<p> </p>
+<p>For a relatively simple site as this, Umbraco Cloud is a <em>really</em> good place to be. I'm constantly amazed by the simpleness of operation I can get by with, given I know how much stuff is being done behind the scenes when I press the Deploy button. Major kudos to all who worked on this product!</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h3>My Precioussss URL...</h3>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>When I <a href="http://24days.in/umbraco-cms/2012/wrapping-up/">wrapped up the first year's calendar</a> I wrote a little about how we built the site and how I had problems placing the backoffice on another URL than the default /umbraco/ — this year I kinda just accepted that moving to Umbraco Cloud I would have to let go of that requirement — but I needed to make sure that all the URLs for the previous 4 years of articles would be redirected to their new home on the /umbraco-cms/ path (with the lovely <em>301 Moved Permanently</em> status code that tells browsers and bots to ditch that old URL because this new one's the shizzle now).</p>
+<p> </p>
+<p>Now, the old me would have used <strong>UrlRewriting.config</strong> for this, but the new me has been told numerous times by <a href="https://twitter.com/cultiv/">Sebastiaan</a> to use the <strong>IIS Rewriting Module</strong> which has been available for quite some time. "Well what's the difference?" you might ask - and I don't know all the good reasons, but the one I liked immediately was the fact that IIS rewrite rules happen <em>before</em> Umbraco even sees the request, which is perfect for this. </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>The IIS Rewrite Module's rules reside in <strong>Web.config</strong>, but do yourself a favor and <a href="http://ruslany.net/2010/05/storing-url-rewrite-mappings-in-a-separate-file/">put them in a separate file</a> by using the <span class="code">configSource</span> attribute. </p>
+<p> </p>
+<p>Here's the simple rule that ensures a request for an old article gets redirected:</p>
+<p> </p>
+<pre><code class="language-markup">&lt;rule name="Redirect from old site"&gt;
+	&lt;match url="^umbraco/(201[2-9])/(.*)$" /&gt;
+	&lt;action type="Redirect" url="/umbraco-cms/{R:1}/{R:2}" redirectType="Permanent" /&gt;
+&lt;/rule&gt;</code></pre>
+      <p class="snippet-caption">Rewrite rule to redirect from /umbraco/ to /umbraco-cms/</p>
+<p> </p>
+<p>  </p>
+<p> </p>
+<p>(Be smart and set <span class="code">redirectType="Found"</span> until you've confirmed everything works as expected - it's way easier to debug :-)</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>(If you want to know more about redirects, <a href="https://twitter.com/NJEllegaard">Niels Ellegaard</a> wrote a <a href="http://24days.in/umbraco-cms/2014/redirect-rules/">very thorough article</a> two years ago.)</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>Archival</h2>
+<p> </p>
+<p>Since the first thought of migrating/moving to Umbraco 7 occurred, I had a pretty good idea about how to handle the old articles in a way that didn't force us to replicate the Document Types (and thus miss out on new available functionality etc.).</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>We already had a way to export <em>everything</em> to an XML format suitable for building the EPUBs, so creating an archive template and a macro for rendering the <strong>List</strong> and <strong>Post</strong> views was pretty straightforward. So the <strong>YearArchive</strong> doctype just has an <strong>XML File</strong> picker property that selects a single XML file containing all of that year's articles. This also means that none of the archived articles have their own Umbraco node, so they're all rendered on the <strong>YearArchive</strong> node — i.e., their URLs are rewritten using this rule:</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<pre><code class="language-markup">&lt;rule name="Rewrite archived articles"&gt;
+	&lt;match url="^umbraco-cms/(201[2-5])/([!\(\)_0-9=a-z-]+)(/?)$" /&gt;
+	&lt;action type="Rewrite" url="/umbraco-cms/{R:1}/?article={R:2}" /&gt;
+&lt;/rule&gt;
+</code></pre>
+      <p class="snippet-caption">Rewrite rule to rewrite URLs for archived articles</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>I'm fully aware that using a <strong>ContentFinder</strong> might accomplish this too in some way, but I much prefer a rewrite, if it solves the problem.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>Them Comments</h2>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>One very important feature on the site has always been the comments — we're using <a href="https://disqus.com">Disqus</a> which has been working very well, so I was of course a little anxious to know if changing an article's URL would mean that it lost its comments, since the JavaScript uses a document's URL and an identifier to associate them?</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>No problem at all - if you've set up 301 redirects for all your URLs they have a scraping tool you can run OR you can do what we ended up doing: Make sure to provide the correct identifier when writing the script to the page; so I just added a <span class="code">disqusID</span> attribute to the exported articles and use that when rendering the inline script.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Once again, I'd worried way too much about it ahead of time :)</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>Roll The Credits</h2>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Thanks to <a href="https://twitter.com/therealbatjan">Jan Skovgaard</a> for all the heavy-lifting behind the scenes of getting people to "sign up" for this, and for making them stick to it and deliver - it simply wouldn't be possible if it weren't for that!! <em>#h5yabeer</em> </p>
+<p> </p>
+<p>Thanks a bunch to <a href="https://twitter.com/aggerbo">Mikkel Aggerbo</a> for coming up with a nice, clean design to celebrate the move to Umbraco 7, Umbraco Cloud, and 5 years of “calendaring” for all the umbracians in the world!</p>
+<p> </p>
+<p>Also huge thanks to <a href="https://twitter.com/dawoe21">Dave Woestenborghs</a> for helping out this year - it's a major boost to your own commitment when someone offers to help with what you're doing!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/umbraco-cloud/" title="See all articles tagged with Umbraco Cloud">Umbraco Cloud</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Chriztian Steinmeier"><img src="//gravatar.com/avatar/286ea7abe73e582c6254956992406a0f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/286ea7abe73e582c6254956992406a0f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Chriztian Steinmeier</h1>
+        <p>Chriztian is on Twitter as <a href="//twitter.com/greystate" title="Chriztian Steinmeier on Twitter" rel="author">@greystate</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

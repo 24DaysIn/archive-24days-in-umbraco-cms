@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Building from Blueprints</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Building from Blueprints</h1>
+      <p class="byline"> by Lars-Erik Aabech, <span class="pubdate">posted on <time datetime="2017-12-21">Dec 21, 2017</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h3>The birth of "content templates"</h3>
+<div>I had had this idea brewing for a long time that some kind of templating was needed to ease editors into using the grid.  I came up with a "templatable grid" that was floating around as open source (and a beta-package) for a while. It served some of the purpose. In some discussion, probably on Twitter, Lee Kelleher commented that templates would be useful for all properties. After all, there was a complete lack of default values for property editors or properties unless they had their own implementation.</div>
+<div>This summer I was lucky enough to be invited to the Umbraco retreat. I brought this luggage and proposed we killed the default value problem once and for all. I'd also figured that the simplest way would really be to allow for templated content. And to do that we could just add</div>
+<div>one more <span class="code"><a rel="noopener noreferrer" href="https://github.com/umbraco/Umbraco-CMS/blob/dev-v7/src/Umbraco.Core/Constants-ObjectTypes.cs" target="_blank">NodeObjectType GUID</a></span> to the core, then re-use all the content apis. It was that simple!</div>
+<div>To my joy, it was accepted as a good idea. It took Jaevon Leopold, Shannon Deminick and me around 20 minutes to flesh out the requirements  and technical how-to. Then we spent 20-30 minutes figuring a nice name. After all "template" was taken, so we couldn't just go ahead and call it "content templates", could we? After scanning hundreds of synonyms for "template" we stumbled upon "blueprint" and finally agreed that was a good term. We made the feature and it was actually complete in two (long) days of work. I was even more happy when it was released nice and polished in version 7.7. But guess what? </div>
+<div>It's named "content templates".</div>
+<h3>How does it work</h3>
+<div>When Jan Skovgaard asked me to write for 21 days in Umbraco, he proposed I'd write about content templates. I was a bit unsure it was a good idea since it's so bloody simple. And besides, Kevin Giszewski has already made a <a href="https://www.youtube.com/watch?v=AEutrBnXZ-Q">brilliant video tutorial</a> about it.</div>
+<div>It can be summed up in a few simple points:</div>
+<ul>
+<li>Editors (with permission) can save a document node as a content template</li>
+<li>All editors get an option when creating contnet to base it on existing content templates</li>
+<li>Users with access to settings can manage content templates
+<ul>
+<li>Templates are organized by document type</li>
+<li>Templates can be edited as with content</li>
+</ul>
+</li>
+</ul>
+<div>So what else is this article about then? Well, I hope you got a nice story. But what I've really wanted to write about for the community for a while is unit testing JavaScript. And the thing is - most of the code I did for content templates was the UX for creating and selecting them with dialogs. Shannon did the bulk of the work to re-use the existing content APIs. But we made sure to compete about the most test coverage. The result on my part was that Umbraco's client-side test count grew from 128 to 136 tests. I pray to the binary gods that this number _will_ increase. At least my tests still pass with the latest commit in the core.</div>
+<div>So if you want to, tag along for a tour of the JavaScript tests I wrote, otherwise, I hope you enjoyed the story. <em>But wait! There's is a small hidden feature of content templates at the end you might want to check out.</em></div>
+<div>For the next part, we'll be writing "blueprint" descriptions of the features we want and then proving them with tests afterwards. Hence the title: building from blueprints. It's TDD, really! :) (TDD is short for "Test Driven Development")</div>
+<h3>The prerequisites</h3>
+<div>To be effective with JavaScript testing; and all those hot-shot ninja JavaScript techiques these days; you need to be able to fire off NPM tasks in Visual Studio (NPM stands for Node.js Package Manager). Granted, you can be a real ninja and just use the CLI (Command Line Interface), but installing <a rel="noopener noreferrer" href="https://marketplace.visualstudio.com/items?itemName=MadsKristensen.NPMTaskRunner" target="_blank">Mads Kristensen's NPM Task Runner</a> is a lifesaver. It enables you to run frequent tasks by doubleclicking within a window in VS and seeing the output right there.</div>
+<div>With that out of the way we can have a look at what's required to test JavaScript. Given we're testing stuff for the backoffice in Umbraco (property editors, grid editors, dashboards and whatnot) we're stuck with <a rel="noopener noreferrer" href="https://code.angularjs.org/1.1.5/docs/guide" target="_blank">Angular 1.1.5</a> for now. So that's a requirement. Angular 1.1.5 was pretty tight with the <a rel="noopener noreferrer" href="https://jasmine.github.io/" target="_blank">Jasmine testing framework</a>, and it's one of the few frameworks that support our setup. Jasmine is also a requirement.</div>
+<div>Finally, we need a test runner. Previously, I've been using Resharper and PhantomJS to run tests ad hoc while writing them. But it's quite quirky, and it's not very useful with build servers and sharing runnable code. The team at Google produced a test runner several years ago called "Testacular". It later evolved into <a rel="noopener noreferrer" href="https://karma-runner.github.io/1.0/index.html" target="_blank">the Karma test runner</a>. Karma is what Umbraco use and what we're going to use here. It runs on node, so it fits well with the toolset we've set up.</div>
+<div>When writing pull-requests for Umbraco, there is already a task you'll find in the NPM  task runner called "test:unit". Karma is set up to look for <span class="code">*.spec.js</span> files, so any file in the Umbraco.Web.UI.Client project named like that will be executed. You can find Umbracos own JavaScript tests under <span class="code">Umbraco.Web.UI.Client\test\unit</span>.</div>
+<div>When you roll your own JavaScript projects, there might be newer, fancier, better ways. But if you want to stick to the basics, here's the gist of it:</div>
+<h3>Node packages</h3>
+<div>Any proper JavaScript cowboy has a <span class="code">package.json</span> file these days. If you don't, I think you'll have an "add item" option in Visual Studio after installing the NPM task runner. You'll need a couple of <span class="code">"devDependencies"</span>. Here's a simple setup:</div>
+<div>
+<pre><code class="language-json">{
+    "version": "1.0.0",
+    "name": "my.plugin",
+    "private": true,
+    "scripts": {
+        "test": "karma start"
+    },
+    "devDependencies": {
+        "karma": "1.5.0",
+        "karma-chrome-launcher": "2.0.0",
+        "jasmine": "2.5.3",
+        "karma-jasmine-html-reporter": "0.2.2",
+        "karma-ng-html2js-preprocessor": "0.2.0"
+    }
+}</code></pre>
+</div>
+<p>This will add a folder called <span class="code">node_modules</span> in your webproject. The packages will be installed automagically just like with Nuget. You should be so lucky that <span class="code">node_modules</span> is already mentioned in <span class="code">.gitignore</span>, but if it isn't, make sure at once! You don't want those packages in source control.</p>
+<div>It will also add an option to your package runner called test that you can use for running the tests.</div>
+<h3>Setting up Karma</h3>
+<div>Karma is basically a simple webserver who's main mission is to execute tests with some framework. I looks for a test framework, files to feed it and how to report the results. Here's a typical <span class="code">karma.conf.js</span> file lying somewhere in a client-side tested project. In Umbraco it's <span class="code">Umbraco.Web.UI.Client\test\config\karma.conf.js</span>. I like to just keep it at root and set Build Option to None so it's not included when I publish.</div>
+<div>
+<pre><code class="language-javascript">module.exports = function(config) {
+    config.set({
+        files: [
+            "umbraco/lib/angular/1.1.5/angular.js",
+            "umbraco/lib/angular/1.1.5/angular-mocks.js",
+            "umbraco/lib/jquery/jquery.min.js",
+            "App_Plugins/MyPlugin/**/*.module.js",
+            "App_Plugins/MyPlugin/**/*.js",
+            "App_Plugins/MyPlugin/**/*.html"
+        ],
+        preprocessors: {
+            "App_Plugins/MyPlugin/**/*.html": ["ng-html2js"]
+        },
+        frameworks: [
+            "jasmine"
+        ],
+        reporters: [
+            "progress",
+            "kjhtml"
+        ],
+        browsers: [
+            "Chrome"
+        ],
+        client: {
+            clearContext: false
+        },
+        ngHtml2JsPreprocessor: {
+            prependPrefix: "/",
+            moduleName: "my.plugin"
+        }
+    });
+}</code></pre>
+</div>
+<div>The first part is a list of files to serve with the webserver. You'll typically start with the least dependent on top, and end up with the details of your implementation near the bottom. Remember to include your module declarations before your implementations.</div>
+<div>Second we'll process all HTML for the views. This has been mitigated in newer versions of Angular, but for our purposes we need to "fool" angular with generated JavaScripts containing our views. Including "ng-html2js" makes this process automagic, so we really don't have to mind. This is due to some quirks with making the Angular <span class="code">$http</span> service testable.</div>
+<div>Further, with <span class="code">frameworks</span> and <span class="code">reporters</span>, we tell Karma to use the Jasmine framework, and report the test results using <span class="code">progress</span> and <span class="code">kjhtml</span>. Progress shows an increasing amount of red or green dots - one per test - while running your suite. KJHTML writes the test names and results to the browser as well (highly useful).</div>
+<div>Finally we say we want the result in Chrome and that the results should be kept around (<span class="code">clearContext: false</span>). If you leave <span class="code">clearContext</span> to the default <span class="code">true</span> the test-results will be gone as soon as the testrun completes.</div>
+<div>The final bit is just boilerplate config for the HTML-to-JS conversion. Remember to set your  module name.</div>
+<h3>Bringing the ContentEditor Controller under test</h3>
+<div>For the content templates, I didn't add any GUI tests. The existing setup doesn't include the "ng-html2js" module, so we'll ignore that for now. What I did test extensively was the logic I added to the existing <span class="code">Umbraco.Editors.Content.CreateController</span>. It's the Angular controller controlling the dialog you see when you create new content in the backoffice. We'd added some of the serverside logic, so it was time to flesh out the UX when creating content <em>from</em> templates.</div>
+<div>Just to get going, I started verifying what was already there. The first thing that happens is that it shows allowed types like so:</div>
+<div><img style="width: 500px; height: 196.27659574468086px;" src="/archive/media/2017/creating-content.png?width=500&amp;height=196.27659574468086" alt="" data-udi="umb://media/30a7782bd5084de6bca66dc06c0cd5e8"></div>
+<div>To prove it, I had to look around a bit in the existing code. Turns out it retrieves and shows items from an <span class="code">allowedTypes</span> field on the scope. And that's it:</div>
+<div>
+<pre><code class="language-javascript">function contentCreateController($scope, $routeParams, contentTypeResource, iconHelper) {
+    contentTypeResource.getAllowedTypes($scope.currentNode.id).then(function(data) {
+        $scope.allowedTypes = iconHelper.formatContentTypeIcons(data);
+    });
+}</code></pre>
+</div>
+<div>Let's prove that with a test:</div>
+<div>
+<pre><code class="language-javascript">describe("create content dialog", function() {
+
+    var allowedTypes = [
+            { id: 1, alias: "x" },
+            { id: 2, alias: "y" }
+        ];
+
+    it("shows available child document types for the given node", function() {
+        expect(scope.allowedTypes).toBe(allowedTypes);
+    });
+
+});</code></pre>
+</div>
+<div>A Jasmine test consists of a <span class="code">describe()</span> call with a top-level description and a function in which several <span class="code">it()</span> calls define the behavior. It's like a test fixture and a test in NUnit. To verify stuff we call <span class="code">expect()</span> to create an assertion object we can  use to define expectations. In this case, we expect that an array of allowed types is present on the controller's scope.</div>
+<div>Of course, we don't have a scope yet, and much less anything that initializes that field on it. If we run the test, it'll fail because <span class="code">scope.allowedTypes</span> is undefined. To run the test, you'll double click "test:unit" in the Task Runner Explorer.</div>
+<div><img style="width: 500px; height: 111.68981481481482px;" src="/archive/media/2017/task-runner-explorer-running-karma.png?width=500&amp;height=111.68981481481482" alt="" data-udi="umb://media/9a99c2e0e28b4a86ade434d5307ad6f5"></div>
+<div>The Angular testing helpers (angular.mocks.js) comes with some functions to start up a subset of your Angular application for testing. The two main methods are <span class="code">module</span> and <span class="code">inject</span>. Coupled with Jasmine's <span class="code">beforeEach</span> we can bring Umbraco under test and get a hold of the controller factory:</div>
+<div>
+<pre><code class="language-javascript">describe("create content dialog", function() {
+
+    var scope = {},
+        controller,
+        allowedTypes = // omitted for readability
+
+    beforeEach(module("umbraco"));
+
+    beforeEach(inject(function($controller) {
+        controller = $controller("Umbraco.Editors.Content.CreateController");
+    }));
+
+    // omitted for readability
+
+});</code></pre>
+</div>
+<div>The <span class="code">module</span> call will load all of the services, controllers, directives and whatnot from the "umbraco" module. At least the ones pointed to from karma.conf.js. It's the testing equivalent to adding <span class="code">ng-app="umbraco"</span> in an HTML page.</div>
+<div>The <span class="code">inject</span> call is a special call that will be analyzed for dependencies and fed Angular's internal services. We need the controller factory named <span class="code">$controller</span>. It is named a bit misleading since it actually creates controllers. We can ask it for the one registered as "Umbraco.Editors.Content.CreateController". However, it won't do us much good yet. We saw that it depends on the <span class="code">contentTypeResource</span> in Umbraco's resource services. It will be concrete, and it will try calling the WebApi endpoint for content on the Karma webserver. It isn't there!</div>
+<h3>Stubbing out the content resource</h3>
+<div>Fortunately and at the same time horrifying, JavaScript is dynamically typed. There are no casting exceptions, no nothing. We can pass anything to anything. As long as we're dilligent with tests, there's nothing wrong with that. It's actually a benefit. In C# we'd have to write full fakes or dig out some scary mocking framework. JavaScript IS one big stubbing framework.</div>
+<div>To get rid of the <span class="code">contentTypeResource</span> dependency, we can merely create one. It doesn't have to have al the functions the original has, just the ones we use in the controller. Normally we'd just initialize it in the <span class="code">describe</span> scope, but we need to return an Angular promise from the <span class="code">getAllowedTypes</span> function. In order to create a promise, we need the <span class="code">$q</span> service from Angular. If you're sharp you remember we can have Angular services handed to us in the inject function, so we extend it with another parameter we store in the outer scope:</div>
+<div>
+<pre><code class="language-javascript">    var scope = {},
+        q,
+        // rest omitted for readability
+
+    beforeEach(inject(function($controller, $q) {
+        q = $q;
+        controller = $controller("Umbraco.Editors.Content.CreateController");
+    }));
+
+    // ...</code></pre>
+</div>
+<div>Now we can easily create a fake resource. When it's ready, we can pass the <span class="code">$controller</span> function a map of dependencies to use instead of the ones it would inject in production.</div>
+<div>
+<pre><code class="language-javascript">    var scope = {},
+        q,
+        contentTypeResource
+        // rest omitted for readability
+
+    beforeEach(inject(function($controller, $q) {
+        q = $q;
+        contentTypeResource = {
+          getAllowedTypes: function() {
+            var def = $q.defer();
+            def.resolve(allowedTypes);
+            return def.promise;
+          }
+        };
+        controller = $controller("Umbraco.Editors.Content.CreateController", {
+            contentTypeResource: contentTypeResource
+        });
+    }));</code></pre>
+</div>
+<div>Finally to get something on our scope, we need to create one from Angular's  <span class="code">$rootScope</span> instance and pass that to <span class="code">$controller</span> as well:</div>
+<div>
+<pre><code class="language-javascript">    beforeEach(inject(function($controller, $q, $rootScope) {
+        // ...
+        scope = $rootScope.$new();
+        scope.currentNode = { id: 1234 };
+        controller = $controller("Umbraco.Editors.Content.CreateController", {
+            $scope: scope,
+            contentTypeResource: contentTypeResource
+        });
+    });</code></pre>
+</div>
+<div>Test test now passes! The resource it calls calls the function we created. The <span class="code">iconHelper.formatContentTypeIcons</span> is real code running over our fake result, but it doesn't do any IO, so it's fine in a unit test.</div>
+<div>If you're wondering how I figured out I needed to set <span class="code">scope.currentNode</span> with a map and an ID, it's all right. I debugged! I dug around at runtime until I found out "how they do it". Make sure to enable debug in web.config so you get non-minified scripts to read.</div>
+<h3>Adding our features</h3>
+<div>If there were more untested code in the controller, I'd keep adding tests proving the <em>existing</em> untested code before venturing further. I'll be completely confident I won't break the existing behavior when I add my code. It's not entirely true - we can't test the stuff that's initiated from the view when not testing through GUI. We can only emulate it. But at least we're safer than when just hacking away.</div>
+<div>Speaking of views, with that slim controller, how is content creation actually initiated? Turns out it's a simple hashbang link in the view:</div>
+<div>
+<pre><code class="language-markup">    ...
+    &lt;a href="#content/content/edit/{{currentNode.id}}?doctype={{docType.alias}}&amp;create=true" ng-click="nav.hideNavigation()"&gt;
+    ...</code></pre>
+</div>
+<div>I want to be able to show another dialogue if there are blueprints, so it can't be hardcoded like that. We could've interpolated the whole href attribute, but I thought it better to extend the click event. The whole URL goes into a function on the controller instead and the <span class="code">ng-click</span> attribute is modified to match:</div>
+<div>
+<pre><code class="language-markup">    ...
+    &lt;a ng-click="goToAction(docType)"&gt;...&lt;/a&gt;
+    ...</code></pre>
+</div>
+<div>The controller:</div>
+<div>
+<pre><code class="language-javascript">    $scope.goToAction = function(docType) {
+        $location.path( "/content/edit/" +
+        $scope.currentNode.id +
+        "?doctype=" +
+        docType.alias +
+        "&amp;create=true"
+        );
+        navigationService.hideNavigation();
+    }</code></pre>
+</div>
+<div>But wait! How can we test that the browser location was already set without redirecting the whole testing routine? After all, it's running in a fake browser (PhantomJS). We do it the same way we got rid of the <span class="code">contentTypeResource</span>. We fake it. However, we have another way of spying on, and prohibiting the actual <span class="code">$location</span> service in Angular.</div>
+<div><em>The really awake readers out there will have arrested me for not doing TDD right now. I'm writing production code before a test! It's all right. Sometimes you'll have to pop out to the browser and just hack for a while. As long as you keep it short, then hurry back and  harness the beast in a test. Amongst other things like "hacking" it's known as <a rel="noopener noreferrer" href="https://lizkeogh.com/2012/06/24/beyond-test-driven-development/" target="_blank">spiking and stabilizing</a>.</em></div>
+<h3>Jasmine spies</h3>
+<div>Back to spying on the <span class="code">$location</span> service. As before, we need to get hold of it from the <span class="code">inject</span> call during startup:</div>
+<div>
+<pre><code class="language-javascript">    var // ...
+        location;
+    
+    beforeEach(inject(function ($controller, $q, $rootScope, $location) {
+        // ...
+        location = $location;
+        // ...
+    }</code></pre>
+</div>
+<div>Now we can employ Jasmine's <span class="code">spyOn</span> method to verify that <span class="code">$location.path()</span> was called. The assertion object has a special method for spies called <span class="code">toHaveBeenCalledWith()</span>. We can use that after spying on path:</div>
+<div>
+<pre><code class="language-javascript">    it("creates content directly when there are no blueprints", function() {
+        spyOn(location, "path");
+
+        scope.goToAction(allowedTypes[0]);
+
+        expect(location.path).toHaveBeenCalledWith("/content/content/edit/1234?doctype=x&amp;create=true");
+    });</code></pre>
+</div>
+<div>Alas, this doesn't pass. Turns out location.path was "only" called with the absolute URL. There's some special magic voodoo going on that I can't explain. The fact of the matter is that the querystring was sent in there, but it can only be traced on a searcher that's been returned by <span class="code">location.path</span>. When spying on functions, we can also instruct Jasmine not to do anything and return something of our choice instead. We can add a searcher to spy on and have it used as such:</div>
+<div>
+<pre><code class="language-javascript">    var searcher = { search: function() {} };
+    spyOn(location, "path").and.returnValue(searcher);
+    spyOn(searcher, "search");</code></pre>
+</div>
+<div>Then we modify the existing expect add an extra assertion on the searcher:</div>
+<div>
+<pre><code class="language-javascript">    expect(location.path).toHaveBeenCalledWith("/content/content/edit/1234");
+    expect(searcher.search).toHaveBeenCalledWith("doctype=x&amp;create=true");</code></pre>
+</div>
+<div>The test passes. So we have successfully refactored the existing code to be testable.</div>
+<h3>What about blueprints</h3>
+<div>Now we're ready to add some functionality. When there <em>are</em> content templates available we want to see a list of those instead of creating the content. Let's add a test. While I'd been building my safety net, Shannon had extended the server side content resource API to expose blueprints as a dictionary on allowed content types. I could extend my fake allowedTypes with some templates:</div>
+<div>
+<pre><code class="language-javascript">    var scope,
+        allowedTypes = [
+          { id: 1, alias: "x" },
+          { id: 2, alias: "y", blueprints: { "1": "a", "2": "b" } }
+        ],
+        // ...</code></pre>
+</div>
+<div>So if we select <span class="code">allowedTypes[1]</span> we should see a selection of templates instead of going to the create page. So what should we verify? I added another <span class="code">div</span> to the create dialog and added a couple of simple <span class="code">ng-show="[boolean]"</span> directives. It seemed the easiest thing to do. The new div needed to show a list of blueprints, so I added an iteration over <span class="code">docType.blueprints</span>.</div>
+<div>
+<pre><code class="language-markup">    &lt;ul class="umb-actions umb-actions-child" ng-show="selectContentType"&gt;
+      ...
+      &lt;li ng-repeat="docType in allowedTypes | orderBy:'name':false"&gt;
+        &lt;a ng-click="goToAction(docType)"&gt;
+          ...
+
+    &lt;ul class="umb-actions umb-actions-child" ng-show="selectBlueprint"&gt;
+      &lt;li ng-repeat="(key, value) in docType.blueprints | orderBy:'name':false"&gt;
+        ...</code></pre>
+</div>
+<div>And there in the view is now what I need to assert:</div>
+<div>
+<pre><code class="language-javascript">    it("shows list of blueprints when there are some", function() {
+        scope.goToAction(allowedTypes[1]);
+        expect(scope.selectContentType).toBe(false);
+        expect(scope.selectBlueprint).toBe(true);
+        expect(scope.docType).toBe(allowedTypes[1]);
+    });</code></pre>
+</div>
+<div>To have the test pass, we just add the required code to the controller:</div>
+<div>
+<pre><code class="language-javascript">    function contentCreateController($scope,
+        $routeParams,
+        contentTypeResource,
+        iconHelper,
+        $location,
+        navigationService) {
+
+        contentTypeResource.getAllowedTypes($scope.currentNode.id).then(function (data) {
+            $scope.allowedTypes = iconHelper.formatContentTypeIcons(data);
+        });
+
+        $scope.selectContentType = true;
+        $scope.selectBlueprint = false;
+        $scope.docType = {};
+
+        $scope.goToAction = function(docType) {
+            if (docType.blueprints &amp;&amp; docType.blueprints.length &gt; 0) {
+                $scope.selectContentType = false;
+                $scope.selectBlueprint = true;
+                $scope.docType = docType;
+            } else {
+                $location.path( "/content/edit/" + 
+                    $scope.currentNode.id +
+                    "?doctype=" +
+                    docType.alias +
+                    "&amp;create=true"
+                );
+                navigationService.hideNavigation();
+            }
+        }
+
+    }</code></pre>
+</div>
+<div>It passes, and we're off to testing that it passes more parameters when creating content from templates.</div>
+<h3>The outcome</h3>
+<div>I'm sure you're getting the hang of it now, so to avoid ruining your workday I'll cut it short. From here there was more features, more refactoring, better names and whatnot. The final tests show a nice little summary of what happens when you create content templates:</div>
+<ul>
+<li>create content dialog
+<ul>
+<li>shows available child document types for the given node</li>
+<li>creates content directly when there are no blueprints</li>
+<li>shows list of blueprints when there are some</li>
+<li>creates from blueprint when selected</li>
+<li>skips selection and creates first blueprint when configured to</li>
+<li>allows blank to be selected</li>
+<li>creates blank when selected</li>
+<li>hides blank when configured to</li>
+</ul>
+</li>
+</ul>
+<div>What's that? Configuration? Yes, it's not very well documented yet, but here's a couple of hidden features:</div>
+<h3>Configuring content templates</h3>
+<div>Say you have a content type where you've prepared a template and want your editors to use only that template. You can add a JavaScript file to a package.manifest of your own and override the content template UI configuration as such:</div>
+<div>
+<pre><code class="language-javascript">angular.module("umbraco").value("blueprintConfig", {
+    skipSelect: true,
+    allowBlank: true
+});</code></pre>
+</div>
+<div>The <span class="code">skipSelect</span> value is <span class="code">false</span> by default. When set to <span class="code">true</span> content template selection will be skipped if there is <em>only one content template available</em>.</div>
+<div>Another case is when you have several templates, and you don't want to allow your editors to create documents from scratch at all. You already noticed the <span class="code">allowBlank</span> value above, so I'm sure you've deducted that the next example will be:</div>
+<div>
+<pre><code class="language-javascript">angular.module("umbraco").value("blueprintConfig", {
+    skipSelect: true,
+    allowBlank: false
+});</code></pre>
+</div>
+<div>With which editors will either just get content based on the only content template for a type, or choose between the content types available, but not from scratch.</div>
+<div>Now how about if you want to make this independent per document type?  <br>Well, you'll have to <a rel="noopener noreferrer" href="http://issues.umbraco.org/issue/U4-10351" target="_blank">say so on the issue tracker</a> for now, and there is an open PR with the following options:</div>
+<div>
+<pre><code class="language-javascript">angular.module("umbraco").value("blueprintConfig", {
+    skipSelect: true,
+    allowBlank: false,
+    contentTypes: {
+        "landingPage": {
+            skipSelect: false,
+            allowBlank: true
+        }
+    }
+});</code></pre>
+</div>
+<div>In which case the defaults will be overridden if the content type happen to be of the document type "landingPage".</div>
+<div>If you're hungry for more JavaScript testing, I've <a rel="noopener noreferrer" href="https://bitbucket.org/bleedo/umbraco-testing-workshop-h2-2017/src/?at=workshop-start" target="_blank">open sourced the workshop material from Umbraco UK Festival 2017</a>. Give it a shot, otherwise look for another workshop at some upcoming conference.</div>
+<div>
+<div>And with that, I wish you and all yours a very happy holiday!</div>
+</div>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Lars-Erik Aabech"><img src="//gravatar.com/avatar/37c881cba280339cb6faa2a152199b5a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/37c881cba280339cb6faa2a152199b5a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Lars-Erik Aabech</h1>
+        <p>Lars-Erik is on Twitter as <a href="//twitter.com/bleedo" title="Lars-Erik Aabech on Twitter" rel="author">@bleedo</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2017/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2017/codecabin-recipes/" title="CODECABIN Recipes"><span class="scr-text">CODECABIN Recipes</span></a></li>
+      <li><a href="/umbraco-cms/2017/social-anxiety/" title="Social Anxiety"><span class="scr-text">Social Anxiety</span></a></li>
+      <li><a href="/umbraco-cms/2017/infuse-ai-into-umbraco/" title="Infuse AI Into Umbraco"><span class="scr-text">Infuse AI Into Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mindful-mornings/" title="Mindful Mornings"><span class="scr-text">Mindful Mornings</span></a></li>
+      <li><a href="/umbraco-cms/2017/mistakes-i-have-made/" title="Mistakes I Have Made"><span class="scr-text">Mistakes I Have Made</span></a></li>
+      <li><a href="/umbraco-cms/2017/elasticating-examine/" title="Elasticating Examine"><span class="scr-text">Elasticating Examine</span></a></li>
+      <li><a href="/umbraco-cms/2017/feeding-a-companion-app-with-umbraco/" title="Feeding a Companion App with Umbraco"><span class="scr-text">Feeding a Companion App with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/novaware-multilingual-tools/" title="Novaware Multilingual Tools"><span class="scr-text">Novaware Multilingual Tools</span></a></li>
+      <li><a href="/umbraco-cms/2017/turn-your-umbraco-website-into-an-alexa-skill/" title="Turn your Umbraco website into an Alexa Skill!"><span class="scr-text">Turn your Umbraco website into an Alexa Skill!</span></a></li>
+      <li><a href="/umbraco-cms/2017/why-you-should-try-umbraco-cloud/" title="Why you should try Umbraco Cloud"><span class="scr-text">Why you should try Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-missing-controller/" title="The Missing Controller"><span class="scr-text">The Missing Controller</span></a></li>
+      <li><a href="/umbraco-cms/2017/similar-solutions-different-approaches/" title="Similar Solutions - Different Approaches"><span class="scr-text">Similar Solutions - Different Approaches</span></a></li>
+      <li><a href="/umbraco-cms/2017/contributing-to-open-source/" title="Contributing to Open-Source"><span class="scr-text">Contributing to Open-Source</span></a></li>
+      <li><a href="/umbraco-cms/2017/multilingual-validation-messages/" title="Multilingual Validation Messages"><span class="scr-text">Multilingual Validation Messages</span></a></li>
+      <li><a href="/umbraco-cms/2017/hidden-gems-for-umbraco-editors/" title="Hidden gems for Umbraco editors"><span class="scr-text">Hidden gems for Umbraco editors</span></a></li>
+      <li><a href="/umbraco-cms/2017/hands-on-with-umbraco/" title="Hands on with Umbraco"><span class="scr-text">Hands on with Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2017/mentoring/" title="Mentoring"><span class="scr-text">Mentoring</span></a></li>
+      <li><a href="/umbraco-cms/2017/virtual-umbrality/" title="Virtual Umbrality"><span class="scr-text">Virtual Umbrality</span></a></li>
+      <li><a href="/umbraco-cms/2017/creating-and-publishing-a-package/" title="Creating and Publishing a Package"><span class="scr-text">Creating and Publishing a Package</span></a></li>
+      <li><a href="/umbraco-cms/2017/the-one-with-performance/" title="The One With Performance"><span class="scr-text">The One With Performance</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2017/building-from-blueprints/" title="Building from Blueprints"><span class="scr-text">Building from Blueprints</span></a></li>
+      <li><a href="/umbraco-cms/2017/azuresearch-and-media/" title="AzureSearch and Media"><span class="scr-text">AzureSearch and Media</span></a></li>
+      <li><a href="/umbraco-cms/2017/mustache-client-and-server-templates/" title="Mustache Client and Server Templates"><span class="scr-text">Mustache Client and Server Templates</span></a></li>
+      <li><a href="/umbraco-cms/2017/cloud-issue/" title="Cloud Issue"><span class="scr-text">Cloud Issue</span></a></li>
+      <li><a href="/umbraco-cms/2017/its-a-wrap/" title="It's a wrap"><span class="scr-text">It's a wrap</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

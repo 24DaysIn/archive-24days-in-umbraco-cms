@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>On Being a Superhero</title>
+<meta name="description" content="Get three very good tips on how to vastly improve the experience your content editors have with Umbraco. They're easy to implement and you'll look like a superhero!">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">On Being a Superhero</h1>
+      <p class="byline"> by Douglas Robar, <span class="pubdate">posted on <time datetime="2012-12-14">Dec 14, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"> </p>
+<figure>
+  <a href="/archive/media/2012/hero_wide.jpg">
+    <img src="/archive/media/2012/hero_wide.jpg" width="1280" alt="Hero Wide">
+  </a>
+</figure>
+<p class="intro">Admit it, you've always dreamed of being a superhero. And this year for Christmas I'll show you three quick and easy steps so that you too can be a mega-awesome acey-pacey brilliant-and-all Umbraco superhero. Your content editors will be singing your praises all season long.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>1. Document Types - a choice of one</h2>
+<figure>
+  <a href="/archive/media/2012/what_do_you_want.jpg">
+    <img src="/archive/media/2012/what_do_you_want.jpg" alt="What is it? Who are you? What do you want? ... My god you've gotten fat!" width="1377">
+  </a>
+  <figcaption>What is it? Who are you? What do you want? ... My god you've gotten fat!</figcaption>
+</figure>
+<p>Ever had too many choices and been unsure which to select? What happens? Do you:</p>
+<ol>
+<li>do nothing</li>
+<li>pick something at random</li>
+<li>accept the default and hope it's correct</li>
+<li>take the time to figure out the best thing</li>
+</ol>
+<p>Those same options often run through Content Editors' minds deciding which document type to use when creating a new page. Consider this dialog:</p>
+<figure>
+  <a href="/archive/media/2012/new_page1.png">
+    <img src="/archive/media/2012/new_page1.png" width="608" alt="What should the user select?">
+  </a>
+  <figcaption>What should the user select?</figcaption>
+</figure>
+<p> </p>
+<p>You can see the problem. There are too many choices. Worse, because the document types are listed alphabetically, the first one may not be a good default choice.</p>
+<p>If there were only <em>one</em> choice in the list then users would be bound to get it right. In fact, that's the reason that, when we create a News Area document type for example, we set the structure to only allow individual News Items below it. The content structure is made obvious and bullet proof. That's the power of one.</p>
+<p>So do your users a favour and get your document types into shape. After you've made your one-of-a-kind pages in the content tree (such as the News Area, the search page, the FAQ section, the events area, the staff section, etc.) deselect them on the document types structure tab.</p>
+<figure>
+  <a href="/archive/media/2012/structure.png">
+    <img src="/archive/media/2012/structure.png" width="416" alt="DE-select one-of-a-kind document types after their content pages have been created">
+  </a>
+  <figcaption>DE-select one-of-a-kind document types after their content pages have been created</figcaption>
+</figure>
+<p> </p>
+<p>The result is elegant simplicity.</p>
+<figure>
+  <a href="/archive/media/2012/new_page2.png">
+    <img src="/archive/media/2012/new_page2.png" width="608" alt="Can't go wrong with a choice of one!">
+  </a>
+  <figcaption>Can't go wrong with a choice of one!</figcaption>
+</figure>
+<p> </p>
+<p>It's now impossible for users to accidentally create additional one-of-a-kind pages in the content tree. And as an added bonus they can't move or copy them either because that isn't allowed by the document type structure. Everyone wins.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>2. Contextual Help</h2>
+<figure>
+  <a href="/archive/media/2012/more_flexible.jpg">
+    <img src="/archive/media/2012/more_flexible.jpg" width="1440" alt="I think you need to be more... flexible!">
+  </a>
+  <figcaption>I think you need to be more... flexible!</figcaption>
+</figure>
+<p>You already add descriptive text to your document type properties to answer the "what should I enter into this field?" question that you'll otherwise inevitably get from content editors.</p>
+<p><span>You </span><em>do</em><span> add descriptive text... right? If not, you're making much more work for yourself and your users. </span><a href="/umbraco-cms/2012/remember-the-editors/">Kim explains why</a><span>. By providing a bevy of perfectly-placed help text for fields you'll already be a hero to your users.</span></p>
+<figure>
+  <a href="/archive/media/2012/description_text.png">
+    <img src="/archive/media/2012/description_text.png" width="605" alt="Descriptive text for properties makes you a hero">
+  </a>
+  <figcaption>Descriptive text for properties makes you a hero</figcaption>
+</figure>
+<p> </p>
+<p>Now go one step further and become a superhero! A month or so <span>after the site has gone live, when content editors are familiar with the fields and don't need as much in-your-face help any more, </span>change to displaying a small help icon rather than the full text.</p>
+<p>Change the <span class="code">PropertyContextHelpOption</span> in the <span class="code">/config/UmbracoSettings.config</span> file from '<span class="code">text</span>' to '<span class="code">icon</span>':</p>
+<pre class="language-markup"><code>&lt;!-- Show property descriptions in editing view "icon|text|none" --&gt;
+&lt;PropertyContextHelpOption&gt;icon&lt;/PropertyContextHelpOption&gt;</code></pre>
+<p>Now, hovering over the icon displays the descriptive text in the tooltip. Still available when needed without being intrusive. As a bonus, the content entry screens are tighter and smaller, which editors prefer.</p>
+<figure>
+  <a href="/archive/media/2012/description_icon.png">
+    <img src="/archive/media/2012/description_icon.png" width="605" alt="Rollover icon to see the help text. It's right there when you need it.">
+  </a>
+  <figcaption>Rollover icon to see the help text. It's right there when you need it.</figcaption>
+</figure>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<h2>3. Personalized Help Pages</h2>
+<figure>
+  <a href="/archive/media/2012/like_to_help.jpg">
+    <img src="/archive/media/2012/like_to_help.jpg" width="1400" alt="Listen closely. I'd like to help you but I can't.">
+  </a>
+  <figcaption>Listen closely. I'd like to help you but I can't.</figcaption>
+</figure>
+<p>Did you know that Umbraco's help button at the top of the back office interface is context-sensitive? It will take you to a wiki page that deals specifically with the screen being displayed (see <a href="http://our.umbraco.org/wiki/umbraco-help" title="Umbraco's help pages on the wiki">our.umbraco.org/wiki/umbraco-help</a>).</p>
+<p>But these generic help pages don't know about your site's special macros, content organisation, naming conventions, etc. Wouldn't it be great if you could have personalised help pages unique to each of your client sites? Merry Christmas, you can!</p>
+<p>The basic idea is to create a site with pages that contain not only the generic details but also all the how-to instructions, conventions, screen shots, help videos, and more that the site uses.</p>
+<p>You can make as many pages as you need for any combination of <strong>application</strong> <strong>section</strong> (content, media, settings, etc.), <strong>page displayed</strong> in umbraco (dashboard, <span>editContent, etc.</span>), <strong>language</strong><span> (translate your help as well when you have multi-lingual sites).</span> and <strong>user type</strong> (administrators might see more technical details than writers). </p>
+<p>Then update the help setting in the <span class="code">/config/umbracoSettings.config</span> file to point to your custom help page(s). </p>
+<pre class="language-markup"><code>&lt;help defaultUrl="http://our.umbraco.org/wiki/umbraco-help/"&gt;
+    &lt;link application="content" applicationUrl="editContent.aspx"  language="en" userType="Editor" helpUrl="http://www.site.com/{0}/{1}/{2}/{3}" /&gt;
+    &lt;!-- Result url: http://www.site.com/content/editContent.aspx/en/Editor --&gt;
+&lt;/help&gt;</code></pre>
+      <p class="snippet-caption">Create personalised help for Editors working in English when editing a content page</p>
+<p>See <a href="http://our.umbraco.org/documentation/using-umbraco/Config-files/umbracoSettings/#Help" title="Thorough explanation of help format with examples">our.umbraco.org/documentation/using-umbraco/Config-files/umbracoSettings</a> for full details of the help syntax and more examples.</p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p> </p>
+<p>Hey presto, you've just given your users an amazing Christmas present! And solidified your reputation as an Umbraco superhero in the process.</p>
+<p> </p>
+<p><br>Merry Christmas, everyone. Let loose your inner superhero!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Douglas Robar"><img src="//gravatar.com/avatar/53248ff43fb039890f1c9eee97cde07d.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/53248ff43fb039890f1c9eee97cde07d.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Douglas Robar</h1>
+        <p>Douglas is on Twitter as <a href="//twitter.com/drobar" title="Douglas Robar on Twitter" rel="author">@drobar</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li class="selected"><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

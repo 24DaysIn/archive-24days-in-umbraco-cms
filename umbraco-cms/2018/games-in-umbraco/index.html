@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Building games in Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Games in Umbraco</h1>
+      <p class="byline"> by Dave Pearcey, <span class="pubdate">posted on <time datetime="2018-12-06">Dec 6, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Hello! I'm Dave and I'm in the south west of England. I've been a developer for 12 years now and I've been working with Umbraco for 3 years. Although only been certified for 18 months when my company shipped me off to London for the week to become a "Master".</p>
+<p class="intro">Those of you lucky enough to witness the quivering mess that was me on the main stage at Codegarden 2018, will be somewhat aware of what I've been up to in my spare time in the last year. I've been building a text-based <a rel="noopener" href="https://en.wikipedia.org/wiki/Massively_multiplayer_online_role-playing_game" target="_blank" title="MMORPG">MMORPG</a> using Umbraco's CMS and services as an engine. I didn't give very much away while I was on stage as I was ill-prepared and nervous. So here we are today, to go over in a little more detail as to how I've been accomplishing this, without even having extended upon Umbraco's functionality.</p>
+<p>When you think of the content hierarchy in the back office, you'd typically think of navigational parent/child relationships. For example: You'd have "Home &gt; About Us" and each node would be a whole web-page. Where this typical structure still applies for some of the pages for my game, that's not always the case. I still have "Home" at the top, along with the first level of pages. But if you go into the "Game" child hierarchy, then how I'm using the content structure changes.</p>
+<p><img style="width: 500px; height: 358.5px;" src="/archive/media/2018/untitled-1.png?width=500&amp;height=358.5" alt="" data-udi="umb://media/71e73c1a02594cd0af809e9d3431949c"></p>
+<p>What you can see here is everything that is manageable within the game. Each of these content nodes is a component of the game. Everything on the Game page works by getting partials asynchronously dependent on user interaction, using Umbraco's own APIs and services. For example, if the user was to try and buy items, the partial would load into view and look under the "Equipment" node for all the available equipment types. Then the children for each of those equipment types are the equipment items that you can buy. The partial just loops through it all to display everything on page for you to choose from.</p>
+<p><img style="width: 500px; height: 128.11387900355874px;" src="/archive/media/2018/buy-equipment.png?width=500&amp;height=128.11387900355874" alt="" data-udi="umb://media/44a1e1b9640b420d9ff933ab2be894f9"></p>
+<p>Please bear in mind that I haven't styled anything properly as of yet (still searching for a designer).</p>
+<p>Here's a snippet of that partial:</p>
+<pre><code class="language-javascript">@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@using Game.Models;
+@using Game.Helpers;
+
+@{
+    IEnumerable&lt;IPublishedContent&gt; types = Umbraco.TypedContent(1227).Children().Where(x =&gt; x.Id != 7560);
+    IPublishedContent InitialItemList = types.FirstOrDefault();
+    BuyItemsModel buyType = new BuyItemsModel();
+    buyType.type = InitialItemList.Id.ToString();
+    IPublishedContent member = Umbraco.TypedMember(Members.GetCurrentMemberId());
+    int inventoryCount = CommonFunctions.CheckInventoryCount();
+}
+
+&lt;div id="buy-items"&gt;
+    &lt;div id="inventory-count"&gt;Capacity: @inventoryCount/@member.GetPropertyValue("inventoryCapacity")&lt;/div&gt;
+    &lt;div id="item-types"&gt;
+        &lt;label for="item-type-select"&gt;Buy:&lt;/label&gt;
+        &lt;select id="item-type-select"&gt;
+            @{ 
+                foreach (IPublishedContent type in types)
+                {
+                    &lt;option value="@type.Id" @if (type.Id == InitialItemList.Id) { @("selected")}&gt;@type.Name&lt;/option&gt;
+                }
+            }
+        &lt;/select&gt;
+    &lt;/div&gt;
+    &lt;div id="item-list"&gt;
+        @Html.Partial("BuyItemsList", buyType)
+    &lt;/div&gt;
+    &lt;div&gt;&lt;a href="" class="back-to-main"&gt;Go Back.&lt;/a&gt;&lt;/div&gt;
+&lt;/div&gt;
+</code></pre>
+<p>Simple enough right? Instead of using the hierarchy for whole pages, I'm using it to define parts of a single page. This same concept goes for all other components within the page too. Depending on your character's location, then different lists of monsters to attack would show. A character on the "Midgard" Plane will see a monster list for that plane, whereas someone in "Helheim" would see another list. All generated from these partials using the data in the above method. Your location is stored against your "Member" in the backoffice, and it just checks your plane and gets the correct list when rendering the partial.</p>
+<pre><code class="language-javascript">@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+
+@{
+    IPublishedContent member = Umbraco.TypedMember(Members.GetCurrentMemberId());
+    IPublishedContent plane = member.GetPropertyValue&lt;IPublishedContent&gt;("plane");
+    IPublishedContent lastmonster = (member.HasValue("lastMonster") ? member.GetPropertyValue&lt;IPublishedContent&gt;("lastMonster") : null);
+}
+
+&lt;div id="attack"&gt;
+    &lt;form id="attack-form"&gt;
+        &lt;label for="monster"&gt;Attack: &lt;/label&gt;
+        &lt;select id="monster"&gt;
+            &lt;option disabled&gt;--- Monsters ---&lt;/option&gt;
+            @foreach (IPublishedContent monster in plane.Children(x =&gt; x.IsVisible())) {
+                &lt;option value="@monster.Id"@if (lastmonster == monster) { @(" selected")}&gt;@monster.Name&lt;/option&gt;
+            }
+        &lt;/select&gt;
+        &lt;button id="attack-submit"&gt;Attack&lt;/button&gt;
+        &lt;button id="auto-attack-submit"&gt;Auto&lt;/button&gt;
+    &lt;/form&gt;
+&lt;/div&gt;</code></pre>
+<p>As you can see, it just gets the plane content node that's attached to the member and displays a list accordingly.</p>
+<p>I'm doing it in this way, because there's many different uses for the content node. Like above, I attach a plane to the member according to their actions within the game. Then I can easily get that information to display information in other partials accordingly.</p>
+<p>Next, I have the JavaScript (with jQuery because we all still love that, right?). Taking the above partial as an example, submitting the form for an attack. We take the monster's node id and true/false on if you click auto attack or manual attack (auto attack will automatically play out an attack every 5 seconds for a predetermined amount of times). When submitting an attack, an Ajax event is formed to Umbraco's surface controller, inside of which talks to an API controller to update the member with their new experience, gold etc... Then the surface controller returns a result of a partial to display the results of said attack. Throw it on the page and done.</p>
+<pre><code class="language-javascript">$(document).ready(function () {
+    $('body').on('click', '#attack-submit', function (e) {
+        e.preventDefault();
+
+        performAttack($('#monster').val(), false);
+    });
+});
+
+function performAttack(monster, auto) {
+    clearTimers();
+    $.ajax({
+        method: 'GET',
+        url: '/umbraco/surface/Attack/Attack/',
+        data: { monsterid: monster, auto: auto}
+    })
+    .done(function (response) {
+        $('#action-wrap').html(response);
+
+        $('.auto-timer').each(function () {
+            var timeRemaining = $(this).data('timer');
+            startTimer(timeRemaining, $(this));
+        });
+
+        getPartial('Stats', '#stats-wrap');
+        getPartial('Skills', '#skills-wrap');
+    });
+}</code></pre>
+<p>The method for attacking is rather large. There's checks in place to prevent creating intervals and looping attacks with JS, random chances to return a security test rather than performing the attack (fill out captcha within time limit), there's chances for different variants of the monster you're attacking, chances to spawn Beasts (boss monsters), gaining new skills, allsorts really! And I'm not going to show it to you. I don't want people to know the formulas used throughout to calculate damages, gains, losses and everything else that makes for fun of trying to figure it all out when trying to maximize the potential of your character. Besides, how else am I supposed to keep you on the edge of your seat whilst I drip feed you information?</p>
+<p>Now, I do understand that this method of using content nodes might not be required for most instances of use, but it's slightly out of the box compared to expected usage. Maybe it'll come in handy to you one day, or maybe it wont. I'm just trying to get you to think differently.</p>
+<p>Stay tuned. #BuildingGamesInUmbraco</p>
+<p>P.S. I should have an alpha/beta version available by the end of the year, perhaps even by the time you read this! ;)</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Dave Pearcey"><img src="//gravatar.com/avatar/d75732de22f6c85f6188da2597b68e4e.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/d75732de22f6c85f6188da2597b68e4e.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Dave Pearcey</h1>
+        <p>Dave is on Twitter as <a href="//twitter.com/dave_pearcey" title="Dave Pearcey on Twitter" rel="author">@dave_pearcey</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

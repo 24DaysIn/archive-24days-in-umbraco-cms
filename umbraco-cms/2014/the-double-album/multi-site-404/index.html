@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>404 error pages for multi-site solutions</title>
+<meta name="description" content="Learn three different ways to provide custom errorpages, using IContentFinder, suitable for multi-site solutions">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">404 error pages for multi-site solutions</h1>
+      <p class="byline"> by Anders Bjerner, <span class="pubdate">posted on <time datetime="2014-12-06">Dec 6, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">This article will guide you how to setup custom 404 error pages for a multi-site solution by implementing the <span class="code">IContentFinder</span> interface.</p>
+<p class="intro"><span class="code">IContentFinder</span> is part of the Umbraco request pipeline, and Umbraco itself has a number for different content finders - eg. one for looking up content from a nice URL and another one if only the ID is specified in the URL. When you enter a URL for your Umbraco website, Umbraco will go through these content finders one by one, and if a content finder knows how to handle a URL, Umbraco will stop with that content finder. The last content finder (named <span class="code">ContentFinderByNotFoundHandlers</span>) is the one responsible for the default and ugly not found page. To summarize this, Umbraco has the following content finders by default:</p>
+<ul>
+<li>Umbraco.Web.Routing.ContentFinderByPageIdQuery</li>
+<li>Umbraco.Web.Routing.ContentFinderByNiceUrl</li>
+<li>Umbraco.Web.Routing.ContentFinderByIdPath</li>
+<li>Umbraco.Web.Routing.ContentFinderByNotFoundHandlers</li>
+</ul>
+<h2>Plan of action</h2>
+<p>I have created a demo solution using the new Umbraco 7.2, but the code should work the same from at least 6.1.x and up. You can try and <a href="https://github.com/abjerner/FourOhFour" target="_blank">download the solution from GitHub</a> or simply view the individual files via your browser. The login for the backoffice is <span class="code">demo</span> for the both the username and password.</p>
+<p>The demo solution has three types of sites; each having their own way to handle 404 error pages.</p>
+<p>The solution has a single main site, so for this, I have just hardcoded the error page to a specific ID.<span> If looking at this way alone, it would be somewhat similar to configuring error pages via </span><span class="code">umbracoSettings.config</span><span>.</span> Besides the error page being served as the error page, it is just a normal page (alias <span class="code">MainPage</span>). The site is configured with the domain <span class="code">awesome.localhost.bjerner.dk</span>. </p>
+<p>The solution also has a type for an institution site (or sub site if you will). For this type of site, the error page is manually selected via a content picker in the settings for the site in the backoffice. We then extract the specified value in our content finder. In similar way, the 404 error page is a standard page of the type <span class="code">InstitutionPage</span>. The site is configured with the domain <span class="code">institution.localhost.bjerner.dk</span>.</p>
+<p>Finally there is also a site type for campaigns. For a campaign site, you should manually create an error page of the type <span class="code">CampaignNotFound</span> directly under the root node of the site. If there are multiple error pages for a given site, the first one is selected. For my example campaign site, the domain is <span class="code">campaign.localhost.bjerner.dk</span>.</p>
+<p>All three domains are configured to point to <span class="code">127.0.0.1</span>, so feel free to add them on your local IIS to play around with the demo solution.</p>
+<h2>Creating a content finder</h2>
+<p>At first, let us create the basics for a content finder, and then come back to the logic later.</p>
+<pre class="language-csharp"><code>using System.Linq;
+using System.Web;
+using Umbraco.Core.Models;
+using Umbraco.Web;
+using Umbraco.Web.Routing;
+using umbraco.cms.businesslogic.web;
+
+namespace FourOhFour.Routing {
+
+    public class FourOhFourContentFinder : IContentFinder {
+
+        public bool TryFindContent(PublishedContentRequest contentRequest) {
+
+            // Return whether an error page was found
+            return contentRequest.PublishedContent != null;
+
+        }
+
+    }
+
+}</code></pre>
+<p>The <span class="code">IContentFinder</span> interface only describes a single method - that is <span class="code">TryFindContent</span>. The method should return a boolean - <span class="code">true</span> if the content finder could handle the request, otherwise <span class="code">false</span>.</p>
+<p>Our content finder will not do anything by itself - we have to tell Umbraco about it. Simply adding our content finder to the end of the list of content finders won't do much since <span class="code">ContentFinderByNotFoundHandlers</span> is the one responsible for showing the standard 404 page, and Umbraco will therefore never reach our custom content finder. So we have to add it right before <span class="code">ContentFinderByNotFoundHandlers</span>. This is done in the following way:</p>
+<pre class="language-csharp"><code>using FourOhFour.Routing;
+using Umbraco.Core;
+using Umbraco.Web.Routing;
+
+namespace FourOhFour {
+
+    public class Startup : ApplicationEventHandler {
+
+        protected override void ApplicationStarting(UmbracoApplicationBase umbracoApplication, ApplicationContext applicationContext) {
+
+            // Add our custom content finder
+            ContentFinderResolver.Current.InsertTypeBefore&lt;ContentFinderByNotFoundHandlers, FourOhFourContentFinder&gt;();
+
+        }
+
+    }
+
+}</code></pre>
+<p>We hook into the Umbraco starting event, and insert our own content finder <span class="code">FourOhFourContentFinder</span> right before <span class="code">ContentFinderByNotFoundHandlers</span>, but still after the first three content finders.</p>
+<p>Back to the logic in our content finder, the first thing to do is to check what type of site we're dealing with. We can find the site by looking up the domain (so a domain must be configured for the site). We can do that with the following lines (including some error handling):</p>
+<pre class="language-csharp"><code>// Get the current domain name
+string domainName = HttpContext.Current.Request.ServerVariables["SERVER_NAME"];
+
+// Get the root node id of the domain
+int rootNodeId = Domain.GetRootFromDomain(domainName);
+
+// Return if a root node couldn't be found
+if (rootNodeId &lt;= 0) return false;
+
+// Find the root node from the ID
+IPublishedContent root = (rootNodeId &gt; 0 ? UmbracoContext.Current.ContentCache.GetById(rootNodeId) : null);
+
+// Return FALSE if the root node wasn't found (AKA move on to the next content finder)
+if (root == null) return false;</code></pre>
+<p>At this point, the variable <span class="code">root</span> is now the content node of the site in question. We should now check the document type of the site. For the main site, the document type alias is <span class="code">MainSite</span>. Since we for the main site know, that the error page has the ID of 1059, we can simply get it from the content cache like below:</p>
+<pre class="language-csharp"><code>// Handle error pages for each site type
+switch (root.DocumentTypeAlias)  {
+
+    case "MainSite": {
+
+        // Get the error page from the hardcoded ID
+        contentRequest.PublishedContent = UmbracoContext.Current.ContentCache.GetById(1059);
+
+        break;
+
+    }
+
+}</code></pre>
+<p><span>Even though the error page for an institution site isn't hardcoded, the approach is very similar - now we just have to get the ID of the error page from the site settings first:</span></p>
+<pre class="language-csharp"><code>// Handle error pages for each site type
+switch (root.DocumentTypeAlias)  {
+
+    case "InstitutionSite": {
+
+        int errorPageId = root.GetPropertyValue&lt;int&gt;("notFoundPage");
+
+        // Get the error page from the specified ID in the "notFoundPage" property
+        contentRequest.PublishedContent = UmbracoContext.Current.ContentCache.GetById(errorPageId);
+
+        break;
+
+    }
+
+}</code></pre>
+<p>For a campagin site, we should find a child node with the document type alias <span class="code">CampaignNotFound</span>. The code for that would look like:</p>
+<pre class="language-csharp"><code>// Handle error pages for each site type
+switch (root.DocumentTypeAlias)  {
+
+    case "CampaignSite": {
+
+        // Find the first child with the "CampaignNotFound" document type
+        contentRequest.PublishedContent = root.Children.FirstOrDefault(x =&gt; x.DocumentTypeAlias == "CampaignNotFound");
+
+        break;
+
+    }
+
+}</code></pre>
+<p><strong>That's it!!!</strong> Our content finder can now handle error pages for all three types of sites. The entire <span class="code">FourOhFourContentFinder</span> class will now look like:</p>
+<pre class="language-csharp"><code>using System.Linq;
+using System.Web;
+using Umbraco.Core.Models;
+using Umbraco.Web;
+using Umbraco.Web.Routing;
+using umbraco.cms.businesslogic.web;
+
+namespace FourOhFour.Routing {
+
+    public class FourOhFourContentFinder : IContentFinder {
+
+        public bool TryFindContent(PublishedContentRequest contentRequest) {
+
+            // Get the current domain name
+            string domainName = HttpContext.Current.Request.ServerVariables["SERVER_NAME"];
+
+            // Get the root node id of the domain
+            int rootNodeId = Domain.GetRootFromDomain(domainName);
+
+            // Return if a root node couldn't be found
+            if (rootNodeId &lt;= 0) return false;
+
+            // Find the root node from the ID
+            IPublishedContent root = (rootNodeId &gt; 0 ? UmbracoContext.Current.ContentCache.GetById(rootNodeId) : null);
+
+            // Return FALSE if the root node wasn't found (AKA move on to the next content finder)
+            if (root == null) return false;
+
+            // Handle error pages for each site type
+            switch (root.DocumentTypeAlias)  {
+
+                case "MainSite": {
+
+                    // Get the error page from the hardcoded ID
+                    contentRequest.PublishedContent = UmbracoContext.Current.ContentCache.GetById(1059);
+
+                    break;
+
+                }
+
+                case "InstitutionSite": {
+
+                    int errorPageId = root.GetPropertyValue&lt;int&gt;("notFoundPage");
+
+                    // Get the error page from the specified ID in the "notFoundPage" property
+                    contentRequest.PublishedContent = UmbracoContext.Current.ContentCache.GetById(errorPageId);
+
+                    break;
+
+                }
+
+                case "CampaignSite": {
+
+                    // Find the first child with the "CampaignNotFound" document type
+                    contentRequest.PublishedContent = root.Children.FirstOrDefault(x =&gt; x.DocumentTypeAlias == "CampaignNotFound");
+
+                    break;
+
+                }
+
+            }
+
+            // Return whether an error page was found
+            return contentRequest.PublishedContent != null;
+
+        }
+
+    }
+
+}</code></pre>
+<h2>Epilogue</h2>
+<p>Once you get the hang of it, the three ways to handle error pages shown is this article, are quite simple. <span class="code">IContentFinder</span> is very powerful, and can be used for even more advanced use cases - not just 404 error pages - so I can really recommend to look further into it. An example for another use case could be virtual URLs - eg. making content appear in other locations than what they are in the backoffice.</p>
+<h3>Links</h3>
+<ul>
+<li><a href="https://github.com/abjerner/FourOhFour" target="_blank">GitHub Repository for the demo solution</a></li>
+<ul>
+<li><a href="https://github.com/abjerner/FourOhFour/blob/master/dev/code/Routing/FourOhFourContentFinder.cs" target="_blank">The FourOhFourContentFinder class</a></li>
+<li><a href="https://github.com/abjerner/FourOhFour/blob/master/dev/code/Startup.cs">The Startup class</a></li>
+</ul>
+<li><a href="http://our.umbraco.org/documentation/Reference/Request-Pipeline/IContentFinder" target="_blank">IContentFinder in the Our Umbraco documentation</a></li>
+</ul>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Anders Bjerner"><img src="//gravatar.com/avatar/d1e8799951be61168d3929c56cdfa828.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/d1e8799951be61168d3929c56cdfa828.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Anders Bjerner</h1>
+        <p>Anders is on Twitter as <a href="//twitter.com/abjerner" title="Anders Bjerner on Twitter" rel="author">@abjerner</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li class="selected"><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

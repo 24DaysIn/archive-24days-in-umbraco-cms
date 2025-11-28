@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Not another Grid Layouts post</title>
+<meta name="description" content="My goal with this post is to address the above and to highlight some basic touch points that can and/or should at least be considered by developers setting up Grid Layouts. All in service of making a meaningful editing experience for the end user (editor) that will be using this to create some hopefully engaging and most certainly responsive content.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Not another Grid Layouts post</h1>
+      <p class="byline"> by Rune Strand, <span class="pubdate">posted on <time datetime="2015-12-24">Dec 24, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Since the release of the Grid Layouts property editor with Umbraco 7.2 (released in December 2014) a lot has been written, discussed, criticized and glorified about this subject. So is it really necessary with another blog post about it? Well yes, I think so and and here are some of the reasons why:</p>
+<ol>
+<li><a href="http://umbraco.com/follow-us/blog-archive/2015/12/17/740-beta-it-s-like-a-whole-new-backoffice/" title="Umbraco 7.4 beta">Umbraco 7.4 beta</a> was released just a week ago containing a complete overhaul of the editing experience for Grid Layouts.</li>
+<li>If you search in the projects section on <a href="https://our.umbraco.org/search?q=grid&amp;cat=project" title="Search for Grid on Our Umbraco">our.umbraco.org</a> for "grid" you'll find very few, albeit very awesome, packages for it.</li>
+<li>I've seen a number of posts on the forum asking various questions regarding the implementation of Grid Layouts and while the discussion, and in many cases the following solutions, are absolutely fantastic there seems to be a disconnect between how we (Umbraco HQ) envisioned the usage of Grid Layouts and the approach a lot of developers are taking.*</li>
+</ol>
+<p class="intro">My goal with this post is to address the above and to highlight some basic things that can and/or should at least be considered by developers setting up Grid Layouts. All in service of making a meaningful editing experience for the end user (editor) that will be using this to create some hopefully engaging and most certainly responsive content.</p>
+<h2>The Grid way of thinking</h2>
+<p>There are three things that are absolutely crucial to acknowledge before implementing Grid Layouts in your project.</p>
+<p>First of you have to get to grips with the fact that setting up one or more Grid Layouts for a given website requires a decidedly different approach than the usual separation of data (properties on a Document Type) and rendering in the template. With Grid Layouts it is imperative that you consider (and customise) the rendering of the input and stored content in the Backoffice and the connection between this and the rendered content on the frontend.</p>
+<p>Secondly there are limitations to the types of content that is suited for Grid layouts. Antoine Giraud, one of the founding fathers of the property editor (the original uSky editor), describes this very aptly in his Skrift article <a href="http://skrift.io/articles/archive/ten-grids-later/" title="Ten Grid Later">Ten Grids Later</a>. Basically stating that "Grid-friendly" content is content that inherently belongs to the page on which it is created and is NOT reusable content. This is in part due to the way Grid Layouts stores content, a big ol' and rather "dumb" chunk of JSON, where depending on content located elsewhere in the solution can add a level of complexity that we cannot require our editors to take into account. This can also cause severe headaches for developers when deploying content between environments.</p>
+<p>The last but in no way smallest point is that creating content with Grid Layouts requires more of the editor. Grid Layouts is a way of solving the problem that has arisen with the evermore complex structure of frontend HTML and CSS. While the advent of CSS grid frameworks has made our lives (as developers) infinitely easier in many ways, both in terms of development speed and cross platform compatibility. It has also added a layer of abstraction between the data input, more often than not vertically aligned fields containing one or more Rich Text editors (oh the horror), and the output neatly arranged side by side in x number of columns. With Grid Layouts it is possible create content with an approximation of the rendered output thus making the level of abstraction smaller. But this in turn means that the editor has to make decisions when choosing Layouts/Rows/Grid Editors and the more complex the Grid Layout is the more decisions the editor has to make. While a good implementation (read: with appropriate restrictions) can help mitigate this to a large extend, I firmly believe there is no getting around that the editor needs a certain amount of flair for design and storytelling.</p>
+<p>To sum up, setting up a Grid Layout is a demanding process where you need to take all of the above into account. There is no two ways about it, to create a good editing experience it is crucial that you tailor Grid Layouts to the content it is meant to create. If you are using Grid Layouts extensively on a site chances are you'll need multiple Grid Layout data types with their own Layouts, Row configuration and custom (and/or customized) Grid editors. I cannot recommend reading the aforementioned article by Antoine enough. It provides great insights, and lists anumber of useful packages as well. This post will be aimed at setting up "vanilla" Grid Layouts.</p>
+<h2>So where do I start?</h2>
+<p>As Grid Layouts is a very visual way of dealing with content in the Backoffice you start by working closely with the designer of the frontend and the client/editor that will be using it. That might even be yourself which can make the process easier but also lonelier ;)</p>
+<p>It is not just a simple matter (overly reductive, I know) of making sure that headlines, paragraphs, images and whatever else a Rich Text editor can serve up is rendered correctly. You need to carefully plan out the different design scenarios that is needed convey the story (or stories) of the content that is yet to be created.</p>
+<p>This is the really tricky part and it is difficult to make meaningful general guidelines for what the specific solution entails, the rest is purely a matter of problem solving (ie development) and something we can talk about in broader terms and give more specific solutions to.</p>
+<h2>Customising a Grid Layout</h2>
+<p>Once the design is in place and the content blocks are mapped out it is more or less a matter of following <a href="https://our.umbraco.org/Documentation/Getting-Started/Backoffice/Property-Editors/Built-in-Property-Editors/Grid-Layout" title="Grid Layouts documentation">the documentation for Grid Layouts</a>. In the following I'll try to provide a little more context to the examples given in the docs.</p>
+<h3>Layouts and Row configurations</h3>
+<p>Setting up the overall layout (Layout in Grid terms) is usually a matter of deciding whether the content created with Grid Layouts is full width or not. If for some reason multiple Layouts is required it is important to restrict which Row configurations are available to the user. If you only have a single layout for the data type this will be the default and no choice will be presented to the editor in the Content section.</p>
+<p>You are almost certainly going to need multiple Row configurations. A row configuration consists of a number of cells (that corresponds to columns in the CSS framework) and inside these cells the actual Grid Editors will be available. Again it is imperative that you remember to restrict which editor are available in the different cells. You can have a large number of Grid Editors in your solution but try to limit the choice on individual cells as much as possible as this will help guide the user to creating the content. As with Layouts, if only one Grid Editor is allowed in a cell this will be inserted by default which means you can actually present a sort of finished template.</p>
+<p><a style="font-size: 14px;" href="https://our.umbraco.org/documentation/getting-started/backoffice/property-editors/built-in-property-editors/Grid-Layout/configuring-the-grid-layout-datatype" title="Configuring the Grid Layout data type">Read the documentation</a></p>
+<h3>Settings and Styles </h3>
+<p>Settings and Styles are great tools to allow your editor some control of the rendering of rows and cells. This means you can let them add CSS classes, data attributes, inline styling and so forth to the rendered HTML. Here we have a coupling between the frontend rendering and the content editing and if used correctly it can empower to the user to create very diverse pieces of content but always try to keep simplicity in mind. Make sure to restrict settings and styles to rows or cells so the options are presented only where they make sense.</p>
+<p><a style="font-size: 14px;" href="https://our.umbraco.org/documentation/getting-started/backoffice/property-editors/built-in-property-editors/Grid-Layout/Settings-and-styles" title="Settings and styling">Read the documentation</a></p>
+<h3>Grid Editors </h3>
+<p>And now for the really fun part! Customising Grid Editors to suit your solution. When you create a new Grid Layout data type in a blank Umbraco installation, there is a number of "default" Grid Editors already available (6 to be specific). These should really be seen as examples of the choices you can give your user. Or rather examples of how you can use the Grid property editors that come with Umbraco. We have made it quite easy to customise these (especially the textstring input which is used for the Headline and Quote Grid Editors).</p>
+<p>A good approach is to think of Grid Layouts as a sort of Rich Text editor replacement. Let's say the Grid Layout data type we are setting up (or rather the content we are designing for) can have three different headlines, we can fairly quickly set up three different Grid Editors to handle this.</p>
+<p><a style="font-size: 14px;" href="https://our.umbraco.org/documentation/getting-started/backoffice/property-editors/built-in-property-editors/Grid-Layout/grid-editors" title="Grid Editors">Read the documentation</a></p>
+<h2>Enter the package.manifest</h2>
+<p>We'll create our three customised headlines in a <span class="code">package.manifest</span> file placed in <span class="code">/App_Plugins/clever-name/</span></p>
+<pre class="language-javascript"><code>{
+    "gridEditors": [
+        {
+            "name": "H1",
+            "alias": "headline1",
+            "view": "textstring",
+            "icon": "icon-coin",
+            "config": {
+                "style": "font-size: 36px; line-height: 45px; font-weight: bold",
+                "markup": "&lt;h1&gt;#value#&lt;/h1&gt;"
+            }
+        },
+        {
+             "name": "H2",
+             "alias": "headline2",
+             "view": "textstring",
+             "icon": "icon-coin",
+             "config": {
+                 "style": "font-size: 28px; line-height: 45px; font-weight: bold",
+                 "markup": "&lt;h2&gt;#value#&lt;/h2&gt;"
+             }
+         },
+         {
+             "name": "H3",
+             "alias": "headline3",
+             "view": "textstring",
+             "icon": "icon-coin",
+             "config": {
+                 "style": "font-size: 22px; line-height: 45px; font-weight: bold",
+                 "markup": "&lt;h3&gt;#value#&lt;/h3&gt;"
+             }
+         }
+    ]
+}
+</code></pre>
+<p>This will make three new Grid Editors available to add to the cells where they are relevant. The really interesting part here is the config object where <span class="code">style</span> injects CSS to the backoffice input and <span class="code">markup</span> wraps the input value <span class="code">#value#</span> in the desired html. You can also add a class attribute (or other html attributes) to target the output more specifically with your frontend CSS and JavaScript.</p>
+<p>A good starting point for customising Grid editors is to take a look at the config file <span class="code">/config/grid.editors.config</span> in your Umbraco installation. This is essentially the same as we added in the gridEditors array in our package manifest.</p>
+<p><strong>PRO TIP:</strong> Do not add custom Grid Editors to the config file as this will be overwritten when upgrading your Umbraco installation. Always use a package manifest.</p>
+<h2>An RTE replacement with an RTE inside, what gives?</h2>
+<p>It is hard to completely get the rid of the Rich Text editor as it does handle things like links and alignment well but limiting the options in the RTE to the absolute minimum (you see a trend here ?) is again highly recommended.</p>
+<figure>
+  <a href="/archive/media/2015/Screen_Shot_2015_12_23_at_02.51.28.jpg">
+    <img src="/archive/media/2015/Screen_Shot_2015_12_23_at_02.51.28.jpg" width="2876" alt="Limiting the RTE">
+  </a>
+</figure>
+<p>This is also be done when setting up the Grid Layout data type and then we can use the RTE for paragraphs where more options than a simple textarea can give us is warranted.</p>
+<figure>
+  <a href="/archive/media/2015/Screen_Shot_2015_12_22_at_23.30.46.jpg">
+    <img src="/archive/media/2015/Screen_Shot_2015_12_22_at_23.30.46.jpg" width="1982" alt="Limited RTE">
+  </a>
+</figure>
+<p>If you do not want to use the RTE for paragraphs in your Grid Layout it is quite easy to create your own:</p>
+<p> </p>
+<pre class="language-javascript"><code>{
+    "gridEditors": [
+        {
+            "name": "Paragraph",
+            "alias": "paragraph",
+            "view": "textstring",
+            "icon": "icon-font",
+            "config": {
+                "style": "font-size: 16px; line-height: 45px; font-weight: normal",
+                "markup": "&lt;p&gt;#value#&lt;/p&gt;"
+            }
+        },
+        {
+            "name": "Paragraph centered",
+            "alias": "paragraphCentered",
+            "view": "textstring",
+            "icon": "icon-font",
+            "config": {
+                "style": "font-size: 16px; line-height: 45px; font-weight: normal, text-align: center",
+                "markup": "&lt;p class='text-center'&gt;#value#&lt;/p&gt;"
+            }
+        }
+    ]
+}
+</code></pre>
+<h2>Creating your own Grid Editors</h2>
+<p>In addition to just customising the default Grid Editors you can also extend them further by adding your own views (for the Backoffice input and if needed add a custom Angular controller) and/or your own renderers (for frontend rendering). There are examples of this in <a href="https://our.umbraco.org/documentation/getting-started/backoffice/property-editors/built-in-property-editors/Grid-Layout/build-your-own-editor" title="Build your own editor">the documentation</a>. You can mix and match the various parts to your fit your needs so you don't have to build every editor from the ground up. Ie. you can use the default  textstring view for input and then add a custom renderer.</p>
+<p>If you are familiar with developing property editors for Umbraco it should be fairly easy to get start on a custom Grid property editor as they rely on the same basic concepts. If not, an easy way to get the hang of things is to copy one of the default editors and start hacking away at it. The views are located in <span class="code">/Umbraco/Views/propertyeditors/grid/editors/</span> and the rendering files in <span class="code">/Views/Partials/Grid/Editors/</span>.</p>
+<p>A package manifest for a custom editor with it's own Angular controller and CSS file would look something like this:</p>
+<pre class="language-javascript"><code>{
+    "gridEditors": [
+        {
+            "name": "My Grid Editor",
+            "alias": "myGridEditor",
+            "view": "/App_plugins/MyGridEditor/myGridEditor.html",
+            "icon": "icon-paint-roller"
+        }
+    ],
+    "javascript": [
+        "/App_Plugins/MyGridEditor/myGridEditor.controller.js"
+    ],
+    "css": [
+        "/App_Plugins/MyGridEditor/myGridEditor.css"
+    ]
+}
+</code></pre>
+<h2>Rendering Grid Layouts</h2>
+<p>The same goes for rendering Grid Layouts. The default renderers that come with Umbraco, located in <span class="code">/Views/Partials/Grid/</span>, are for Bootstrap 2 and 3. These are perfectly servicable for some cases but also easily customised. If you are using Bootstrap 3 but want to render using the <span class="code">.sm</span> instead of <span class="code">.md</span>, simply copy the renderer, rename it, change the class names and call it in your template.</p>
+<pre class="language-javascript"><code>@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+    Layout = "Master.cshtml";
+}
+
+&lt;div class="gridCSS"&gt;
+   @CurrentPage.GetGridHtml("bodyText", "myCustomRenderer")
+&lt;/div&gt;
+</code></pre>
+<p>This is a very simple example but you can manipulate the output in any way you want. For some inspiration take a look at this package, <a href="https://our.umbraco.org/projects/developer-tools/umbraco-grid-renderers/" title="Umbraco Grid Renderers">Umbraco Grid Renderers</a>, that enables the use of other popular CSS grid frameworks.</p>
+<h2>Sharing is caring</h2>
+<p>You might very well end up with a bunch of editors and renderers that you'll want to use on other projects. You might have them in a repository chock full Grid goodies you and your colleagues can pick and choose from. But going back to one of the reasons for doing this post (the somewhat lackluster results when searching for "grid" projects on Our) you can also share them with the community. This can easily be done by packaging them up in the Developer section of the Backoffice. Simply right click "Created Packages", choose create package and then you can add the files and/or folders that you think might be beneficial to others, "download zip" and upload it to your profile on <a href="https://our.umbraco.org/" title="Community - our.umbraco.org">our.umbraco.org</a>.</p>
+<p>I think there is a ton of potential in Grid Layouts that we can tap into and there is no better way than by sharing ideas and code. If you are really lucky you might even get some feedback or help for future improvements.</p>
+<h2>Famous last words</h2>
+<p>As I briefly mentioned in the beginning Umbraco 7.4 beta is out and we've given the content editing experience in Grid Layouts a much needed overhaul. You can read about why in <a href="http://umbraco.com/follow-us/blog-archive/2015/11/17/the-future-of-grid-layouts/" title="The future of Grid Layouts">this blogpost</a> and see an example of it in action in the <a href="http://umbraco.com/follow-us/blog-archive/2015/12/17/740-beta-it-s-like-a-whole-new-backoffice/" title="7.4.0 beta: It's like a whole new backoffice">beta release post</a> (7.4 has a ton of other cool stuff as well). We would love to get your feedback on the changes we have made. We REALLY love when you log issues on the <a href="http://issues.umbraco.org/issues/U4" title="Umbraco issue tracker">issue tracker</a>, tweet at us and write forum or blog posts. </p>
+<p>If you have made it this far, I thank you for your patience, and sincerely hope this post has helped clarify a few things for grid veterans and made it a tad more approachable for newcomers. If you want more information on Grid Layouts I highly recommend <a href="https://www.youtube.com/watch?v=QvzwilqYOp4" title="Umbraco Grid: Structure, settings, editors, and use cases - Marc Stöcker">Mark Stöckers talk from UK festival</a> and the <a href="http://umbraco.tv/videos/umbraco-v7/implementor/fundamentals/grid-layouts/introduction/" title="Umbraco TV - Grid Layouts">video tutorials on Umbraco.tv</a>. There is also a <a href="/umbraco-cms/2014/grid-macros/" title="Grid Macros">post on using macros in Grid Layouts</a> from last years 24 days in Umbraco by Antoine.</p>
+<p>Also a big HIGH FIVE, YOU ROCK to Blake, Jan and Chriztian for making 24 days in Umbraco and to all the Umbracians who contribute to this great tradition!</p>
+<p>On a personal note I'll just say that 2015 as been absolutely fantastic. My first full year at HQ, it is truly humbling to be a part of a community this engaged and vibrant.</p>
+<p>Happy holidays to all, see you in the new year :)</p>
+<p><em>*Important to note that this is said with humility. The onus of imparting the "right approach" is on Umbraco HQ by providing sufficient documentation and examples.</em></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/community/" title="See all articles tagged with Community">Community</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/contribution/" title="See all articles tagged with Contribution">Contribution</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Rune Hem Strand"><img src="//gravatar.com/avatar/87ff7386420dc373cf3526fe8b4369c5.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/87ff7386420dc373cf3526fe8b4369c5.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Rune Hem Strand</h1>
+        <p>Rune is on Twitter as <a href="//twitter.com/hemraker" title="Rune Hem Strand on Twitter" rel="author">@hemraker</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li class="selected"><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco Membership APIs Investigation</title>
+<meta name="description" content="A thorough look at the various APIs for dealing with Members in Umbraco">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">An Investigation into the Umbraco Membership APIs</h1>
+      <p class="byline"> by Mike Bowen, <span class="pubdate">posted on <time datetime="2015-12-12">Dec 12, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Since the release of <a href="https://our.umbraco.org/contribute/releases/620/" target="_blank" title="Umbraco v6.2.0 Release">v6.2.0</a>, the membership APIs available within Umbraco have been given a long overdue spring clean, with the addition of several fancy new ones. The reasons for this are to generally make them more consistent with the latest frontend and backend APIs (<em>UmbracoHelper </em> and <em>Services</em>, respectively), as well as the previous membership APIs not being the most performant or easy to use.</p>
+<p class="intro">Unfortunately, whilst the new APIs are greatly improved to what came before, there are still a myriad of different options, each with advantages, weird corner cases and inconsistencies that may perplex you as a developer. Should I use the <em>MemberService </em>to create a member, or <em>MembershipHelper</em>? Where do the standard ASP.NET Membership APIs sit within all of this? <em>How do I just get my darn CRUD' on?</em></p>
+<p>Different to Lee's awesome <a href="/umbraco-cms/2014/dealing-with-members/" target="_blank" title="Lee Messenger - Dealing with Members - 24 Days in Umbraco">24 Days in Umbraco article</a> regarding membership last year, I hope to compare and contrast the different approaches so you can find the one that fits best for you. Membership has long been a dark, unexplored corner to me within Umbraco, so it's a good opportunity to learn and get stuck into the Umbraco source code as well!</p>
+<p>Please note that at the time of writing, I'm using the latest and greatest version of Umbraco, <a href="https://our.umbraco.org/contribute/releases/732/" target="_blank" title="Ou Umbraco - Umbraco v7.3.2 Release">v7.3.2</a>.</p>
+<h2>Creating a Member</h2>
+<p>Let's start by running through some of the different ways you can create members.</p>
+<h3>MembershipHelper</h3>
+<p>Certainly the most expedient way of creating a new member is to use the <em>MembershipHelper. </em>It's available out of the box on the frontend as the <span class="code">Members</span> property, as long as your view is derived from <span class="code">UmbracoViewPage&lt;T&gt;</span> somewhere in its inheritance chain. <span class="code">MembershipHelper</span> also offers a few public constructors if you need to use it independently of a view.</p>
+<p><span>To start, we need to encapsulate the new member's details. To this end, we use the <span class="code">Umbraco.Web.Models</span><span>.</span></span><span class="code">RegisterModel</span><span> type.</span><span> <span>Let's see some code!</span></span></p>
+<pre class="language-csharp"><code>using Umbraco.Web.Models;
+
+RegisterModel newMember = this.Members.CreateRegistrationModel("MyMemberTypeAlias");</code></pre>
+      <p class="snippet-caption">Constructing an instance of RegisterModel</p>
+<p><span><span>There are other ways of instantiating the type, as demonstrated below:</span></span></p>
+<pre class="language-csharp"><code>// Nay! Assumes that a default member type for a baked in alias exists!
+newMember = this.Members.CreateRegistrationModel();
+
+// Yay for mutability! &gt;_&gt;
+
+/* Nay! Attempts to manually construct an instance of MembershipHelper based off the 
+ * current context and also assumes that a default member type for a baked in alias exists! */
+newMember = new RegisterModel(); 
+
+/* Nay! Creates a completely vanilla instance of the model and also assumes that a default 
+ * member type for a baked in alias exists! */
+newMember = RegisterModel.CreateModel();</code></pre>
+      <p class="snippet-caption">The different ways of constructing an instance of RegisterModel</p>
+<p><span>I'd </span><strong>always </strong><span>recommend using the overload of </span><span><span class="code">MembershipHelper.CreateRegistrationModel</span> which expects an explicit member type alias to construct a new instance of <span class="code">RegisterModel</span></span>.</p>
+<p>The other methods assume that the member type alias to be set on the <span class="code">RegisterModel</span> is to be "<em>Member</em>", which is baked into the source of Umbraco itself and the alias of the default member type shipped with a vanilla instance of Umbraco.</p>
+<p><span>The default member type alias set on the underlying </span><span><span class="code">UmbracoMembershipProvider</span>, configured via the site </span>web.config<em> </em><span>does </span><strong>not </strong><span>affect the aforementioned default member type alias. I do believe this could be a remnant of the older membership API. </span></p>
+<p>If a member type with this default alias isn't present, constructing a new instance of <span class="code">RegisterModel</span> via the parameterless instance constructor or parameterless overload of <span class="code">MembershipHelper.CreateRegistrationModel</span> will lead to an invalid operation exception being thrown. Blork!</p>
+<p>Using the parameterless instance constructor should just be generally avoided altogether. It is marked with the <span class="code">Obsolete</span> attribute and calling it leads to an attempt to manually construct <span class="code">MembershipHelper</span> from the current context, which is not a guaranteed operation and may leave the newly created instance in a invalid state. It performs the same <em>business logic lookups </em>as both <span><span class="code">CreateRegistrationModel</span> overloads on <span class="code">MembershipHelper </span></span>(to be exact, setting a collection of member properties based on the member type alias to be used with the instance of RegisterModel), but in a different order as it has to construct <span class="code">MembershipHelper</span> first. Just, uh, avoid it.</p>
+<p>The static <span class="code">CreateModel</span> method on the <span class="code">RegisterModel</span> type itself should only be used to create a default, vanilla instance with none of the aforementioned <em>business logic lookups. </em>I fail to see how this will be useful in most cases, so again, avoid!</p>
+<p><span>You can use <span class="code">RegisterModel</span> directly as a </span><em>form </em><span>model in a view, though I'd recommend having a less specific, generalised model. This will increase the level of indirection and encourage you to keep logic mapping complex member properties to both the view and Umbraco itself separate.</span></p>
+<p><span><span>To register a member based off a created <span class="code">RegisterModel</span>, we need to call <span class="code">MembershipHelper.RegisterMember</span>. There a few things we need to be aware of firstly, however.</span></span></p>
+<p><span><span>The </span><span class="code">Name</span><span>, </span><span class="code">Email</span><span> and </span><span class="code">Password</span><span> properties of the returned instance of </span><span class="code">RegisterModel</span><span> </span><strong>must </strong><span>be set in order for the instance to be used with the </span><span class="code">MembershipHelper.RegisterMember</span><span> method successfully, otherwise you'll run into non-descript null reference exceptions whilst trying to register the member.</span></span></p>
+<pre class="language-csharp"><code>newMember.Name = "Mike Bowen";
+newMember.Email = "milquetoastable@gmail.com";
+
+newMember.Password = "24DaysInUmbraco"; 
+
+newMember.UsernameIsEmail = false;  
+newMember.Username = "mike";
+
+newMember.LoginOnSuccess = false;</code></pre>
+      <p class="snippet-caption">Setting the required properties on an instance of RegisterModel</p>
+<p>The <span class="code">UsernameIsEmail</span> property needs to be set to <span class="code">false</span> on an instance of <span class="code">RegisterModel</span> to be able set a custom username on the <span class="code">Username</span> property. Just setting the property isn't enough. If you try to be funny and set <span class="code">UsernameIsEmail</span> to false and not set a username, the supplied email address <em>will </em>be used. So don't try it. Sneaky.</p>
+<p>Setting custom properties that are defined on your member type, as configured within Umbraco is <em>relatively </em>simple, if rather inelegant. Please note that a property must be marked as "<em>Member can edit</em>" within the Umbraco interface to be accessible within the collection of <span class="code">UmbracoProperty</span>.</p>
+<pre class="language-csharp"><code>// The "favouriteLanguage" property has been marked as "Member can edit" within Umbraco.
+UmbracoProperty favouriteLanguage = newMember.MemberProperties.Single(p =&gt; p.Alias == "favouriteLanguage");
+favouriteLanguage.Value = "Crystal";</code></pre>
+      <p class="snippet-caption">Setting custom properties on an instance of RegisterModel</p>
+<p>I'd personally recommended creating an extension method on the <span class="code">RegisterModel</span> type that tidys up this slightly cumbersome bit of code.</p>
+<pre class="language-csharp"><code>public static void SetPropertyValue(this RegisterModel model, string alias, object value)
+{
+    model.MemberProperties.Single(p =&gt; p.Alias == alias).Value = value.ToString();
+}
+
+newMember.SetValue("favouriteLanguage", "F#");</code></pre>
+      <p class="snippet-caption">Extension methods on RegisterModel</p>
+<p>The above provides a similar interface to other Umbraco APIs we all know and love for dealing with setting and getting property values.</p>
+<p><span class="code">MembershipHelper.RegisterMember</span><span> uses the underlying </span><span class="code">UmbracoMembershipProvider</span><span>. The provided email address, username and password contained on the supplied instance of </span><span class="code">RegisterModel</span><span> are subject to validation which can be configured through the site </span>web.config<em> </em><span>as you would a standard ASP.NET membership provider. The duo of </span><span class="code">R</span><span class="code">egisterModel</span><span> and </span><span class="code">MembershipHelper.</span><span class="code">RegisterMember</span><span> doesn't quite fully encapsulate </span><em>everything</em><span> the </span><span class="code">UmbracoMembershipProvider</span><span> offers, at least </span><em>directly</em><span>, however.</span></p>
+<p>Now, for the life of me, I just can't figure out how to set some standard membership properties such as the password retrieval question and answer using this approach. These are not exposed on an instance of <span class="code">RegisterModel</span> directly, even via its collection of member properties.</p>
+<p><span class="code">MembershipUser</span> does expose one such method, <span class="code">ChangePasswordQuestionAndAnswer</span>, but this can not be called unless the <span class="code">requiresQuestionAndAnswer </span>attribute has been set to <span class="code">true</span> on the <span class="code">UmbracoMembershipProvider </span>configuration stored within the web.config. However, we can then not create a new member using <span class="code">MembershipHelper.RegisterMember</span> as a password retrieval question and answer are required to be set <em>before</em> the new member is registered. A chicken and egg situation - <strong>answers on a postcard please!</strong></p>
+<p>The Umbraco abstractions end after calling <span class="code">MembershipHelper.RegisterMember</span>, where upon you're left with instances of <span class="code">MembershipCreateStatus</span> and <span class="code">MembershipUser</span>, both belonging to the <span class="code">System.Web.Security </span>namespace. <span class="code">MembershipCreateStatus</span> should be used to verify the success of the registration. I feel it's somewhat unfortunate that after dealing with these rather lovely Umbraco abstractions, we are thrown back to murky waters of the underlying .NET types. It's not a <em>massive </em>issue, but slightly jarring nonetheless.</p>
+<pre class="language-csharp"><code>using System.Web.Security
+
+MembershipCreateStatus status = new MembershipCreateStatus();
+MembershipUser member = this.Members.RegisterMember(newMember, out status);</code></pre>
+      <p class="snippet-caption">Creating a new member using MembershipHelper</p>
+<p>It's here where the frontend APIs throw back the curtain and reveal what they were all along; a thin layer over both the <span class="code">UmbracoMembershipProvider</span> and the Umbraco <em>Services</em> layer.</p>
+<p>Once you've registered a member, you may want to add them to an Umbraco <em>member group</em>, or a <em>role </em>in ASP.NET parlance. Neither RegisterModel or MembershipHelper exposes a way of doing this, so you'll have to resort to the ASP.NET membership APIs.</p>
+<pre class="language-csharp"><code>Roles.AddUserToRole(newMember.Username, "MyMemberGroup");</code></pre>
+      <p class="snippet-caption">Adding member groups (roles) to a member</p>
+<p>Members created using <span class="code">MembershipHelper</span> are automatically approved. If you want to disapprove the member, after the member has been persisted you'll have to use the native ASP.NET membership APIs.</p>
+<pre class="language-csharp"><code>member.IsApproved = false;
+Membership.UpdateUser(member);</code></pre>
+      <p class="snippet-caption">Disapproving a member</p>
+<h3>MemberService</h3>
+<p>Despite the <span>availability and </span>relative ease of using the front end APIs to create a new member, there is fair amount of complexity that is just as easy to find yourself wading through. The front end APIs essentially wrap a good portion of the <em>MemberService</em> for actually creating and persisting a member, using the <span class="code">UmbracoMembershipProvider</span> for validation and general data sanity.</p>
+<p>The <em>MemberService</em> is a lower level API, but should be comfortable to those familiar to the other, similarly veined APIs available in the <em>Services</em> family.</p>
+<p>The obvious issue is that <em>MemberService</em> hits the database agnostic of any validation supplied by the <span class="code">UmbracoMembershipProvider</span>. This is a gain in that it allows very fine grained control of the registration process, but it's not exactly a win to duplicate pre-built functionality.</p>
+<p>The service itself resides within the <span class="code">Umbraco</span><span class="s1 code">.</span><span class="code">Core</span><span class="s1 code">.</span><span class="code">Services</span> namespace and is accessible via the current Umbraco <span class="code">ServiceContext</span>, itself in the <span class="code">Umbraco.Core</span> namespace as an interface (<span class="code">IMemberService</span>). The concrete type is <span class="code">MemberService</span>.</p>
+<p>You can create a new instance of <span class="code">MemberService</span>, but you'll almost always want to use the current Umbraco application context rather than do this. It's certainly a lot more involved than initialising a new instance of <span class="code">MembershipHelper</span>.</p>
+<p>Anyhoo, let's register a new member!</p>
+<pre class="language-csharp"><code>using Umbraco.Core.Models;
+using Umbraco.Core.Services;
+
+IMemberService service = ApplicationContext.Current.Services.MemberService;
+    
+IMember newMember = service.CreateMember("milquetoastable@gmail.com", "milquetoastable@gmail.com", "Mike Bowen", "MyMemberType");
+newMember = service.CreateMemberWithIdentity("milquetoastable@gmail.com", "milquetoastable@gmail.com", "Mike Bowen", "MyMemberType");
+newMember = service.CreateWithIdentity("milquetoastable@gmail.com", "milquetoastable@gmail.com", "Mike Bowen", "MyMemberType");</code></pre>
+      <p class="snippet-caption">Using MemberService to create and / or persist a new member</p>
+<p>The above methods called on the <span class="code">IMemberService </span>expose a bunch of different overloads, allowing you to pass in either a <span class="code">MemberType</span> object or alias for the type of the newly created member as well as an optional member name.</p>
+<p>There is no functional difference between the <span class="code">IMemberService.CreateMemberWithIdentity</span> and <span class="code">IMemberService.CreateWithIdentity</span> methods; the former is implemented from <span class="code">Umbraco.Core.Services.</span><span class="code">IMembershipMemberService</span> whilst the latter is implemented from<span class="code"> <span>Umbraco.Core.Services.</span>IMembershipMemberService&lt;IMember&gt;</span>. </p>
+<p class="p1"><span class="code">IMemberService.CreateMember</span> creates a new member object (of type <span class="code">Umbraco.Core.Models.IMember</span>, the concrete type being <span class="code">Umbraco.Core.Models.Member</span>) without immediately registering the new member, allowing you to set additional properties before hitting the database.</p>
+<p class="p1">Custom properties can be easily set using the <span class="code">IMember.SetValue </span>method. Since the concrete instance of <span class="code">IMember</span> inherits from <span class="code">Umbraco.Core.Models.ContentBase</span> just like <span class="code">Umbraco.Core.Models.Content,</span> you may be already familiar with this approach! Please note that <em>every custom </em>property is available, regardless of whether it has been marked as "Member can edit" within the Umbraco interface.</p>
+<pre class="language-csharp"><code>newMember.SetValue("favouriteLanguage", "Ruby");</code></pre>
+      <p class="snippet-caption">Setting custom properties on an instance of IMember</p>
+<p class="p1">Interesting aside; whilst the main overload of the <span class="code">SetValue</span><em class="code"> </em>method you'll be using accepts <em>object</em> as the type of the value you want to set on a member (or content), it binds to one of several <span class="code">SetPropertyValue</span> overloads, defined on the concrete type of <span class="code">Umbraco.Core.Models.ContentModelBase</span> dynamically. There are overloads of <span class="code">ContentModelBase.SetPropertyValue</span> for <span class="code">string</span>, <span class="code">int</span>, <span class="code">long</span>,<span class="code"> bool</span> and <span class="code">DateTime</span>. Basically, you can't just pass <em>anything</em> despite the signature accepting object.</p>
+<p class="p1">Properties related to the <span><span class="code">UmbracoMembershipProvider</span> itself are exposed directly, and can be edited as such.</span></p>
+<pre class="language-csharp"><code>newMember.Comments = "Here's an member";
+newMember.IsApproved = false;
+newMember.PasswordQuestion = "Awesome?";
+newMember.RawPasswordAnswerValue = "AWESOME";</code></pre>
+      <p class="snippet-caption">Setting properties on IMember</p>
+<p class="p1">The member can then be persisted by passing the <span class="code">IMember</span> object to <span class="code">IMemberService.Save</span>.</p>
+<p class="p1">Slightly jarringly, we have to set member's password <em>after </em>it has been persisted. If the member does not exist, say as a result by creating the member by calling <span class="code">IMemberService.CreateMember</span> first, a obscure SQL exception is thrown. The below call entails a separate database hit, unfortunately.</p>
+<pre class="language-csharp"><code>service.Save(newMember);
+service.SavePassword(newMember, "24DaysInUmbraco");</code></pre>
+      <p class="snippet-caption">Calling SavePassword on the MemberService</p>
+<p><em>Roles</em> or Umbraco member groups can be applied to a member using the <span class="code">MemberService</span> like so:<span style="font-size: 1.17em;"><br></span></p>
+<pre class="language-csharp"><code>service.AssignRole(newMember.Id, "MyMemberGroup");
+
+// or multiple role assignment.
+    
+service.AssignRoles(new [] { newMember.Id }, new [] { "MyMemberGroup", "MyOtherMemberGroup" });</code></pre>
+      <p class="snippet-caption">Adding member groups (roles) to a member</p>
+<h3><span style="font-size: 1.17em;">Which to use?</span></h3>
+<p>In my first draft of this article I actually choose <span class="code">MemberService</span>. Perhaps controversial, but I feel the API as whole is more consistent, familiar and requires less uncomfortable hoop jumping than the front end APIs.</p>
+<p>Just instantiating and configuring <span class="code">RegisterModel</span> correctly<span class="code"> </span>is an awkward process hiding a few alarming edge cases. Far too much is dependant on the state of the model and what properties may or may not be set when using it in conjunction with the <span class="code">MembershipHelper.RegisterMember</span> method.</p>
+<p>Using the <span class="code">MemberService</span> <span>also </span>just <em>feels</em> more natural. Creating members <em>should</em> logically be a "<em>backend</em>" operation, rather than something exposed on an frontend API.</p>
+<p>As awkward as it is, the combination of <span class="code">MembershipHelper</span> and <span class="code">RegisterModel </span>does provide validation for the new member using the <span class="code">UmbracoMembershipProvider</span>. Replicating this functionality yourself is a pretty large ask, you may as well be making your own membership provider.</p>
+<p><span class="code">MemberService</span> does expose almost <em>too</em> much flexibility; there are plenty of properties on <span class="code">IMember</span> that, whilst they mirror those <span>available on </span><span class="code">MembershipUser</span>, aren't immediately relevant to registering a member. It's very much an <em>administration </em>API.</p>
+<p>The situation isn't ideal. I'd definitely like to see an intermediate backend service that utilises the <span><span class="code">UmbracoMembershipProvider</span> but is semantically similar to the <span class="code">MemberService</span><em class="code">,</em> is as simple as <span class="code">MembershipUser</span> and<em> </em>that has most of the flexibility and power of <span class="code">MemberService</span></span>. A <em>RegisterService</em>, if you will.<span><br></span></p>
+<p>Regardless of what API you use, whether you mix and match or even disregard both and simply use <span class="code">System.Web.Security.Membership</span>, I'd mostly just recommended wrapping the logic up as a separate <em>module</em>, whether that's a class or class library that's up to you!</p>
+<h2>Displaying a Member's Profile</h2>
+<p>Now that we've created a member, it's best we find an appropriate API to retrieve that member and their information.</p>
+<h3>MembershipHelper</h3>
+<p>Our old friend <span class="code">MembershipHelper</span> exposes a multitude of different ways of dealing with members on the frontend of an Umbraco website. There are operations for not only registering, logging in and out, but updating and obtaining the currently logged in member. Compared to using <span class="code">MemberService</span> for frontend operations involving members, <span class="code">MembershipHelper</span> feels much nicer, succinct and logical. As previously stated, it's available out of the box on view pages inheriting <span class="code">Umbraco.Web.Mvc.UmbracoViewPage&lt;T&gt;</span>, abstracts parts of the underlying <br>membership provider and genuinely feels like a true, usable counterpart to the <span class="code">UmbracoHelper</span>.</p>
+<p>There are a couple of caveats, but there's really no convincing reason not to use it in favor of another API. It's not complete picture however, and I'd certainly recommended using it in conjunction with custom functionality that helps smooth the rougher edges.</p>
+<p>I must stress that as <span class="code">MembershipHelper</span> is very much a frontend API; that is it concerns itself most with dealing with a single, logged in member. If you want to perform batch operations on members, you'll have to use the <span class="code">MemberService</span>.</p>
+<pre class="language-csharp"><code>if (this.Members.IsLoggedIn() &amp;&amp; this.Members.IsMemberAuthorized(allowTypes: new [] { "MyMemberType" }))
+{
+    string currentUserName = this.Members.CurrentUserName;
+    int currentMemberId = this.Members.GetCurrentMemberId();
+    
+    IPublishedContent member = this.Members.GetCurrentMember();
+    ProfileModel profile = this.Members.GetCurrentMemberProfileModel();
+}</code></pre>
+      <p class="snippet-caption">Simple operations defined on MembershipHelper to access the currently logged in member</p>
+<p>The above methods are relatively self explanatory. Of note is <span class="code">MembershipHelper.IsMemberAuthorized</span>, which provides a variety of different ways via optional parameters to confirm that the currently logged in member is allowed to view the current content. The above example uses member types to authorise the member; how this works with regards to Umbraco <em>protected pages </em>I'm not sure - you can only protect a page by member group or a specific member.</p>
+<p>The main point of interest is how we request a more complex object representing the currently logged in member. <span class="code">MembershipHelper</span> exposes two different methods that deliver such functionality. <span class="code">MembershipHelper.GetCurrentMemberProfileMode</span> maps the currently logged in member to an instance of <span class="code">Umbraco.Web.Models.ProfileModel</span>, which we will disregard for the time being.</p>
+<p><span class="code">MembershipHelper.GetCurrentMember</span> returns the currently logged in member as instance of <span class="code">Umbraco.Core.Models.IPublishedContent</span>.</p>
+<p>You'll most likely be familiar with IPublishedContent. It is the interface that represents a chunk content within Umbraco on the frontend. That the concrete type that represents a logged member implements the same interface allows us to treat it <em>exactly</em> the same way. Lovely!</p>
+<p>Except in situations where a member is <em>not </em>like content. That is where the abstraction falls down.</p>
+<pre class="language-csharp"><code>string email = member.GetPropertyValue&lt;string&gt;("uhhh, what's the alias for the member's email address?");
+        
+// Oddly, the below don't throw an exception.
+var firstChild = member.FirstChild();
+var descendants = member.Descendants();
+
+// Throws not supported exception!
+string templateAlias = member.GetTemplateAlias();</code></pre>
+      <p class="snippet-caption">IPublishedContent properties</p>
+<p><em>Odd.</em> Certain properties and methods throw not supported exceptions, whilst others fail silently. We could argue that if a type is throwing such exceptions  or failing silently within a interface method, then it is only implementing the interface to please the compiler and the type <em>shouldn't </em>implement said interface. Regardless of the approach taken, just general <em>consistency</em> would be nice.</p>
+<p>The main stumbling block you may come across will be how to acquire standard membership properties such as the member's email address or username. <span class="code">IPublishedContent.GetPropertyValue&lt;T&gt;</span> won't help here. Instead we have to cast the instance of <span class="code">IPublishedContent</span> to its underlying concrete type, <span class="code">Umbraco.Web.PublishedCache.MemberPublishedContent</span>.</p>
+<pre class="language-csharp"><code>using Umbraco.Web.PublishedCache;
+
+MemberPublishedContent actualMember = member as MemberPublishedContent;
+        
+string email = actualMember.Email;
+string username = actualMember.UserName;</code></pre>
+      <p class="snippet-caption">MemberPublishedContent</p>
+<h3>The other approaches...</h3>
+<p>There are two other Umbraco APIs that can be used to display a member's details. Either <span class="code">MembershipHelper.GetCurrentMember</span> (covered above) or <span class="code">MembershipHelper.GetCurrentMemberProfileMode</span> should be used if you're trying to access details pertaining to a currently logged in member, as there's nothing on <span class="code">MemberService</span> that will help with this.</p>
+<p>There are methods to retrieve a member based on id, username or provider key, but you'll have to call one of the appropriate methods on <span class="code">MembershipHelper</span> to use these in a meaningful way. Conversely <span class="code">MembershipHelper</span> exposes nothing to help with a bunch of members, so if you're trying to build a members directory or something similar, you'll have to use <span class="code">MemberService</span>. <span class="code">IMember</span> plenty of ways to obtain information and properties on a member.</p>
+<p>Where you can, and unless you have very specific needs, stick with <span class="code">MembershipHelper</span> and <span><span class="code">MembershipHelper.GetCurrentMember</span>. It really is a wonderful API for dealing with plenty of common tasks related to members, not just displaying information pertaining to them.</span></p>
+<p>We <em>haven't </em>covered <span><span class="code">MembershipHelper.GetCurrentMemberProfileMode</span>, mainly because its main purpose isn't purely for <em>displaying</em> details about a member. Rather it is <em>updating</em>.</span></p>
+<h2><span>Updating a Member's Profile</span></h2>
+<p><span>We've come to the final part of our investigation. How do we update a member's profile in a meaningful way?</span></p>
+<p>You can either use the <span class="code">MemberService</span> directly as demonstrated above, or use <span class="code">MembershipHelper.GetCurrentMemberProfileMode</span>. Calling this method returns the currently logged in member mapped to an instance of <span class="code">Umbraco.Web.Models.ProfileModel.<br></span></p>
+<p><span class="code">ProfileModel </span>looks and feels very similar to <span class="code">RegisterModel</span>. In fact, it can be constructed in very much the same as <span class="code">RegisterModel</span>; via a static method call on the type itself, a parameterless instance constructor and with the aforementioned method on <span class="code">MembershipHelper</span>. The same edge cases and oddities that occur with constructing <span class="code">RegisterModel</span> make an re-appearance with <span class="code">ProfileModel</span>.</p>
+<p>Regardless, it's the best way of updating a member's details. Again, as a part of the <span class="code">MembershipHelper</span> suite of methods, it's consistent and holds less potential pitfalls than using <span class="code">MembershipHelper</span> for registering a member. Since <span class="code">MembershipHelper</span> is attuned to dealing with the currently logged in member, you're stuck with <span class="code">MemberService</span> if you want to batch update members.</p>
+<p>Updating custom properties is awkward, just as it is on <span class="code">RegisterModel</span>, but can easily be cleaned up with a extension method or two. </p>
+<p>Once a <span class="code">ProfileModel</span> has been updated with the member's new details, it needs to be passed to <span class="code">Members.UpdateMemberProfile</span> to be persisted.</p>
+<p>Once again, I wouldn't recommend using a <span class="code">ProfileModel</span> directly as a <em>form </em>model. Use a generalised model that can be mapped to a <span class="code">ProfileModel</span> for update operations. That way you can also make it interchangeable with the <span class="code">MemberService</span> if needs be.</p>
+<h2>Conclusion</h2>
+<p>This concludes our whirlwind tour of the Umbraco membership APIs for now. What have we learnt? Well, Membership is <em>hard</em>. But apart from that, if you know your way around the APIs Umbraco offers, it's actually a much easier, streamlined process. Registration is only the spot that causes headaches and where the APIs could be clearer. I think the old Python adage that there should only be <em>one simple way of doing things</em> rings especially true here.</p>
+<ul>
+<li>When registering a member, use either the <span class="code">MemberService</span> and (ouch!) write your own validation or use <span class="code">MembershipHelper</span> and beware of its issues.</li>
+<li>To display details about the currently logged in member, use <span class="code">MembershipHelper</span>.</li>
+<li>To perform batch operations or get information about multiple members, use <span class="code">MemberService</span>.</li>
+<li>To update a member, use <span class="code">MembershipHelper</span>. It provides validation and is more consistent with the rest of the frontend APIs.</li>
+<li>Try to avoid using either <span class="code">RegisterModel</span> or <span class="code">ProfileModel</span> directly as form models. You'll have more control and flexibility if use an intermediate model.</li>
+</ul>
+<p>Hopefully I will write a future article that will go into further details about the other membership services that Umbraco provides, as well as custom membership providers.</p>
+<p>Please leave a comment if you have any feedback, queries, corrections, insights or any of the alike or you can tweet me at <a href="https://twitter.com/milquetoastable" target="_blank" title="Twitter - milquetoastable">@milquetoastable</a>.</p>
+<p>Here is a link to a <a href="https://gist.github.com/milquetoastable/056bbfe68cf8ad06f630" target="_blank" title="Umbraco Membership APIs snippets gist">gist</a> with some of the above code examples.</p>
+<p>Thanks to <a href="https://twitter.com/designwithpink" title="Twitter - Blake Clerke-Smith">Blake Clerke-Smith</a> for allowing me to provide an article! </p>
+<p>Godspeed!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/members/" title="See all articles tagged with Members">Members</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Mike Bowen"><img src="//gravatar.com/avatar/50d36fecd03adf30fc9095387efdc28c.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/50d36fecd03adf30fc9095387efdc28c.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Mike Bowen</h1>
+        <p>Mike is on Twitter as <a href="//twitter.com/milquetoastable" title="Mike Bowen on Twitter" rel="author">@milquetoastable</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li class="selected"><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

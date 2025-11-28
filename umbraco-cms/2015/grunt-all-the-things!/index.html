@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Creating and releasing Umbraco packages for multiple platforms using Grunt</title>
+<meta name="description" content="A guide to automating package creation with multiple distribution formats for Umbraco using Grunt">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Creating and releasing Umbraco packages for multiple platforms using Grunt</h1>
+      <p class="byline"> by Anders Bjerner, <span class="pubdate">posted on <time datetime="2015-12-03">Dec 3, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Creating and releasing Umbraco packages for multiple platforms using Grunt</h2>
+<p>If you ever tried creating a package for Umbraco, there might be quite a few steps involved when pushing a new release, taking up time you could use for development instead.</p>
+<p class="intro">When I create packages for Umbraco, I usually release my package via three different platforms: a NuGet package to be installed via Visual Studio, a ZIP file of the relevant files uploaded to GitHub, and an actual Umbraco package uploaded to Our Umbraco. Targeting three different platforms then obviously involves even more steps.</p>
+<p>So can we do something to automate this? YES!</p>
+<h3>The power of Grunt</h3>
+<p>There are multiple ways of obtaining the same result - eg. some build servers supports creating a NuGet package for each build.</p>
+<p>But since we at Skybrud.dk already are using Grunt for our frontend stuff, I've opted for using Grunt for this as well.</p>
+<p><strong>Getting started</strong><br><span>For creating a release for each platform, we'll need some information about our package. We can declare this in </span><code class="code">Gruntfile.js</code><span>, but to keep things a bit separate, I've gone with appending this to </span><code class="code">package.json</code><span> instead.</span></p>
+<p>So for our <a href="https://github.com/skybrud/Skybrud.Umbraco.GridData" target="_blank" title="View Skybrud.Umbraco.GridData on GitHub">Umbraco GridData package</a>, the package.json looks like this:</p>
+<pre class="language-javascript"><code>{
+  "name": "Skybrud.Umbraco.GridData",
+  "url": "https://github.com/skybrud/Skybrud.Umbraco.GridData",
+  "license": {
+    "name": "MIT",
+    "url": "https://github.com/skybrud/Skybrud.Umbraco.GridData/blob/master/LICENSE.md"
+  },
+  "author": {
+    "name": "Anders Bjerner, René Pjengaard",
+    "url": "http://www.skybrud.dk/"
+  },
+  "readme": "Skybrud.Umbraco.GridData is a small package with a strongly typed model for the new grid in Umbraco 7.2.\n\nThe package makes it easy to use the model in your MVC views, master pages or even in your custom logic - eg. to index the grid data in Examine for better searches.",
+  "devDependencies": {
+    "grunt": "~0.4.5",
+    "grunt-contrib-copy": "~0.4.1",
+    "grunt-nuget": "~0.1.4",
+    "grunt-zip": "~0.17.0",
+    "grunt-umbraco-package": "1.0.0",
+    "grunt-contrib-clean": "^0.6.0"
+  }
+}</code></pre>
+<p>Since the the release for each platform will be based on a Visual Studio project, it would make sense to get as much information from the DLL of that project. Since I haven't found a way to do this directly using either npm or Grunt, I have created a small tool called <a href="https://github.com/skybrud/Skybrud.Umbraco.GridData/tree/master/.skybrud" target="_blank">UpdateAssemblyInfoJson</a> that generates a JSON file with information about the DLL.</p>
+<p>The <span class="code">.csproj</span> file of our Grid project is located at <span class="code">/src/Skybrud.Umbraco.GridData/Skybrud.Umbraco.GridData.csproj</span>. To generate the mentioned JSON file, I've added a post build event to the Visual Studio project:</p>
+<pre class="language-markup"><code>"$(SolutionDir)..\.skybrud\UpdateAssemblyInfoJson.exe" "$(ProjectPath)" "$(TargetPath)"</code></pre>
+<p>So when a build completes, the information will be saved to <span class="code">/src/Skybrud.Umbraco.GridData/Properties/AssemblyInfo.json</span>, and contain something like this:</p>
+<pre class="language-javascript"><code>{
+  "title": "Skybrud.Umbraco.GridData",
+  "description": "Skybrud.Umbraco.GridData is a small package with a strongly typed model for the grid in Umbraco 7.2 and above.",
+  "company": "Skybrud.dk",
+  "product": "Skybrud.Umbraco.GridData",
+  "copyright": "Copyright © 2015",
+  "version": "1.5.0.0",
+  "informationalVersion": "1.5.0",
+  "fileVersion": "0.0.347.2"
+}</code></pre>
+<p><strong>Setting up the Grunt file</strong><br><span>With the JSON file in place, we can now read it from </span><code class="code">Gruntfile.js</code><span>. The starting point of the </span><code class="code">Gruntfile.js</code><span> could look like:</span></p>
+<pre class="language-javascript"><code>module.exports = function(grunt) {
+
+    // Load the package JSON file
+    var pkg = grunt.file.readJSON('package.json');
+
+    // get the root path of the project
+    var projectRoot = 'src/' + pkg.name + '/';
+
+    // Load information about the assembly
+    var assembly = grunt.file.readJSON(projectRoot + 'Properties/AssemblyInfo.json');
+
+    // Get the version of the package
+    var version = assembly.informationalVersion ? assembly.informationalVersion : assembly.version;
+
+    grunt.initConfig({
+        pkg: pkg
+    });
+
+    grunt.loadNpmTasks('grunt-contrib-clean');
+    grunt.loadNpmTasks('grunt-contrib-copy');
+    grunt.loadNpmTasks('grunt-nuget');
+    grunt.loadNpmTasks('grunt-zip');
+    grunt.loadNpmTasks('grunt-umbraco-package');
+
+    grunt.registerTask('dev', []);
+    grunt.registerTask('default', ['dev']);
+
+};</code></pre>
+<p><strong>Determining relevant files for the packages</strong><br><span>For the GitHub ZIP file and the Umbraco ZIP package, I setup </span><code class="code">/files</code><span> as the source directory, and copy relevant files here using the </span><a href="https://www.npmjs.com/package/grunt-contrib-copy" target="_blank">grunt-contrib-copy</a><span> task. To make sure the directory is empty before copying, I'm also using the </span><a href="https://www.npmjs.com/package/grunt-contrib-clean" target="_blank">grunt-contrib-clean</a><span> task.</span></p>
+<p><span><span>The updated </span><code class="code">Gruntfile.js</code><span> now looks like this:</span></span></p>
+<pre class="language-javascript"><code>module.exports = function(grunt) {
+
+    // Load the package JSON file
+    var pkg = grunt.file.readJSON('package.json');
+
+    // get the root path of the project
+    var projectRoot = 'src/' + pkg.name + '/';
+
+    // Load information about the assembly
+    var assembly = grunt.file.readJSON(projectRoot + 'Properties/AssemblyInfo.json');
+
+    // Get the version of the package
+    var version = assembly.informationalVersion ? assembly.informationalVersion : assembly.version;
+
+    grunt.initConfig({
+        pkg: pkg,
+        clean: {
+            files: [
+                'files/**/*.*'
+            ]
+        },
+        copy: {
+            release: {
+                files: [
+                    {
+                        expand: true,
+                        cwd: projectRoot + 'bin/Release/',
+                        src: [
+                            pkg.name + '.dll',
+                            pkg.name + '.xml'
+                        ],
+                        dest: 'files/bin/'
+                    }
+                ]
+            }
+        }
+    });
+
+    grunt.loadNpmTasks('grunt-contrib-clean');
+    grunt.loadNpmTasks('grunt-contrib-copy');
+    grunt.loadNpmTasks('grunt-nuget');
+    grunt.loadNpmTasks('grunt-zip');
+    grunt.loadNpmTasks('grunt-umbraco-package');
+
+    grunt.registerTask('dev', ['clean', 'copy']);
+    grunt.registerTask('default', ['dev']);
+
+};</code></pre>
+<p><strong>NuGet</strong><br><span>For creating the NuGet package, I'm using the </span><a href="https://www.npmjs.com/package/grunt-nuget" target="_blank">grunt-nuget</a><span> package. It adds tasks for a number of purposes, but most importantly the <span class="code">nugetpack</span> task.</span></p>
+<p><span>The task is then based on <span class="code">/src/Skybrud.Umbraco.GridData/Skybrud.Umbraco.GridData.csproj</span>. When the pack task is based on a <span class="code">.csproj</span> file, NuGet will automatically look for a <span class="code">.nuspec</span> file with the same basename. So in this example, NuGet will find <span class="code">/src/Skybrud.Umbraco.GridData/Skybrud.Umbraco.GridData.nuspec</span>, which looks like:</span></p>
+<pre class="language-markup"><code>&lt;?xml version="1.0"?&gt;
+&lt;package &gt;
+  &lt;metadata&gt;
+    &lt;id&gt;$id$&lt;/id&gt;
+    &lt;version&gt;$version$&lt;/version&gt;
+    &lt;title&gt;$title$&lt;/title&gt;
+    &lt;authors&gt;Anders Bjerner, René Pjengaard&lt;/authors&gt;
+    &lt;owners&gt;Anders Bjerner, René Pjengaard&lt;/owners&gt;
+    &lt;licenseUrl&gt;https://github.com/skybrud/Skybrud.Umbraco.GridData/blob/master/LICENSE.md&lt;/licenseUrl&gt;
+    &lt;projectUrl&gt;https://github.com/skybrud/Skybrud.Umbraco.GridData&lt;/projectUrl&gt;
+    &lt;iconUrl&gt;http://www.skybrud.dk/img/5431sk/icon/favicon.ico&lt;/iconUrl&gt;
+    &lt;requireLicenseAcceptance&gt;false&lt;/requireLicenseAcceptance&gt;
+    &lt;description&gt;$description$&lt;/description&gt;
+    &lt;tags&gt;Umbraco, Grid, JSON&lt;/tags&gt;
+  &lt;/metadata&gt;
+&lt;/package&gt;</code></pre>
+<p>The values of <span class="code">id</span>, <span class="code">version</span> and <span class="code">title</span> are automatically populated based on the DLL of the project.</p>
+<p>The configuration of the task will look like:</p>
+<pre class="language-javascript"><code>nugetpack: {
+    release: {
+        src: 'src/' + pkg.name + '/' + pkg.name + '.csproj',
+        dest: 'releases/nuget/'
+    }
+}</code></pre>
+<p><strong>GitHub</strong><br>For creating a ZIP archive to be uploaded to GitHub, I'm using the <a href="https://www.npmjs.com/package/grunt-zip" target="_blank">grunt-zip</a> package, which gives me the <span class="code">zip</span> task. The task can be set up like:</p>
+<pre class="language-javascript"><code>zip: {
+    release: {
+        cwd: 'files/',
+        src: [
+            'files/**/*.*'
+        ],
+        dest: 'releases/github/' + pkg.name + '.v' + version + '.zip'
+    }
+}</code></pre>
+<p>If the version of the DLL file is <span class="code">1.5.0</span>, running the above task will create a new archive at <span class="code">/releases/github/Skybrud.Umbraco.GridData.v1.5.0.zip</span>.</p>
+<p><strong>Umbraco package</strong><br>For creating the Umbraco package, I'm using <a href="https://www.npmjs.com/package/grunt-umbraco-package" target="_blank">grunt-umbraco-package</a> by <a href="https://twitter.com/tomnfulton" target="_blank">@tomnfulton</a>.</p>
+<p><span>When setting up the task with the configuration shown below, the task will automatically generate the manifest, and add the files that we earlier copied to </span><code class="code">/files</code><span>. The ZIP archive is then saved to </span><code class="code">/releases/umbraco/Skybrud.Umbraco.GridData.v1.5.0.zip</code><span>.</span></p>
+<pre class="language-javascript"><code>umbracoPackage: {
+    release: {
+        src: 'files/',
+        dest: 'releases/umbraco',
+        options: {
+            name: pkg.name,
+            version: version,
+            url: pkg.url,
+            license: pkg.license.name,
+            licenseUrl: pkg.license.url,
+            author: pkg.author.name,
+            authorUrl: pkg.author.url,
+            readme: pkg.readme,
+            outputName: pkg.name + '.v' + version + '.zip'
+        }
+    }
+}</code></pre>
+<h3><span>Finale</span></h3>
+<p><span>To summarize the various tasks, the final <span class="code">Gruntfile.js</span> will now look like:</span></p>
+<pre class="language-javascript"><code>module.exports = function(grunt) {
+
+    // Load the package JSON file
+    var pkg = grunt.file.readJSON('package.json');
+
+    // get the root path of the project
+    var projectRoot = 'src/' + pkg.name + '/';
+
+    // Load information about the assembly
+    var assembly = grunt.file.readJSON(projectRoot + 'Properties/AssemblyInfo.json');
+
+    // Get the version of the package
+    var version = assembly.informationalVersion ? assembly.informationalVersion : assembly.version;
+
+    grunt.initConfig({
+        pkg: pkg,
+        clean: {
+            files: [
+                'files/**/*.*'
+            ]
+        },
+        copy: {
+            release: {
+                files: [
+                    {
+                        expand: true,
+                        cwd: projectRoot + 'bin/Release/',
+                        src: [
+                            pkg.name + '.dll',
+                            pkg.name + '.xml'
+                        ],
+                        dest: 'files/bin/'
+                    }
+                ]
+            }
+        },
+        nugetpack: {
+            release: {
+                src: 'src/' + pkg.name + '/' + pkg.name + '.csproj',
+                dest: 'releases/nuget/'
+            }
+        },
+        zip: {
+            release: {
+                cwd: 'files/',
+                src: [
+                    'files/**/*.*'
+                ],
+                dest: 'releases/github/' + pkg.name + '.v' + version + '.zip'
+            }
+        },
+        umbracoPackage: {
+            release: {
+                src: 'files/',
+                dest: 'releases/umbraco',
+                options: {
+                    name: pkg.name,
+                    version: version,
+                    url: pkg.url,
+                    license: pkg.license.name,
+                    licenseUrl: pkg.license.url,
+                    author: pkg.author.name,
+                    authorUrl: pkg.author.url,
+                    readme: pkg.readme,
+                    outputName: pkg.name + '.v' + version + '.zip'
+                }
+            }
+        }
+    });
+
+    grunt.loadNpmTasks('grunt-contrib-clean');
+    grunt.loadNpmTasks('grunt-contrib-copy');
+    grunt.loadNpmTasks('grunt-nuget');
+    grunt.loadNpmTasks('grunt-zip');
+    grunt.loadNpmTasks('grunt-umbraco-package');
+
+    grunt.registerTask('dev', ['clean', 'copy', 'nugetpack', 'zip', 'umbracoPackage']);
+    grunt.registerTask('default', ['dev']);
+
+};</code></pre>
+<p>In my example for version <span class="code">1.5.0</span>, the following files will be generated:</p>
+<ul>
+<li><span class="code">/releases/nuget/Skybrud.Umbraco.GridData.1.5.0.nupkg</span></li>
+<li><span class="code">/releases/github/Skybrud.Umbraco.GridData.v1.5.0.zip</span></li>
+<li><span class="code">/releases/umbraco/Skybrud.Umbraco.GridData.v1.5.0.zip</span></li>
+</ul>
+<p>I have then manually uploaded the files to NuGet, GitHub and Our Umbraco, which is fine for me.</p>
+<p>But you could take it further to automatically deploy the files as well. <a href="https://www.npmjs.com/package/grunt-nuget" target="_blank">grunt-nuget</a> for instance also has a <span class="code">nugetpush</span> task.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Anders Bjerner"><img src="//gravatar.com/avatar/d1e8799951be61168d3929c56cdfa828.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/d1e8799951be61168d3929c56cdfa828.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Anders Bjerner</h1>
+        <p>Anders is on Twitter as <a href="//twitter.com/abjerner" title="Anders Bjerner on Twitter" rel="author">@abjerner</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li class="selected"><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

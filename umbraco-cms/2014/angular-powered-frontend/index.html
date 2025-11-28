@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Making an Angular-powered frontend with Umbraco</title>
+<meta name="description" content="Learn how to tweak Umbraco and use AngularJS to present data in the frontend">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Making an Angular-powered frontend with Umbraco</h1>
+      <p class="byline"> by René Pjengaard &amp; Filip Bech, <span class="pubdate">posted on <time datetime="2014-12-08">Dec 8, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span>Have you ever wanted to make a really cool website with cool transitions instead of those tedious pageloads? Maybe even as cool as the Umbraco 7 backoffice? Here is our recipe. I'm sure there are other ways to do it, but now that you have to learn Angular to extend the backoffice, why not use that?</span></p>
+<p class="intro"><span>In this article you will learn how to tweak Umbraco and use AngularJS to present data in the frontend. Maybe now is a good time to learn a little about how Google crawls websites containing data presented with JavaScript: <a href="http://googlewebmastercentral.blogspot.dk/2014/05/understanding-web-pages-better.html" target="_blank">http://googlewebmastercentral.blogspot.dk/2014/05/understanding-web-pages-better.html</a></span></p>
+<h2><span><span>Routing</span></span></h2>
+<p><span><span><span>First off we have to tame Umbraco and hand over the routing to Angular. This could be done very simple by creating a new UrlRedirect which always uses the same template. This can be done by adding this rule to the UrlRewriting.config file:</span></span></span></p>
+<pre class="language-markup"><code>&lt;rewrites&gt;
+	&lt;add name="Startview Templating"
+	     virtualUrl="^~/(?![0-9]+/)(?!umbraco/)([^\?]*?)$"
+	     rewriteUrlParameter="ExcludeFromClientQueryString"
+	     destinationUrl="~/$1?altTemplate=StartView"
+	     ignoreCase="true" /&gt;
+&lt;/rewrites&gt;	</code></pre>
+<p><span><span>This Rewrite-rule takes the first request (no matter if it is </span><a href="http://www.imonaboat.com/"><span>www.imonaboat.com/</span></a><span> og </span><span><a href="http://www.imonaboat.com/products/unicorn/">www.imonaboat.com/products/unicorn/</a> </span><span>) and renders the "StartView" template, which we will create in a short while.</span></span></p>
+<p><span><span><span>The rest of the requests (unless you do a browser refresh) will be taken care of by Angular.</span></span></span></p>
+<h2><span><span>The startview template</span></span></h2>
+<p dir="ltr"><span>It may sound a little odd that we use the same template no matter what url we hit, but that's because Angular also takes care of the templating (more on that later). So all we want is to load an (almost) empty template along with AngularJS and some styling.</span></p>
+<p>Since you are reading this I presume you are a cool dude or dudette, so of course you will be using Umbraco 7 + MVC. So go ahead and create a template in your View-folder and call it e.g. "StartView.cshtml". Insert the following markup and save your file. </p>
+<pre class="language-markup"><code>@inherits UmbracoTemplatePage
+@{
+    Layout = null;
+}&lt;!DOCTYPE html&gt;
+&lt;html lang="en" ng-app="app"&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;base href="/"&gt;
+    &lt;title&gt;&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+
+    &lt;div class="menu"&gt;
+        &lt;!-- you should probably assemble this with angular in the real world, for this example this will do --&gt;
+
+        &lt;ul&gt;
+            &lt;li&gt;&lt;a href="/"&gt;Home&lt;/a&gt;&lt;/li&gt;
+            &lt;li&gt;&lt;a href="/subpage-1"&gt;Page 1&lt;/a&gt;
+                &lt;ul&gt;
+                    &lt;li&gt;&lt;a href="/subpage-1/nested-subpage/"&gt;Nested&lt;/a&gt;&lt;/li&gt;
+                &lt;/ul&gt;
+            &lt;/li&gt;
+            &lt;li&gt;
+                &lt;a href="/subpage-2"&gt;Page 2&lt;/a&gt;
+            &lt;/li&gt;
+        &lt;/ul&gt;
+
+    &lt;/div&gt;
+    
+    &lt;div style="position:relative;"&gt;
+        &lt;div class="view" ui-view&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+
+    &lt;script src="scripts/angular-1.3.0.js"&gt;&lt;/script&gt;
+    &lt;script src="scripts/angular-ui-router.js"&gt;&lt;/script&gt;
+    &lt;script src="scripts/angular-sanitize.js"&gt;&lt;/script&gt;
+    &lt;script src="scripts/angular-animate.js"&gt;&lt;/script&gt;
+    &lt;script src="scripts/TweenMax.js"&gt;&lt;/script&gt;
+    &lt;script src="scripts/app.js"&gt;&lt;/script&gt;
+    @Html.Partial("GlobalInfo", new GlobalModel(Model.Content))
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+<p dir="ltr"><span>The StartView is plain simple. In real life we would also handle navigation via the API, but for now we want to keep it simple.</span></p>
+<p dir="ltr">The partial view in the bottom is for rendering out javascript variables that are constants. E.g. addresses and phonenumbers or dictionary items for multilingual sites; it could be anything that is constant for the whole site.</p>
+<p>In this example i have made a GlobalModel which the partial renders out as a javascript JSON variable.</p>
+<pre class="language-markup"><code>@using code
+@model code.models.GlobalModel
+&lt;script&gt;
+    var globalInfo = {
+        @for (var i = 0; i &lt; ViewData.ModelMetadata.Properties.Count(); i++)
+        {
+            var data = ViewData.ModelMetadata.Properties.ToList();
+
+            var output = i == (ViewData.ModelMetadata.Properties.Count() - 1) ? string.Format("'{0}': '{1}'", data[i].PropertyName.FirstCharacterToLower(), Html.Display(data[i].PropertyName)) : string.Format("'{0}': '{1}',", data[i].PropertyName.FirstCharacterToLower(), Html.Display(data[i].PropertyName));
+
+            @Html.Raw(output)
+        }
+    };
+&lt;/script&gt; </code></pre>
+<p dir="ltr"><span>I use the ModelMetadata to loop through the GlobalModel properties, and render out the propertyname (first char lower, or else my frontender will kill me) and the value of the property.</span></p>
+<p><span><span><span>Now we are all set to start creating the Models and Controllers for Angular to communicate with Umbraco. Are you still awake and alert? Here we go!</span></span> </span></p>
+<h2>The API</h2>
+<p>What I normally do is create a model per doctype. So to begin with I create a model for the frontend doctype. In a real situation I would create a master model first where I would put all the properties I want on all my models, but for this example we just create this single model to keep it simple:</p>
+<pre class="language-csharp"><code>using System.Collections.Generic;
+using code.models.helper;
+using Newtonsoft.Json;
+using Umbraco.Core.Models;
+using Umbraco.Web;
+
+namespace code.models
+{
+    public class FrontpageModel
+    {
+      [JsonProperty("id")]
+      public int Id { get; set; }
+
+      [JsonProperty("name")]
+      public string Name { get; set; }
+
+      [JsonProperty("templateUrl")]
+      public string AngularTemplateUrl { get; set; }
+
+      [JsonProperty("contentImages")]
+      public IEnumerable&lt;ImageModel&gt; ContentImages { get; set; }
+
+      [JsonProperty("contentBody")]
+      public string ContentBody { get; set; }
+
+      [JsonProperty("created")]
+      public DateTime Created { get; set; }
+
+      [JsonProperty("updated")]
+      public DateTime Updated { get; set; }
+
+      public static FrontpageModel GetFromContent(IPublishedContent a)
+      {
+          return new FrontpageModel
+          {
+              Id = a.Id,
+              Name = a.Name,
+              ContentImages = ImageModel.GetImages(a, "contentImages"),
+              ContentBody = a.GetPropertyValue&lt;string&gt;("contentBody"),
+              AngularTemplateUrl = "/ng-views/frontpage.html",    //could be done from Umbraco
+              Created = a.CreateDate,
+              Updated = a.UpdateDate
+          };        
+      }
+    }
+}</code></pre>
+<p dir="ltr"><span>Notice two things:</span></p>
+<ol>
+<li>I am a lazy ass and am not creating a DAL for my datahandling. Instead I created the method GetFromContent right there in the model.</li>
+<li>I'm decorating the properties, so I can give them a JS-look (camelCase) when presenting them in my JSON later.</li>
+</ol>
+<p>Now that I have my model I will create my controller so Angular can receive some data from Umbraco.</p>
+<pre class="language-csharp"><code>using System;
+using System.Linq;
+using System.Net;
+using System.Web;
+using code.models;
+using Skybrud.WebApi.Json;
+using Skybrud.WebApi.Json.Meta;
+using Umbraco.Core.Logging;
+using Umbraco.Web;
+using Umbraco.Web.WebApi;
+
+namespace code.controllers
+{
+    [JsonOnlyConfiguration]
+    public class ContentApiController : UmbracoApiController
+    {
+        private UmbracoHelper _helper = new UmbracoHelper(UmbracoContext.Current);
+
+        public object GetData(string url, string langKey = "da")
+        {
+            HttpContext.Current.Response.AddHeader("Access-Control-Allow-Origin", "*");
+
+            try
+            {
+                var urlName = HandleUrlDecoding(url);
+
+                //find node by url og return null
+                var content = !string.IsNullOrEmpty(urlName)
+                    ? UmbracoContext.Current.ContentCache.GetByXPath(string.Format(@"//*[@isDoc and @urlName=""{0}""]", urlName)).FirstOrDefault()
+                    : null;
+
+                if (content != null)
+                {
+                    if (content.DocumentTypeAlias.ToLower() == "frontpage")
+                    {
+                        return
+                            Request.CreateResponse(JsonMetaResponse.GetSuccessFromObject(content,
+                                FrontpageModel.GetFromContent));
+                    }
+                    else if (content.DocumentTypeAlias.ToLower() == "subpage")
+                    {
+                        return
+                            Request.CreateResponse(JsonMetaResponse.GetSuccessFromObject(content,
+                                SubpageModel.GetFromContent));
+                    }
+                    
+
+                    //we are fucked, throw a 500
+                    return Request.CreateResponse(JsonMetaResponse.GetError(HttpStatusCode.InternalServerError, "Der skete en fejl på serveren." + content.DocumentTypeAlias));
+                }
+                else
+                {
+                    //no content found, throw a 404
+                    return Request.CreateResponse(JsonMetaResponse.GetError(HttpStatusCode.NotFound, "Siden fandtes ikke."));
+                }
+            }
+            catch (Exception ex)
+            {
+                LogHelper.Info(typeof(ContentApiController), String.Format("Der skete en fejl: {0}", ex.Message));
+
+                //throw 500
+                return Request.CreateResponse(JsonMetaResponse.GetError(HttpStatusCode.InternalServerError, "Der skete en fejl på serveren."));
+            }
+
+
+        }
+
+        public string HandleUrlDecoding(string url)
+        {
+            url = HttpUtility.UrlDecode(url);
+
+            var urlName = url == "/"
+                ? "home"
+                : url.Split(new[] { '/' }, StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
+
+
+            if (!string.IsNullOrEmpty(urlName))
+            {
+                urlName = urlName.Replace(".aspx", "");
+                urlName = urlName.ToLower();
+            }
+
+            return urlName;
+        }
+    }
+}</code></pre>
+<p dir="ltr"><span>We now have our controller. Please notice that I added an "</span><span>Access-Control-Allow-Origin</span><span>" in the start of the method. This is not necessary if you don't want to access the method from another domain. I also decorated the class with [JsonOnlyConfiguration]. This attribute decoration came from the Skybrud.WebApi.Json NuGet package i have installed (read further down). This means that even though my controller is a UmbracoApiController, and thereby can return both xml and json, it will only return json. The rest of the method is self-expanatory. It looks up the content by urlname and returns the found data as a JSON-object.</span></p>
+<p>The controller can now be called from Angular by using its route + url-parameter: <a href="http://www.mydomain.com/umbraco/api/contentapi/getdata/?url=/product/enterprise/sitecore/">http://www.imonaboat.com/umbraco/api/contentapi/getdata/?url=/product/enterprise/sitecore/</a></p>
+<p>The controller will try to find the url specified and either return the model in JSON-format or a 404 HttpStatusCode with an error message you define.</p>
+<p>All the magic that is used to convert our models to JSON is provided by Anders Bjerners NuGet package <a href="http://www.nuget.org/packages/Skybrud.WebApi.Json/" target="_blank">Skybrud.WebApi.Json</a></p>
+<p><img src="/archive/media/2014/Screen_Shot_2014_11_28_at_23.16.53_500x53.jpg" width="500" height="53" alt="NuGet Skybrud.WebApi.Json"></p>
+<p dir="ltr"><span>That's all folks! Now you are ready to go on with the Angular implementation. So I hand over the rudder to my good friend and colleague Filip Bruun who will navigate you through the seas of Angular. Aye aye captain!</span></p>
+<p> </p>
+<h2><span><span>Angular routing</span></span></h2>
+<p>Cheers everybody.</p>
+<p dir="ltr"><span>Now that René has set everything up on the server I'll try to walk you through the simplest possible solution I've found to generic routing and templating with Angular (for the sake of simplicity I won't go into handling server errors or 404s)</span></p>
+<p dir="ltr"><span>The Angular team have built a very basic router, which they moved out of the core and into its own module in<span> Angular 1.2</span>. That means we need to declare it as a dependency to use it, but it also means that you are free to use other routers (there is really only alternative at the moment: the </span><a href="https://github.com/angular-ui/ui-router"><span>ui.Router</span></a><span>). I prefer the latter and this example is made for ui.Router, but all the features I use in this example also works with the </span><span><a href="https://docs.angularjs.org/api/ngRoute">ngRoute</a> </span><span>module from the Angular team. (although the syntax is a little different, </span><a href="https://github.com/skybrud/AngularPoweredUmbracoFrontend/blob/master/umbraco/web/scripts/app-ngroute.js"><span>so I put up a ngRoute version in the github repo too</span></a><span>).</span></p>
+<p dir="ltr"><span>Angular routers work by reading the url and then intercepting all internal links so clicks will push url changes without reloading the page (while keeping the addressbar and history up to date). When the location changes the router will figure out what to display from settings in an object. So our task at hand is to set up a route object that will match any url and then do an ajax request with the path to the API that you just built in the previous section.</span></p>
+<p dir="ltr"><span>Now all we need from the html is to include the javascript files, provide a base-tag (so all resources (images, css, etc) are fetched from the right location) and a DOM node with a ui-view attribute (and a DOM node with an ng-app attribute to kick off Angular). We also bind the title-tag to a pageTitle value so it can easily be updated. All of this goes in Renés startview...</span></p>
+<p><span><br><span>The javascript magic then looks like this...</span></span></p>
+<pre class="language-javascript"><code>angular.module('app', ['ui.router', 'ngAnimate', 'ngSanitize'])
+    .config(['$locationProvider', '$stateProvider', function($locationProvider, $stateProvider) {
+
+        // This removes the # in browsers that support it (so we have real urls)
+        $locationProvider.html5Mode(true);
+
+        $stateProvider
+            .state('all', {
+                /* This matches any url, and exposes the path to $stateParams with the name myPath */
+                url:'*myPath', 
+                resolve: {
+                    getData: ['$stateParams', '$http', function($stateParams, $http) {
+                        return $http({
+                            url: '/umbraco/api/contentApi/getData/',
+                            params: {
+                                /* Send the current path in the querystring with the key 'url' to the api */
+                                url: encodeURIComponent($stateParams.myPath)
+                            }
+                        });
+                    }]
+                },
+                template: '&lt;div ng-include="ctrl.pageData.templateUrl"&gt;&lt;/div&gt;',
+                controller: ['getData','$rootScope', function(getData,$rootScope) {
+                    var _this = this;
+                    /* We assign the api-reponse to the instance of the controller, so it's accessible from the view */
+                    _this.pageData = getData.data.data;
+                    $rootScope.pageTitle = getData.data.data.name;
+                }],
+                controllerAs: 'ctrl'
+            });
+    }])</code></pre>
+<p> </p>
+<p dir="ltr"><span>If you have played around with Angular this won't look to scary to you. The $stateProvider.state() method takes a name as the first parameter and the config object as the second (this is where ngRoute differs a little from ui.Router). </span></p>
+<p>The url value is some special syntax that basically means match anything and capture it (regex-style) into a variable named path.</p>
+<p>Resolve is an object of methods that needs to be resolved before the route will instantiate. If you return anything other than a promise (or false) the router will take that as being resolved. If you return a promise the route won't be initiated before that promise is resolved. We return the $http-call directly as that itself returns a promise. That means the route will run on a successful response to that ajax-call.</p>
+<p>The routes are static so we can't change the template based on data we receive. We work around this by having the minimal possible template that then uses the <a href="https://docs.angularjs.org/api/ng/directive/ngInclude">ngInclude</a> directive to render a template depending on a url value (that you can set/change at the response of the server).</p>
+<p>All that's left is the controller that takes the data the resolve (with the key "getData") returns, and makes that available to the template. At this time we also update the pageTitle value of the $rootScope so the page title is updated.</p>
+<p>Voila, there you have it! Angular now controls the routing and templating on the frontend, and you can still have editors change the content and even the template.</p>
+<p>Remember to include <a href="https://docs.angularjs.org/api/ngSanitize">ngSanitize</a> to allow angular to bind html content from an ajax-response to your view.</p>
+<p>The article could easily end here, but I thought we should give you the basics of actually animating the page transitions as well.</p>
+<h2>Page transitions</h2>
+<p>Angular also has a module (also not included in the core but made by the team) for animation; it's called <a href="https://docs.angularjs.org/api/ngAnimate/">ngAnimate</a>. You include its source and set it as a dependency in your module. This will enable two things for you: It will 1) add some css hooks for you when it's transitioning in and out (see the doc in the previous link), and 2) provide you with some javascript hooks for the same thing. The page transition we use could easily be done with a css transition, but I'll implement it the more empowering alternative way.</p>
+<p>The hooks are available as methods on an object that the .animation() method returns. We'll add '.view' as our first parameter (the elements that has the hooks) and as the second a function that returns the hooks for enter and leave-animations. The methods will be called by Angular when it's changing the view, and will be called with the element (or rather, an angular.element/jqLite wrapper that contains the element) and a done function that you'll call when your animation is done. This tells angular that you are done animating, so it can remove the element from the DOM at the right time. For the sake of simplicity I'll use the <a href="http://greensock.com/gsap">GreenSock Animation Platform</a> to actually tween the values and handle the callback (for the TweenLite calls i use element[0] to get the native element instead of the angular-wrapped one).</p>
+<p>All put together it looks something like this:</p>
+<pre class="language-javascript"><code>.animation('.view', function() {
+        return {
+            enter: function (element, done) {
+                TweenLite.from(element[0], 1, {
+                    opacity: 0,
+                    onComplete: done
+                });
+            },
+            leave: function(element, done) {
+                TweenLite.set(element[0], {
+                    position: 'absolute',
+                    top: 0
+                });
+                 TweenLite.to(element[0], 1, {
+                    opacity: 0,
+                    onComplete: done
+                });
+            }
+        }
+	});</code></pre>
+<p dir="ltr"><span>I hope you can grasp the power in this humble module and start imagining what great opportunities this gives you. Good luck! I hope to see more Angular powered Umbraco one-pages in the future! </span></p>
+<p>A couple of tips that could make your one-page even more awesome:</p>
+<ul>
+<li>
+<p dir="ltr"><span>A spinner: You could add a spinner or something to indicate that you are loading the next page. Add it in the resolve getData method and remove it from the controller.</span></p>
+</li>
+<li>
+<p dir="ltr"><span>Save requests: Cache and inline your client side templates so you won't need to make an extra request for them. We do this with a grunt task named ngTemplates. Tweet at me (@filipbech), and I'll send you some configuration if you would like.</span></p>
+</li>
+<li>
+<p dir="ltr"><span>Error handling: The router will broadcast an event named "$stateChangeError" when resolves fail (eg. header 404, 500 etc). Listen for that event and act accordingly.</span></p>
+</li>
+<li>
+<p dir="ltr"><span>You should probably build your navigation based on the api as well.</span></p>
+</li>
+</ul>
+<p> </p>
+<h2>Samples </h2>
+<p dir="ltr"><span>You can find a sample-project on GitHub: <a href="https://github.com/skybrud/AngularPoweredUmbracoFrontend" target="_blank">https://github.com/skybrud/AngularPoweredUmbracoFrontend</a></span></p>
+<p><span><br><span>You can find a live example-site here: </span><a href="http://24days.skybrud.dk/" target="_blank"><span>http://24days.skybrud.dk/</span></a></span></p>
+<p><span> </span></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="René Pjengaard"><img src="//gravatar.com/avatar/1a8e71efb3df2cfe2ee5db2acb1b906b.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/1a8e71efb3df2cfe2ee5db2acb1b906b.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>René Pjengaard</h1>
+        <p>René is on Twitter as <a href="//twitter.com/pjengaard" title="René Pjengaard on Twitter" rel="author">@pjengaard</a></p>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="Filip Bech"><img src="//gravatar.com/avatar/ec91ba762dd37fdce7727895fb029f7d.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/ec91ba762dd37fdce7727895fb029f7d.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Filip Bech</h1>
+        <p>Filip is on Twitter as <a href="//twitter.com/Filipbech" title="Filip Bech on Twitter" rel="author">@Filipbech</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li class="selected"><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

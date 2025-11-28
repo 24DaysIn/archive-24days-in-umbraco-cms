@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>The power of Diagnostic Tools for a web project</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Diagnostic Tools for web</h1>
+      <p class="byline"> by Lucas Michaelsen, <span class="pubdate">posted on <time datetime="2021-12-13">Dec 13, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I will begin my story by taking you back in time. It was in the early stages of my career, and I had just built a small web application for a client which was intended to show the sold lots at an auction with real-time data load and history load for new users. I finished the project after a few weeks, the client was satisfied and launched the application. Happy days.</p>
+<p class="intro">But only a few hours into the first auction, we received the first complaints from the client’s customers. They said their phones froze for a bit when they entered the website – some users even said it crashed their browser app. Do you want to see what that looks like</p>
+<p><strong>!Warning! Open the link at your own risk - it may freeze your browser!</strong><br><a href="https://codepen.io/rammi1995/pen/vYJWoBa">https://codepen.io/rammi1995/pen/vYJWoBa</a></p>
+<p>If you didn´t open the link, I’ll tell you what happens. First, you will see an empty screen, but after a while, data pops in.</p>
+<pre><code class="language-javascript">class App {
+    constructor() {
+      this.items = [];
+      
+      // TEST Data, replacement of the real signalR
+      for(var i = 0; i &lt; 1000; i++) {
+        this.items.push({
+          'lot': i,
+          'priceDKK': '200',
+          'priceUSD': '20',
+          'name': 'test - ' + i
+         });
+        
+        if (i == 999)
+            this.render();
+      }
+    }
+
+    render() {
+        const txt = JSON.parse(document.getElementById('table-body').dataset.txt);
+        document.getElementById('table-body').innerHTML = '';
+
+        this.items.forEach((elm) =&gt; {
+            document.getElementById('table-body').innerHTML = document.getElementById('table-body').innerHTML + `&lt;div class="table-row"&gt;
+                &lt;div class="table-cell"&gt;&lt;span class="label"&gt;${txt.lot}&lt;/span&gt; ${elm.lot}&lt;/div &gt;
+                &lt;div class="table-cell"&gt;&lt;span class="label"&gt;${txt.DKK} / ${txt.USD}&lt;/span&gt; ${elm.priceDKK} / ${elm.priceUSD}&lt;/div &gt;
+                &lt;div class="table-cell"&gt;&lt;span class="label"&gt;${txt.Name}&lt;/span&gt; ${elm.name}&lt;/div &gt;
+            &lt;/div&gt;`;
+        });
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () =&gt; new App());
+</code></pre>
+<p>I had never experienced this issue before, and the accept test didn’t find anything. So what could the problem be?</p>
+<h3>Mind blown by the performance tab</h3>
+<p>I did what we all do when we experience a new issue: Googled. But there were barely any results. Finally, I read someone was suggesting the performance tab in Dev-tools might help. I went to the application, fired up the performance tab, hit the record button, reloaded the website, and I was mind blown!</p>
+<p><img style="width: 575px; height: 452px;" src="/archive/media/2021/before-frontend-problem.png?width=575&amp;height=452&amp;mode=max" alt="Performance tab in Dev-tools" data-udi="umb://media/91b849e217694eb6bc552d91cca81801"></p>
+<p>As you can see in the summary, the web application spent <strong>~4.3s</strong> on loading and <strong>~1.9s</strong> on scripting. If you click Bottom-Up, you will see it spent <strong>~99%</strong> of its time in a function named Parse HTML. If you expand that function, you can see another function named Render, which is our function. So we can conclude that our function Render is triggering the Parse HTML. <br>If you’re unfamiliar with Parse HTML, it is triggered every time you try to parse in a string to the DOM tree. So, in my example, it is triggered on line 19 and repeated on line 22.</p>
+<h3>How do we fix the issue?</h3>
+<p>Now we have isolated the issue – the web application is spending too much time on the Parse HTML. What would you do to fix it? Try to see if you can make the application perform better with these two simple rules: Only change the Render function behavior and there no external frameworks are allowed.</p>
+<p>(For background: External frameworks such as VueJs or AngularJs are not allowed because the application was built to respond in milliseconds and with only a few KB to download. The application was used by people all around the world and in some countries, a MB is still a bit expensive. Furthermore, the server was based in Denmark and had to deliver content to China – fast. I know, the setup could have been better, but it was what we had at the time. VueJs is 33KB and a bit overkill when you only need 5% of the framework, and the application was depending on SignalR as an external framework to provide a real-time data feed.)</p>
+<p>My first thought was to avoid writing to the DOM repeatedly in line 22. So I made this minor change:</p>
+<figure class="codepen-embed"><p data-height="350" data-theme-id="dark" data-slug-hash="PoKOMqL" data-default-tab="result" data-user="rammi1995" data-embed-version="2" data-pen-title="Codepen by rammi1995" class="codepen"><a href="https://codepen.io/rammi1995/pen/PoKOMqL">See the Pen</a> by rammi1995 (<a href="https://codepen.io/rammi1995">@rammi1995</a>) on <a href="https://codepen.io">CodePen</a>.
+				</p><script async="" src="https://production-assets.codepen.io/assets/embed/ei.js">
+//
+
+////
+</script><figcaption></figcaption></figure>
+<p>In line 18, I created a variable of an empty string and populated it with data in line 23, and finally dumped it to DOM at line 30. <br>You might be wondering what the difference is? With this solution, we are only working in memory and only triggering the Parse HTML two times instead of 1000 times. When visiting the website, you can see the data is almost instantly popping in.</p>
+<p><img style="width: 500px; height: 365.6527249683144px;" src="/archive/media/2021/after-frontend-problem.png?width=500&amp;height=365.6527249683144" alt="Performance tab in Dev tools" data-udi="umb://media/e626edf90d3643d8bd0898d5faf3d21c"></p>
+<p>If we run a new performance test in Dev-tools, the web application use <strong>10ms</strong> on loading and <strong>23ms</strong> on scripting. We are only using <strong>~33%</strong> in bottom up, which is an outstanding improvement. <br>My key takeaway from this experience was that I need to write as little to the DOM as possible in the future.</p>
+<h3>Diagnostic tools in Visual Studio</h3>
+<p>Next tip on the list is found in Visual Studio. I am using VS 2019 – you might wonder why it isn’t VS 2022. I haven’t had the time to explore 2022 fully yet, but hey, we are still in the year 2021, right? ;)</p>
+<p>I want to shed a little light on the diagnostic tools. You may have seen or noticed the window without really knowing what to use it for? <br>Every time you hit F5 and want to debug your solution, a window pops up and shows a CPU-performance indicator. This is the diagnostic tools window. If you have turned it off, you can always turn it on again by hitting CTRL + ALT + F2 or under the menu Debug - Windows - Show diagnostic tools. Personally, I prefer to keep the window open when I debug my solutions, so I can easily tell if something makes the CPU go bananas where I expected it to be silent.</p>
+<p>As an example, I have created a basic Umbraco v8.17.1 website with the starter kit. In addition, I created two doctypes; news-container and news. The news-container and news could be descendants of a news-container. Then I created 10,000 articles. I always want nine of the newest articles to show regardless of where the articles are located in the containers, so I end up with this piece of code.</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using Umbraco.Core.Models.PublishedContent;
+using Umbraco.Web;
+using Umbraco_1.Models;
+
+namespace Umbraco_1.Service
+{
+    public class NewsService
+    {
+        public List&lt;ArticleEntry&gt; GetSectionArticles(IPublishedContent content)
+        {
+            List&lt;ArticleEntry&gt; _articles = new List&lt;ArticleEntry&gt;();
+
+            foreach (var child in content.Children)
+            {
+                if (child.ContentType.Alias == "news")
+                {
+                    foreach (var level2 in child.Children)
+                    {
+                        if (level2.ContentType.Alias == "news")
+                        {
+                            foreach (var level3 in level2.Children)
+                            {
+                                if (level3.ContentType.Alias == "news")
+                                {
+                                    foreach (var level4 in level3.Children)
+                                    {
+                                        if (level4.ContentType.Alias == "newsItem")
+                                        {
+                                            _articles.Add(new ArticleEntry()
+                                            {
+                                                Date = level4.Value&lt;DateTime&gt;("publishedDate"),
+                                                Headline = level4.Value&lt;string&gt;("headline"),
+                                                Manchet = level4.Value&lt;string&gt;("manchet"),
+                                                Tags = level4.Value&lt;string[]&gt;("tags"),
+                                                Url = level4.Url(mode: UrlMode.Absolute),
+                                                Image = level4.Value&lt;IPublishedContent&gt;("image")?.GetCropUrl("news grid"),
+                                            });
+                                        }
+                                    }
+                                }
+                                else 
+                                { 
+                                    _articles.Add(new ArticleEntry()
+                                    {
+                                        Date = level3.Value&lt;DateTime&gt;("publishedDate"),
+                                        Headline = level3.Value&lt;string&gt;("headline"),
+                                        Manchet = level3.Value&lt;string&gt;("manchet"),
+                                        Tags = level3.Value&lt;string[]&gt;("tags"),
+                                        Url = level3.Url(mode: UrlMode.Absolute),
+                                        Image = level3.Value&lt;IPublishedContent&gt;("image")?.GetCropUrl("news grid"),
+                                    });
+                                }
+                            }
+                        }
+                        else
+                        {
+                            _articles.Add(new ArticleEntry()
+                            {
+                                Date = level2.Value&lt;DateTime&gt;("publishedDate"),
+                                Headline = level2.Value&lt;string&gt;("headline"),
+                                Manchet = level2.Value&lt;string&gt;("manchet"),
+                                Tags = level2.Value&lt;string[]&gt;("tags"),
+                                Url = level2.Url(mode: UrlMode.Absolute),
+                                Image = level2.Value&lt;IPublishedContent&gt;("image")?.GetCropUrl("news grid"),
+                            });
+                        }
+                    }
+                }
+                else
+                {
+                    _articles.Add(new ArticleEntry()
+                    {
+                        Date = child.Value&lt;DateTime&gt;("publishedDate"),
+                        Headline = child.Value&lt;string&gt;("headline"),
+                        Manchet = child.Value&lt;string&gt;("manchet"),
+                        Tags = child.Value&lt;string[]&gt;("tags"),
+                        Url = child.Url(mode: UrlMode.Absolute),
+                        Image = child.Value&lt;IPublishedContent&gt;("image")?.GetCropUrl("news grid"),
+                    });
+                }
+            }
+
+            return _articles.OrderBy(x =&gt; x.Date).Take(9).ToList();
+        }
+    }
+}</code></pre>
+<p>Beautiful, isn’t it? However, after loading just the front page, I get a response of <strong>200ms</strong> – the site normally responds after <strong>10ms</strong> on average, so something is definitely wrong.</p>
+<p>In the diagnostic tools, I can see a CPU spike on <strong>15-18%</strong> when reloading the site. If I upscale my test from one user to 500 users connecting at the same time, the CPU goes to <strong>100%</strong> usage for a moment and the load time is <strong>11.3S</strong> on average. Worst case scenario here would be that the code causes a CPU overload, which can lead to server crash or a server shutdown.</p>
+<p>Why does this bug occur – even years after launch? Most of us probably don’t test to see if our code can withstand 10.000 articles and a lot of pressure. We do more like 200 articles, hit F5 multiple times and the job is done. But that might not be the best way. Let’s dive into it and see how we can perfect the code, so it doesn’t tear down our CPU and loading time.</p>
+<h3>Let’s fix it</h3>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using Umbraco.Core.Models.PublishedContent;
+using Umbraco.Web;
+using Umbraco_1.Models;
+
+namespace Umbraco_1.Service
+{
+    public class NewsServicev2
+    {
+        public List&lt;ArticleEntry&gt; GetSectionArticles(IPublishedContent content)
+        {
+            return content.DescendantsOfType("newsItem").OrderBy(x =&gt; x.Value&lt;DateTime&gt;("publishedDate")).Take(9).Select(x =&gt; new ArticleEntry()
+            {
+                Date = x.Value&lt;DateTime&gt;("publishedDate"),
+                Headline = x.Value&lt;string&gt;("headline"),
+                Manchet = x.Value&lt;string&gt;("manchet"),
+                Tags = x.Value&lt;string[]&gt;("tags"),
+                Url = x.Url(mode: UrlMode.Absolute),
+                Image = x.Value&lt;IPublishedContent&gt;("image")?.GetCropUrl("news grid"),
+            }).ToList();
+        }
+    }
+}</code></pre>
+<p>Here is a new piece of code. I got rid of all the foreach statements. Not that there’s anything wrong with foreach and nested foreach but be cautious with them due to a risk of decrease of readability, complex ability, and in some cases performance issues. <br>Next, instead of asking each node what doctype it is, and if it has any children, I simply used the Umbraco 8 feature DescendantsOfType. It provides me with all the nodes of the doctype newsItem, regardless of whether it’s children or grandchildren. Then I order them, take nine, and throw them to my view model - must faster!</p>
+<p>A new test gives the result of a response time of <strong>50ms</strong> on average and a CPU spike of <strong>2-3%</strong>. If I connect 500 users at the same time, I get a slight improvement. The average response time is <strong>1.3S</strong>, but the CPU is still hitting the <strong>100%</strong> spike for a moment. We can do better than that.</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using Umbraco.Core.Cache;
+using Umbraco.Core.Composing;
+using Umbraco.Core.Models.PublishedContent;
+using Umbraco.Core;
+using Umbraco.Web;
+using Umbraco_1.Models;
+
+namespace Umbraco_1.Service
+{
+    public class NewsServicev3
+    {
+        public List&lt;ArticleEntry&gt; GetSectionArticles(IPublishedContent content)
+        {
+            var cache = Umbraco.Core.Composing.Current.AppCaches.RuntimeCache;
+
+            return cache.GetCacheItem("newsoverview", () =&gt;
+            {
+                return content.DescendantsOfType("newsItem").OrderBy(x =&gt; x.Value&lt;DateTime&gt;("publishedDate")).Take(9).Select(x =&gt; new ArticleEntry()
+                {
+                    Date = x.Value&lt;DateTime&gt;("publishedDate"),
+                    Headline = x.Value&lt;string&gt;("headline"),
+                    Manchet = x.Value&lt;string&gt;("manchet"),
+                    Tags = x.Value&lt;string[]&gt;("tags"),
+                    Url = x.Url(mode: UrlMode.Absolute),
+                    Image = x.Value&lt;IPublishedContent&gt;("image")?.GetCropUrl("news grid"),
+                }).ToList();
+            }, TimeSpan.FromMinutes(10));
+        }
+    }
+}</code></pre>
+<p>This is the Umbraco cache service, I have now wrapped my code with a cache function, which expires after 10 min. The first response is <strong>50ms</strong>, but all the next ones are <strong>10ms</strong> on average, and <strong>1-2%</strong> spike in CPU. I try the 500 users at the same time again and now we’re getting somewhere: the CPU spike is <strong>5%</strong>, and the average response is <strong>15ms</strong>. This only leaves us with a minor issue – even though our performance is now through the roof, if my client creates a new news article, it won’t appear on the front page for the first 10 minutes due to cache. We can work around that by adding an event to the ContentPublishingEvent that will purge the cache if a newsItem is published.</p>
+<p>Our job is done. The site with 10.000 articles can respond on 15 ms on average with 500 connected users. But it’s important to have in mind that cache can´t solve everything – we don´t have infinite resources to cache everything we like. Remember to take into consideration that when you use cache you need to be able to purge it easily, not with a server restart. Cache is a clever idea but use it with wisdom. If you want to know more about this, I can recommend Anthony Dang. He opened my eyes about the use of cache at the Umbraco Festival in 2019:</p>
+<p>
+        <iframe width="360" height="203" src="https://www.youtube.com/embed/VakR9a9ISo8?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>
+      </p>
+<h3>JMeter – a handy tool</h3>
+<p>My last tip on for now is about JMeter. It’s a tool I got to know a few years back, so I am not an expert yet, but I’ve picked up a few tricks.</p>
+<p>JMeter is a 100% pure Java application designed to test functional behavior and measure performance. JMeter is not a browser, but it works on the protocols as a browser, so if you request JMeter to go to your website, it will connect to the defined path and server through HTTP or HTTPS and wait for a response from the server. The test stops when the server returns with a code such as 200, 202, or 500.</p>
+<p>JMeter can be used for many different purposes: pressure test a server setup, if Azure environment upscales from one web app to two, when the CPU hits a threshold, or to see how the code performs under pressure. I used JMeter in the example above to test if the NewsService on the front page could handle 500 users. I’ve even set up JMeter on a Windows service for a client to test different paths on their website to make sure a reliable performance was held. So JMeter is a great tool to have in your toolbox.</p>
+<p>We’ll start by setting up JMeter: <a href="https://jmeter.apache.org/download_jmeter.cgi" title="https://jmeter.apache.org/download_jmeter.cgi">https://jmeter.apache.org/download_jmeter.cgi</a> <br>Start the application from the unzipped folder you have downloaded and navigate to the bin folder for executing the Apache JMeter file, and a GUI will open. You’re good to go, let’s set up our first test.</p>
+<p><strong>Step 1:<br></strong>Right-click on test tube Test Plan - add - Threads - Thread Group – this is the configuration of how we want our test to look.</p>
+<p>For now, let´s only focus on the two fields Number of threads and Ramp-up period. The number of threads is how many connections you want against your application, so if you pick 100, your application is called 100 times. The ramp-up period is how long it should take JMeter to fire the number of threads that you specified. So if you write 100 threads and 10s for ramp-up, over the next 10 seconds JMeter will call your application with 10 connections every second. If you write 100 and 1, JMeter will call your application with 100 users in the same second.</p>
+<p>Be aware of how many threads you want against your application. I speak from experience, as I obviously had to see what happened if I wrote a ridiculous number in the number of threads. The result was a computer with a blue screen of death due to overload of CPU. So keep it simple like 100 or 500. You can go higher but keep your computer’s health in mind.</p>
+<p><strong>Step 2:<br></strong><span>Once that’s done, right-click the <em>Thread Group</em> in JMeter and pick <em>Add - Sampler - HTTP Request. </em>Here you can specify which URL you want to use for the test, as an example I wrote:  protocol - HTTPS, Server - localhost, Port - 44357 (application port) - Path - Path to the API/Page (/Umbraco/api/controller/action or / - for front page)</span><span>.</span></p>
+<p><strong>Step 3:<br></strong>Finally, I added two things. Right-click on the Thread Group in JMeter and pick Add - Listener - View Results Tree and then right-click on the thread group and pick add - Listener - Summary Report. We are not changing the configurations on any of the views. <br>View Results Tree show every request JMeter is sending to the configurated HTTP Request, so it shows the status code and the result - just like the network tab in dev-tools. Summary Report shows how many threads were successful, an average time of completion, minimum time of completion of a thread, and maximum time of completion of a thread.</p>
+<p>JMeter is now set up, all you have to do is hit the play button in the icon toolbelt and wait for the test to complete. You can see the status in the right corner, where it shows how many threads are left or how many threads are wanted.</p>
+<p><img style="width: 500px; height: 281.496062992126px;" src="/archive/media/2021/jmeter.png?width=500&amp;height=281.496062992126" alt="JMeter" data-udi="umb://media/36bfcb8fe1044be7bf958a30e08b4681"></p>
+<h3>The magic of JMeter &amp; Diagnostic tools</h3>
+<p>Let’s move into the code for an example of how I use JMeter and diagnostic tools. For this test I have an AJAX request from the browser, asking to see all the parcel shops from GLS inside their google maps Lat/Lng bounds. The returned data is shown in Google Maps, so the customer can choose where they want their package delivered. At first the test was completed successfully, nothing to worry about. But later on, we received complaints about long loading times when the customer was trying to choose a parcel shop.</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http;
+using System.Web.Mvc;
+using System.Xml.Serialization;
+using Umbraco.Web.WebApi;
+using Umbraco_1.Models;
+
+namespace Umbraco_1.API
+{
+    public class GlsParcelshopsController : UmbracoApiController
+    {
+        public async Task&lt;IHttpActionResult&gt; GetAllByCordinate(decimal SWLat, decimal SWLng, decimal NELat, decimal NELng)
+        {
+            var paracels = new ArrayOfPakkeshopData();
+
+            //collect list
+            using (var client = new HttpClient()
+            {
+                BaseAddress = new Uri("http://www.gls.dk")
+            })
+            {
+                // init vars
+                XmlSerializer serializer = new XmlSerializer(typeof(ArrayOfPakkeshopData));
+
+
+                client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/xml"));
+
+                HttpResponseMessage response = client.GetAsync("/webservices_v4/wsShopFinder.asmx/GetAllParcelShops?countryIso3166A2=DK").Result;
+
+                if (!response.IsSuccessStatusCode &amp;&amp; response.StatusCode != System.Net.HttpStatusCode.OK)
+                    return Json(new ArrayOfPakkeshopData());
+
+                var content = response.Content.ReadAsStringAsync().Result;
+
+                using(StringReader sr = new StringReader(content))
+                {
+                    paracels = (ArrayOfPakkeshopData)serializer.Deserialize(sr);
+                }
+            }
+
+            if (paracels?.PakkeshopData?.Any() ?? false)
+            {
+                paracels.PakkeshopData = paracels.PakkeshopData.Where(x =&gt; x.Latitude &gt; SWLat &amp;&amp; x.Latitude &lt; NELat &amp;&amp; x.Longitude &gt; SWLng &amp;&amp; x.Longitude &lt; NELng).ToArray();
+
+                return Json(paracels);
+            }
+
+            return Json(new ArrayOfPakkeshopData());
+        }
+
+    }
+}</code></pre>
+<p>A single request gives a response time of <strong>~500ms</strong>. A speed test with the setup above, and where the numbers of threads are set to 10 threads, gives a response time of <strong>~4.2s</strong> – 100 threads and the response time is <strong>~42s</strong>. A speed test (number of threads: 100 / ramp-up period: 10) = 10 thread connect to the server every second for the next 10 seconds, the response is <strong>~35s</strong>.</p>
+<p>The test result reveal something is wrong with the code – if the website is under pressure, and the shop is busy, there is a risk of CPU lock, where the server can shut down or being taken down due to too much noise.</p>
+<p>This is where our diagnostic tools come in handy, we’ll use them to take a look at the code. Remember to open Visual Studio in administrator, or you might lose data when working with the diagnostic tools.</p>
+<p>I´ll place a breakpoint at line 20 and line 51 in order to help the diagnostic tools show me CPU usage between only these two breakpoints. In the diagnostic tools, I go to the tab CPU Usage and click Record CPU Profile and then I hit my API with Postman. I skip the first breakpoint and do nothing on the second breakpoint in order to let VS work. After a brief time, a diagram will appear inside the diagnostic tools. Click on Open details, use the current view Call Tree, and you should see something like this:</p>
+<p><img style="width: 500px; height: 382.91413703382483px;" src="/archive/media/2021/jmeter-v1.png" alt="Diagnostic tools in visual studio" data-udi="umb://media/3ad9b65218654ef3a05cb4e34406183a"></p>
+<p>As you can see the API call is spending <br><strong>21 units</strong> of the CPU time to deserialize the XML <br><strong>4 units</strong> of the CPU to perform the web call <br><strong>4 units</strong> of the CPU to read response content to a string.</p>
+<p>In order to improve the performance, we can remove the using code block with the HTTPClient and add HttpClient to a Static instead. Are you wondering why it make sense to take the HTTPClient out of a using and into a static? For .NET framework v4.8 the reason is this: <br>"HttpClient is intended to be instantiated once and re-used throughout the life of an application. Instantiating an HttpClient class for every request will exhaust the number of sockets available under heavy loads. This will result in SocketException errors." - <a href="https://docs.microsoft.com/en-us/dotnet/api/system.net.http.httpclient?view=netframework-4.8" title="https://docs.microsoft.com/en-us/dotnet/api/system.net.http.httpclient?view=netframework-4.8" data-anchor="?view=netframework-4.8">https://docs.microsoft.com/en-us/dotnet/api/system.net.http.httpclient?view=netframework-4.8</a></p>
+<p>For Umbraco 9, which is running on .NET, great information can be found here: <br><a href="https://docs.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests" title="https://docs.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests">https://docs.microsoft.com/en-us/dotnet/architecture/microservices/implement-resilient-applications/use-httpclientfactory-to-implement-resilient-http-requests</a></p>
+<p>You might wonder why we don’t read the requested content to a string and then parses it StringReader, which is inheriting the TextReader class, so we in the end can call the deserialize? Just writing that description exhausts me, so it would be way too much for the CPU, especially when we can read the requested content stream into the deserializer.</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http;
+using System.Web.Mvc;
+using System.Xml.Serialization;
+using Umbraco.Web.WebApi;
+using Umbraco_1.Models;
+
+namespace Umbraco_1.API
+{
+    public class GlsParcelshopsV2Controller : UmbracoApiController
+    {
+        private static readonly HttpClient _client;
+
+        static GlsParcelshopsV2Controller()
+        {
+            if (_client == null)
+            {
+                _client = new HttpClient()
+                {
+                    BaseAddress = new Uri("http://www.gls.dk")
+                };
+
+                _client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/xml"));
+            }
+        }
+
+        public async Task&lt;IHttpActionResult&gt; GetAllByCordinate(decimal SWLat, decimal SWLng, decimal NELat, decimal NELng)
+        {
+            var paracels = new ArrayOfPakkeshopData();
+
+            XmlSerializer serializer = new XmlSerializer(typeof(ArrayOfPakkeshopData));
+
+            HttpResponseMessage response =  await _client.GetAsync("/webservices_v4/wsShopFinder.asmx/GetAllParcelShops?countryIso3166A2=DK");
+
+            if (!response.IsSuccessStatusCode &amp;&amp; response.StatusCode != System.Net.HttpStatusCode.OK)
+                return Json(new ArrayOfPakkeshopData());
+
+            paracels = (ArrayOfPakkeshopData)serializer.Deserialize(await response.Content.ReadAsStreamAsync());
+
+            if (paracels?.PakkeshopData?.Any() ?? false)
+            {
+                paracels.PakkeshopData = paracels.PakkeshopData.Where(x =&gt; x.Latitude &gt; SWLat &amp;&amp; x.Latitude &lt; NELat &amp;&amp; x.Longitude &gt; SWLng &amp;&amp; x.Longitude &lt; NELng).ToArray();
+
+                return Json(paracels);
+            }
+
+            return Json(new ArrayOfPakkeshopData());
+        }
+
+    }
+}</code></pre>
+<p><img style="width: 500px; height: 383.0409356725146px;" src="/archive/media/2021/jmeter-v2.png?width=500&amp;height=383.0409356725146" alt="Diagnostic tools in visual studio" data-udi="umb://media/00df7baa8f674862ada8a8c50dcd2b96"></p>
+<p>It is still using a lot of time in the deserializer though - <strong>20units</strong>. A single test still took <strong>~500ms</strong> to respond and <strong>~31s</strong> with 100 threads. Not exactly a satisfying performance boost. To get even faster, we can investigate the cache. Do GLS parcel shops change often? Not really. Are the parcel shops critical information? Yes, the customer is using it to tell where their package should be delivered. So a cache might be a great solution in this case.</p>
+<pre><code class="language-csharp">﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http;
+using System.Web.Mvc;
+using System.Xml.Serialization;
+using Umbraco.Web.WebApi;
+using Umbraco_1.Models;
+using Umbraco.Core.Composing;
+using Umbraco.Core.Cache;
+
+namespace Umbraco_1.API
+{
+    public class GlsParcelshopsV3Controller : UmbracoApiController
+    {
+        private static readonly HttpClient _client;
+        static GlsParcelshopsV3Controller()
+        {
+            if (_client == null)
+            {
+                _client = new HttpClient()
+                {
+                    BaseAddress = new Uri("http://www.gls.dk")
+                };
+
+                _client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/xml"));
+            }
+        }
+
+        public IHttpActionResult GetAllByCordinate(decimal SWLat, decimal SWLng, decimal NELat, decimal NELng)
+        {
+            var cache = Current.AppCaches.RuntimeCache;
+            var paracels = cache.GetCacheItem&lt;ArrayOfPakkeshopData&gt;("newsoverview", () =&gt;
+            {
+                XmlSerializer serializer = new XmlSerializer(typeof(ArrayOfPakkeshopData));
+
+                HttpResponseMessage response = _client.GetAsync("/webservices_v4/wsShopFinder.asmx/GetAllParcelShops?countryIso3166A2=DK").Result;
+
+                if (!response.IsSuccessStatusCode &amp;&amp; response.StatusCode != System.Net.HttpStatusCode.OK)
+                    return new ArrayOfPakkeshopData();
+
+                return (ArrayOfPakkeshopData)serializer.Deserialize(response.Content.ReadAsStreamAsync().Result);
+
+            }, TimeSpan.FromHours(1));
+
+            if (paracels?.PakkeshopData?.Any() ?? false)
+            {
+                paracels.PakkeshopData = paracels.PakkeshopData.Where(x =&gt; x.Latitude &gt; SWLat &amp;&amp; x.Latitude &lt; NELat &amp;&amp; x.Longitude &gt; SWLng &amp;&amp; x.Longitude &lt; NELng).ToArray();
+
+                return Json(paracels);
+            }
+
+            return Json(new ArrayOfPakkeshopData());
+        }
+    }
+}</code></pre>
+<p><img style="width: 500px; height: 382.10818307905686px;" src="/archive/media/2021/jmeter-v3.png?width=500&amp;height=382.10818307905686" alt="Diagnostic tools in visual studio" data-udi="umb://media/f75a777a7d2c4af8b96c6bf0b9c65a10"></p>
+<p>I have wrapped the code that is receiving the data and deserialized it to a function that stores the result in the Umbraco Cache with 1 hour of expiration time. A single test took <strong>~10ms</strong>, and 100 threads took <strong>~11ms</strong> on average, so now we’re finally kicking ass.</p>
+<p>But as mentioned before – we don´t have infinite resources to store cache, and what if the customer expands and opens a web shop in Sweden? Then we would have to store both Sweden and Denmark in the cache. For that reason, I would suggest a change in the UX and use case from freely navigating in Google Maps when choosing a parcel shop based on a list of parcel shop in the zip code – The suggestion above can be done with GLS API, which comes with a search for parcel shops inside a zip code.</p>
+<pre><code class="language-csharp">using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+using System.Web;
+using System.Web.Http;
+using System.Web.Mvc;
+using System.Xml.Serialization;
+using Umbraco.Web.WebApi;
+using Umbraco_1.Models;
+using Umbraco.Core.Composing;
+using Umbraco.Core.Cache;
+
+namespace Umbraco_1.API
+{
+    public class GlsParcelshopsV3Controller : UmbracoApiController
+    {
+        private static readonly HttpClient _client;
+        static GlsParcelshopsV3Controller()
+        {
+            if (_client == null)
+            {
+                _client = new HttpClient()
+                {
+                    BaseAddress = new Uri("http://www.gls.dk")
+                };
+
+                _client.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("text/xml"));
+            }
+        }
+
+        public async Task&lt;IHttpActionResult&gt; GetByZipCode(int zipCode)
+        {
+            XmlSerializer serializer = new XmlSerializer(typeof(ArrayOfPakkeshopData));
+
+            HttpResponseMessage response = await _client.PostAsync("/webservices_v4/wsShopFinder.asmx/GetParcelShopsInZipcode", new FormUrlEncodedContent(new Dictionary&lt;string, string&gt;()
+            {
+                { "zipcode", zipCode.ToString() },
+                { "countryIso3166A2", "DK" }
+            }));
+
+            if (!response.IsSuccessStatusCode &amp;&amp; response.StatusCode != System.Net.HttpStatusCode.OK)
+                return Json(new ArrayOfPakkeshopData());
+
+            var stringbyte = await response.Content.ReadAsStreamAsync();
+            var vm = (ArrayOfPakkeshopData)serializer.Deserialize(stringbyte);
+
+            return Json(vm);
+        }
+    }
+}</code></pre>
+<p><img style="width: 500px; height: 381.82382133995037px;" src="/archive/media/2021/jmeter-v4.png?width=500&amp;height=381.82382133995037" alt="Diagnostic tools in visual studio" data-udi="umb://media/100cbc39f3724a5c9cb20a6d6e6671ab"></p>
+<p>Final test: Single user <strong>~60ms</strong> response time. 100 threads <strong>~70ms</strong> response time and a total of <strong>3 units</strong> of the CPU units. We’re no longer relying on the cache, we always have the newest GLS dataset and it works in both Denmark and Sweden without any additional changes. It may even work in other countries as well. Success.</p>
+<p><strong>Just a few final notes regarding JMeter.</strong> If you want to speed test your application, remember to notify the customer and hosting provider. A JMeter speed test is quite heavy, and your hosting provider could mistake the overload for a DOS attack. And it’s probably a good idea for your client to know what’s going on if their website suddenly crashes.</p>
+<p>I hope you learned something and that you will start testing more. Especially speed test critical areas like the front page to make sure it can withstand a normal load on a busy day or think of creative ways to solve performance issues.</p>
+<p>Merry Xmas to all.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/health/" title="See all articles tagged with Health">Health</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/personal-development/" title="See all articles tagged with Personal development">Personal development</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Lucas Michaelsen"><img src="//gravatar.com/avatar/e30003ecd739bc6bf5b7c11c63561911.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/e30003ecd739bc6bf5b7c11c63561911.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Lucas Michaelsen</h1>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

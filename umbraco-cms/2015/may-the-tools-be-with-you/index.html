@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>May the tools be with you</title>
+<meta name="description" content="An introduction to using the Chaffeur CLI to automate tasks against an Umbraco installation">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">May The Tools Be With You</h1>
+      <p class="byline"> by Dirk Grave, <span class="pubdate">posted on <time datetime="2015-12-18">Dec 18, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">As a software developer, I'm hooked on tools such as vs.net and to build .net and Umbraco solutions. And thus hooked on Umbraco tools that simplify greatly our development workflow, or can automate otherwise time-consuming or error-prone tasks.</p>
+<p class="intro">While I already knew about a specific tool I'd like to discuss in this article, I didn't feel the need to use it until very recently, when I was (currently still am) tasked with rolling out a complete new responsive version of a website, originally built in v4+, upgraded to v6+, but was able to convince the customer to jump to v7 latest.</p>
+<p>Whilst I'm not going to discuss every aspect of the upgrade, I'd love to introduce a tool that has helped us a lot (and I mean a LOT) in making the shift from v6 to v7, especially when it comes down to migrating data from the old to new Umbraco instance.</p>
+<h2>Introducing Chauffeur</h2>
+<p>According to its official documentation:</p>
+<blockquote>
+<p>Chauffeur is a CLI for Umbraco, it will sit with your Umbraco website's bin folder and give you an interface to which you can execute commands, known as Deliverables, against your installed Umbraco instance.</p>
+</blockquote>
+<p><span>Chauffeur is developed for Umbraco 7.x as it is designed around the new Umbraco API.</span></p>
+<p>Before I jump start into how this tool has helped us moving and migrating data, let us start with a short intro</p>
+<h2>Getting started</h2>
+<p>If you've never used the tool before and are familiar with vs.net, hit up your favorite editor and install Chauffeur using <span class="code">Nuget</span> through the <span class="code">Package Manager Console</span>:</p>
+<p class="code">PM&gt; Install-Package Chauffeur.Runner</p>
+<p>After package has been installed, you should have a <span class="code">Chauffeur.Runner.exe</span> executable sitting in the <span class="code">/bin</span> folder of your Umbraco installation.</p>
+<p>Open up a command prompt, navigate to your /bin folder and execute <span class="code">Chauffeur.Runner</span>. You should get a new prompt waiting for your commands to execute.</p>
+<p class="code">umbraco &gt;</p>
+<h3>You say commands, I say deliverable</h3>
+<p>Each command executed against the runner is called a deliverable. If you wish to get a list of deliverables available out-of-the-box, type in</p>
+<p class="code">umbraco &gt; help</p>
+<p>and it should list all deliverables. And to get more info about a specific deliverable, use</p>
+<p class="code">umbraco &gt; help &lt;deliverable&gt;</p>
+<p>For example, to get more info about the user deliverable which is shipped together with the tool, use</p>
+<p class="code">umbraco &gt; help user<br>A series of operations that can be run against an Umbraco User.<br><br>change-password &lt;username&gt; &lt;new password&gt;<br>  Changes the password for a given user. This will also hash it if hashing is turned on <br>  in the web.config</p>
+<p>Great. Sounds like a nice feature if you wish to change your admin password without having to go via the backoffice. Just follow the instructions...</p>
+<p class="code">umbraco &gt; user change-password admin didyoureallythinkimfoolishtoentermypasswordhere</p>
+<h3>Wow, but how exactly does it work?</h3>
+<p>Each <span class="code">deliverable</span> you wish to execute via the <span class="code">Chauffeur</span> command prompt should inherit from an abstract class <span class="code">Deliverable</span>. I won't list the code from the <span class="code">UserDeliverable</span> here (it's up on GitHub), but here goes a basic pattern for implementing a <span class="code">deliverable</span></p>
+<pre class="language-csharp"><code>[DeliverableName("deliverable-long-name")]
+[DeliverableAlias("deliverable-alias")]
+public sealed class MyDeliverable : Deliverable
+{
+    private readonly IService service;
+
+    public MyDeliverable(TextReader reader, TextWriter writer, IService service) : base(reader, writer)
+    {
+        this.service = service;
+    }
+
+    public override async Task&lt;DeliverableResponse&gt; Run(string command, string[] args)
+    {
+        if (!args.Any())
+        {
+            await Out.WriteLineAsync("No arguments were provided");
+
+            return DeliverableResponse.Continue;
+        }
+
+        //Do your thing...
+
+        return DeliverableResponse.Continue;
+    }
+}</code></pre>
+      <p class="snippet-caption">Basic implementation of a deliverable</p>
+<p>Most important things to note:</p>
+<ul>
+<li><span style="font-size: 14px;">Both </span><span class="code" style="font-size: 14px;">deliverable-long-name</span><span style="font-size: 14px;"> and </span><span class="code" style="font-size: 14px;">deliverable-alias</span><span style="font-size: 14px;"> can be used as command name to execute at prompt.</span></li>
+<li><span style="font-size: 14px;">Services can be injected into constructor using dependency injection (DI). Makes it easy to inject services exposed by the Umbraco core such as </span><span class="code" style="font-size: 14px;">IContentService</span><span style="font-size: 14px;">, </span><span class="code" style="font-size: 14px;">IUserService</span><span style="font-size: 14px;">, </span><span class="code" style="font-size: 14px;">IMemberService</span><span style="font-size: 14px;"> etc...</span></li>
+<li><span style="font-size: 14px;">Optionally, you can implement in interface </span><span class="code" style="font-size: 14px;">IProvideDirections</span><span style="font-size: 14px;"> which has a single method</span></li>
+</ul>
+<pre class="language-csharp"><code>public interface IProvideDirections
+{
+    Task Directions();
+}</code></pre>
+      <p class="snippet-caption">IProvideDirections interface</p>
+<p>which you should implement to provide the user with more info about what to expect. Basically this is what the user will get when typing '<span class="code">help &lt;deliverable&gt;</span>' at the prompt</p>
+<p class="code">umbraco &gt; help deliverable-alias</p>
+<h3>Got it? Let's move on</h3>
+<p>We decided to roll our own deliverables to perform some data conversions for datatypes that no longer exist in v6 (usercontrols, anyone...) but for which we found a valuable alternative in v7.</p>
+<p>Only problem was a difference in data format (<span class="code">xml</span> vs <span class="code">json</span>).</p>
+<p>Using a tool such as <span class="code">Chauffeur</span>, which was designed with extensibility and - evenly important - testability in mind, give us a real boost in terms of development time. We didn't have to worry about a setup, we only needed to focus on one particular issue, converting data from xml to json and update documents.</p>
+<p>I'll walk you through a code example of such a data conversion. Here's how the old legacy datatype (implemented as a usercontrol containing a textstring/textarea for each language) and new datatype (implemented as a Vorto editor) are storing their data</p>
+<pre class="language-markup"><code>&lt;?xml version="1.0"?&gt;
+&lt;ArrayOfValue xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"&gt;
+&lt;value xml:lang="en-US" id="1"&gt;Bow Roller&lt;/value&gt;
+&lt;value xml:lang="nl-NL" id="2"&gt;Bow Roller&lt;/value&gt;
+&lt;value xml:lang="fr-FR" id="3"&gt;Davier à rouleau&lt;/value&gt;
+&lt;value xml:lang="it-IT" id="4"&gt;Rullo salpancora&lt;/value&gt;
+&lt;value xml:lang="es-ES" id="5"&gt;Roldana de Proa&lt;/value&gt;
+&lt;value xml:lang="da-DK" id="6"&gt;Bow Roller&lt;/value&gt;
+&lt;value xml:lang="sv-SE" id="7"&gt;Stävrulle&lt;/value&gt;
+&lt;value xml:lang="nn-NO" id="8"&gt;Baugrulle&lt;/value&gt;
+&lt;value xml:lang="de-DE" id="9"&gt;Bugrolle&lt;/value&gt;
+&lt;value xml:lang="fi-FI" id="10"&gt;Bow Roller&lt;/value&gt;
+&lt;value xml:lang="en-GB" id="11"&gt;Bow Roller&lt;/value&gt;
+&lt;value xml:lang="bg-BG" id="12"&gt;Bow Roller&lt;/value&gt;
+&lt;/ArrayOfValue&gt;</code></pre>
+      <p class="snippet-caption">Legacy data format</p>
+<pre class="language-javascript"><code>{"values":{"en-US":"Bow Roller","nl-NL":"Bow Roller","fr-FR":"Davier à rouleau","it-IT":"Rullo salpancora","es-ES":"Roldana de Proa","da-DK":"Bow Roller","sv-SE":"Stävrulle","nn-NO":"Baugrulle","de-DE":"Bugrolle","fi-FI":"Bow Roller","en-GB":"Bow Roller","bg-BG":"Bow Roller"},"dtdGuid":"b6f2478c-90af-4bb0-960c-b1b957b9a70b"}</code></pre>
+      <p class="snippet-caption">v7 Vorto data format</p>
+<p>So, for conversion of hundreds of documents, we've knocked together a simple class that would get all documents of a specific type, read in the xml value and construct and store a json object that a Vorto property uses to store data in the cmsPropertyData table.</p>
+<pre class="language-csharp"><code>[DeliverableName("convert-dictionary-2-vorto")]
+[DeliverableAlias("cd2v")]
+public class ConvertDictionary2Vorto : Deliverable, IProvideDirections
+{
+    private readonly IContentTypeService contentTypeService;
+    private readonly IContentService contentService;
+
+    public ConvertDictionary2Vorto(TextReader reader, TextWriter writer, IContentTypeService contentTypeService, IContentService contentService)
+        : base(reader, writer)
+    {
+        this.contentTypeService = contentTypeService;
+        this.contentService = contentService;
+    }
+
+    public override async Task&lt;DeliverableResponse&gt; Run(string command, string[] args)
+    {
+        if (args.Length != 4)
+        {
+            await this.Out.WriteLineAsync("Invalid arguments, expected format of `convert-dictionary-2-vorto &lt;guid&gt; &lt;documentTypeAlias&gt; &lt;propertyTypeAlias&gt; &lt;newPropertyTypeAlias&gt;");
+
+            return DeliverableResponse.Continue;
+        }
+
+        var guid = args[0].ToLowerInvariant();
+        var documentTypeAlias = args[1];
+        var propertyTypeAlias = args[2];
+        var newPropertyTypeAlias = args[3];
+
+        var documents = this.contentService.GetContentOfContentType(this.contentTypeService.GetContentType(documentTypeAlias).Id);
+        var documentsForSave = new List&lt;IContent&gt;();
+
+        foreach (var document in documents.Where(document =&gt; document.HasProperty(propertyTypeAlias)))
+        {
+            var xml = document.GetValue&lt;string&gt;(propertyTypeAlias);
+            var conversion = "{" + "\"values\":" + "{" + "}," + $"\"dtdGuid\":\"{guid}\"" + "}";
+
+            if (!string.IsNullOrWhiteSpace(xml))
+            {
+                var xmlDocument = XDocument.Parse(xml);
+
+                if (xmlDocument?.Document != null)
+                {
+                    var translations = xmlDocument.Document.XPathSelectElements("/ArrayOfValue/value");
+
+                    conversion = "{" + "\"values\":" + "{"
+                                 + string.Join(
+                                     ",",
+                                     translations.Select(
+                                         x =&gt; $"\"{x.FirstAttribute.Value}\":{JsonConvert.ToString(x.Value)}"))
+                                 + "}," + $"\"dtdGuid\":\"{guid}\"" + "}";
+                }
+            }
+
+            document.SetValue(newPropertyTypeAlias, conversion);
+            documentsForSave.Add(document);
+        }
+
+        this.contentService.Save(documentsForSave, raiseEvents: false);
+
+        await this.Out.WriteLineAsync($"Finished converting documents ({guid},{documentTypeAlias},{propertyTypeAlias},{newPropertyTypeAlias})!");
+
+        return DeliverableResponse.Continue;
+    }
+
+    public async Task Directions()
+    {
+        await this.Out.WriteLineAsync("convert-dictionary-2-vorto");
+        await this.Out.WriteLineAsync("\tAlias: cd2v");
+        await this.Out.WriteLineAsync("\tConverts data from a legacy Dictionary datatype (implemented as usercontrol) into Vorto datatype");
+        await this.Out.WriteLineAsync("\tSyntax: convert-dictionary-2-vorto &lt;guid&gt; &lt;documentTypeAlias&gt; &lt;propertyTypeAlias&gt; &lt;newPropertyTypeAlias&gt;");
+    }
+}</code></pre>
+      <p class="snippet-caption">Conversion of data using Chauffeur</p>
+<p>Most interesting stuff from this code snippet:</p>
+<ul>
+<li><span style="font-size: 14px;">Passing in required </span><span class="code" style="font-size: 14px;">IContentTypeService</span><span style="font-size: 14px;"> and </span><span class="code" style="font-size: 14px;">IContentService</span><span style="font-size: 14px;"> into </span><span class="code" style="font-size: 14px;">ctor() </span><span style="font-size: 14px;">using DI</span></li>
+<li><span style="font-size: 14px;">Passing in a couple of arguments for maximum reuse of this deliverable (we were able to reuse these bits for several document types and document type properties).</span></li>
+<li><span style="font-size: 14px;">Iterating documents, fetching old format data from document and storing new data format (using a different property, so we could always rollback in case something went horribly wrong)</span></li>
+</ul>
+<p><span style="font-size: 14px;">I'll be honest with you... I didn't create any unit test to build this functionality although <span class="code">Chauffeur</span> has support for this already built-in. Find more info about how to unit test your deliverables on <span class="code">Chauffeur</span>'s <a href="https://github.com/aaronpowell/Chauffeur/wiki/how-to-unit-testing">wiki pages</a>.</span></p>
+<h3>Are we done yet?</h3>
+<p>Yes, that's really are there is to it, it took us approx. 30 mins to build this solution. But wait, there's more.</p>
+<p>Did you know you can combine multiple deliverables into a single command? It's called a <span class="code">delivery</span> and <span class="code">Chauffeur</span> expects these files to reside in <span class="code">App_Data/Chauffeur</span> folder (Must have <span class="code">.delivery</span> extension)</p>
+<p>For example:</p>
+<pre class="language-markup"><code>convert-dictionary-2-vorto 8C56E1C1-F798-4ADD-B703-9ECA3657AF4A Boatequipment description descriptionV7
+convert-dictionary-2-vorto 8C56E1C1-F798-4ADD-B703-9ECA3657AF4A Boatequipment imageDescription imageDescriptionV7
+convert-dictionary-2-vorto 8C56E1C1-F798-4ADD-B703-9ECA3657AF4A BoatAccessory title titleV7
+convert-dictionary-2-vorto 8C56E1C1-F798-4ADD-B703-9ECA3657AF4A BoatEquipmentGroup title titleV7
+convert-dictionary-2-vorto 8C56E1C1-F798-4ADD-B703-9ECA3657AF4A Boatkeyfeature title titleV7
+convert-dictionary-2-vorto 6DA67943-EF21-4920-972F-206362DC186F BoatAccessories intro introV7
+convert-dictionary-2-vorto 6DA67943-EF21-4920-972F-206362DC186F BoatAccessory description descriptionV7
+convert-dictionary-2-vorto 6DA67943-EF21-4920-972F-206362DC186F Boatequipments intro introV7
+convert-dictionary-2-vorto 6DA67943-EF21-4920-972F-206362DC186F Boatkeyfeature description descriptionV7</code></pre>
+      <p class="snippet-caption">A delivery file holding multiple deliverables</p>
+<p class="code">umbraco &gt; delivery</p>
+<p>Above command tells Chauffeur to locate and run all <span class="code">.delivery</span> files found in <span class="code">App_Data/Chauffeur</span></p>
+<p>Bonus: A delivery is tracked in the database, so next time you run a delivery, it will be skipped if already run (Continuous integration, anyone?).</p>
+<h3>Yes, but we're already using uSync, CmsImport, ...</h3>
+<p>Fine, and I love these tools as well... Just not for this particular case, I couldn't have migrated such amount of data in less than 1 hour.</p>
+<p>Give it a try!</p>
+<h2>credit where credit's due</h2>
+<p>Big thanks to <a href="https://twitter.com/slace">Aaron Powell</a> for creating such a great valuable tool.</p>
+<h2>References</h2>
+<ul>
+<li><span style="font-size: 14px;">Chauffeur.Runner on </span><a style="font-size: 14px;" href="https://github.com/aaronpowell/Chauffeur">GitHub</a><span style="font-size: 14px;"> and </span><a style="font-size: 14px;" href="https://www.nuget.org/packages/Chauffeur.Runner/">Nuget</a></li>
+<li><span style="font-size: 14px;">Vorto on </span><a style="font-size: 14px;" href="https://our.umbraco.org/projects/backoffice-extensions/vorto">our.umbraco.org</a><span style="font-size: 14px;"> and </span><a style="font-size: 14px;" href="https://www.nuget.org/packages/Our.Umbraco.Vorto/">Nuget</a></li>
+</ul>
+<p>Get in the driver's seat. <strong>Don't drink and drive! Happy 2016!</strong></p>
+<p> </p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Dirk De Grave"><img src="//gravatar.com/avatar/9dbc80f6694b38e28fa5b0d7ccef49f1.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/9dbc80f6694b38e28fa5b0d7ccef49f1.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Dirk De Grave</h1>
+        <p>Dirk is on Twitter as <a href="//twitter.com/netaddicts" title="Dirk De Grave on Twitter" rel="author">@netaddicts</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li class="selected"><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Prototyping in the Umbraco Backoffice</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Prototyping in the Umbraco Backoffice</h1>
+      <p class="byline"> by Laura Weatherhead, <span class="pubdate">posted on <time datetime="2020-12-24">Dec 24, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Why would I want to prototype?</h2>
+<p>You’re working on a fantastic Umbraco project. The front-end is an intuitive work of art, full of carefully designed user journeys and easy to understand processes. It’s been a dream, and the client has taken to content management like a duck to water.</p>
+<p class="intro">Now, for your next trick, they want you to add a custom section to the Umbraco backoffice. Here is the client brief:</p>
+<blockquote>When an editor logs into Umbraco, we want them to see an overview of their recent activity on the site – perhaps also some appropriate quick links to make new content. Also, maybe information about all recent edits and some statistics on the site content, so they can get an “at a glance” overview.</blockquote>
+<p>It’s a broad specification and they trust you to make the best of it; there is no budget left for design and (as always) time is tight.</p>
+<p><em><span style="text-decoration: underline;">Note</span>: if this design spec sounds familiar, it’s probably because it is! For more information, check out the Umbraco tutorial on how to create a custom dashboard: <a href="https://our.umbraco.com/documentation/tutorials/Creating-a-Custom-Dashboard">https://our.umbraco.com/documentation/tutorials/Creating-a-Custom-Dashboard</a> </em></p>
+<h3>So, what do you do?</h3>
+<p>You could just build something – it’s “only the backoffice” after all. It will be quick and functional, even if not beautiful, and does that matter?</p>
+<p>Let us take a moment to consider what is at stake here… it is true to say that whatever happens in the backoffice will likely not affect the number of sales the client makes, or how many visitors come to the site or how many visitors can be converted into sales; it also won’t materially affect the impression that external customers have of the client. However, it will affect how the client uses Umbraco – how quickly they can meet their goals, how long they will spend in the backoffice and how much they <em>enjoy</em> the experience!</p>
+<p>At the beginning of a project you are the Umbraco expert - especially if the client has had little to no experience with Umbraco previously – and you are in charge of mapping out the topography for a client based on their needs. You signpost the journeys they need to take in order to update their news articles, or add new components to the homepage, or compose product details, but they are the ones who will follow these paths through Umbraco; you might have lain the stones but they are the ones who walk the walk back and forth, day in and day out. The same is true of the custom sections you add to a site, so it goes to reason that it needs to be more than just functional: at the very least what you build should be tailored and, in an ideal world, also engaging and intuitive. If the extension to the backoffice is hard to use or there are unintentional consequences, you can rest assured that the client’s life will be made considerably harder rather than easier.</p>
+<p>So perhaps, before you jump into the bear pit of code, a prototype of the custom backoffice flow could serve to set expectations, preserve the good working relationship and highlight possible pain points – after all it is they that will be using it and not you!</p>
+<p>Let’s have a look at how one might create a prototype for this task…</p>
+<h3>What is a prototype?</h3>
+<p>There are several different definitions of what constitutes a prototype, but essentially what we want to achieve with ours is a representation of <em>information</em> and a flow of <em>interactivity</em> – Umbraco already has a polished backoffice with clear styles and layouts, we want to use this as a base to create an extension. There is no need for us to reinvent the wheel here.</p>
+<p>So, we want to:</p>
+<ul>
+<li>Show the client what information we can display to them</li>
+<li>Show them what that information will look like in the layout</li>
+<li>Demonstrate what information they can interact with</li>
+<li>Demonstrate the outcomes of interacting with that information</li>
+</ul>
+<h3>What might success look like?</h3>
+<p>To understand if we are successful or not, we must first look at what tasks the client wants to do. Let us breakdown their requirements, and consolidate them into user story format:</p>
+<ul>
+<li>As an editor I want to see my most recent five actions</li>
+<li>As an editor I want to be able to speed up completion of the tasks I do the most</li>
+<li>As an editor I want to see a list of the most recent edits from all content editors</li>
+<li>As an editor I want to see statistics about the site content</li>
+</ul>
+<p>Now, some of these tasks are achievable albeit perhaps scattered or long-winded, and some would take rather a large amount of cross-referencing effort. So, then the question becomes: <strong>how can we reduce the amount of effort it takes to do these tasks?</strong></p>
+<h2>Basics of prototyping</h2>
+<p>For this article we’re going to look at creating a prototype in Adobe XD. XD is free on a “starter” plan (which has more than enough features to get you off the ground!). Most of the concepts are platform-independent, although the processes will of course be different if you were to use another prototyping platform such as Sketch or Invision for example.</p>
+<p>The goal of this exercise is to take the tasks the user wishes to accomplish and port them into an interactive prototype to share with the client so that they can establish whether the flow makes sense to them and whether the information that will be included meets their criteria.</p>
+<p>There are three different modes to work in in Adobe XD:</p>
+<ol>
+<li><strong>Design - </strong>this is where you can create new interface elements and components that will feed into your prototype flow. Think of it as a massive paint box.</li>
+<li><strong>Flow </strong>– this is where you pick out interactive elements and link them together to create the illusion of functionality. It is the cornerstone of the prototyping process and breathes life into what would otherwise be just a series of images.</li>
+<li><strong>Share </strong>– this is where you can gather feedback from the client or any stakeholder who needs an input into the process.</li>
+</ol>
+<p>Let’s have a look at each of these in a little more detail.</p>
+<h3>Design</h3>
+<h4>A quick note about designing for the Umbraco backoffice</h4>
+<p>When we think about how our custom data could look in Umbraco it is very tempting to just create from scratch – we only have a little data; let’s just roll our own tables and styles. This is a legitimate course of action, but ultimately you are not harnessing the full support that Umbraco can offer you here. Aside from the fact that the CMS already has several well-designed flows and conventions (such as infinite editing), it also had a whole catalogue of pre-made components and design features available to you; from buttons to tables to notifications (you can view all these at the Umbraco Angular UI docs: <a href="https://our.umbraco.com/apidocs/v8/ui/#/api">https://our.umbraco.com/apidocs/v8/ui/#/api</a>)</p>
+<p>If we return a moment to our goal of <strong>reducing the amount of effort to complete the tasks</strong>, we probably want to bear in the mind that the client’s editors have already used Umbraco, so if we stay consistent it will prevent them from having further interactions to master and remember. We are trying to simplify their cognitive load and not add to it!</p>
+<h4>Creating in Adobe XD</h4>
+<p>There are a number of excellent tutorials for XD out there (I would personally recommend the series by Dan Scott at <a href="https://www.bringyourownlaptop.com/courses/ui-ux-web-design-using-adobe-XD">Bring your own laptop</a>); unfortunately it is outside the scope of this article to give you a full walkthrough of how to use XD - but I will touch on a couple of strategies that I use as shortcuts when creating prototypes for Umbraco.</p>
+<ol>
+<li>As there is already a fully designed layout for Umbraco, it speeds the process up to use <strong>screenshots</strong> for areas that you are not interested in modelling new data or interactivity for. For example, in this case we are focused on the dashboard section and so do not need to spend time with peripheral interactions with the tree or header navigation<br><br></li>
+<li>There are visual samples in the backoffice of most types of element you will want to add: buttons, tables, headings etc – XD has a number of tools that you can combine to create simple shapes<br><br><iframe width="672" height="378" src="https://www.youtube.com/embed/fCLFfCIjmOk?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe><br><br></li>
+<li>You can build up interfaces quite quickly by creating elements, grouping these in the layers panel and then duplicating them (a handy shortcut is holding down the ALT key and dragging the element on the screen to clone it). XD also has some handy features such as repeat grids:<br><br><iframe width="672" height="378" src="https://www.youtube.com/embed/9tyXrGreXnk?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>
+        </li>
+</ol>
+<p>I have taken a little time to mock-up what my custom dashboard might look like using the Umbraco tables (for example in the URL redirects tab) and the “create new” action areas on list views as sources of inspiration. If I show each requirement in full, my prototyped layout is now built up to look like the below: </p>
+<p>
+        <iframe width="672" height="378" src="https://www.youtube.com/embed/ok7CROIUEZA?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>
+      </p>
+<p>First shown is "viewing own recent activity", second is "following shortcut for tasks", third is "viewing sitewide activity", and fourth is "viewing sitewide statistics".</p>
+<h3>Flow</h3>
+<p>So, now we have what is essentially just an image, but we can use prototyping flows to link them up to one another. This is what brings the prototype to life and is the bit that speaks a thousand words more than just the picture alone will! To demonstrate this, I have copied Umbraco screens for a new “news item” and to edit a “news item” which we can link to the buttons and points on interaction on our custom dashboard layout.</p>
+<p>This page flow is set up like this:</p>
+<p>
+        <iframe width="672" height="378" src="https://www.youtube.com/embed/rnvNcHpaXow?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>
+      </p>
+<p>If we wanted to make use of the overlay feature (infinite editing styles in Umbraco) we could add another prototype link for the statistics, for example, and that could be set up and look like this:</p>
+<p>
+        <iframe width="672" height="378" src="https://www.youtube.com/embed/uaZZEPIExk8?feature=oembed" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen=""></iframe>
+      </p>
+<h3>Share</h3>
+<p>Now that you have some flows and layouts that you would like feedback on, there are a bunch of different ways you can share your finished prototype depending on what your desired response is going to be. In the prototype that I have shared below, I have set it to "Presentation" but as you can see from the below options there are a number of other paths you could take.</p>
+<p><img style="width: 365px; height: 338px; text-align: center;" src="/archive/media/2020/share-options.png?width=365&amp;height=338" alt="XD share options" data-udi="umb://media/4533ae1c1e194d23a1ee62e14fd9d699"></p>
+<p>I have shared the screens that I have made for this demo here:</p>
+<p>
+        <iframe width="768" height="432" src="https://xd.adobe.com/embed/06618728-7d87-474d-adcb-7e2c8bb8bf72-5332/?fullscreen" frameborder="0" allowfullscreen=""></iframe>
+      </p>
+<p>You can click through the few simple flows that we have added on the “create news item” button, the “edit” button and the activity detail overlays. These fairly simple flows are just designed to give you a taste of how Adobe XD (or any other prototyping software) might be able to help you out in not just visualising your backoffice interactions, but being able to share that intended interactivity with others.</p>
+<h2>Summary</h2>
+<p>Thanks for following along! Hopefully you now have a little more insight into not only how prototyping Umbraco backoffice interaction flows might work, but also an idea of how you could get started with making one yourself to share with a client. This is a high-level article and unfortunately there isn’t the time to really delve into all that Adobe XD has to offer; but I am always happy to help out and answer any questions that I can!</p>
+<p>If this article has piqued your interest on prototyping, I have dipped an initial toe in the water to create a base kit of Umbraco styles that can be used between projects as a touchpoint for typography and colours. You can see the early bones here: <a rel="noopener" href="https://xd.adobe.com/view/ffdd69e9-0f69-43be-be30-2c23e996ce2d-aa8e/?fullscreen" target="_blank" title="Adobe XD Semantic Umbraco UI Kit" data-anchor="?fullscreen">Adobe XD Semantic Umbraco UI Kit</a></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/personalisation/" title="See all articles tagged with Personalisation">Personalisation</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/planning/" title="See all articles tagged with Planning">Planning</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/ux/" title="See all articles tagged with UX">UX</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Laura Weatherhead"><img src="//gravatar.com/avatar/0cdf7b1f9678b25b3b3d93c8237d9956.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/0cdf7b1f9678b25b3b3d93c8237d9956.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Laura Weatherhead</h1>
+        <p>Laura is on Twitter as <a href="//twitter.com/lssweatherhead" title="Laura Weatherhead on Twitter" rel="author">@lssweatherhead</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

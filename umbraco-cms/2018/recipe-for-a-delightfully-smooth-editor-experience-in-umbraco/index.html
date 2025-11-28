@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Recipe for a delightfully smooth editor experience in Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Recipe for a delightfully smooth editor experience in Umbraco</h1>
+      <p class="byline"> by Katie Archibald, <span class="pubdate">posted on <time datetime="2018-12-12">Dec 12, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Hi, I’m Katie Archibald, you may remember me from such Umbraco events as: Codegarden 2017/18, various Umbraco meetups or the UK Festival which I had the pleasure of co-organising this year. I’ve been working within the realms of Umbraco for almost 3 years, starting off as a content editor and now working as an Umbraco certified Project Manager at <a rel="noopener" href="https://thecogworks.com/" target="_blank">Cogworks</a>. <br><br>When I started writing this blog it was supposed to be something along the lines of: ‘how to editor proof the Umbraco back office’, but the more I thought about this, the more I realised ‘editor proofing’ a CMS isn't one-size-fits-all and also doesn't necessarily make for a good editor experience. For me 'editor proofing' conjures up an image of developers dotting baby gates all around the back office to prevent editors from doing certain things. It treats editors as the last people to arrive to the party, once everything is built you simply drop them into the CMS and hey presto, a beautifully smooth no-holes-or-issues-editing-experience, they just get how it all works...right?</p>
+<p class="intro"><img style="width: 381.2375249500998px; height: 500px;" src="/archive/media/2018/24-days-blog.gif?width=381.2375249500998&amp;height=500" alt="Editors are good at finding gaps" data-udi="umb://media/ea56e7248632435699436cbc40c207df"></p>
+<p><span style="font-weight: 400;">Not quite. As a project manager I’ve come to learn that in most projects things change along the way. From the start to the end of a build, it’s possible that the system will have undergone several upgrades or new features and bug fixes may have been released. Sometimes a client might want something completely new to be developed and leaving editors out of the loop until the end product is delivered doesn’t generally equate to a good editing experience.</span></p>
+<p><span style="font-weight: 400;">So, when building something new in the CMS, what are some ways in which we can approach the process to ensure the best possible editing experience is achieved and ‘editor proof’ the back office along the way? (without the need for baby gates!)</span><span style="font-weight: 400;"><br></span></p>
+<h3>Talking to each other is a great start.</h3>
+<p><span style="font-weight: 400;">Communication equals collaboration, and collaboration is an extremely powerful tool. It’s amazing how much we can learn from one another when we work together. There should never be the ‘us’ vs ‘them’ outlook that is so often the case within companies that split teams into silos. It’s much more productive to put our minds together, as ultimately we all share the same goal of delivering the best possible solution for our clients. Huan Song gave a great talk about what can happen </span><a rel="noopener" href="https://vimeo.com/229536795" target="_blank"><span style="font-weight: 400;">when content and development teams join forces</span></a><span style="font-weight: 400;"> at Codegarden 2017 and explained how the idea behind our ‘</span><a rel="noopener" href="https://our.umbraco.com/packages/backoffice-extensions/find-and-replace/" target="_blank"><span style="font-weight: 400;">Find and replace</span></a><span style="font-weight: 400;">’ package arose through a need raised by an editor and through collaboration a solution was created. Some of the best Umbraco packages have come about as a way to solve an issue raised by the editor.</span></p>
+<h3>Propose and test out possible solutions before ploughing ahead and building something in stone.</h3>
+<p><span style="font-weight: 400;">This could be talking through some initial ideas, or wireframes, and can be as simple as drawing them up on a piece of paper. If you were building a car you’d probably want to test out if the position of the steering wheel, indicators and ignition worked for the driver before wiring it all up. The further down the line you are the harder and more costly it is to change something which could have been ironed out early on.</span></p>
+<p><img style="width: 480px; height: 362px;" src="/archive/media/2018/24-days-gif-3.gif?width=480&amp;height=362" alt="Where does the key even go?" data-udi="umb://media/d733376183a340b8abfceaaf974e52fb"></p>
+<p><span style="font-weight: 400;">I’m going to use a real case example to demonstrate how we developed a new feature for one of our client’s sites, from the initial concept through to the development. The website handles a lot of attractions, and the client wanted to introduce premium adverts which would sit at the top of a listing page. Previously, premium adverts were being executed via Google Tag Manager, which was: ‘time intensive and had latency issues’. They wanted to be able to easily administer these via the CMS at a county level and additionally wanted to see, at a glance, an overview of the advert info (name, start/end date and position). After the initial scoping, we sat down as a team and wrote out some acceptance criteria before planning the back end development. </span></p>
+<p><span style="font-weight: 400;">Based on this, and my knowledge of existing Umbraco builds, I had a pretty good idea of how I would want it to work as an editor. So I grabbed a piece of paper and jotted down my vision…I know, I know...move over Monet!</span></p>
+<h3><img style="width: 500px; height: 374.68734367183595px;" src="/archive/media/2018/24-days-image-1.jpg?width=500&amp;height=374.68734367183595" alt="Back office feature scoping on paper" data-udi="umb://media/f25199a001644111a74164957f5079b7"></h3>
+<h3><img style="width: 500px; height: 375.18759379689845px;" src="/archive/media/2018/24-days-image-2.jpg?width=500&amp;height=375.18759379689845" alt="Back office feature scoping on paper with annotations" data-udi="umb://media/7bfbc74907b14010a62f85aae9a14c3b"></h3>
+<p>I gave these sketches to the devs and they cracked on, turning my vision from paper to product.</p>
+<h3><span style="font-weight: 400;"><img style="width: 500px; height: 237.02894593118515px;" src="/archive/media/2018/24-days-image-3.png?width=500&amp;height=237.02894593118515" alt="The end results of feature in CMS" data-udi="umb://media/507243d74bb6447b9fe43b3e8bfc6c81"></span></h3>
+<p><span style="font-weight: 400;"><br>It’s important to note that the development of the doctypes, templates and the structure of the back office should not be dictated by the editor, but it’s certainly worth taking their opinion on board, as often they will approach it from a completely different perspective and ultimately they’re the ones using it. Even simple things like naming fields and writing their descriptions with an editor will ensure it makes sense to them and can help make the whole editing experience much smoother. </span></p>
+<h3>Write your acceptance criteria as a team.</h3>
+<p><span style="font-weight: 400;">As mentioned above, before we embark on development we try to iron out as much as possible upfront and this often gets done when writing the acceptance criteria. Once again this involves communicating with one another. Just by talking things through together and</span><span style="font-weight: 400;"> explaining how everyone </span><span style="font-weight: 400;">thinks</span><span style="font-weight: 400;"> it should work often raises questions that may have been missed out during scoping, but is still early on enough to catch and resolve before development starts. It’s important to involve the whole team during this phase, otherwise you may end up with something the developer thinks works, the editor can’t use, and the client doesn’t want.</span><span style="font-weight: 400;"></span></p>
+<p><span style="font-weight: 400;">Once all the ‘planning stuff’ is done next comes the fun part - development! But this is not the point where the developer shuts themselves away until the development is 'done'. Spoiler alert; development is never actually 'done', to quote <a rel="noopener" href="https://twitter.com/ourfounder/status/770075137332932608?lang=en" target="_blank" data-anchor="?lang=en">Jim Benson</a>:</span><span style="font-weight: 400;"></span></p>
+<blockquote><span style="font-weight: 400;"><span>Software being "Done" is like lawn being "Mowed".</span></span></blockquote>
+<h3>Demo, demo, demo<span style="font-weight: 400;">. </span></h3>
+<p><span style="font-weight: 400;">When development starts, demo as often as you can and again this should be done to the whole team (hmm...there seems to be a theme developing here). By demoing with the editor and other team members on board they may be able to flag issues early on that the developer hasn't spotted. Also if possible, it’s really beneficial to have another developer outside of the project on the demo who may have a different approach and can provide valuable feedback. When you’re super involved in a project sometimes it’s hard to not become blinkered and overlook aspects where improvements could be made. </span><span style="font-weight: 400;"></span></p>
+<p><span style="font-weight: 400;">I have found that by following this method we very rarely get to the point whereby a solution the developer has implemented doesn’t work or is difficult for the editor to use. Having the whole team working together throughout a project removes much of the need to install baby gates. The editors already know what they should or shouldn’t be doing because they understand and helped shape how it should work. </span></p>
+<p><span style="font-weight: 400;">I’d like to add a bit of a “</span><span style="font-weight: 400;">all opinions are my own</span><span style="font-weight: 400;">” disclaimer here. I’m not claiming that this process is the best way of doing it, is 100% foolproof or is the right approach for every team and project. It’s based on my own experience and I understand there are some potential issues or questions that may arise which I will try my best to address below.</span></p>
+<p><em><span style="font-weight: 400;">“I don’t have enough budget to include an editor in the build”</span></em></p>
+<p><span style="font-weight: 400;">Imagine you’ve got a budget set aside to learn how to drive and to buy a car. There wouldn’t be much point in buying a Lamborghini (aside from it looking pretty swanky on your driveway and making your neighbours super jealous) if you haven’t left yourself enough budget to pay for driving lessons. In the same way, you could spend lots of time and money building a back office that looks great on the surface, but if at its core it’s not useable for an editor this is a total waste of resource. </span><span style="font-weight: 400;">I’d argue it’s not a case of not having enough budget, but rather, not allocating it correctly. It may mean reducing the backlog slightly or phase the work, but at the end of the day we should be aiming to deliver quality over quantity.</span></p>
+<p><em><span style="font-weight: 400;">“How can I get the client on board with this way of working, won’t an additional team member mean the hours will clock up on the project?”</span></em></p>
+<p><span style="font-weight: 400;">If having an editor/non developer involved in the build process is something you don’t currently exercise, this will seem like having to factor in an additional team member. Whether that person is part of your internal team or the effort is coming from the client side, it will ultimately affect the resource required on the project. However, if this is factored in from the very beginning it won’t be a shock to the client. </span></p>
+<p><span style="font-weight: 400;">A lot of our projects are legacy projects taken on from other agencies, and usually there’s a reason why they left and clients are often looking for guidance or better practices. Unfortunately with legacy projects comes the fear from the client of being stung again, so it’s really important to show return early on in a project. By delivering even small tasks in this way (and it working smoothly) gains trust in the method and as such clients are more willing to follow the process in the long run.</span></p>
+<p><em><span style="font-weight: 400;">“The editor is inexperienced or doesn’t have any strong opinions on how the back office should work”</span></em></p>
+<p><span style="font-weight: 400;">That’s ok, not every project will have experienced editors and in this case it's almost not knowing what they're missing out on. </span><span style="font-weight: 400;">All you can do is trust that the developer will put forward (to the best of their knowledge) the most editor friendly solution. An inexperienced editor also brings something unique to the table that well-versed Umbracians simple don't have; an unbiased, fresh perspective. And if you don't have an editor available/with much opinion then anyone else outside of the project (another developer, PM, your next door neighbour) will do, just so it’s not a totally blinkered view. We should always aim to build components that require little to no explanation. So if you've created an Umbraco solution that your best friend's Nan can use, then congratulations my friend, you’ve nailed it!</span></p>
+<p><em><span style="font-weight: 400;">‘What about scope creep, how do you handle new features or requirements arising over the course of the editor testing and is it ok to say ‘no’?’</span></em></p>
+<p><span style="font-weight: 400;">This is where having a solid acceptance criteria is key, because you always have an agreed set of requirements to refer back to. If you don’t define things upfront then you don’t really have a leg to stand on to deem if something is a change request, out of scope, or has simply been overlooked (it happens, we're only human!) It’s much better that these questions arise as early as possible which is why I would encourage to having the editor/client involved from the outset so they don't come up at the very end.</span></p>
+<p><span style="font-weight: 400;">It’s great to see an increased focus on the importance of including editors and non-devs in the Umbraco community. In the same way that developers learn from one another, there’s a lot that devs can learn from editors and vice versa. Something I found really useful was doing the Umbraco fundamentals training, and would highly encourage any PMs/editors looking to broaden their technical knowledge to look into doing it. I hope the presence of editors and non-devs within the community continues to grow and with this in mind would really encourage editors to join in the chat on </span><a href="https://our.umbraco.com/"><span style="font-weight: 400;">Umbraco Our</span></a><span style="font-weight: 400;">. The seed for the next best Umbraco package may just be planted by a small issue raised by an editor! </span><span style="font-weight: 400;"></span></p>
+<p><span style="font-weight: 400;">Whether you're reading this as a developer, a project manager, an editor or anyone else involved in a project, I hope this provides some inspiration on how you can approach a project. I'd</span><span style="font-weight: 400;"> be really keen to hear if anyone also uses some of these methods, or if you're doing it totally differently, let me know and give me a tweet!</span></p>
+<p><br><br></p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Katie Archibald"><img src="//gravatar.com/avatar/f8f61a11308dc972bcf474bab80a4409.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/f8f61a11308dc972bcf474bab80a4409.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Katie Archibald</h1>
+        <p>Katie is on Twitter as <a href="//twitter.com/katiearchibald " title="Katie Archibald on Twitter" rel="author">@katiearchibald </a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

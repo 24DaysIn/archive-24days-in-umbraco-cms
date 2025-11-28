@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Configuration Files: Creating, Testing and Deploying in Azure DevOps</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Configuration Files</h1>
+      <p class="byline"> by Rachel Breeze, <span class="pubdate">posted on <time datetime="2020-12-19">Dec 19, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <h2>Introduction</h2>
+<p>Configuration files, despite the fact they contain settings which the whole site or application can rely on, are often overlooked; the contents of the files often become the coding equivalent of the junk cupboard, a case of “we want to store this setting, but we’re not quite sure where to put it”.<br>Because many of us are still developing and supporting applications in .NET Frameworks 4.7 and 4.8 I am going to take a look at configuration files:</p>
+<ul>
+<li>Options for creating structured configuration files</li>
+<li>How to test a configuration file at site start-up</li>
+<li>How to using configuration files as part of unit tests</li>
+<li>How to deploy files to an Azure App Services using Azure DevOps and deployment slots</li>
+</ul>
+<p class="intro">Sample code for this article can be found at <a rel="noopener" href="https://github.com/RachBreeze/2020-24-Days-In-Umbraco/" target="_blank" title="https://github.com/RachBreeze/2020-24-Days-In-Umbraco/">https://github.com/RachBreeze/2020-24-Days-In-Umbraco/ (Opens a new window)</a></p>
+<h2>What is a configuration file, and when will you use it?</h2>
+<p>A configuration file is used to store environment-specific settings, such as database connection strings. Developers may also use them to store information which is fairly constant but we know could change, for example, if the site is an eCommerce site retailing and shipping only in the UK the VAT rate may be stored in the config file as “0.2” as the VAT rate is constant, until the Chancellor changes it. By storing it in the config file, if the value does change we don’t have to recompile our application.</p>
+<h2>Working With Configuration Files</h2>
+<p>Let us imagine a scenario where the site is a UK site, supplying UK products and which sends marketing emails via a scheduled task.</p>
+<p>We know that the marketing emails:</p>
+<ul>
+<li>Should only be going to the dev and test team in our dev and test environments</li>
+<li>To the dev, test and client in the clients testing environment (or UAT environment)</li>
+<li>To anyone in the production environment.</li>
+</ul>
+<p>We will store the following in the configuration files to support this:</p>
+<ul>
+<li>A decimal value for the VAT rate, stored as “VAT”</li>
+<li>A boolean for if the email is in test mode, stored as “emailInTestMode”</li>
+<li>A semi colon-separated list of valid email domains for recipients of emails, stored in “testEmailDomains”</li>
+</ul>
+<h3>Web.Config</h3>
+<p>The default location for web site settings in the web.config within the <span class="code">&lt;appSettings&gt;</span> element. Values are stored as key value pairs:</p>
+<p><span class="code">&lt;appSettings&gt;</span><br><span class="code">&lt;add key="VAT" value="0.2" /&gt;</span><br><span class="code">&lt;add key="emailInTestMode" value="true" /&gt;</span><br><span class="code">&lt;add key="testEmailDomains" value="@testdomain.com" /&gt;</span><br><span class="code">&lt;/appSettings&gt;</span></p>
+<p>And then these can be accessed in code via calls like:</p>
+<pre><code class="language-csharp">﻿using System.Configuration;
+
+namespace _24DaysInUmbraco.Examples
+{
+    public class ReadWebConfig
+    {
+        public void ReaderSettings()
+        {
+            var VAT = decimal.Parse(ConfigurationManager.AppSettings["VAT"]);
+            var emailInTestMode = bool.Parse(ConfigurationManager.AppSettings["emailInTestMode"]);
+            var testEmailDomains = ConfigurationManager.AppSettings["testEmailDomains"];
+
+        }
+    }
+}</code></pre>
+<p> </p>
+<p> </p>
+<p>As we can see adding key-value pairs in the <span class="code">&lt;appSettings&gt;</span> in the <span class="code">web.config</span> is quick but:</p>
+<ul>
+<li>It is hard to structure them and group related settings</li>
+<li>If there’s a lot of key-value pairs the <span class="code">web.config</span> becomes hard to read</li>
+<li>The values need to be cast and tested to ensure they are type-safe every time they are read</li>
+<li>It’s not until the routine that is accessed that uses that exact key-value pair that the developer/ tester/ user can confirm that the value is set correctly.</li>
+</ul>
+<p>Some of these issues can be overcome by creating a settings class. This class ensures that the values are cast correctly and also helps keep the code DRY. Doing this also helps with creating Mocks for unit testing. An example settings class may be:</p>
+<p> </p>
+<pre><code class="language-csharp">﻿using System.Configuration;
+
+namespace _24DaysInUmbraco.Examples
+{
+    public class Settings
+    {
+        public virtual decimal VAT =&gt; decimal.Parse(ConfigurationManager.AppSettings["VAT"]);
+
+        public virtual bool EmailInTestMode =&gt; bool.Parse(ConfigurationManager.AppSettings["emailInTestMode"]);
+
+        public virtual string TestEmailDomains =&gt; ConfigurationManager.AppSettings["testEmailDomains"];
+    }
+}</code></pre>
+<p> </p>
+<p>However, under pressure, rather than reusing existing code developers may make direct calls to <span class="code">ConfigurationManager.AppSettings</span> to read the contents of the <span class="code">web.config</span>.</p>
+<h3>Custom.Config</h3>
+<p>A custom config file allows us to structure the data more clearly, as it is pure XML. We can model the config file contents in code by writing a reader that inherits from the abstract <span class="code">ConfigurationSection</span> class. The properties of the class should use the <span class="code">[ConfigurationProperty]</span> attribute. Implementing properties with the <span class="code">ConfigurationProperty</span> attribute means that developers can rely on C# to perform the type checking. In addition, developers can add one line of code per custom config, at startup to validate the file contents, ensuring an error is thrown at startup if the contents don’t validate, giving developers and testers automatic feedback on the site configuration.</p>
+<h3>Adding a custom config file</h3>
+<p>To use a custom config in code:</p>
+<ul>
+<li>Add a new config file to the solution the same way as any other file</li>
+<li>Give it the same name as the class that will be modelling it</li>
+</ul>
+<p>In our example I’ve created “<span class="code">UmbracoAdvent.config</span>” in the config subfolder and move the values from the <span class="code">web.config</span> to this file:</p>
+<p><span class="code">&lt;?xml version="1.0"?&gt;</span><br><span class="code">&lt;umbracoAdventSettings vat="0.2"&gt;</span><br><span class="code">&lt;marketing emailInTestMode="true" testEmailDomains="@testdomain.com"/&gt; </span><br><span class="code">&lt;/umbracoAdventSettings&gt;</span><br><br>Next up we need to create the class that will read this information.</p>
+<p>To do this we need to tell the class it’s reading a configuration file section by inheriting from abstract ConfigurationSection class.</p>
+<p>Then we need to tell the class about the properties in the file. The value for VAT is on the root element and can be read as follows, and here we are saying it’s always required:</p>
+<p><span class="code">[ConfigurationProperty("vat",IsRequired = true)]</span><br><span class="code">public virtual decimal VAT =&gt; (decimal)this["vat"];</span></p>
+<p>Here we’ve:</p>
+<ul>
+<li>Named the VAT property, and given it a type as we would normally</li>
+<li>Decorated the VAT property so that it reads from the config file by adding the <span class="code">ConfigurationProperty</span> attribute</li>
+</ul>
+<p>We can also tell our class to read from the config file into another class. To do this define the marketing element as a configuration element, and read the properties as before:</p>
+<p><span class="code">public class MarketingElement : ConfigurationElement</span><br><span class="code">{</span><br><span class="code">[ConfigurationProperty("emailInTestMode")]</span><br><span class="code">public virtual bool EmailInTestMode =&gt; (bool)this["emailInTestMode"];</span></p>
+<p><span class="code">[ConfigurationProperty("testEmailDomains")]</span><br><span class="code">public virtual string TestEmailDomains =&gt; (string)this["testEmailDomains"];</span><br><span class="code">}</span></p>
+<p>Then tell the class to read that element:<br><span class="code">[ConfigurationProperty("marketing")]</span><br><span class="code">public virtual MarketingElement MarketingSettings =&gt; (MarketingElement)this["marketing"];</span></p>
+<p>A full list of constructors are available here <a rel="noopener" href="https://docs.microsoft.com/en-us/dotnet/api/system.configuration.configurationproperty?view=netframework-4.7.2#constructors" target="_blank" title="https://docs.microsoft.com/en-us/dotnet/api/system.configuration.configurationproperty?view=netframework-4.7.2#constructors">https://docs.microsoft.com/en-us/dotnet/api/system.configuration.configurationproperty?view=netframework-4.7.2#constructors (opens a new window)</a> <br>By decorating the read of the property with the validators required anyone consuming that property knows it is type safe and in the expected format.</p>
+<p>Lastly because we don’t want to have to keep telling the class to read the property, and we need to tell the class where to read it from we add this:<br><span class="code">public static UmbracoAdventSettings Settings { get; } = ConfigurationManager.GetSection("umbracoAdventSettings") as UmbracoAdventSettings;</span></p>
+<p>The final code can be found in Examples\UmbracoAdventSettings.cs</p>
+<p>And finally we need to tell the <span class="code">web.config</span> where to read this section from, so add the following to the <span class="code">&lt;configSections&gt;</span> element in the <span class="code">web.config</span></p>
+<p><span class="code">&lt;section name="readerSectionName" type="classname,dll name"/&gt;</span></p>
+<p>Where:</p>
+<ul>
+<li>Name is the same name as the name used in the call to ConfigurationManager.GetSection in the reader class</li>
+<li>Type is the name of the class reading the file, followed by a comma and then the name of the dll containing the class reading the file, in our example it is:</li>
+</ul>
+<p><span class="code">&lt;section name="umbracoAdventSettings" type="_24DaysInUmbraco.Examples.UmbracoAdventSettings,_24DaysInUmbraco"/&gt;</span></p>
+<p>And then tell the <span class="code">web.config</span> where to read the details from:<br><span class="code">&lt;umbracoAdventSettings configSource="config\umbracoAdvent.config" /&gt;</span></p>
+<h2>Testing Custom Config</h2>
+<h3>Testing with Nunit and Moq</h3>
+<p>The custom config is read via a static class, so there are a few tweaks to make it testable and work with dependency injection.<br>For dependency injection to work the class needs an interface, to do this we will create a wrapper interface:</p>
+<pre><code class="language-csharp">﻿namespace _24DaysInUmbraco.Examples
+{
+    public interface IUmbracoAdventSettingsWrapper
+    {
+        UmbracoAdventSettings Settings();
+    }
+}</code></pre>
+<p><br>And the interface needs a class which implements it:</p>
+<pre><code class="language-csharp">﻿namespace _24DaysInUmbraco.Examples
+{
+    public class UmbracoAdventSettingsWrapper : IUmbracoAdventSettingsWrapper
+    {
+        public UmbracoAdventSettings Settings()
+        {
+            return UmbracoAdventSettings.Settings;
+        }
+    }
+}</code></pre>
+<p><br>The wrapper interface and implementation need registering at application startup, in Umbraco 8 this would be using a composer such as:</p>
+<pre><code class="language-csharp">﻿using _24DaysInUmbraco.Examples;
+using Umbraco.Core.Composing;
+
+namespace _24DaysInUmbraco.Composing
+{
+    // prepares the dependency injection for the email service
+    public class ConfigurationComposer : IUserComposer
+    {
+        public void Compose(Composition composition)
+        {
+            composition.RegisterFor&lt;IUmbracoAdventSettingsWrapper, UmbracoAdventSettingsWrapper&gt;();
+     }
+    }
+}</code></pre>
+<p>We can then create an email service into which <span class="code">IUmbracoAdventSettingsWrapper</span> injected and which has a method “<span class="code">CanSendEmail</span>”:</p>
+<p> </p>
+<pre><code class="language-csharp">﻿using System;
+using _24DaysInUmbraco.Examples;
+
+namespace _24DaysInUmbraco.Services
+{
+    public class EmailService
+    {
+        private readonly IUmbracoAdventSettingsWrapper _settingsWrapper;
+
+        public EmailService(IUmbracoAdventSettingsWrapper settingsWrapper)
+        {
+            _settingsWrapper = settingsWrapper;
+        }
+
+        public bool CanSendEmail(string emailAddress)
+        {
+            if (!_settingsWrapper.Settings().MarketingSettings.EmailInTestMode)
+            {
+                return true;
+            }
+
+            var domain = emailAddress.Substring(emailAddress.IndexOf("@", StringComparison.Ordinal)).ToLower();
+            return _settingsWrapper.Settings().MarketingSettings.TestEmailDomains.Contains(domain);
+        }
+    }
+}</code></pre>
+<p>This can then be tested:<span class="code"></span></p>
+<pre><code class="language-csharp">﻿using _24DaysInUmbraco.Examples;
+using _24DaysInUmbraco.Services;
+using Moq;
+using NUnit.Framework;
+
+namespace _24DaysInUmbraco.Tests.Services
+{
+    public class WhenSendingEmail
+    {
+        [Test]
+        public void IfTheSiteIsNotInTestModeEmailsCanBeSent()
+        {
+            var settings = new Mock&lt;IUmbracoAdventSettingsWrapper&gt;();
+            settings.Setup(x =&gt; x.Settings().MarketingSettings.EmailInTestMode).Returns(false);
+            var emailService = new EmailService(settings.Object);
+            Assert.AreEqual(emailService.CanSendEmail("anyeamil@this.com"), true);
+        }
+    }
+}
+</code></pre>
+<p><br>More sample tests can be found in the solution in the tests project.</p>
+<p> </p>
+<h3>Testing the custom configs on startup</h3>
+<p>Custom configs are validated the first time they are read, so if you want to validate them on startup add a line in your startup code that reads a value from the config file:</p>
+<p> </p>
+<pre><code class="language-csharp">﻿using _24DaysInUmbraco.Examples;
+using Umbraco.Core.Composing;
+
+namespace _24DaysInUmbraco.Composing
+{
+    // prepares the dependency injection for the email service
+    public class ConfigurationComposer : IUserComposer
+    {
+        public void Compose(Composition composition)
+        {
+            composition.RegisterFor&lt;IUmbracoAdventSettingsWrapper, UmbracoAdventSettingsWrapper&gt;();
+            var testFileContents = UmbracoAdventSettings.Settings.VAT;
+        }
+    }
+}</code></pre>
+<p> </p>
+<p> </p>
+<p>If there is an error in the config file at startup a YSOD will be displayed.</p>
+<h2>Deploying Config Files In Azure DevOps</h2>
+<p>Configuration files contain settings that are unique to each environment. There are a number of ways of manipulating the configuration file contents as part of the build and deployment process, to ensure the values are changed as they are deployed to each environment.</p>
+<h3>File Transform</h3>
+<p>When a web application is configured for the first time two files are automatically created for the <span class="code">web.config</span> as shown below:</p>
+<p><img style="width: 218px; height: 65px;" src="/archive/media/2020/webtransform.png?width=218&amp;height=65" alt="Screen shot of a web.config transform file structure in Visual Studio" data-udi="umb://media/d2d3da77aae54f0ca25f27c7d09fe144"></p>
+<p>These are named after the two default configurations found in configuration manager.</p>
+<p><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/7c004195185a43349cb916ff168d3b4c"><img style="width: 500px; height: 298.8338192419825px;" src="/archive/media/2020/configurationmanager.png?width=500&amp;height=298.8338192419825" alt="Screenshot of configuration manager showing the Debug and Release options" data-udi="umb://media/7c004195185a43349cb916ff168d3b4c"></p>
+<p>The debug configuration is usually the configuration we all develop in.<br>The release configuration is the configuration we normally deploy with.</p>
+<p>The two files apply transforms the <span class="code">web.config</span> that we have been working with. A transform just changes the config file’s contents.</p>
+<h3>Previewing Transforms</h3>
+<p>To preview a transform before it’s deployed right mouse on the transform to view and select “Preview Transform”.</p>
+<p>If prompted to install SlowCheetah and you know the solution will be deployed using a tool such as OctopusDeploy or Azure DevOps answer yes to the install SlowCheetah NuGet package question as it will help the deployment process.</p>
+<p><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/7c3258a9d0e547398a4fc32a52df05c5"><img style="width: 403px; height: 215px;" src="/archive/media/2020/slowcheetahprompt.png?width=403&amp;height=215" alt="Screenshot of SlowCheetah prompt" data-udi="umb://media/7c3258a9d0e547398a4fc32a52df05c5"><br>The preview option for the transform allows a developer to see what the values are currently and what they will be when they are applied:</p>
+<p><img style="width: 500px; height: 255.39568345323744px;" src="/archive/media/2020/webconfigtransform.png?width=500&amp;height=255.39568345323744" alt="Screenshot of Web.Config transform preview" data-udi="umb://media/cc9b4db2749440199265c1d40d4fc5b2"></p>
+<p>Out of the box we can see that all the web.Release.Config does is remove <span class="code">debug=”true”</span> from the <span class="code">web.config</span> file.<br>A full list of transforms can be found and details of how to add per environment van be found in this guide <a rel="noopener" href="https://blog.elmah.io/web-config-transformations-the-definitive-syntax-guide/" target="_blank">https://blog.elmah.io/web-config-transformations-the-definitive-syntax-guide/ (Opens a new window)</a>.</p>
+<h3>Deploying with Transforms</h3>
+<p>Once transforms have been added and tested locally they need to be added to the Azure DevOps build pipeline. To do this in the deploy task, select “xml transformation”.</p>
+<p><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/09ade5c125474551ae4515fbee6f9c34"><img style="width: 500px; height: 104.638619201726px;" src="/archive/media/2020/xmltransformation.png?width=500&amp;height=104.638619201726" alt="Screenshot of Azure DevOps XML transformation option" data-udi="umb://media/09ade5c125474551ae4515fbee6f9c34"></p>
+<p>The original file is transformed in the following order:</p>
+<ul>
+<li>*.release.config</li>
+<li>*.&lt;environment&gt;.config</li>
+</ul>
+<p>So for example when deploying to the production environment the following transforms are applied:</p>
+<ul>
+<li>*.release.config</li>
+<li>*.production.config</li>
+</ul>
+<h3>Variable Substitution</h3>
+<p>Variables can be used to change configuration values on a per-environment basis.<br>Variable substitution is always performed after XML transformation. To enable variable substitution select “XML variable transformation” in the deploy task in the Azure DevOps pipeline:<img style="width: 500px; height: 54.6875px;" src="/archive/media/2020/variables.png?width=500&amp;height=54.6875" alt="Screenshot of XML Variable Substitution setting in Azure DevOps" data-udi="umb://media/b515e4bb0af94445ace583baa809328f"></p>
+<p>Variables are defined in the variables section of the pipeline:</p>
+<p><img style="width: 465px; height: 101px;" src="/archive/media/2020/umbracoaplicationurldevenvironment.png?width=465&amp;height=101" alt="Screenshot of the variables tab in Azure DevOps pipeline" data-udi="umb://media/694b7ce46e9f4e0b97ed2178c506b2b8"></p>
+<h3>Azure Default Variable Substitution</h3>
+<p>Azure will only substitute variables in the following sections of any config files:</p>
+<ul>
+<li>appSettings</li>
+<li>applicationSettings</li>
+<li>connectionStrings</li>
+</ul>
+<p>The variables should have the same name as the “key” or “name” entries in these sections. For example in Umbraco the database connection string is used:</p>
+<p><span class="code"> &lt;connectionStrings&gt;</span><br><span class="code">&lt;remove name="umbracoDbDSN" /&gt;</span><br><span class="code">&lt;add name="umbracoDbDSN" connectionString="YourConnectionString" providerName="System.Data.SqlServerCe.4.0" /&gt;</span><br><span class="code">&lt;/connectionStrings&gt;</span></p>
+<p>In Azure DevOps the variable name for this connection string would be “umbracoDbDSN”<br>Similarly, if you want to change the models mode in the <span class="code">appSettings</span> the variable name to use would be “<span class="code">Umbraco.ModelsBuilder.ModelsMode</span>”</p>
+<h3>Azure Variables Substitution</h3>
+<p>Performing variable substitution for elements outside of appSettings,applicationSettings and connectionStrings requires developers to use:</p>
+<ul>
+<li>The task "Tokenize in Archive"</li>
+<li>parameters.xml</li>
+</ul>
+<h3>Tokenize in Archive</h3>
+<p>This is where the transform is added to the config file, which has been tokenized, and then variable substitution is applied after.</p>
+<p>An example in Umbraco, in the <span class="code">umbracoSettings.Config</span> file where the <span class="code">umbracoApplicationUrl</span> may need to be transformed for the different environments.</p>
+<p>In our development environment the url will be set as:</p>
+<p><span class="code"> &lt;web.routing</span><br><span class="code">trySkipIisCustomErrors="true"</span><br><span class="code">internalRedirectPreservesTemplate="false" disableAlternativeTemplates="false" validateAlternativeTemplates="false" disableFindContentByIdPath="false"</span><br><span class="code">umbracoApplicationUrl=""&gt;</span><br><span class="code">&lt;/web.routing&gt;</span></p>
+<p>However we want to change this on deployment to the url being deployed to so we add a release transform that says:</p>
+<p><span class="code">&lt;settings xmlns:xdt="http://schemas.microsoft.com/XML-Document-Transform"&gt;</span><br><span class="code">&lt;web.routing umbracoApplicationUrl="#{baseURL}#" xdt:Transform="SetAttributes(umbracoApplicationUrl)"/&gt;</span><br><span class="code">&lt;/settings&gt;</span><br>This says on creating a build release replace umbracoApplicationUrl within the umbracoSettings.config with #{baseURL}#</p>
+<p>Making the element look like this:</p>
+<p><span class="code">&lt;web.routing</span><br><span class="code">trySkipIisCustomErrors="true"</span><br><span class="code">internalRedirectPreservesTemplate="false" disableAlternativeTemplates="false" validateAlternativeTemplates="false" disableFindContentByIdPath="false"</span><br><span class="code">umbracoApplicationUrl="#{baseURL}#"&gt;</span><br><span class="code">&lt;/web.routing&gt;</span><br>Now in Azure Devops we can add a variable in our pipeline:</p>
+<p><img style="width: 500px; height: 76.24398073836277px;" src="/archive/media/2020/variable.png?width=500&amp;height=76.24398073836277" alt="Screenshot of Azure DevOps variable" data-udi="umb://media/a97b82d2c7ab404699e55c552a604f1c"><br>And then use tokenize to replace the values in the config file. This will tokenize files in the build.zip too. The tokenize must target the transform file and run before the app deployment.</p>
+<p><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/20d86158236d425db89964db1874ffde"><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/6aff5e6c76a4438a9b5f2de1781d4eae"><img style="width: 500px; height: 367.3469387755102px;" src="/archive/media/2020/tokenize.png?width=500&amp;height=367.3469387755102" alt="Screenshot of tokenize in archive, showing path to archive, token prefix and token suffix as values that must be entered" data-udi="umb://media/6aff5e6c76a4438a9b5f2de1781d4eae"></p>
+<p>Tokenize can also be used to deploy the robots.txt, ensuring the disallow/ allow options are set correctly on each of the environments if the source robots.txt is defined as:</p>
+<p><span class="code">Sitemap: #{baseURL}#/xml-sitemap/</span><br><span class="code">User-agent: *</span><br><span class="code">#{robots}#</span></p>
+<p>The baseURL and Robots values can be defined as variables in Azure DevOps</p>
+<p><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/a2b186d4fc0d4df9a9fcb9772a63060d"><img style="width: 500px; height: 70.3125px;" src="/archive/media/2020/robots.png?width=500&amp;height=70.3125" alt="Screenshot of configuring Robots.txt values" data-udi="umb://media/a2b186d4fc0d4df9a9fcb9772a63060d"></p>
+<p>The tokenize can then be configured to tokenize robots.txt:</p>
+<h3><img style="width: 500px; height: 368.48072562358277px;" src="/archive/media/2020/tokenizerobots.png?width=500&amp;height=368.48072562358277" alt="Screenshot of tokenize in robots.txt" data-udi="umb://media/40019dff23124149aafade328796aa33"><br>Parameters.xml</h3>
+<p>Replacing variables using the “Tokenize in Archive” task is slow. It is possible to configure variable replacement using “parameters.xml”. The parameters.xml file provides a set of values to the MSDeploy.exe command, detailing which configuration files to replace with what value. An example in Umbraco is where the <span class="code">ClientDependency.config</span> is transformed to include the latest build number. Doing this ensures the latest css and js files are visible on the front end of Umbraco. Here the parameters.xml file would include:</p>
+<p><span class="code">&lt;?xml version="1.0" encoding="utf-8" ?&gt;</span><br><span class="code">&lt;parameters&gt;</span><br><span class="code">&lt;parameter name="ClientDependency.Version"</span><br><span class="code">description="Change the Client DependencyVersion"</span><br><span class="code">defaultValue="#{clientDependency.Version}#"</span><br><span class="code">tags=""&gt;</span><br><span class="code">&lt;parameterEntry</span><br><span class="code">kind="XmlFile"</span><br><span class="code">scope="ClientDependency\.config$"</span><br><span class="code">match="/clientDependency/@version" /&gt;</span><br><span class="code">&lt;/parameter&gt;</span><br><span class="code">&lt;/parameters&gt;</span></p>
+<p>The parameters.xml file is merged with any auto generated build parameters to create a file called “projectname.SetParameters.xml” in the buildoutput folder.</p>
+<p>To ensure the correct <span class="code">clientDependency.Version</span> is applied in the build task the “Replace Token” task needs adding to the build pipeline, with the root directory being set to the root of the folder that contains “*projectname.SetParameters.xml”</p>
+<p><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/79f2dbfe476a4eddbf1f016db4196128"><img style="width: 500px; height: 416.49377593361px;" src="/archive/media/2020/repalcetokens.png?width=500&amp;height=416.49377593361" alt="Screenshot of replace tokens task for setparameters.xml" data-udi="umb://media/79f2dbfe476a4eddbf1f016db4196128"></p>
+<p>In addition to the value of <span class="code">#{clientDependency.Version}#</span>  to be the value of the build number, a variable needs adding to the pipeline:</p>
+<p><img style="width: 500px; height: 48.1859410430839px;" src="/archive/media/2020/clientdependency.png?width=500&amp;height=48.1859410430839" alt="Screenshot of client dependency variable ClientDependency.Version set to $(Build.BuildId) in Azure DevOps pipeline" data-udi="umb://media/b90e32d8216a4352bb94a909bb57029d"></p>
+<p><a rel="noopener" href="https://marketplace.visualstudio.com/items?itemName=RichardFennellMVP.ParametersXmlGenerator" target="_blank" data-anchor="?itemName=RichardFennellMVP.ParametersXmlGenerator">https://marketplace.visualstudio.com/items?itemName=RichardFennellMVP.ParametersXmlGenerator (Opens a New Window)</a> from Richard Fennel of BlackMarble can be used to auto generate a <span class="code">parameters.xm</span>l based on the contents of the <span class="code">app.config</span> and <span class="code">web.config</span> files.</p>
+<h3>Deployment Slots</h3>
+<p>Azure deployment slots allow a site to be deployed, warmed up and checked over before swapping the slot and placing it live. <br>Azure allows the values in appSettings, applicationSettings and connectionStrings elements to be substituted via the slot/ App Service (at the time of writing custom config files can not be substituted).<br>This means that whilst custom configuration files provide a great way of structuring the data Azure WebApps do not provide a way to substitute elements and values within them.</p>
+<p>When creating a configuration file it is important therefore to determine which values really need to be stored at the deployment slot level and move them into the <span class="code">web.config.</span></p>
+<p>Umbraco supports scheduled tasks, and these are definitely something that should only be enabled to run on the production slot and not the staging slot. To do this we may add a value to the configuration file and then override it on the staging slot.</p>
+<p>To configure a setting to be specific to the slot in the Azure Portal open that slot and go to the configuration section:</p>
+<p><img style="width: 223.72881355932202px; height: 500px;" src="/archive/media/2020/azuredevopsslot.png?width=223.72881355932202&amp;height=500" alt="Screenshot of an azure app service slot" data-udi="umb://media/55b34e2f26e146d6b17fdcb213979545"></p>
+<p>Select application settings and click new application setting:</p>
+<p><img style="width: 500px; height: 173.828125px;" src="/archive/media/2020/aaplicationsettings.png?width=500&amp;height=173.828125" alt="Screenshot of adding a new application setting" data-udi="umb://media/76f8986133ac4285b4a0a36976e9776c"></p>
+<p>Then add the name of the key value pair in the <span class="code">web.config</span> you want to override, in the name, enter the value for that slot and tick deployment slot setting. This value is then bound to the slot by ticking the "Deployment slot setting" option:</p>
+<p><img style="width: 470px; height: 221px;" src="/archive/media/2020/deploymentslotsetting.png?width=470&amp;height=221" alt="Screenshot showing the add/edit application setting in Azure DevOps" data-udi="umb://media/ba2833bdb83d4cd68298620434f9a5cc"></p>
+<h2>Summary</h2>
+<p>Implemented well in .NET 4.7 and 4.8 it is possible to ensure that the values contained in and read from configuration files are type-safe.  Making life easier for the developers working with the file contents. </p>
+<p>We can also test their contents at application startup and Mock their contents for Unit testing.  This means that we can reduce and mitigate the risks of errors in our config files; giving us more confidence that the file contents are robust on deployment and also a quick check for if the values are not in the correct type at startup.</p>
+<p> </p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Rachel Breeze"><img src="//gravatar.com/avatar/5b2cce26cb9a4ece3969fc5fa3149fc8.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/5b2cce26cb9a4ece3969fc5fa3149fc8.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Rachel Breeze</h1>
+        <p>Rachel is on Twitter as <a href="//twitter.com/BreezeRachel" title="Rachel Breeze on Twitter" rel="author">@BreezeRachel</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

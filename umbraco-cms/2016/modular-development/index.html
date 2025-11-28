@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Modular Development</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Modular Development</h1>
+      <p class="byline"> by Jamie Pollock, <span class="pubdate">posted on <time datetime="2016-12-04">Dec 4, 2016</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Hello folks! Today I'd like to cover a deep-dive into modular development. This is basically the concept of keeping authoring, integration in self-contained components where appropriate to do so. So grab a cuppa tea or whatever your favourite seasonable beverage is and we'll get started.</p>
+<p class="intro">We'll be using Document Type Compositions to handle the modularised authoring components. While on the integration side we'll be using <a href="https://github.com/leekelleher/umbraco-ditto" target="_blank">Ditto</a>, which uses DittoView (available in versions 0.10.0 and higher) to make content transformation portable enough to be included in partial views without any Controller wire up.</p>
+<h2>Before we get started</h2>
+<p>If you're unfamiliar with the Ditto, I recommended looking at <a href="http://blog.aabech.no/archive/comparing-modelsbuilder-and-ditto/" target="_blank">Lars-Erik's blog article</a> comparing the core Umbraco Models Builder and Ditto.</p>
+<p>And for those of you unfamiliar with the concept, Compositions are a way of compontentising document &amp; media type properties. This isn't anything new, we've had Compositions since Umbraco 7.2 and people have covered this over the last couple of years. There are resources about <a href="http://umbraco.tv/videos/umbraco-v7/implementor/fundamentals/document-types/folders-and-compositions/">Compositions on Umbraco.tv</a> and <a href="http://letswritecode.net/articles/document-type-compositions-in-umbraco/" target="_blank">Blake Clerke has written a great article</a> on them earlier this year.</p>
+<h2>How? Why?</h2>
+<p>For this demo, <span>I've taken the existing Umbraco v7.5.4 Fanoe starter kit as a basis of showing how to integrate not only modular components but also DittoView which in itself can work standalone in an existing web application. </span>The idea of going to the effort of modularising authoring components might seem counter intuitive at first because the Fanoe grid already supports, through the shear flexibility of the grid system many different types of authoring component. Personally I consider this worthwhile for a couple of reasons:</p>
+<ol>
+<li>Adding a component to a page which doesn't support authoring the Umbraco Grid (eg. a greatly simplified page)</li>
+<li>Consistent authoring &amp; <span>integration </span>of a component from within and outside of the Umbraco Grid</li>
+</ol>
+<p>So in our Fanoe starter kit, I'll be integrating a flexible promo boxes component. This is a flexible 2-4 item authoring component which could sit on a page or within the Umbraco Grid. We'll be using the <a href="https://github.com/umco/umbraco-nested-content">Nested Content</a> Umbraco package and a Document Type Composition to make up the fieldset for our individual promo boxes and then wrapping that Nested Content data type in a Document Type Composition to make it portable and easy to add to other pages. <em>So meta!</em></p>
+<p>To ensure the overarching Promo Boxes composition isn't a one trick pony I'll also be adding in an optional Title &amp; Content authoring properties.</p>
+<p>Here's an example of what we're aiming for, this is without the optional title.</p>
+<p><img style="width: 500px; height: 301.9918973666442px;" src="/archive/media/2016/frontend_promoboxes-2.jpg?width=500&amp;height=301.9918973666442" alt="Example of two column Promo Boxes" rel="1375" data-id="1375"></p>
+<h2>Enough talk! Time for action!!</h2>
+<p>There's a fair bit to cover so I'll just be covering some of the key areas here but be sure to checkout the demo will be <a href="https://github.com/jamiepollock/umbraco-modular-development" target="_blank">available on Github</a> for the full experience.</p>
+<p>Typically, I'd use uSync to ensure the backoffice is up to date but because that's outside of the focus of this tutorial I've included the media files and a local SQL Compact file to get you up and running. </p>
+<h3>Creating the compositions</h3>
+<p>As previously discussed we'll be using Document Type Compositions to create our authoring component. I've created a Compositions folder, which is entirely unnecessary but I do like a tidy backoffice (Folders <em>FTW!</em>). We'll also be creating both these compositions as a new Document Type without a template. This is because, they are partial functionality and will not be used by itself as a standalone page.</p>
+<p>First of all the Promo Box item composition, without this we won't have the structured required to create Nested Content items for the Promo Boxes.</p>
+<p><img style="width: 500px; height: 298.5px;" src="/archive/media/2016/umbraco-backoffice_adding-composition-promo-box.jpg?width=500&amp;height=298.5" alt="" rel="1357" data-id="1357"></p>
+<p>Nothing too fancy here, one thing to note though is that Nested Content does not currently work with the Upload data type, so we'll be using Media Picker instead.</p>
+<p>Now we have our Promo Box, we can add it to the Document Type Composition for Promo Boxes.</p>
+<p><img style="width: 500px; height: 297.5px;" src="/archive/media/2016/umbraco-backoffice_adding-composition-promo-boxes.jpg?width=500&amp;height=297.5" alt="" rel="1358" data-id="1358"></p>
+<p>This contains the optional Title &amp; Intro as well as the Nested Content data type. Here's a quick look at the Nested Content data type setup. For those of you who are used to packages like <a href="https://github.com/kgiszewski/Archetype" target="_blank">Archetype</a> it function in a similar way, you're creating document types as your fieldset definitions. For our application that would be the "Composition: Promo Box". We're allowing authors to create 2 to 4 of these items and our markup will handle whatever they add upon integration.</p>
+<p><img style="width: 500px; height: 297.5px;" src="/archive/media/2016/umbraco-backoffice_creating-nested-content.jpg?width=500&amp;height=297.5" alt="" rel="1359" data-id="1359"></p>
+<p>I'd like to take this moment to say I love the in-editor editor for editing editors. Very nice!</p>
+<p>Another thing you may have noticed is. I've created the document types with the prefix "Composition: " this is simply to easily identify it as a composition and not something that should be used as a page type. Also all the alias properties are prefixed with "promoBox_" or "promoBoxes_", this is so they can be identified easily as belonging to their respective components. Having an alias like "title" or "intro" will no doubt get confusing to code around.</p>
+<h3>Utilising Compositions</h3>
+<p>So now we have our compositions we need to add them into our pages. This can be achieved by adding "Composition: Promo Boxes" into a page document type's compositions. This will automatically allow an author to add a set of Promo Boxes to an existing page. Let's add this to the Blog Post Repository page as this is a page which doesn't support the Fanoe Grid.</p>
+<p><img style="width: 500px; height: 297.66666666666663px;" src="/archive/media/2016/umbraco-backoffice_blog-post-repository-compositions.jpg?width=500&amp;height=297.66666666666663" alt="" rel="1360" data-id="1360"></p>
+<p>Now we've added it, let's add some content!</p>
+<p><img style="width: 500px; height: 298.16666666666663px;" src="/archive/media/2016/umbraco-backoffice_blog-post-promo-boxes-authoring.jpg?width=500&amp;height=298.16666666666663" alt="" rel="1361" data-id="1361"></p>
+<p>That's a pretty decent blog roll. As you can see we've added 4 items and below shows off Nested Content maintaining our Promo Box properties from the composition. <em>Nifty!</em></p>
+<p><img style="width: 500px; height: 298.43281093697897px;" src="/archive/media/2016/umbraco-backoffice_blog-post-single-promo-box-authoring.jpg?width=500&amp;height=298.43281093697897" alt="" rel="1363" data-id="1363"> </p>
+<h3>Wiring it up </h3>
+<p>Now that we have our authored content. The next step is wiring it all up, so this effort isn't wasted. As previously mentioned, I'm using DittoView here, which basically takes the current Umbraco Page request as transforms it into a provided POCO. The beauty of DittoView is it works in isolation of any controller meaning this approach can be added into an existing project so long as that project can support Ditto v0.10.0 or higher and the current request has an IPublishedContent to work with.</p>
+<p>So let's look at that PromoBoxes component DittoView.</p>
+<pre><code class="language-javascript">﻿@using Our.Umbraco.ModularDevelopment.ViewModels;
+@inherits Our.Umbraco.Ditto.DittoView&lt;PromoBoxesViewModel&gt;
+@if (Model.View != null &amp;&amp; Model.View.HasItems())
+{
+    &lt;div class="grid-section"&gt;
+        &lt;div class="light"&gt;
+            &lt;div class="container"&gt;
+                &lt;div class="row clearfix"&gt;
+                    &lt;div class="col-md-12 column"&gt;
+                        @Html.DisplayFor(model =&gt; model.View)
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+}</code></pre>
+      <p class="snippet-caption">The PromoBoxes Partial View using DittoView</p>
+<p>A few things here:</p>
+<p>The first line is what initiates the Ditto View doing the transformation which then is assigned to Model.View property, this a strongly typed class.</p>
+<p>Secondly, the actual markup is in a DisplayTemplate, this is so the wire up is done in the view but is then passed on to another view to handle the markup. I've done this for working with integration with the Umbraco Grid later on. I also really like working with DisplayFor as if you're dealing with potentially polymorphic objects it will handle which the rendering based on the class type.</p>
+<p>The markup here is based on the grid markup as these Promo Boxes don't have any containing elements.</p>
+<p>So let's look at that Promo Boxes view model class.</p>
+<pre><code class="language-csharp">﻿using Our.Umbraco.Ditto;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+
+namespace Our.Umbraco.ModularDevelopment.ViewModels
+{
+    [UmbracoProperties(Prefix = "promoBoxes_")]
+    public class PromoBoxesViewModel
+    {
+        [UmbracoProperty]
+        public string Title { get; set; }
+
+        [UmbracoProperty]
+        public IHtmlString Intro { get; set; }
+
+        [UmbracoProperty]
+        public IEnumerable&lt;PromoBoxViewModel&gt; Items { get; set; }
+
+        [DittoIgnore]
+        public int ColumnWidth
+        {
+            get
+            {
+                var itemCount = Items.Count();
+
+                switch (itemCount)
+                {
+                    case 3:
+                        return 4;
+                    case 4:
+                        return 3;
+                    default:
+                        return 6;
+                }
+            }
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">PromoBoxesViewModel POCO with Ditto Processors</p>
+<p>This is a fairly straightforward POCO which allows Ditto to do its thing. Title &amp; Intro are fairly simple. They're just Umbraco properties which require no further conversion aside from adding the "promoBoxes_" prefix to them so that Ditto knows where to look.</p>
+<p>The Items however are handled in a separate class. Nested Content returns an IEnumerable&lt;IPublishedContent&gt; which when used in conjunction with an IEnumerable&lt;Class&gt; will be automagically tranformed into that Class type. Pretty sweet, huh? I thought so too.</p>
+<p>Finally the ColumnWidth property is something Ditto will ignore hence the DittoIgnore attribute. This is here to make our column widths smart with the Bootstrap markup used. I'd be interested to hear if people feel this might be an anti-pattern or not.</p>
+<p>Moving on to the individual Promo Box view models now.</p>
+<pre><code class="language-csharp">﻿using Our.Umbraco.Ditto;
+using Our.Umbraco.ModularDevelopment.ComponentModel;
+using System.Web;
+
+namespace Our.Umbraco.ModularDevelopment.ViewModels
+{
+    [UmbracoProperties(Prefix = "promoBox_")]
+    public class PromoBoxViewModel
+    {
+        [UmbracoProperty]
+        [UmbracoPicker]
+        [EnumerableConverter]
+        [ContentValueUmbracoUrl]
+        public string Thumbnail { get; set; }
+
+        [UmbracoProperty]
+        public string Title { get; set; }
+
+        [UmbracoProperty]
+        public IHtmlString Content { get; set; }
+    }
+}</code></pre>
+      <p class="snippet-caption">PromoBoxViewModel POCO with Ditto Processors</p>
+<p>They're again a straightforward POCO. Title &amp; Intro are simply Umbraco properties. Thumbnail however, because we're using a Media Picker rather than an Upload requires a few chained processors to get working. In production code I'd turn these into a Multi Processor so they're reusable. Hopefully this chaining is fairly straightforward but to explain it, it's doing the following:</p>
+<ol>
+<li>Finding a UmbracoProperty called "promoBox_thumbnail"</li>
+<li>Converting the comma separated value of IDs returned to that into an IEnumerable&lt;IPublishedContent&gt;</li>
+<li>EnumerableConverter then converts this into a single IPublishedContent</li>
+<li>ContentValueUmbracoUrl then takes this IPublishedContent value and gets the Url property from it which is then assigned to our Thumbnail property</li>
+</ol>
+<p>Going back to the Display Template I talked about earlier, it looks a bit like this.</p>
+<pre><code class="language-javascript">﻿@using Our.Umbraco.ModularDevelopment.ViewModels
+@model PromoBoxesViewModel
+@if (Model.HasItems())
+{
+    if (Model.HasTitle())
+    {
+        &lt;div class="row"&gt;
+            &lt;h2&gt;@Model.Title&lt;/h2&gt;
+            @Model.Intro
+        &lt;/div&gt;
+    }
+    &lt;div class="row"&gt;
+        @foreach (var item in Model.Items)
+        {
+            &lt;div class="col-sm-6 col-md-@Model.ColumnWidth"&gt;
+                &lt;div class="thumbnail"&gt;
+                    &lt;img alt="@item.Title" src="@item.Thumbnail" style="height: auto; width: 100%; display: block;"&gt;
+                    &lt;div class="caption"&gt;
+                        &lt;h3&gt;@item.Title&lt;/h3&gt;
+                        @item.Content
+                    &lt;/div&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        }
+    &lt;/div&gt;
+}</code></pre>
+      <p class="snippet-caption">PromoBoxes DisplayTemplate view</p>
+<p>Finally, after all this work I'll add it to the Blog Post Repository view. Fortunately this is as simple as including a Partial View.</p>
+<pre><code class="language-javascript">﻿@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+    Layout = "Master.cshtml";
+}
+
+&lt;div role="content"&gt;
+
+	&lt;section class="light blogarchive equalizer"&gt;
+		&lt;div class="container"&gt;
+
+			&lt;div class="row"&gt;
+				@foreach(var post in CurrentPage.Children) 
+				{
+					&lt;div class="col-sm-6"&gt;
+						&lt;div class="content equal"&gt;
+							&lt;a href="@post.Url"&gt;
+								&lt;div class="date"&gt;@post.CreateDate.ToLongDateString()&lt;/div&gt;
+								&lt;h2&gt;@post.Name&lt;/h2&gt;		
+								&lt;p&gt;@Umbraco.Truncate(post.Introduction, 240, true)&lt;/p&gt;
+							&lt;/a&gt;
+						&lt;/div&gt;
+					&lt;/div&gt;
+				}
+			&lt;/div&gt;
+		&lt;/div&gt;
+	&lt;/section&gt;
+
+&lt;/div&gt;
+@Html.Partial("PromoBoxes")</code></pre>
+      <p class="snippet-caption">Blog Overview View with added PromoBoxes Partial View</p>
+<p>Notice that this view is almost entirely unchanged and requires that the BlogOverview view requires no knowledge of Ditto at all to work. Here is the finished result. Looking sharp!</p>
+<p><img style="width: 500px; height: 300.23600809170597px;" src="/archive/media/2016/frontend_promoboxes-4.jpg?width=500&amp;height=300.23600809170597" alt="" rel="1371" data-id="1371"></p>
+<p>Now that we've done all the heavy lifting, adding in the Promo Boxes authoring component is as easy as adding the composition and the Partial View where ever it is needed. In the demo code I've also added it to the Text Page document type to illustrate this point.</p>
+<h2>Bonus Points: Adding Promo Boxes to Umbraco Grid</h2>
+<p>This may seem like overkill as it is possible to already create a banner already, but the intention is to reuse markup and authoring. One of the advantages I mentioned before was a consistent authoring experience inside and outside of the Umbraco Grid. So let's add this Promo Boxes component to the grid. </p>
+<p>This is all made possible by using <a href="https://github.com/umco/umbraco-doc-type-grid-editor" target="_blank">Doc Type Grid Editor</a>, which plays nicely with Ditto View as it sends an IPublishedContent to its grid view. Again, this can be done without investing wholesale into Ditto as it works along side your existing grid editors and web application.</p>
+<h3>Configuring the composition to work with Grid Editors</h3>
+<p>Adding in document types to the grid editor is fairly simple with Doc Type Grid Editor, adding in the below configuration with this page installed will add a new editor to the list of available editors in the Grid. The new "Promo Boxes" editor still needs to be added in as the Fanoe setup rightly doesn't use the "all available editors" option for its configuration.</p>
+<pre><code class="language-javascript">[
+    {
+        "name": "Promo Boxes",
+        "alias": "promoBoxes",
+        "view": "/App_Plugins/DocTypeGridEditor/Views/doctypegrideditor.html",
+        "render": "/App_Plugins/DocTypeGridEditor/Render/DocTypeGridEditor.cshtml",
+        "icon": "icon-box",
+        "config": {
+            "allowedDocTypes": [ "compositionPromoBoxes" ],
+            "nameTemplate": "",
+            "enablePreview": true,
+            "viewPath": "/Views/Partials/Grid/Editors/DocTypeGridEditor/",
+            "previewViewPath": "/Views/Partials/Grid/Editors/DocTypeGridEditor/Previews/",
+            "previewCssFilePath": "",
+            "previewJsFilePath": ""
+        }
+    }
+]</code></pre>
+      <p class="snippet-caption">A partial snippet of Grid.Editors.Config.js</p>
+<p>So now that we've made this available. Let's add it to the Home Page. This requires modifying the Grid FrontPage data type. In the screengrab below shows the configuration for the "Full width content" row, which now supports the "Promo Boxes". Which to our authors looks like this.</p>
+<p><img style="width: 500px; height: 297.5px;" src="/archive/media/2016/umbraco-backoffice_grid-promo-boxes-authoring.jpg?width=500&amp;height=297.5" alt="" rel="1372" data-id="1372"></p>
+<p>Because we used a DisplayTemplate the view for this is really simple. Literally two lines of code.</p>
+<pre><code class="language-javascript">﻿@inherits Our.Umbraco.Ditto.DittoView&lt;Our.Umbraco.ModularDevelopment.ViewModels.PromoBoxesViewModel&gt;
+@Html.DisplayFor(model =&gt; model.View)</code></pre>
+      <p class="snippet-caption">The view for PromoBoxes doc type grid editor</p>
+<p>And the results are exactly as you'd expect. This time we have 3 items rather than 4 to show off the flexibility of this component.</p>
+<p><img style="width: 500px; height: 301.68350168350173px;" src="/archive/media/2016/frontend_promoboxes-3.jpg?width=500&amp;height=301.68350168350173" alt="" rel="1374" data-id="1374"> </p>
+<h2>Conclusion</h2>
+<p>Not bad, eh? I hope this has been useful. Compositions are one of my favourite bits of functionality in the core. So many aspects of web development are geared towards components it's nice to work on self contained chucks of functionality. DittoView is also a great way to make functionality self contained. A little goes a long way.</p>
+<p>We've covered quite a bit today, but I'd be keen to write a follow up in the new year for how we could take this demo a step further by making the "Composition: Promo Box" item itself a grid editor meaning it will work with the standard grid configuration rather than just be a fieldset for the "Composition: Promo Boxes".</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jamie Pollock"><img src="//gravatar.com/avatar/e091c2d5c46cb3e8b9d3fcf7b8595105.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/e091c2d5c46cb3e8b9d3fcf7b8595105.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jamie Pollock</h1>
+        <p>Jamie is on Twitter as <a href="//twitter.com/jamiepollock" title="Jamie Pollock on Twitter" rel="author">@jamiepollock</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2016/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2016/umbraco-forms-and-newsletter-studio/" title="Umbraco Forms and Newsletter Studio"><span class="scr-text">Umbraco Forms and Newsletter Studio</span></a></li>
+      <li><a href="/umbraco-cms/2016/moving-to-umbracoland/" title="Moving to Umbracoland"><span class="scr-text">Moving to Umbracoland</span></a></li>
+      <li><a href="/umbraco-cms/2016/pipeline-crm-and-umbraco-forms/" title="Pipeline CRM and Umbraco Forms"><span class="scr-text">Pipeline CRM and Umbraco Forms</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2016/modular-development/" title="Modular Development"><span class="scr-text">Modular Development</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-property-editor-tutorial/" title="Custom Property Editor Tutorial"><span class="scr-text">Custom Property Editor Tutorial</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-list-view-layouts/" title="Custom List View Layouts"><span class="scr-text">Custom List View Layouts</span></a></li>
+      <li><a href="/umbraco-cms/2016/cms-for-the-internet-of-things/" title="CMS for the Internet Of Things"><span class="scr-text">CMS for the Internet Of Things</span></a></li>
+      <li><a href="/umbraco-cms/2016/custom-data-and-examine-searching/" title="Custom data and Examine searching"><span class="scr-text">Custom data and Examine searching</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-comfortable-with-umbraco-cloud/" title="Getting comfortable with Umbraco Cloud"><span class="scr-text">Getting comfortable with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/unique-sites-using-theming/" title="Unique Sites Using Theming"><span class="scr-text">Unique Sites Using Theming</span></a></li>
+      <li><a href="/umbraco-cms/2016/importance-of-side-projects/" title="Importance of side projects"><span class="scr-text">Importance of side projects</span></a></li>
+      <li><a href="/umbraco-cms/2016/first-time-with-umbraco-cloud/" title="First time with Umbraco Cloud"><span class="scr-text">First time with Umbraco Cloud</span></a></li>
+      <li><a href="/umbraco-cms/2016/friendly-backoffice/" title="Friendly Backoffice"><span class="scr-text">Friendly Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2016/using-your-voice-better/" title="Using your voice better"><span class="scr-text">Using your voice better</span></a></li>
+      <li><a href="/umbraco-cms/2016/continuous-deployment-of-umbraco/" title="Continuous Deployment of Umbraco"><span class="scr-text">Continuous Deployment of Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-edge-case-stories/" title="Umbraco edge case stories"><span class="scr-text">Umbraco edge case stories</span></a></li>
+      <li><a href="/umbraco-cms/2016/web-components/" title="Web Components"><span class="scr-text">Web Components</span></a></li>
+      <li><a href="/umbraco-cms/2016/the-content-tree-is-dead/" title="The Content Tree is Dead"><span class="scr-text">The Content Tree is Dead</span></a></li>
+      <li><a href="/umbraco-cms/2016/authenticating-with-ad-fs-and-identityextensions/" title="Authenticating with AD FS and IdentityExtensions"><span class="scr-text">Authenticating with AD FS and IdentityExtensions</span></a></li>
+      <li><a href="/umbraco-cms/2016/getting-started-with-modelsbuilder/" title="Getting started with ModelsBuilder"><span class="scr-text">Getting started with ModelsBuilder</span></a></li>
+      <li><a href="/umbraco-cms/2016/umbraco-extensibility/" title="Umbraco extensibility"><span class="scr-text">Umbraco extensibility</span></a></li>
+      <li><a href="/umbraco-cms/2016/adding-umbraco-to-existing-site/" title="Adding Umbraco to existing site"><span class="scr-text">Adding Umbraco to existing site</span></a></li>
+      <li><a href="/umbraco-cms/2016/polls-in-umbraco/" title="Polls in Umbraco"><span class="scr-text">Polls in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2016/into-the-cloud/" title="Into the Cloud"><span class="scr-text">Into the Cloud</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

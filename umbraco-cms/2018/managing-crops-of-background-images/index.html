@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Managing Crops of Full Width Background Images Using Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Managing Crops of Background Images</h1>
+      <p class="byline"> by Kevin Meilander, <span class="pubdate">posted on <time datetime="2018-12-21">Dec 21, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Full width background images overlaid with text are essential to modern web design, adding both function and visual interest. It is because full width images automatically resize to accommodate the user’s browser that developers must account for a wide array of possible screen sizes.  </p>
+<p class="intro">In the past, it has been difficult for the developer and author to guarantee that full width background images look appealing across a wide range of screen sizes as the image could potentially crop in a haphazard way.  However, using the Umbraco Image Cropper, developers can give authors the ability to specify how a background image appears at each breakpoint and we can ensure that the end users receive an optimized browsing experience regardless of their screen size.</p>
+<p><img style="width: 500px; height: 244.16666666666669px;" src="/archive/media/2018/ugly-cropped-images.jpg?width=500&amp;height=244.16666666666669" alt="Example of full width background image with text via a Marquee" data-udi="umb://media/af24d2537c3c404b998ff7bfffd9468b"></p>
+<h2>The Umbraco Setup</h2>
+<p>The first thing we need to do is determine what the image sizes should be at different breakpoints.  The width of each image size will also serve as the breakpoint.  We will set the height in our CSS.  For the example image I use here, the breakpoints are 480px, 768px, 992px, 1200px, and 1920px.  I have set the height to 650px at every breakpoint, but you can change this to fit whatever your design.    </p>
+<p>Now that we have the image sizes, we will create a new Image Cropper data type, using these values as our different Crop Sizes. </p>
+<p><img style="width: 415.7608695652174px; height: 500px;" src="/archive/media/2018/imagecropper.png?width=415.7608695652174&amp;height=500" alt="Background Image Image Cropper Data Type" data-udi="umb://media/8a9077a7935945f5bec545bfd5e1f0bb"></p>
+<p>We will use the new Image Cropper data type, to create a new Media Type.</p>
+<p><img style="width: 500px; height: 296.5587044534413px;" src="/archive/media/2018/imagemediatype2.png?width=500&amp;height=296.5587044534413" alt="Full Width Background Image Media Type" data-udi="umb://media/bf049c6861fa480da6078d55bd6f4a5a"></p>
+<p>Next, we must allow the media library to use our new media type.  You can do this by allowing this type on the existing media folder. However, this will require authors to choose the correct media type when they add an image.  If authors have a choice, they may choose the wrong type. Let’s make the decision for them.</p>
+<p>We do this by creating a new media type that only allows the new full width background image media type within it.  Once we created that folder type, we will make an instance of this in the media library and create new a Media Picker Data Type that has the start node set to this folder. Then when we configure a property to use this data type, the data type guarantees that the media set on the document is a full width background images media type.  </p>
+<p>Now an author can create a full width background image media item, and with it, specify how they want the image to appear at different breakpoints.  Finally, we need to render the HTML.</p>
+<p><img style="width: 500px; height: 272.17125382263px;" src="/archive/media/2018/background-image-media.png?width=500&amp;height=272.17125382263" alt="Image Media Item with Crops" data-udi="umb://media/2c997c8823ae4d638dc52170ba6bde4a"><br><br></p>
+<h2>The Code</h2>
+<p>Normally, to render background images, we add a style tag to the HTML element.  However, this doesn’t work if we want to use media queries to change the image at different breakpoints.  For this reason, we will write inline CSS to specify our image crops.  Since the images are full width and we know the crops are based on the breakpoints, we can loop though the different crops and generate the CSS that will be inline.</p>
+<p>I use an HTML helper that takes an image object and CSS selector, parses the image crops, and writes the appropriate media queries for the different background images. </p>
+<pre><code class="language-javascript">@using Umbraco.Web;
+@using Umbraco.Core.Models;
+
+@helper WriteBackgroundImageCrops(IPublishedContent image, string elementSelector)
+{
+  var htmlHelper = ((System.Web.Mvc.WebViewPage)WebPageContext.Current.Page).Html; ;
+  var imageCrops = image.GetPropertyValue&lt;Umbraco.Web.Models.ImageCropDataSet&gt;("umbracoFile");
+
+  @*//First we loop though the crops we have and figure out what image should be displayed at what breakpoint *@
+  IDictionary&lt;int, string&gt; cropDetails;
+  if (imageCrops != null &amp;&amp; imageCrops.Crops != null &amp;&amp; imageCrops.Crops.Any())
+  {
+     cropDetails = imageCrops.Crops.OrderBy(c =&gt; c.Width).ToDictionary(c =&gt; c.Width, c =&gt; image.GetCropUrl(c.Alias));
+  }
+  else
+  {
+    cropDetails = new Dictionary&lt;int,string&gt;() { { 0, image.Url }};
+  }
+
+  @*//Now loop though our crop details and build our media queries *@ 
+  var minWidth = 0;
+  &lt;style&gt;
+    @foreach (var crop in cropDetails)
+    {
+      if(minWidth != 0) {&lt;text&gt;@@media (min-width: @(minWidth)px) {&lt;/text&gt;}
+      &lt;text&gt;@elementSelector {background-image:url(@htmlHelper.Raw(crop.Value));}&lt;/text&gt;
+      if(minWidth != 0) {&lt;text&gt;}&lt;/text&gt;}
+      minWidth = crop.Key;
+    }
+  &lt;/style&gt;
+}</code></pre>
+<p>Then in my template view, instead writing my background image in a style attribute, I use my Helper method to write the inline media queries.</p>
+<pre><code class="language-javascript">@{
+  var elementId = "image-" + Guid.NewGuid();// Unique ID for this div
+}
+@*// Pass in the image and the selector to our helper to write the CSS *@
+@ImageHtmlHelper.WriteBackgroundImageCrops(Model.Content.HeroBackgroundImage, "#" +elementId)
+
+@*// The element we want our full width background image on *@
+&lt;section id="@elementId" class="background-image-marquee"&gt;
+  ...
+&lt;/section&gt;</code></pre>
+<h2>The Result</h2>
+<p>Finally, when the site renders, our full width background image will show the different crops at the different breakpoints.</p>
+<p><img style="width: 500px; height: 244.16666666666669px;" src="/archive/media/2018/nicely-cropped-images.jpg?width=500&amp;height=244.16666666666669" alt="Full width background image with nice crops" data-udi="umb://media/de341f25c0024b54b668bd092092a369"></p>
+<p>Using the Image Cropper Data Type in Umbraco, we have empowered authors to choose the best image crops at each breakpoint.  In the example here, we used full-width background images.  However, developers can apply the same principles to any image, ensuring that authors can deliver a tailored browsing experience to their users.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/media/" title="See all articles tagged with Media">Media</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/responsive/" title="See all articles tagged with Responsive">Responsive</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Kevin Meilander"><img src="//gravatar.com/avatar/37c99fd686890e89686a9e979ba14300.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/37c99fd686890e89686a9e979ba14300.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Kevin Meilander</h1>
+        <p>Kevin is on Twitter as <a href="//twitter.com/kmeilander" title="Kevin Meilander on Twitter" rel="author">@kmeilander</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

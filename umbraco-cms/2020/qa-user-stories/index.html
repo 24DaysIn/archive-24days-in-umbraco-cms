@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>A QA Responsible's points about a good User Story</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">QA User Stories</h1>
+      <p class="byline"> by Pierre Ahlbom, <span class="pubdate">posted on <time datetime="2020-12-13">Dec 13, 2020</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">I work as a QA at Knowit Experience (Formerly Creuna) and the first time I saw Umbraco was 2 years ago when my colleague Dennis Adolfi introduced me to it, telling me that it was the greatest thing since sliced bread 😉!  I have been through other CMSs like Magento, Wordpress and Episerver, so Umbraco was a welcome addition. It was a rocky start, but after a while it grew on me more and more.</p>
+<p class="intro">As a QA I am the one responsible for making sure the quality of the developed feature fits the bill. Since Umbraco is the friendly CMS, I always try to put some attention to the CMS itself as well, not just the lovely stuff visitors see on the site.</p>
+<p>The CMS in general has gone from being “the tech persons domain” to include everyone. All parts of the CMS should be easy to understand and configure, which brings me as a QA to spend more time going through the CMS and file bugs there as well. Those CMS bugs which was a very low priority before, has been upgraded to now be a high priority. Now a CMS with workaround solutions can be very time consuming or even destructive for the editor experience.</p>
+<p>I think the expression “Easy to learn, a lifetime to master” is very fitting for Umbraco. It is easy to get started with the basics, but as soon as you get those admin rights and the new tabs in the CMS appear, you've got a totally new world to explore.</p>
+<p>With this flexible product, my responsibility as a QA is also to promote that writing a story with proper requirements and acceptance criteria is even more important. If you put a little more effort into the creation of the issue (user story, bug, epic, etc); the easier it will be for the developer and QA to understand what it is about. This makes the coding and testing less of a guessing game (I hate guessing) and easier to understand. Another plus is that if you write the issue in a constructive way, other people in the project will understand as well.</p>
+<h2>So what does a good user story look like?</h2>
+<ul>
+<li>First off, a good title which sums up the content of the story is nice.</li>
+<li>If you write the story in the <em>Given When Then</em> format, developers can easily adapt this into unit tests.</li>
+<li>The more effort you spend on acceptance criteria, the easier it will be to develop and test.</li>
+<li>Don’t forget to add parts of the feature which is out of scope, especially if design sketch is included in the story.</li>
+</ul>
+<h3>So, an example of a poor user story:</h3>
+<p><img style="width: 175px; height: 175px;" src="/archive/media/2020/x-1152114_1280.png?width=175&amp;height=175&amp;mode=max" alt="" data-udi="umb://media/a951e013ebe348ae831cc1c89bae59af"></p>
+<p><strong>Title:</strong> Block for a form<br><strong>Story:</strong> Users should be able to write things on the page<br><strong>Acceptance Criteria:</strong></p>
+<ul>
+<li>A block</li>
+<li>Fields to write in</li>
+<li>Button to send</li>
+</ul>
+<hr>
+<h3>An example of a good user story:</h3>
+<p><img style="width: 175px; height: 175px;" src="/archive/media/2020/check-37583_1280.png?width=175&amp;height=175&amp;mode=max" alt="" data-udi="umb://media/973a3d389ae2486ba6d393a83d5a72d4"></p>
+<p><strong>Title:</strong> Form block for the article page</p>
+<p><strong>Story:</strong><br>(Given) As a user, <br>(When) I want to be able to see a form on the page,<br>(Then) So that I can fill in the fields and submit my form.</p>
+<p><strong>Acceptance Criteria:</strong></p>
+<ol>
+<li>The form should be wrapped in a block</li>
+<li>There should be a title</li>
+<li>There should be a preamble</li>
+<li>The form should be in two columns</li>
+<li>When submitting, there should be a message informing the user the form has been sent</li>
+<li>The form should contain the following fields:
+<ol>
+<li>Name (Text field)</li>
+<li>Last name (Text field)</li>
+<li>Email (email field)</li>
+<li>Phone (Text field, only numbers 0-9 and +)</li>
+<li>Comments (Text Area)</li>
+<li>Choice (Radio buttons)</li>
+<li>Submit button</li>
+</ol>
+</li>
+<li>Validation errors:
+<ol>
+<li>Red border around the field</li>
+<li>Label which explains what the error was</li>
+<li>User should be focused on the first error</li>
+</ol>
+</li>
+</ol>
+<p><strong>Out of scope:</strong></p>
+<ul>
+<li>The option to send the form again.</li>
+</ul>
+<p> </p>
+<p>Which story would you like to work on? So, I ask you people, how often do you develop something that you don’t know the value or purpose of? If you answer once or more, there is room for improvement.</p>
+<p>With some effort, both the developer and the tester will understand who the feature is for, why it's being developed and what purpose it serves. As a tester, this gives me the understanding of how I should test it. <br>Is it for the editors? Then I need to think as an editor. <br>Is it for the visitors of the page? Then I need to think as a visitor.</p>
+<h3>How do I test then?</h3>
+<p>Umbraco is very flexible and the number of possibilities makes my job harder and more interesting, but here are a few of the points I consider when testing:<br><br></p>
+<ul>
+<li>Test boundary values (can I fill in “anything” in the fields?) in both the CMS and fields on the site.</li>
+<li>Can it handle special characters? (Since I am a Swede, those ÅÄÖ will be used…)</li>
+<li>Does the images or video work, will they play properly?</li>
+<li>Does the linking work, internally and externally?</li>
+<li>Do the translations work properly?</li>
+<li>Does the block render properly?</li>
+<li>Do you get proper error messages when something goes wrong?</li>
+<li>Do I get the correct responses when we've got interactions with other systems?</li>
+<li>And the more and more important one, does it work/look good in a mobile viewport?</li>
+</ul>
+<p>Since I am a QA, I can't resist to return some feedback on the CMS as of now. I have limited myself to three "Wow!" and three "Whoa?", which is my equivalent of "Pros and Cons". </p>
+<p><strong>Wow!</strong></p>
+<ul>
+<li>The customization of the CMS UI, power to the editor.</li>
+<li>The shared blocks function, so easy to navigate around the blocks.</li>
+<li>The block edit view overlapping, no new navigation away from the current page when checking out a block on the page.</li>
+</ul>
+<p><strong>Whoa?</strong></p>
+<ul>
+<li>Where is the current block being used? I tend to get nervous to delete or move things where I don't know where they are used.</li>
+<li>Translation tab can be a bit scary sometimes, hard to get a good overview if you not a "tech" person.</li>
+<li>Basic error messages for the editors, hard to understand what went wrong. Experienced this myself and heard it from clients.</li>
+</ul>
+<p> </p>
+<h3>To conclude:</h3>
+<p>Getting started with Umbraco can be an eye opener for someone used to other CMSs. It is great, but as with all new things, it takes time.</p>
+<p>Please let the investigation, refinement of requirements and story writing take its time, we all will benefit from it. If we start with quality work right off the bat, the road to success will be less bumpy. If you work this way today, that is great. If you don't, I hope this post has boosted your morale to try to spend more time before coding and most important; ask questions and object before starting!</p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/qa/" title="See all articles tagged with QA">QA</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Pierre Ahlbom"><img src="//gravatar.com/avatar/3466aea11965e2d136bf52f65e353b65.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/3466aea11965e2d136bf52f65e353b65.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Pierre Ahlbom</h1>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2020/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2020/your-first-pull-request/" title="Your first pull request"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a href="/umbraco-cms/2020/multilingual-websites-in-umbraco-8/" title="Multilingual Websites in Umbraco 8"><span class="scr-text">Multilingual Websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2020/static-website-with-umbraco-heartcore/" title="Static website with Umbraco Heartcore"><span class="scr-text">Static website with Umbraco Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-heartcore-and-nextjs/" title="Umbraco Heartcore and Next.js"><span class="scr-text">Umbraco Heartcore and Next.js</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-8-content-apps/" title="Umbraco 8 Content Apps"><span class="scr-text">Umbraco 8 Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2020/lovely-back-end/" title="Lovely Back-end"><span class="scr-text">Lovely Back-end</span></a></li>
+      <li><a href="/umbraco-cms/2020/from-wannabe-to-honorary/" title="From Wannabe to Honorary"><span class="scr-text">From Wannabe to Honorary</span></a></li>
+      <li><a href="/umbraco-cms/2020/tools-of-our-trade/" title="Tools of our trade"><span class="scr-text">Tools of our trade</span></a></li>
+      <li><a href="/umbraco-cms/2020/grid-nouveau-block-list/" title="Grid Nouveau Block List"><span class="scr-text">Grid Nouveau Block List</span></a></li>
+      <li><a href="/umbraco-cms/2020/friendly-to-the-masses/" title="Friendly to the masses"><span class="scr-text">Friendly to the masses</span></a></li>
+      <li><a href="/umbraco-cms/2020/resilient-integrations/" title="Resilient integrations"><span class="scr-text">Resilient integrations</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution/" title="Candid Contribution"><span class="scr-text">Candid Contribution</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2020/qa-user-stories/" title="QA User Stories"><span class="scr-text">QA User Stories</span></a></li>
+      <li><a href="/umbraco-cms/2020/tips-for-better-code-reviews/" title="Tips For Better Code Reviews"><span class="scr-text">Tips For Better Code Reviews</span></a></li>
+      <li><a href="/umbraco-cms/2020/iis-builder/" title="IIS Builder"><span class="scr-text">IIS Builder</span></a></li>
+      <li><a href="/umbraco-cms/2020/how-codegarden-led-to-umarketingsuite/" title="How Codegarden led to uMarketingSuite"><span class="scr-text">How Codegarden led to uMarketingSuite</span></a></li>
+      <li><a href="/umbraco-cms/2020/personalisation-in-umbraco/" title="Personalisation in Umbraco"><span class="scr-text">Personalisation in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-dotnet-core-config/" title="Umbraco dotnet core config"><span class="scr-text">Umbraco dotnet core config</span></a></li>
+      <li><a href="/umbraco-cms/2020/configuration-files/" title="Configuration Files"><span class="scr-text">Configuration Files</span></a></li>
+      <li><a href="/umbraco-cms/2020/candid-contribution-experience/" title="Candid Contribution Experience"><span class="scr-text">Candid Contribution Experience</span></a></li>
+      <li><a href="/umbraco-cms/2020/empathy-in-development/" title="Empathy in Development"><span class="scr-text">Empathy in Development</span></a></li>
+      <li><a href="/umbraco-cms/2020/semantics-in-web-development/" title="Semantics in web development"><span class="scr-text">Semantics in web development</span></a></li>
+      <li><a href="/umbraco-cms/2020/switching-the-umbraco-backoffice-to-utility-css/" title="Switching the Umbraco backoffice to utility CSS"><span class="scr-text">Switching the Umbraco backoffice to utility CSS</span></a></li>
+      <li><a href="/umbraco-cms/2020/prototyping-in-the-umbraco-backoffice/" title="Prototyping in the Umbraco Backoffice"><span class="scr-text">Prototyping in the Umbraco Backoffice</span></a></li>
+      <li><a href="/umbraco-cms/2020/umbraco-block-builders/" title="Umbraco Block Builders"><span class="scr-text">Umbraco Block Builders</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

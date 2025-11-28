@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Using Angular in the backoffice - Some useful tips</title>
+<meta name="description" content="Someuseful tips when extending Umbraco backend functionality with Angular JS. Examples of the notificationsService and the dialogService. And some pointers on how to reuse existing datatypes">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Using Angular in the backoffice - Some useful tips</h1>
+      <p class="byline"> by Dave Woestenborghs, <span class="pubdate">posted on <time datetime="2014-12-14">Dec 14, 2014</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">It has been little over a year now that Umbraco 7 has been released. With the release of v7, the way we extend the backoffice has been moved from the serverside (Webcontrols, usercontrols, ...) to the frontend (Angular controllers and views).</p>
+<p class="intro">If you haven't tried out Angular yet, now is a good time to add it to your developer toolbelt. </p>
+<p>In this post I will try to explain how to use the components already present in Umbraco to make your life easier when creating property editors or custom sections and trees with Angular.</p>
+<h2>Notifications</h2>
+<p>Sometimes you want to display additional information to the user using the built in notifications. You can do that by using the <span class="code">notifactionsService.</span></p>
+<p>This service can be used in your controller by injecting <span class="code">notificationsService</span> as a dependency in your controller.</p>
+<p>Out of the box you can use four types of notifications:</p>
+<ul>
+<li>success</li>
+<li>warning</li>
+<li>info</li>
+<li>error</li>
+</ul>
+<p><span>You can display a notification like this:</span></p>
+<pre class="language-javascript"><code>angular.module('umbraco').controller('MyController',
+    function ($scope, notificationsService) {
+        notificationsService.success("Success", "Speaker has been deleted");          
+    });</code></pre>
+      <p class="snippet-caption">Displaying a success notification</p>
+<p>But you can create your own notification types. You can use the <span class="code">add</span> method of the service for this. </p>
+<pre class="language-javascript"><code>angular.module('umbraco').controller('MyController',
+    function ($scope, notificationsService) {
+        notificationsService.add({
+						headline : 'Custom notification',
+						message : 'My custom notification message',
+						url: 'http://www.colours.nl',
+						sticky : true,
+						type : 'custom'
+					});         
+    });</code></pre>
+      <p class="snippet-caption">Display a custom notification</p>
+<p>Of course this notification needs to have some (ugly) styling applied. You can load a CSS file by adding it to your package manifest, or by using the <a href="http://umbraco.github.io/Belle/#/api/umbraco.services.assetsService" target="_blank" title="Umbraco documentation for assetsService"><span class="code">assetsService</span></a>.</p>
+<p>The CSS will look like this : </p>
+<pre class="language-css"><code>.alert-custom{
+	background-color: purple;
+	color: pink;
+	border: 2px dotted green !important;
+}
+
+.alert-custom a{
+	
+	color: pink;
+	
+}</code></pre>
+      <p class="snippet-caption">CSS for styling custom notification</p>
+<p>But you can also have your own views displayed by the <span class="code">notificationsService</span>. In the core you can see this with the unsaved changes dialog that pops up when you navigate to another item without saving first.</p>
+<p>To show how you can use this yourself, I created a simple property editor that shows a dialog with a custom view when you leave a textbox and the contents is longer than 25 characters. The custom dialog will ask you if you want to trim your text and shows an example of the trimmed text.</p>
+<p> The property editor view :</p>
+<pre class="language-markup"><code>&lt;div ng-controller="NotificationEditorController"&gt;
+	&lt;input ng-model="model.value" ng-blur="showNotification()" type="text" class="umb-editor umb-textstring textstring" /&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">Property editor view</p>
+<p> The property editor controller :</p>
+<pre class="language-javascript"><code>// add ng-blur directive because this is missing in Angular 1.1.5
+angular.module('umbraco.directives').directive('ngBlur', function() {
+    return function (scope, elem, attrs) {
+        elem.bind('blur', function () {
+            scope.$apply(attrs.ngBlur);
+        });
+    };
+});
+
+angular.module('umbraco')
+    .controller('NotificationEditorController',
+	function($scope, notificationsService) {
+	
+		// function to trim text to a length of 25
+		$scope.TrimText = function() {
+			$scope.model.value = $scope.model.value.substring(0,25);
+			};
+	
+		// function to show custom notification
+		$scope.showNotification = function() {
+			if($scope.model.value.length &gt; 25) {
+				notificationsService.add({ 
+					// the path of our custom notification view
+					view: "/App_Plugins/CustomNotification/notification.html", 
+					// arguments object we want to pass to our custom notification
+					args: { 
+						value : $scope.model.value, 
+						callback : $scope.TrimText 
+						} 
+					});
+				}
+			};
+	});	</code></pre>
+      <p class="snippet-caption">Property editor controller</p>
+<p>As you can see in the above example, we use the add method of the notificationsService to render our own view by setting the view property. We also pass an args object which contains our value and a callback function that we are going to call from our notification. You can decide what the args object consists of.</p>
+<p>The notification view :</p>
+<pre class="language-markup"><code>&lt;div ng-controller="NotificationController"&gt;
+	&lt;h4&gt;Your Text is too long&lt;/h4&gt;
+	&lt;p&gt;This can have unwanted visual bugs on your page. Do you want to trim the text ?&lt;/p&gt;
+	&lt;p&gt;Trimmed text : {{trimmedtext}}&lt;/p&gt;
+	&lt;button class="btn btn-warning" ng-click="cancel(notification)"&gt;No&lt;/button&gt;
+	&lt;button class="btn" ng-click="trim(notification)"&gt;Yes&lt;/button&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">Custom notification view</p>
+<p>The notification controller :</p>
+<pre class="language-javascript"><code>angular.module('umbraco')
+    .controller('NotificationController',
+	function($scope, notificationsService) {
+		// the notification is set on scope by umbraco, so we can access our args object passed in
+		$scope.trimmedtext = $scope.notification.args.value.substring(0,25);
+	
+		$scope.trim = function(not){
+			// call our callback function set on the args object in our property editor controller
+			not.args.callback();				
+			notificationsService.remove(not);
+		};
+
+		$scope.cancel = function(not){
+			notificationsService.remove(not);
+		};
+	});	</code></pre>
+      <p class="snippet-caption">Custom notification controller</p>
+<p>As you can see here there is a notification object set on the scope. This is handled by Umbraco. The notification object contains the args object that we passed to the view in our property editor controller. When the user clicks the yes button we call our callback function from our property editor controller so it gets executed on the scope of our property editor.</p>
+<h2>Dialogs</h2>
+<p>Umbraco comes out of the box with a set of dialogs you can use in your editors. For example mediaPicker, contentPicker, memberPicker, ... <span>But you can also show your own views in a dialog. </span></p>
+<p>To use the dialogs you need to inject <a href="http://umbraco.github.io/Belle/#/api/umbraco.services.dialogService" target="_blank" title="Dialog "><span class="code">dialogService</span> </a>as a dependency on your controller.</p>
+<p>As an example I made a property editor for managing contact details. It allows you to select an image for the contact person and edit details like name, email and phone number. </p>
+<pre class="language-markup"><code>&lt;div ng-controller="ContactEditor.Controller"&gt;
+	&lt;div&gt;
+		
+		&lt;div ng-show="thumbnail != ''"&gt;
+			&lt;umb-image-thumbnail 
+				width="{{width}}"
+				height="{{height}}"
+				src="thumbnail"			
+				max-size="100"	
+				/&gt;
+		&lt;/div&gt;
+		&lt;div ng-show="model.value.image == undefined || model.value.image == ''"&gt;
+			&lt;i class="icon icon-add blue"&gt;&lt;/i&gt;
+		        &lt;a href="#" ng-click="pickImage()" prevent-default=""&gt;
+		            &lt;localize key="general_add" class="ng-isolate-scope ng-scope"&gt;Add&lt;/localize&gt;
+		        &lt;/a&gt;
+		&lt;/div&gt;
+		&lt;div ng-show="model.value.image"&gt;			
+				&lt;i class="icon icon-delete red"&gt;&lt;/i&gt;
+		        &lt;a href="#" ng-click="removeImage()" prevent-default=""&gt;
+		            &lt;localize key="general_delete" class="ng-isolate-scope ng-scope"&gt;Remove&lt;/localize&gt;
+		        &lt;/a&gt;
+		&lt;/div&gt;
+	&lt;/div&gt;
+	&lt;div&gt;
+
+		&lt;div&gt;
+			&lt;div&gt;
+				Name : {{model.value.details.name}}
+			&lt;/div&gt;
+			&lt;div&gt;
+				Email : {{model.value.details.email}}
+			&lt;/div&gt;
+			&lt;div&gt;
+				Phone : {{model.value.details.phonenumber}}
+			&lt;/div&gt;
+			&lt;i class="icon icon-edit blue"&gt;&lt;/i&gt;
+		        &lt;a href="#" ng-click="openEditDialog()" prevent-default=""&gt;
+		           Edit
+		        &lt;/a&gt;
+		&lt;/div&gt;
+	&lt;/div&gt;
+	
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">Property editor view</p>
+<p>In the view I make use of the <a href="https://github.com/umbraco/Umbraco-CMS/blob/7.2.0/src/Umbraco.Web.UI.Client/src/common/directives/imaging/umbimagethumbnail.directive.js" target="_blank" title="Source code for umb-image-thumbnail directive" class="code">umb-image-thumbnail</a> directive. This allows you to show a resized or cropped image in the backend. In my case I want to show an image with max width or height of 100px.</p>
+<p>Another directive I'm using is the <span class="code">localize</span> directive, which takes a key and retrevies a localized text from the Umbraco language XML files. The key has to be in the format <em>area_keyalias</em> from the language file.</p>
+<pre class="language-javascript"><code>angular.module('umbraco')
+    .controller('ContactEditor.Controller',
+	function($scope, dialogService, entityResource) {
+		
+		// if model value is empty, create empty scope object
+		if($scope.model.value == ''){
+			$scope.model.value = {};
+			$scope.model.value.image = '';
+			$scope.model.value.details = {
+				email : '',
+    			name : '',
+    			phonenumber : ''
+    			};	
+    		$scope.thumbnail = '';	
+    		$scope.width = 0;
+    		$scope.height = 0;
+			}
+		else {
+			// if existing scope has no image, create empty object
+			if($scope.model.value.image == ''){
+				$scope.thumbnail = '';	
+	    		$scope.width = 0;
+	    		$scope.height = 0;
+			}
+			else {
+				// if we have a image id, call information about media item using media resource
+				entityResource.getById($scope.model.value.image, "Media").then(function (ent) {
+					console.log(ent);
+					$scope.thumbnail = ent.metaData.umbracoFile.Value;
+					$scope.width = ent.metaData.umbracoWidth.Value;
+					$scope.height = ent.metaData.umbracoHeight.Value;					
+				});
+			}
+		}
+
+		$scope.pickImage = function() {
+			// open the build in mediapicker
+			dialogService.mediaPicker({
+				multiPicker : false, // only allow one image to be picked
+				// function that is called when the dialog is closed. 
+				// Selected item(s) will be passed in by the data object
+				callback : function(data) { 					
+					$scope.model.value.image = data.id;
+					$scope.thumbnail = data.thumbnail;
+					$scope.width = data.originalWidth;
+					$scope.height = data.originalHeight;
+					
+				}
+			});
+		};
+
+		$scope.openEditDialog = function () {
+			// open a custom dialog
+            dialogService.open({
+            	// set the location of the view
+                template: "/App_Plugins/ContactEditor/dialog.html",
+                // pass in data used in dialog
+                dialogData: $scope.model.value.details,
+                // function called when dialog is closed
+                callback: function (value) {
+                    if (value != null &amp;&amp; value != '') {                      
+                        $scope.model.value.details.name = value.name;   
+                        $scope.model.value.details.email = value.email;                    
+                        $scope.model.value.details.phonenumber = value.phonenumber;
+                    }
+                }
+            });
+        };
+
+		$scope.removeImage = function() {
+			$scope.thumbnail = '';
+			$scope.model.value.image = '';			
+		};		
+	});</code></pre>
+      <p class="snippet-caption">Property editor controller</p>
+<p>In the controller we have a function called <span class="code">pickImage</span>. This opens the built in <span class="code">mediaPicker</span>. We pass in an options object telling the picker to disable multiselect and a callback function to execute when the user selects an item in the dialog.</p>
+<p>The function <span class="code">openEditDialog</span> opens a dialog showing a view we created. We pass in the path of our view in the template parameter. The data we want to edit gets passed to the view using the dialogData parameter. The callback function is a function we call when the data in the dialog is submitted.</p>
+<p> </p>
+<pre class="language-markup"><code>&lt;div ng-controller="ContactEditorDialog.Controller"&gt;
+    &lt;form name="dialogForm" ng-submit="submit(model)"&gt;
+        &lt;umb-panel&gt;
+            &lt;div class="umb-panel-body no-header umb-scrollable with-footer" &gt;
+                &lt;umb-pane&gt;
+                    &lt;umb-control-group label="Name"&gt;
+                        &lt;input type="text" name="name" ng-model="model.name" required /&gt;
+                    &lt;/umb-control-group&gt;
+                    &lt;umb-control-group label="E-mail"&gt;
+                        &lt;input type="email" name="email" required ng-model="model.email" /&gt;
+                    &lt;/umb-control-group&gt;
+                    &lt;umb-control-group label="Phone Number"&gt;
+                        &lt;input type="text" name="phone" ng-model="model.phonenumber" /&gt;
+                    &lt;/umb-control-group&gt;
+                &lt;/umb-pane&gt;
+            &lt;/div&gt;
+            &lt;div class="umb-panel-footer"&gt;
+                &lt;div class="btn-toolbar umb-btn-toolbar pull-right"&gt;
+                    &lt;a class="btn btn-link" ng-click="close()"&gt;
+                        &lt;localize key="cancel" /&gt;
+                    &lt;/a&gt;
+                    &lt;button type="submit" class="btn btn-primary" ng-disabled="!dialogForm.$valid"&gt;
+                        &lt;localize key="buttons_save"&gt;Save&lt;/localize&gt;
+                    &lt;/button&gt;
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/umb-panel&gt;
+    &lt;/form&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">Dialog view</p>
+<p> </p>
+<pre class="language-javascript"><code>angular.module('umbraco')
+    .controller('ContactEditorDialog.Controller',
+    function($scope) {
+    	$scope.model = {
+    		name : $scope.dialogData.name,
+    		email : $scope.dialogData.email,
+    		phonenumber : $scope.dialogData.phonenumber
+    	}    	    	
+    });</code></pre>
+      <p class="snippet-caption">Dialog controller</p>
+<p>The dialogData object on the scope of our controller is the one we set in the editor controller. We can now use this data in our dialog.</p>
+<h2>Reusing existing datatypes</h2>
+<p>If you ever tried using reusing existing datatype editors in Umbraco V6 or earlier you know that is almost a impossible mission. </p>
+<p>Luckily in V7 this has become very easy. </p>
+<p>Before I continue, I want you to <a href="http://www.enkelmedia.se/blogg/2013/12/4/umbraco-7-use-the-rich-text-editor-tinymce-in-a-custom-section.aspx" target="_blank">read this post</a> by <span>Markus Johansson about re-using the Rich Text Editor in a custom section. He explains how the umb-editor directive comes in to play and what the best way is to get this working.</span></p>
+<p>The only problem with the approach from Markus is that you have to find out the config of the editor by taking a deep dive in the Umbraco source code.</p>
+<p>I knew this could be done easier because packages like <a href="http://our.umbraco.org/projects/backoffice-extensions/vorto" target="_blank">Vorto</a> and <a href="http://our.umbraco.org/projects/backoffice-extensions/archetype" target="_blank">Archetype</a> are also using existing datatypes. Looking at the source code of Vorto I saw an API controller was created to get the config from the Umbraco datatype. </p>
+<p>Have a look at the <a href="https://bitbucket.org/dawoe/umbukfestival2014/src/1f7a6c03621a873b25cb709ecac43b298dad2a20/Sources/UmbUkFestival2014.Core/API/DatatypeController.cs?at=master" target="_blank">source code</a> of the API controller I created for my talk at the Umbraco UK festival. It allows you to get all the information needed by the umb-editor directive. </p>
+<p>For the UmbUkFest demo I created an <a href="https://bitbucket.org/dawoe/umbukfestival2014/src/1f7a6c03621a873b25cb709ecac43b298dad2a20/Sources/UmbUkFestival2014.Website/App_Plugins/UmbUkFest/backoffice/datatype.resource.js?at=master" target="_blank">angular resource</a> that handles all calls to this API. The resource can be injected as a dependency into your controllers.</p>
+<p>Below you find the code needed to use the Richtext editor datatype in your property editor or custom section once you have the API and the angular resource in place.</p>
+<pre class="language-javascript"><code>datatypeResource.getByName('Richtext editor').then(function (result) {
+  $scope.rteField = [
+    {
+      alias: 'rtefield',
+      label: 'Text',
+      view: result.data.view,
+      config: result.data.config,
+      value: $scope.model.rtevalue
+      }
+    ];
+});
+
+$scope.$watch('rteField', function () {
+  if ($scope.rteField != undefined) {
+    $scope.session.description = $scope.rteField[0].value;
+  }
+}, true);</code></pre>
+      <p class="snippet-caption">Calling the datatype resource to get the Rich Text editor datatype configuration</p>
+<p> The first part is where we call the resource to get the config from the API and store the result in a JavaScript Array. </p>
+<p>The second part is a watch on the array so that we are sure our model gets updated, when something in the Richtext editor is changed by the user.</p>
+<p>To render this we just need the following HTML in our view:</p>
+<pre class="language-markup"><code>&lt;div ng-repeat="editor in rteField"&gt;
+	&lt;umb-editor model="editor"&gt;&lt;/umb-editor&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">The html needed to render our Richtext editor</p>
+<h2>Conclusion</h2>
+<p>So if you haven't tried Angular yet, use the holidays to get to know the basics.</p>
+<p>You don't need to be an angular expert to extend the Umbraco Backend. </p>
+<p>And the last tip I have is:</p>
+<blockquote>
+<p>Use the source, Luke</p>
+</blockquote>
+<p>You can find all the angular related code in the <a href="https://github.com/umbraco/Umbraco-CMS/tree/7.2.1/src/Umbraco.Web.UI.Client" target="_blank">Umbraco.Web.UI.Client</a> folder and it is well documented.</p>
+<p>Happy ng-holidays !!!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/angular/" title="See all articles tagged with Angular">Angular</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Dave Woestenborghs"><img src="//gravatar.com/avatar/c6c76510af08bcb2896f4e9e887074fd.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c6c76510af08bcb2896f4e9e887074fd.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Dave Woestenborghs</h1>
+        <p>Dave is on Twitter as <a href="//twitter.com/dawoe21" title="Dave Woestenborghs on Twitter" rel="author">@dawoe21</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2014/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Umbraco Codebase: A Traveller's Guide" href="/umbraco-cms/2014/traveller-guide/"><span class="scr-text">The Umbraco Codebase: A Traveller's Guide</span></a></li>
+      <li><a title="Debugging AngularJS" href="/umbraco-cms/2014/debugging-angularjs/"><span class="scr-text">Debugging AngularJS</span></a></li>
+      <li><a title="Getting data in and out of complex Archetype data types" href="/umbraco-cms/2014/working-with-complex-archetype-datatypes/"><span class="scr-text">Getting data in and out of complex Archetype data types</span></a></li>
+      <li><a title="Your first pull request" href="/umbraco-cms/2014/your-first-pull-request/"><span class="scr-text">Your first pull request</span></a></li>
+      <li><a title="Dealing With Members Using The MemberService &amp; MembershipHelper" href="/umbraco-cms/2014/dealing-with-members/"><span class="scr-text">Dealing With Members Using The MemberService &amp; MembershipHelper</span></a></li>
+      <li><a title="The Double Album" href="/umbraco-cms/2014/the-double-album/"><span class="scr-text">The Double Album</span></a></li>
+      <li><a title="Managing Members in Umbraco" href="/umbraco-cms/2014/managing-members/"><span class="scr-text">Managing Members in Umbraco</span></a></li>
+      <li><a title="Making an Angular-powered frontend with Umbraco" href="/umbraco-cms/2014/angular-powered-frontend/"><span class="scr-text">Making an Angular-powered frontend with Umbraco</span></a></li>
+      <li><a title="Architectural thoughts when using Umbraco in Multi-platform solutions" href="/umbraco-cms/2014/architectural-thoughts/"><span class="scr-text">Architectural thoughts when using Umbraco in Multi-platform solutions</span></a></li>
+      <li><a title="How to take full advantage of macros within the Umbraco 7.2 grid" href="/umbraco-cms/2014/grid-macros/"><span class="scr-text">How to take full advantage of macros within the Umbraco 7.2 grid</span></a></li>
+      <li><a title="Newbie's Guide to Setting Up an Umbraco Website" href="/umbraco-cms/2014/how-to-set-up-an-umbraco-site/"><span class="scr-text">Newbie's Guide to Setting Up an Umbraco Website</span></a></li>
+      <li><a title="Upgrading Umbraco using Git" href="/umbraco-cms/2014/upgrading-umbraco-using-git/"><span class="scr-text">Upgrading Umbraco using Git</span></a></li>
+      <li><a title="Architecture based on IoC/DI for Umbraco packages" href="/umbraco-cms/2014/iocdi-architecture/"><span class="scr-text">Architecture based on IoC/DI for Umbraco packages</span></a></li>
+      <li class="selected"><a title="Using Angular in the backoffice - Some useful tips" href="/umbraco-cms/2014/umbraco-angular-tips/"><span class="scr-text">Using Angular in the backoffice - Some useful tips</span></a></li>
+      <li><a title="Build a simple contextual language switcher" href="/umbraco-cms/2014/razor-language-switcher/"><span class="scr-text">Build a simple contextual language switcher</span></a></li>
+      <li><a title="All Your Images Are Belong to Umbraco" href="/umbraco-cms/2014/all-your-images-are-belong-to-umbraco/"><span class="scr-text">All Your Images Are Belong to Umbraco</span></a></li>
+      <li><a title="Modify Umbraco URLs with the UrlProvider and ContentFinder" href="/umbraco-cms/2014/urlprovider-and-contentfinder/"><span class="scr-text">Modify Umbraco URLs with the UrlProvider and ContentFinder</span></a></li>
+      <li><a title="Umbraco Packaging with AppVeyor CI" href="/umbraco-cms/2014/packaging-with-appveyor/"><span class="scr-text">Umbraco Packaging with AppVeyor CI</span></a></li>
+      <li><a title="Have beer - looking for workers" href="/umbraco-cms/2014/umbraco-tribe/"><span class="scr-text">Have beer - looking for workers</span></a></li>
+      <li><a title="Extending Umbraco 7 backend" href="/umbraco-cms/2014/extending-umbraco-7-backend/"><span class="scr-text">Extending Umbraco 7 backend</span></a></li>
+      <li><a title="Redirect rules" href="/umbraco-cms/2014/redirect-rules/"><span class="scr-text">Redirect rules</span></a></li>
+      <li><a title="Faceted Search with Bobo" href="/umbraco-cms/2014/search-with-bobo/"><span class="scr-text">Faceted Search with Bobo</span></a></li>
+      <li><a title="The Merchello Contribution" href="/umbraco-cms/2014/the-merchello-contribution/"><span class="scr-text">The Merchello Contribution</span></a></li>
+      <li><a title="The power of (Christmas) card modes" href="/umbraco-cms/2014/card-modes/"><span class="scr-text">The power of (Christmas) card modes</span></a></li>
+      <li><a title="The EPUB is here" href="/umbraco-cms/2014/epub/"><span class="scr-text">The EPUB is here</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Powering applications using Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Applications using Umbraco</h1>
+      <p class="byline"> by Poornima Nayar, <span class="pubdate">posted on <time datetime="2018-12-05">Dec 5, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Hey all! I am an Umbracian from UK. I am primarily a back-end dev and have been using Umbraco since 2011. I am a freelancer and I mainly work on websites and web applications although I am really excited to learn what more can we do with Umbraco. I am also a part of the Umbraco Community Pull Request Team. I am also one of the few mummies in the community, Umbraco Mummy as we term it!</p>
+<h3>Overview</h3>
+<p class="intro">We all know that Umbraco is a pretty flexible CMS. The CMS just does not come in the way of the front end code. And most importantly with the content tree we can model our content in such a way that content editors have the flexibility they require while retaining a good structure to the content. Being a freelancer, I get to see Umbraco used in various different ways. And of late I have happened to work in a team developing applications using Umbraco, even B2B applications.</p>
+<p>I was approached by a client of mine last year to create an application for their business. The business is essentially an advertising ground for event venues and suppliers. They wanted an application to capture information from the various venues and suppliers which could then be turned into a benchmarking report on a monthly basis. In addition to the application, the business also wanted an admin area to create logins, reset passwords etc. They also wanted to tie up logins to specific event venue/supplier. This was the basic requirements for the Phase 1. The main business website was in Umbraco which meant that the business staff is used to Umbraco. So I did not have to think too much before concluding that the admin area should be in Umbraco. I can use the Membership in Umbraco and the nice UI it provides for member management. I can make use of the content section to create the pages for the application and manage content. And all this were out-of-the-box Umbraco features. I could also extend the functionality to create custom dashboards to view the captured data thus making it quite a comprehensive admin area.</p>
+<p>With any application you have a lot of configuration which you would either put in a config file or store in a database. You could even have some content associated with the pages in case of sizeable applications. And changing any of this can only be achieved using an effective admin interface or with a developer’s help. How can Umbraco help here as being that admin interface and how can we use some of the features effectively?</p>
+<p>I am going to build the basics of a very simple ticketing system for a product a business sells as an example. I want 3 versions of the same application to be built:</p>
+<ul>
+<li>The basic version of the application (Brand 1)</li>
+<li>A version with a different branding (Brand 2)</li>
+<li>A version targeting businesses (resellers of product, Reseller Site)</li>
+</ul>
+<p>I am hosting all the 3 versions in a single instance of Umbraco. I have set <span class="code">umbracoHideTopLevelNodeFromPath</span> to <strong>true</strong> as you would set for a multi-language set up.</p>
+<p>Let us start building the application in Umbraco. Some of the requirements for this application would be</p>
+<ul>
+<li>A login per user (I am assuming one login per client for the sake of simplicity here).</li>
+<li>A form to raise a ticket which could have the following fields - user name, query category and a message.</li>
+<li>A content page for some information</li>
+</ul>
+<h3>Creating the basic version of the application</h3>
+<p>I have set up a very basic site in Umbraco with a home page, a content page, a query page and a settings section. I want all of my pages, even the content page behind a login so I have secured the site. My home page is a login page.</p>
+<p><img style="width: 455px; height: 315px;" src="/archive/media/2018/brand1sitecontenttree.png?width=455&amp;height=315" alt="" data-udi="umb://media/4714149fa3f5443697ee375f8a3e2f80"></p>
+<p>Once you login to the application I want to see the page for creating a ticket. It can have the following fields</p>
+<ul>
+<li>Details of the logged in user like name and contact details</li>
+<li>The ticket types or categories</li>
+<li>The products available for the logged in user</li>
+<li>Description of the ticket</li>
+</ul>
+<p>The details of the logged in user can be gathered from the profile of the user. I want to manage the categories available myself so I am using the settings section for managing the categories available. I have a Categories container set up and I have added the various categories available as a child items to the Categories container. Now I can query the the site to get the categories to show on the page.</p>
+<p>I want the user to log tickets only for the products that they have. Moreover, given that I have three versions of the same application I want to make sure that the login created for one site cannot be used on another. I am going to use the Membership in Umbraco to control all of this.</p>
+<h3>Using Membership in Umbraco to enable user login to the site</h3>
+<p>My application can have different types of end users - Consumers, which can be individuals or businesses, and Resellers. So I have set up 2 member types in Umbraco - <strong>Consumer</strong> and <strong>Reseller</strong>. I want to allow only Consumers to access my Brand 1 site and more specifically, only “Brand 1” Consumers should be able log in to the Brand 1 site. As a starting point I have created a property called “<strong>Brand Name</strong>” in the <strong>Site Settings</strong> tab of the <strong>Home Page</strong> doctype. I have also created Member Groups in Umbraco. The idea is to set up a member group by the same name as the brand name property. In this case the brand name and the associated member group is set to “<strong>Brand 1</strong>”. I also secure the site to allow access to only the above member group.</p>
+<p><img style="width: 500px; height: 33.65032918800293px;" src="/archive/media/2018/brandnameproperty.png?width=500&amp;height=33.65032918800293" alt="" data-udi="umb://media/b9691dc49bc7433baba6355f23396499"></p>
+<p><img style="width: 500px; height: 422.5806451612903px;" src="/archive/media/2018/brand1siterolebasedpermissions.png?width=500&amp;height=422.5806451612903" alt="" data-udi="umb://media/ce33275d096841118bbaf908eaef1401"></p>
+<p>Finally, for every login I create for the site I assign the member to this member group. Now I can check in my code whether the member is in the correct role/member group before letting the user log in.</p>
+<p>The allowed roles for the site is same as the brand name.</p>
+<p><span class="code" style="font-weight: 400;">var allowedRoles= homePage.BrandName;</span></p>
+<p><span style="font-weight: 400;">You can check for the allowed roles here before logging the user in.</span></p>
+<p><span class="code"><span style="font-weight: 400;">if (!Roles.IsUserInRole(viewModel.Email, allowedRoles))</span><span style="font-weight: 400;"> {<br></span><span style="font-weight: 400;">           ModelState.AddModelError(string.Empty, "The user does not exist.");<br></span><span style="font-weight: 400;">            return CurrentUmbracoPage();<br></span><span style="font-weight: 400;">      }</span></span></p>
+<p>Since the property <strong>Brand Name</strong> is a crucial one, I have made it an admin only field. Only Umbraco users in the “admin” user group should be allowed to change it, for anyone who is not, it should be a read-only field. I have achieved this by using some code in the <strong>ApplicationStartUp</strong>. You can find the sample code <a rel="noopener" href="https://github.com/poornimanayar/Umbraco-Application/blob/master/Umbraco-B2B/Umbraco-B2B/App_Start/StartUp.cs#L48" target="_blank" data-anchor="#L48">here</a>.</p>
+<h3>Assigning specific products to logins</h3>
+<p>I want users to create tickets for products that they own. For this I create a property called <strong>Available Products</strong>. I have created a new data type using Umbraco Multi Node Tree Picker limiting the selection to product nodes only. I use this property to assign products to logins and query the logged in member’s profile to show the relevant product options on the query form.</p>
+<p><img style="width: 500px; height: 130.67349926793557px;" src="/archive/media/2018/brand1products.png?width=500&amp;height=130.67349926793557" alt="" data-udi="umb://media/413a05bd915a43b0b72959659ea30b3f"></p>
+<p>Finally, a look at the query page now.</p>
+<p><img style="width: 500px; height: 337.1478873239437px;" src="/archive/media/2018/brand1sitecreateticketscreen.png?width=500&amp;height=337.1478873239437" alt="" data-udi="umb://media/f9649a4350944a1288ed33fc4082e092"></p>
+<p>This is the “Create a ticket “ page in the application. It queries the ticket type/categories for the application, products associated with the logged in member as well as the details of the logged in member to present the final screen to the end user, all using Umbraco’s out-of-the-box capabilities.</p>
+<p>You can have a look at the application at <a rel="noopener" href="http://brandapp1.kvtechsltd.co.uk" target="_blank">http://brandapp1.kvtechsltd.co.uk</a><br>Username/password : brand1member@test.com/password123</p>
+<h3>Introducing a different branding to the application</h3>
+<p>Suppose you have a scenario where you want to rebrand the application. To begin with, I make a copy of the site above and make some content changes. Here are the content changes I made</p>
+<ul>
+<ul>
+<li>Changed the category and product names, prepending “Brand 2” before the names.</li>
+<li>Changed the “Brand Name” property on the Home Page to “Brand 2”.</li>
+<li>Changed the navigation to look at the content page for the new application</li>
+<li>Created a member group called <strong>Brand 2</strong> and secured the site to use this role</li>
+<li>Create a member and assign it to group <strong>Brand 2</strong></li>
+</ul>
+</ul>
+<p>Now we can start thinking about how can we apply specific styles to this application alone. I have a few sets of stylesheets</p>
+<ul>
+<li>a base set of rules in the <strong>styles</strong> folder along with Bootstrap files</li>
+<li>A stylesheet per application for the brand specific styles.</li>
+</ul>
+<p>I plan to use ASP.Net bundling and minification for my JavaScript files and CSS files. So I set up my base bundle like this:</p>
+<p><span class="code"><span style="font-weight: 400;">bundles.Add(new StyleBundle("~/bundles/css").Include(<br></span><span style="font-weight: 400;">                      "~/assets/styles/bootstrap.css",<br></span><span style="font-weight: 400;">                      "~/assets/styles/site.css"));<br><span style="background-color: #ffffff; font-family: Verdana, Arial, Helvetica, sans-serif;"></span></span></span></p>
+<p>Now I can call this bundle in my Layout view</p>
+<p><span class="code"><span style="font-weight: 400;"></span></span><span class="code" style="font-weight: 400;">@Styles.Render("~/bundles/css")</span></p>
+<p>For my application specific styles I am creating a stylesheet per brand. I hold the stylesheet in a folder named after the brand name, getting rid of any whitespaces. In this case I put my application specific stylesheet in a folder called “<strong>brand2</strong>”. I can now create my bundle</p>
+<p><span class="code"><span style="font-weight: 400;">bundles.Add(new StyleBundle("~/bundles/brand2").Include(<br></span><span style="font-weight: 400;">                "~/assets/brand2/styles.css"));</span></span></p>
+<p>I create a controller action to load the site specific bundle depending on the brand name and call the action in my layout view</p>
+<p><span class="code"><span style="font-weight: 400;">public ActionResult GetBrandSpecificStyleBundle()<br></span><span style="font-weight: 400;">        {<br></span><span style="font-weight: 400;">            var homePage = CurrentPage.AncestorOrSelf(1).OfType&lt;HomePage&gt;();<br></span><span style="font-weight: 400;">            var brandName = homePage.BrandName;<br></span><span style="font-weight: 400;">            var assetFolder = brandName.ToLower().Replace(" ", string.Empty);<br></span><span style="font-weight: 400;">            return this.PartialView(SiteConstants.PartialViewPath + "BrandSpecificStyles.cshtml", assetFolder);<br></span><span style="font-weight: 400;">        }</span></span></p>
+<p><span class="code" style="font-weight: 400;">@Html.Action("GetBrandSpecificStyleBundle", "GlobalSurface")</span></p>
+<p>I have kept the branding very minimal here, just to the navigation background, but this can all be extended to suit your needs.</p>
+<p>Have a look at the application at <a rel="noopener" href="http://brandapp2.kvtechsltd.co.uk" target="_blank">http://brandapp2.kvtechsltd.co.uk</a><br>Username/password : brand2member@test.com/password123</p>
+<h3>Creating a version of the application targeting businesses (B2B Application)</h3>
+<p>I now want to create a version of the application targeting businesses. I start off by copying the basic application and making the content changes as mentioned above. I set the brand name of the application as “<strong>Reseller Brand</strong>”. I create a member group called “<strong>Reseller Brand</strong>” and secure the application to this role. I also create a member and assign it to this member group. That is the basic version of the B2B application ready.</p>
+<p>I now want to add an extra field to the “Create a ticket” screen, just for the reseller site. I want to capture the name of the client, on whose behalf the ticket is being raised. For this I have added a True/False property to the Home Page Settings tab called “<strong>Is Reseller Site</strong>”.<br><img style="width: 500px; height: 48.19863680623174px;" src="/archive/media/2018/reseelersiteproperty.png?width=500&amp;height=48.19863680623174" alt="" data-udi="umb://media/67f343bc3c63495c8edb3f0eaf24a4a8"></p>
+<p>I can query for a True value for this property when I build my view model for the form and use it to show a textbox to capture the details. So the final screen looks like this.</p>
+<p><img style="width: 500px; height: 393.16987740805604px;" src="/archive/media/2018/resellersitecreateticketscreen.png?width=500&amp;height=393.16987740805604" alt="" data-udi="umb://media/ff291a1039e944279e1d70cd2d2243e0"></p>
+<p>Have a look at the application at <a rel="noopener" href="http://resellerapp.kvtechsltd.co.uk" target="_blank">http://resellerapp.kvtechsltd.co.uk</a><br>Username/password : reseller1@test.com/password123</p>
+<h3>Capturing data and viewing the information</h3>
+<p>No application is complete without capturing data and providing ways and means to view it as well. Although I am not going into great detail here, you can use custom dashboards which you can build to view the data or use a package like Fluidity to create custom sections to view the captured data.</p>
+<p>So that is it! You have now got 3 versions of the same application running on the same instance of Umbraco. The point to note here is that you have your application running, you have the CMS as the admin/back-office, all using the out-of-the-box features from Umbraco and you can extend it by all means to suit the needs of your application. You can create whole new database to capture data or even send the data to a CRM of your choice. Not only this, but you also are free to choose the front end technology of your choice. For this demo I have chosen ASP.Net MVC but you can use a JavaScript library of your choice to render your application UI, make it a Single Page Application or even use it to power a mobile app.</p>
+<p>The code for the demo application is available at <a rel="noopener" href="https://github.com/poornimanayar/Umbraco-Application" target="_blank">https://github.com/poornimanayar/Umbraco-Application</a></p>
+<p>The database is available in the repo as well. <br>Username/password for the CMS : admin@admin.com/password123</p>
+<p>Give it a spin and let me know.</p>
+<p>Hope you enjoyed reading the article! Merry Christmas and a very Happy New Year :-)</p>
+<h3>Resources</h3>
+<ul>
+<li>ASP.Net Bundling and Minification <a rel="noopener" href="https://docs.microsoft.com/en-us/aspnet/mvc/overview/performance/bundling-and-minification" target="_blank">https://docs.microsoft.com/en-us/aspnet/mvc/overview/performance/bundling-and-minification</a></li>
+<li>Enabling bundling and minification in Umbraco <a rel="noopener" href="https://codeshare.co.uk/blog/how-to-use-bundling-to-minify-css-and-javascript-in-mvc-and-umbraco/" target="_blank">https://codeshare.co.uk/blog/how-to-use-bundling-to-minify-css-and-javascript-in-mvc-and-umbraco/</a></li>
+<li>Fluidity <a rel="noopener" href="https://umco.github.io/umbraco-fluidity/" target="_blank">https://umco.github.io/umbraco-fluidity/</a></li>
+<li>SLides and Demo Rep from Dave Woestenborgh's talk at DUUGFest'18 <a rel="noopener" href="https://github.com/dawoe/umbraco-journey-into-the-unknown" target="_blank">https://github.com/dawoe/umbraco-journey-into-the-unknown</a></li>
+</ul>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/members/" title="See all articles tagged with Members">Members</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Poornima Nayar"><img src="//gravatar.com/avatar/dd8b418389638867552cb41af1b9a727.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/dd8b418389638867552cb41af1b9a727.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Poornima Nayar</h1>
+        <p>Poornima is on Twitter as <a href="//twitter.com/PoornimaNayar" title="Poornima Nayar on Twitter" rel="author">@PoornimaNayar</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

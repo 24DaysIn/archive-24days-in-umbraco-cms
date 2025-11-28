@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco with CQRS</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Umbraco CQRS</h1>
+      <p class="byline"> by Adrian Ochmann, <span class="pubdate">posted on <time datetime="2021-12-15">Dec 15, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <div><span>Some time ago, we’ve had an idea to create a sample project using Umbraco with CQRS. We created a sample Umbraco v9 application and focused on the Members domain for the example purposes. Our goal was to apply the Clean Architecture concept onto it and implement the base for the future Clean-Umbraco-CQRS projects. Today I want to share and explain these concepts and code with you all.</span></div>
+<div><span></span></div>
+<div>
+<div>
+<h2><span>1. Clean Architecture</span></h2>
+<div><span>Clean Architecture is an architectural style concept that can be defined as a set of guidelines for systems that strictly follows the principle of separation of concerns. The main goal is to create / divide the application into specific, responsible, simple, extensible layers.</span></div>
+<br>
+<div><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/4e90baa9e1184a2cbebe84d5b454032c"><img style="width: 500px; height: 367.22797927461136px;" src="/archive/media/2021/1-cleanarchitecture.jpg?width=500&amp;height=367.22797927461136" alt="Clean Architecture" data-udi="umb://media/ce42a310c0a44765919a2260abf8c005"></div>
+<blockquote><span> Clean Architecture diagram. Taken from <a rel="noopener" href="https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html" target="_blank" title="clean coder blog">clean coder blog</a></span><span>.</span></blockquote>
+<br>
+<div><span>The picture shows a layered architecture that puts the domain as an entrance to the designed system - each inner layer does not depend on the outer layer.</span></div>
+<br>
+<div><span>This architectural style evolves or has similar concepts such as:</span></div>
+<ul>
+<li><span>Hexagonal Architecture</span></li>
+</ul>
+<div></div>
+<div><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/a0920c9cd6eb4a40b468c6353c1f8285"><img style="width: 500px; height: 441.25px;" src="/archive/media/2021/ha_example.png?width=500&amp;height=441.25" alt="Hexagonal Architecture" data-udi="umb://media/a0920c9cd6eb4a40b468c6353c1f8285"></div>
+<br>
+<blockquote><span> Hexagonal Architecture scheme. Taken from <a rel="noopener" href="https://blog.allegro.tech/2020/05/hexagonal-architecture-by-example.html" target="_blank" title="allegro.tech blog">allegro.tech blog</a></span><span>.</span></blockquote>
+<br>
+<ul>
+<li><span>Ports and Adapters</span></li>
+</ul>
+<br>
+<div><img style="width: 500px; height: 467.14285714285717px;" src="/archive/media/2021/2-1_lf3qzk0dgk9kfnplyykv4q.png?width=500&amp;height=467.14285714285717" alt="Ports and Adapters" data-udi="umb://media/4e90baa9e1184a2cbebe84d5b454032c"></div>
+<br>
+<blockquote><span>Ports and Adapter architecture scheme. Taken from <a rel="noopener" href="https://medium.com/idealo-tech-blog/hexagonal-ports-adapters-architecture-e3617bcf00a0" target="_blank" title="idealo tech blog">idealo-tech-blog</a></span><span>.</span></blockquote>
+<br>
+<ul>
+<li><span>Onion Architecture</span></li>
+</ul>
+</div>
+<div></div>
+<div><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/feddad78454c4f5da5e83a59a50464a7"><img style="width: 477.8782693717917px; height: 500px;" src="/archive/media/2021/cqrs.jpg?width=477.8782693717917&amp;height=500" alt="onion architecture" data-udi="umb://media/feddad78454c4f5da5e83a59a50464a7"></div>
+<div>
+<div></div>
+<br>
+<div><span>You can read more about it on <a rel="noopener" href="https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html" target="_blank" title="Uncle Bob's">Uncle Bob's</a> </span><span>article.</span></div>
+<br>
+<div><span>For the application layer and solution itself, there are a few technics to organize its structure. The most common are:</span></div>
+<br>
+<ol>
+<li><span> In the first structure example, the 'Application' layer contains all of the business rules, infrastructure aspects, repositories, services etc. and only domain entities and shared code is extracted to the separated projects:<br><br></span><span></span><span><img style="width: 222px; height: 233px;" src="/archive/media/2021/structure1.png?width=222&amp;height=233" alt="Structure 1" data-udi="umb://media/1140d67543374242a6bc9f94dfc5b312"></span><span><br><br></span></li>
+<li><span>In this example, structure has the 'Core' project that contains all of the above described and the domain entities - all bundled together:<br><br><img style="width: 183px; height: 202px;" src="/archive/media/2021/structure2.png?width=183&amp;height=202" alt="Structure 2" data-udi="umb://media/7728d866d64d4c479807e6f52a21d5ab"><br><br><br></span></li>
+<li><span>Last, but not least, we can have a separation of responsibilities to dedicated layers for domain entities, application rules, domain logic, infrastructural configuration and so on:<br><br><br><img style="width: 238px; height: 271px;" src="/archive/media/2021/structure3.png?width=238&amp;height=271" alt="Structure 3" data-udi="umb://media/c952a61ebc3848278b576ee3d2571662"><br></span></li>
+</ol>
+</div>
+<div>
+<blockquote><span> </span><strong>Note:</strong><span> Sometimes the 'Application' layer is also called 'Core'</span></blockquote>
+<blockquote><span> </span><strong>Note:</strong><span> Sometimes the 'Shared' layer is also called 'SharedKernel'</span></blockquote>
+<br>
+<h2><span>2. CQS and CQRS</span></h2>
+<a href="https://martinfowler.com/bliki/CQRS.html" title="CQRS"></a></div>
+<div>
+<div><a rel="noopener" href="https://martinfowler.com/bliki/CommandQuerySeparation.html" target="_blank" title="CQS"><span>CQS</span></a><span> is a design principle that is based on applying the separation of concerns in our applications.</span></div>
+<div><span>In short, </span><strong>C</strong><span>ommand </span><strong>Q</strong><span>uery </span><strong>S</strong><span>eparation stand behind idea:</span></div>
+<br>
+<blockquote><span>Every method should either be a command that performs an action, or a query that returns data to the caller, but not both.</span></blockquote>
+</div>
+<div></div>
+<div><a href="https://martinfowler.com/bliki/CQRS.html" title="CQRS">CQRS</a><span> is an architectural pattern and is usally applied on the top of the application layer. It's based on CQS principle.</span></div>
+<div><span>In short, </span><span><strong>C</strong></span><span>ommand </span><strong>Q</strong><span>uery </span><strong>R</strong><span>esponsibility </span><strong>S</strong><span>egregation stands for separating commands as writes and queries as reads in regards to the storage within the application.</span></div>
+<div><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/d6dd7e13d3804554b8a757e146c07c35"><img style="width: 500px; height: 197.68904260336427px;" src="/archive/media/2021/cqrs-diagram.jpg?width=500&amp;height=197.68904260336427" alt="CQRS Diagram" data-udi="umb://media/d6dd7e13d3804554b8a757e146c07c35"><br><br>
+<div><span>You can read more information about CQRS/CQS by visitng the external resources listed in the </span><span>reference</span><span> section in the bottom of the article.</span></div>
+<br>
+<div><span>Let's focus on more technical solution of CQRS!</span></div>
+<br>
+<h3><span>2.1. Command + Handler + Dispatcher</span></h3>
+<br>
+<div><strong>Commands</strong><span><strong> </strong>are used to modify state. A good example is the command to </span><span class="code">RegisterMember</span><span>. It contains all the needed details on processing this command by Command Handler.</span></div>
+<br>
+<div><span>Bellow you can see the markup / abstraction for a proper command model. </span><strong>Command doesn't return any value.</strong></div>
+<br>
+<div>
+<pre><code class="language-csharp">﻿public interface ICommand
+{
+}</code></pre>
+</div>
+<div></div>
+<br>
+<div><span><strong>Command Handler</strong></span><span> is used to process dedicated command. As you can see, generic </span><em><strong>TCommand</strong></em><span> is there for letting know </span><span>Command Dispatcher</span><span> what exact implementation of </span><span>Command Handler</span><span> we need to get (it's mostly for DI to know about the dedicated implementation) and then to send a dedicated command object as strongly type object further.</span></div>
+</div>
+<div></div>
+<div>
+<pre><code class="language-csharp">﻿public interface ICommandHandler&lt;in TCommand&gt; where TCommand : class, ICommand
+{
+    ValueTask HandleAsync(TCommand command);
+}</code></pre>
+</div>
+<div><br>
+<div><span><strong>Command Dispatcher</strong></span><span> - "is an object that links the Action-Request with the appropriate Action-Handler". I can't describe it better, so let's see it in the implementation:</span></div>
+</div>
+<div></div>
+<div>
+<pre><code class="language-csharp">﻿public interface ICommandDispatcher
+{
+    ValueTask DispatchAsync&lt;TCommand&gt;(TCommand command) where TCommand : class, ICommand;
+}</code></pre>
+</div>
+<div><br>
+<div><span>Then, we can extend it and implement for example the 'in memory' implementation of it:</span></div>
+</div>
+<div></div>
+<div>
+<pre><code class="language-csharp">﻿public class InMemoryCommandDispatcher : ICommandDispatcher
+{
+    private readonly IDependencyResolver _dependencyResolver;
+
+    public InMemoryCommandDispatcher(IDependencyResolver dependencyResolver)
+        =&gt; _dependencyResolver = dependencyResolver;
+
+    public async ValueTask DispatchAsync&lt;TCommand&gt;(TCommand command)
+        where TCommand : class, ICommand
+    {
+        try
+        {
+            var handler = _dependencyResolver.Resolve&lt;ICommandHandler&lt;TCommand&gt;&gt;();
+
+            await handler.HandleAsync(command);
+        }
+        catch (DependencyNotFoundException dependencyNotFoundException)
+        {
+            throw new CommandHandlerNotFoundException(
+                $"Command handler for {typeof(TCommand).Name} not found.",
+                dependencyNotFoundException);
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+}</code></pre>
+</div>
+<div><br>
+<h3><span>2.2. Query + Query Handler</span></h3>
+<br>
+<div><strong>Queries</strong><span><strong> </strong>are used to read the state of a dedicated domain object. </span><span><strong>They are not changing state of the systems.</strong></span></div>
+<br>
+<div><span>The markup / abstraction for the dedicated query may look like this:</span></div>
+</div>
+<div></div>
+<div>
+<pre><code class="language-csharp">﻿public interface IQuery&lt;in TQuery, out TResult&gt; where TQuery : class
+{
+}</code></pre>
+<div></div>
+<div><span>Where </span><em><strong>TQuery</strong></em><span><em><strong> </strong></em>is a strongly typed definition of the query e.g. </span><em>GetMemberByEmail</em><span> and </span><em><strong>TResult</strong></em><span> is any kind of the result type (it can be a DTO, list of DTOs, etc.).</span></div>
+<br>
+<div><strong>Query Handler</strong><span> - is used to process the dedicated query. As you can see <em><strong>TQuery</strong> </em>is there to let know our </span><em>Query Dispatcher</em><span> what exact implementation of </span><em>Query Handler</em><span> we need to get (it's mostly for DI to let know about dedicated implementation) and to send a dedicated query object as a strongly type object with </span><em><strong>TResult</strong></em><span><em><strong> </strong></em>return type.</span></div>
+</div>
+<div></div>
+<div>
+<pre><code class="language-csharp">﻿public interface IQueryHandler&lt;in TQuery, TResult&gt; where TQuery : class, IQuery&lt;TQuery, TResult&gt;
+{
+    ValueTask&lt;TResult&gt; HandleAsync(TQuery query);
+}</code></pre>
+</div>
+<div><br>
+<div><strong>Query Dispatcher</strong><span> - same as </span><em>Command Handler</em><span> - is used to get a proper query handler and dispatch it. It can be also a wrapper to wrap exceptions, what is a common use-case of them.</span></div>
+</div>
+<div></div>
+<div>
+<pre><code class="language-csharp">﻿public interface IQueryDispatcher
+{
+    ValueTask&lt;TResult&gt; QueryAsync&lt;TQuery, TResult&gt;(IQuery&lt;TQuery, TResult&gt; query)
+        where TQuery : class, IQuery&lt;TQuery, TResult&gt;;
+}</code></pre>
+<div></div>
+<div><span>Below code example shows the 'in memory' implementation of the Query Dispatcher:</span></div>
+</div>
+<div></div>
+<div>
+<pre><code class="language-csharp">﻿public class InMemoryQueryDispatcher : IQueryDispatcher
+{
+    private readonly IDependencyResolver _dependencyResolver;
+
+    public InMemoryQueryDispatcher(IDependencyResolver dependencyResolver)
+        =&gt; _dependencyResolver = dependencyResolver;
+
+    public async ValueTask&lt;TResult&gt; QueryAsync&lt;TQuery, TResult&gt;(IQuery&lt;TQuery, TResult&gt; query)
+        where TQuery : class, IQuery&lt;TQuery, TResult&gt;
+    {
+        try
+        {
+            var handler = _dependencyResolver.Resolve&lt;IQueryHandler&lt;TQuery, TResult&gt;&gt;();
+
+            return await handler.HandleAsync((TQuery)query);
+        }
+        catch (DependencyNotFoundException dependencyNotFoundException)
+        {
+            throw new QueryHandlerNotFoundException(
+                $"Query handler for {typeof(TQuery).Name} not found.",
+                dependencyNotFoundException);
+        }
+        catch (Exception)
+        {
+            throw;
+        }
+    }
+}</code></pre>
+<br>
+<h3><span>2.3. Aggregate, Value Objects, DTO, POCO</span></h3>
+<div><span>What it is ? In short:</span></div>
+<ul>
+<li><strong>Aggregate</strong><span><strong> </strong>- a single and simple domain object with the identity and domain operations on it (that aggregates it all together).</span></li>
+<li><strong>Value Object</strong> - similar to Aggregate, but without the identity. When we compare Value Objects, only if all properties match each other, it means that those are the same objects (each value needs to be the same, no need to have any identity to make them equal).</li>
+<li><strong>DTO</strong><strong> </strong>- data object without any logic in it.</li>
+</ul>
+<br>
+<div><span>Aggregate, Value Objects, DTO, POCO are a very large topic and are for the explorers. If you'd want to explore more about them, check out some of the below materials that describes them in more details:</span></div>
+<ul>
+<li><a rel="noopener" href="https://martinfowler.com/bliki/DDD_Aggregate.html" target="_blank" title="https://martinfowler.com/bliki/DDD_Aggregate.html"><span>https://martinfowler.com/bliki/DDD_Aggregate.html</span></a></li>
+<li><a rel="noopener" href="https://enterprisecraftsmanship.com/posts/entity-vs-value-object-the-ultimate-list-of-differences/" target="_blank" title="https://enterprisecraftsmanship.com/posts/entity-vs-value-object-the-ultimate-list-of-differences/">https://enterprisecraftsmanship.com/posts/entity-vs-value-object-the-ultimate-list-of-differences/</a></li>
+<li><a rel="noopener" href="https://enterprisecraftsmanship.com/posts/dto-vs-value-object-vs-poco/" target="_blank" title="https://enterprisecraftsmanship.com/posts/dto-vs-value-object-vs-poco/">https://enterprisecraftsmanship.com/posts/dto-vs-value-object-vs-poco/</a></li>
+</ul>
+<h2><span>3. Example details</span></h2>
+<div><span>Let's begin with a diagram about our domain example for Member registration and management.</span></div>
+</div>
+<div></div>
+<div><img style="width: 0px; height: 0px;" src="/nothing.jpg" alt="" data-udi="umb://media/e8de0031aae0406fa6262167b1258033"><img style="width: 500px; height: 398.8387673068334px;" src="/archive/media/2021/umbraco-with-cqrs.jpg?width=500&amp;height=398.8387673068334" alt="umbraco with cqrs" data-udi="umb://media/e8de0031aae0406fa6262167b1258033"></div>
+<div>
+<div><span>We designed layers and its dependencies there. Like on Onion Architecture concept, the </span><span><strong>Domain layer does not know anything about any other layers</strong></span><span>. Application layer knows only about the Domain and Infrastructure knows all about Application and Domain. Shared project is used for abstractions or shared implementation (can be used in modules with same architecture).</span></div>
+<br>
+<div><span>Let's focus on two examples for simplicity:</span></div>
+<ul>
+<li><span> </span><strong>Member registration</strong><span> - to explore how we can create commands</span></li>
+<li><span> </span><strong>Getting member by email</strong><span> - to explore how we can query data</span></li>
+</ul>
+<br>
+<div><span>Let's start from the entry point of our Application - </span><em>Startup.cs</em><span>:</span></div>
+<div><span></span></div>
+<div>
+<pre><code class="language-csharp">﻿public class Startup
+{
+    ///
+    ///...
+    ///
+
+    public void ConfigureServices(IServiceCollection services)
+    {
+        ///
+        ///...
+        ///
+
+        RegisterUmbracoDependencies(services);
+    }
+
+    ///
+    ///...
+    ///
+
+    private void RegisterUmbracoDependencies([NotNull] IServiceCollection services)
+        =&gt; services
+            .AddUmbraco(_env, _config)
+            .AddBackOffice()
+            .AddWebsite()
+            .AddComposers()
+            .AddApplication()
+            .AddInfrastructure()
+            .AddFeaturesManagementDashboard()
+            .Build();
+}</code></pre>
+</div>
+<br>
+<div><span>We are registering the application and infrastructure layers to our DI. Those are extension methods that perform registration inside a proper dependencies.</span></div>
+</div>
+<div></div>
+<div>
+<pre><code class="language-csharp">﻿public static class ApplicationExtensions
+{
+    public static IUmbracoBuilder AddApplication([NotNull] this IUmbracoBuilder umbracoBuilder)
+    {
+        _ = umbracoBuilder.Services
+            .AddApplication();
+
+        return umbracoBuilder;
+    }
+
+    public static IServiceCollection AddApplication(this IServiceCollection serviceCollection)
+        =&gt; serviceCollection.AddCommands();
+}</code></pre>
+<br>
+<div>
+<pre><code class="language-csharp">﻿public static class InfrastructureExtensions
+{
+    public static IUmbracoBuilder AddInfrastructure([NotNull] this IUmbracoBuilder umbracoBuilder)
+    {
+        _ = umbracoBuilder.Services
+            .AddInfrastructure();
+
+        return umbracoBuilder
+            .AddUmbracoHandlers();
+    }
+
+    public static IServiceCollection AddInfrastructure(this IServiceCollection serviceCollection)
+        =&gt; serviceCollection
+            .AddQueries()
+            .AddCommandDispatcher&lt;InMemoryCommandDispatcher&gt;()
+            .AddQueryDispatcher&lt;InMemoryQueryDispatcher&gt;()
+            .AddCommandHandlersLogging()
+            .AddServices();
+}</code></pre>
+</div>
+<div></div>
+<blockquote><strong>Note:</strong><span> </span><span><em>AddQueries</em></span><span>, </span><span><em>AddCommands</em></span><span>, </span><span><em>AddCommandDispatcher</em></span><span>, </span><span><em>AddQueryDispatcher</em></span><span> those are extension methods that are using <a rel="noopener" href="https://github.com/khellang/Scrutor" target="_blank" title="Scrutor">Scrutor</a></span><span> to find implementation based on the abstraction on invoked assembly and automatically register it in the DI.</span></blockquote>
+<br>
+<div><span> 1. Members registration</span></div>
+<br>
+<div><span>  In the app, we have a form that is calling the action controller to perform form submit. This surface controller looks like this:</span></div>
+</div>
+<div></div>
+<div>
+<pre><code class="language-csharp">﻿public class RegistrationSurfaceController : SurfaceController
+{
+    private readonly ICommandDispatcher _commandDispatcher;
+    private readonly Lazy&lt;IUmbracoContentNodeService&gt; _umbracoContentNodeService;
+
+    public RegistrationSurfaceController(IUmbracoContextAccessor umbracoContextAccessor,
+        IUmbracoDatabaseFactory databaseFactory,
+        ServiceContext services,
+        AppCaches appCaches,
+        IProfilingLogger profilingLogger,
+        IPublishedUrlProvider publishedUrlProvider,
+        ICommandDispatcher commandDispatcher,
+        Lazy&lt;IUmbracoContentNodeService&gt; umbracoContentNodeService)
+        : base(umbracoContextAccessor, databaseFactory, services, appCaches, profilingLogger, publishedUrlProvider)
+    {
+        _commandDispatcher = commandDispatcher;
+        _umbracoContentNodeService = umbracoContentNodeService;
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async ValueTask&lt;IActionResult&gt; Register(RegisterMember command)
+    {
+        if (!ModelState.IsValid)
+        {
+            return CurrentUmbracoPage();
+        }
+
+        try
+        {
+            await _commandDispatcher.DispatchAsync(command);
+        }
+        catch (System.Exception exception)
+        {
+            switch (exception)
+            {
+                case MemberAlreadyExistsException memberAlreadyExistsException:
+                    {
+                        ModelState.AddModelError(memberAlreadyExistsException.Code, "Bad username or password");
+                    }
+                    break;
+
+                case PasswordEmptyException passwordEmptyException:
+                    {
+                        ModelState.AddModelError(passwordEmptyException.Code, "Empty password");
+                    }
+                    break;
+
+                case PasswordNotMatchConfirmationException passwordNotMatchConfirmationException:
+                    {
+                        ModelState.AddModelError(passwordNotMatchConfirmationException.Code, "Passwords not match.");
+                    }
+                    break;
+
+                default:
+                    throw;
+            }
+
+            return CurrentUmbracoPage();
+        }
+
+        var homePage = _umbracoContentNodeService.Value.GetHomePage();
+
+        return Redirect(homePage is not null
+            ? homePage.Url(mode: UrlMode.Relative)
+            : "/");
+    }
+}</code></pre>
+</div>
+<div><br>
+<div><span>  In it, we are mapping the request model to our </span><em>RegisterMember</em><span><em> </em>command object and then perform the execution for this command.</span></div>
+<br>
+<div><span>  What we are doing in </span><em>Command Handler</em><span> is:</span></div>
+</div>
+<div></div>
+<div>
+<pre><code class="language-csharp">﻿internal class RegisterMemberHandler : ICommandHandler&lt;RegisterMember&gt;
+{
+    private readonly IMemberManager _memberManager;
+    private readonly IMemberService _memberService;
+
+    public RegisterMemberHandler(IMemberManager memberManager, IMemberService memberService)
+    {
+        _memberManager = memberManager;
+        _memberService = memberService;
+    }
+
+    public async ValueTask HandleAsync(RegisterMember command)
+    {
+        var existingMember = _memberService.GetByEmail(command.Email);
+
+        if (existingMember is not null)
+        {
+            throw new MemberAlreadyExistsException(command.Email);
+        }
+
+        if (string.IsNullOrWhiteSpace(command.Password) || string.IsNullOrWhiteSpace(command.PasswordConfirmation))
+        {
+            throw new PasswordEmptyException();
+        }
+
+        if (!command.Password.Equals(command.PasswordConfirmation))
+        {
+            throw new PasswordNotMatchConfirmationException();
+        }
+
+        var member = _memberService.CreateWithIdentity(
+            command.Email,
+            command.Email,
+            command.Password,
+            Member.ModelTypeAlias);
+
+        _memberService.Save(member);
+    }
+}</code></pre>
+<br>
+<div><span>  Now, there are a few approaches to validate command data:</span></div>
+<ul>
+<li><span>   inside command handler</span></li>
+<li><span>   via attributes - not that 'clean'</span></li>
+<li><span>   by </span><a rel="noopener" href="https://docs.fluentvalidation.net/en/latest/aspnet.html#using-the-validator-in-a-controller" target="_blank" title="Fluent Validation" data-anchor="#using-the-validator-in-a-controller"><span>Fluent Validation</span></a><span> and the request model binding - it's a very clean way to do that what I highly recommend following!</span><span></span></li>
+</ul>
+<div><span>  In the code, we are throwing application layer exception if validation is not met. Clever!</span></div>
+<div><span></span></div>
+<div><span>  If all is ok, we are simply registering the member.</span></div>
+<br>
+<div><span> 2. Getting member by email from the API controller</span></div>
+<br>
+<div><span> Let's now see how we can perform the query operation. For that let's use a little bit different approach with Web API application.</span></div>
+<br>
+<div><span> This is how our API controller looks like:</span></div>
+<div><span></span></div>
+<div>
+<pre><code class="language-csharp">﻿[Route("api/[controller]")]
+[ApiController]
+public class MemberController : ControllerBase
+{
+    private readonly IQueryDispatcher _queryDispatcher;
+
+    public MemberController(IQueryDispatcher queryDispatcher)
+        =&gt; _queryDispatcher = queryDispatcher;
+
+    public ActionResult&lt;TResult&gt; OkOrNotFound&lt;TResult&gt;(TResult result)
+        =&gt; result is not null
+            ? Ok(result)
+            : NotFound();
+
+    [HttpGet("{email}")]
+    public async ValueTask&lt;ActionResult&lt;string&gt;&gt; Get([FromRoute] GetMemberByEmail query)
+    {
+        var member = await _queryDispatcher.QueryAsync(query);
+
+        return OkOrNotFound(member?.Name ?? "Error");
+    }
+}</code></pre>
+</div>
+<br>
+<div><span> The route for it is </span><span class="code">site/api/member/{email}</span><span> - here instead the </span><span class="code">{email}</span><span> placeholder, we'll put a valid email address that will be binded into </span><em>GetMemberByEmail</em><span><em> </em>query object visible below:</span></div>
+<div><span></span></div>
+<div>
+<pre><code class="language-csharp">﻿public record GetMemberByEmail(string Email) : IQuery&lt;GetMemberByEmail, IMember&gt;;</code></pre>
+</div>
+<br>
+<div><span>  After that, we are processing a query via the handler to get a proper query response model:</span></div>
+<div><span></span></div>
+<div>
+<pre><code class="language-csharp">﻿internal class GetMemberByEmailHandler : IQueryHandler&lt;GetMemberByEmail, IMember&gt;
+{
+    private readonly IMemberService _memberService;
+
+    public GetMemberByEmailHandler(IMemberService memberService)
+        =&gt; _memberService = memberService;
+
+    public ValueTask&lt;IMember&gt; HandleAsync(GetMemberByEmail query)
+    {
+        var member = _memberService.GetByEmail(query.Email);
+
+        return ValueTask.FromResult(member);
+    }
+}</code></pre>
+</div>
+<br>
+<blockquote><span> </span><strong>Note:</strong><span> We could perform the mapping to DTO object, but for simplicity we are returning the Umbraco member definition.</span></blockquote>
+<br>
+<div><span>Voila!</span></div>
+<br>
+<h2><span>4. Summary</span></h2>
+<div><span>Hope this example shows ideally how simple and effective (in terms of its scalability and maintainability) this architecture style can be. As every other, it has its pros and cons and is not always a good choice to introduce it (for example when we only need to display content - it could be over-engineering and overkill).</span></div>
+<br>
+<div><span>By applying CQS/CQRS and Clean Architecture concept, our code gained more readability, layer responsibility and standardized style. It can be seen as more complex to initially understand and introduce to the first project as setting it up imposes an effort on creating abstractions, commands, queries and keeping domain clear.</span></div>
+<br>
+<div><span>But from the other perspective, especially for the complex solutions and large teams, it can speed up the delivery process drastically - due to its need for standardization and universal patterns within it. Specific boost is possible to be captured with a combination with Event Storming sessions, where after the domain explorations and transforming it from the events cards and client's needs into software, is possible on a very early stage, even during the workshop and using a human language for it. Implementation then really become a details in the end.</span></div>
+<br>
+<div><span>If you have any thoughts, doubts, concerns or maybe some experience with any of the above described patterns, reach out to me on Twitter and let me know what do you think about it, how you are using it, etc.</span></div>
+<br>
+<div><span>Cheers! Happy coding :)</span></div>
+<br>
+<h2><span>5. References:</span></h2>
+<ul>
+<li><a rel="noopener" href="https://martinfowler.com/bliki/CQRS.html" target="_blank" title="https://martinfowler.com/bliki/CQRS.html"><span>https://martinfowler.com/bliki/CQRS.html</span></a></li>
+<li><a rel="noopener" href="https://cqrs.files.wordpress.com/2010/11/cqrs_documents.pdf" target="_blank" title="https://cqrs.files.wordpress.com/2010/11/cqrs_documents.pdf"><span>https://cqrs.files.wordpress.com/2010/11/cqrs_documents.pdf</span></a></li>
+<li><a rel="noopener" href="https://blog.jacobsdata.com/2020/02/19/a-brief-intro-to-clean-architecture-clean-ddd-and-cqrs" target="_blank" title="https://blog.jacobsdata.com/2020/02/19/a-brief-intro-to-clean-architecture-clean-ddd-and-cqrs"><span>https://blog.jacobsdata.com/2020/02/19/a-brief-intro-to-clean-architecture-clean-ddd-and-cqrs</span></a></li>
+<li><a rel="noopener" href="https://danylomeister.blog/2020/06/25/cqs-cqrs-event-sourcing-whats-the-difference" target="_blank" title="https://danylomeister.blog/2020/06/25/cqs-cqrs-event-sourcing-whats-the-difference"><span>https://danylomeister.blog/2020/06/25/cqs-cqrs-event-sourcing-whats-the-difference</span></a></li>
+<li><span>DevMentors mini course about Clean Architecture and Modular Monolith: <a rel="noopener" href="https://www.youtube.com/watch?v=NzcZcim9tp8" target="_blank" title="https://www.youtube.com/watch?v=NzcZcim9tp8" data-anchor="?v=NzcZcim9tp8">https://www.youtube.com/watch?v=NzcZcim9tp8</a> + <a rel="noopener" href="https://www.youtube.com/watch?v=MkdutzVB3pY" target="_blank" title="https://www.youtube.com/watch?v=MkdutzVB3pY" data-anchor="?v=MkdutzVB3pY">https://www.youtube.com/watch?v=MkdutzVB3pY</a></span></li>
+<li>Repo: <a rel="noopener" href="https://github.com/aochmann/24-Days-Umbraco-Umbraco-CQRS" target="_blank" title="https://github.com/aochmann/24-Days-Umbraco-Umbraco-CQRS">https://github.com/aochmann/24-Days-Umbraco-Umbraco-CQRS</a></li>
+</ul>
+</div>
+</div>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v9/" title="See all articles tagged with v9">v9</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/net-5/" title="See all articles tagged with .NET 5">.NET 5</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Adrian Ochmann"><img src="//gravatar.com/avatar/8a5276b37e440400c147b708e613812f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/8a5276b37e440400c147b708e613812f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Adrian Ochmann</h1>
+        <p>Adrian is on Twitter as <a href="//twitter.com/AdrianOchmann" title="Adrian Ochmann on Twitter" rel="author">@AdrianOchmann</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

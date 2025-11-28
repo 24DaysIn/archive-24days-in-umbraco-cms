@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Integrating an application into Umbraco (Using Ninject)</title>
+<meta name="description" content="An article about how to take an existing application and integrate it into Umbraco while keeping the parts separate and testable.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Integrating an application into Umbraco (Using Ninject)</h1>
+      <p class="byline"> by Darren Ferguson, <span class="pubdate">posted on <time datetime="2015-12-17">Dec 17, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">So "Integrating an application into Umbraco" - hardly the most festive and inspiring article title...</p>
+<p class="intro">But I think an important one - at <a href="https://www.moriyama.co.uk/">Moriyama</a> we spend a lot of time consulting with people about how to add content management to their .NET applications (with Umbraco). Unfortunately a fair few of these have given it a go already and frankly made a really bad job of it.</p>
+<p>In this article - I'm going to spout some theory about how you may approach integrating code into Umbraco - along with a practical albeit very trivial example.</p>
+<p>We'll touch the surface of dependency injection using <a href="http://www.ninject.org/">Ninject</a> and provide food for thought about how you could go <a href="https://en.wikipedia.org/wiki/Test-driven_development">full TDD</a>.</p>
+<h2><strong>Who is this article for?</strong></h2>
+<p>Sorry - techies only, with some experience of <a href="https://en.wikipedia.org/wiki/Object-oriented_programming">OO</a> applications and a working knowledge of Umbraco and MVC. It'll sound a bit crazy otherwise!</p>
+<p><strong>This isn't a starting out with Umbraco article</strong> - it is for those who've mastered simple Umbraco websites and want to complement that ability with a nicely separated application integration.</p>
+<p>And all of my opinions are my own - as seems fit to state in blogs nowadays. You  don't have to agree with me!</p>
+<h2><strong>Umbraco isn't a relational database</strong></h2>
+<p>In case this article turns into a classic <a href="https://en.wikipedia.org/wiki/Wikipedia:Too_long;_didn%27t_read">TL;DR</a> for you - I'll make the most important point up front so that you can go about your day.</p>
+<p>If you are approaching an integration of an application into Umbraco by trying to map Umbraco document types to your existing application tables - you are setting yourself up for a fall. Step away from the keyboard - take a cold shower and come back and read the rest of the article.</p>
+<p>I'd make an exception to the previous statement for trivial apps that maybe have a couple of dozen rows/records.</p>
+<p>To perhaps quantify a little better - Umbraco isn't for:</p>
+<ul>
+<li>Storing thousands of holidays from external data feeds - and importing these feeds on a nightly basis.</li>
+<li>Storing thousands of posts for a high used discussion forum.</li>
+</ul>
+<p>The majority of Umbraco fails that we see attempt to do similar things to the above, or even worse - joining your existing application tables onto the umbracoNode table.</p>
+<p>Although you can use LINQ over the Umbraco cache to join nodes and map them into some kind of entities - I'd advise you don't. Don't try and use Examine as a relational database either!</p>
+<p>If you are some kind of .NET guru you may achieve great results - but for maintainability and sanity - I'd suggest you stay away. I've literally lhad nightmares of Examine queries, joined in memory onto Umbraco content and then filtered using LINQ.</p>
+<h2><strong>So what should I do?</strong></h2>
+<p>I've been quick to embark on a mini rant with lots of advice on what <em>not to do</em>, but how should one approach the integration of an application into Umbraco?</p>
+<p>The most important thing to do is to realise the difference between:</p>
+<ul>
+<li>Content</li>
+<li>Data</li>
+<li>User generated content</li>
+</ul>
+<p>My rule of thumb is that only data edited by a CMS editor belongs in Umbraco - and everything else doesn't. User generated content (blog comments etc) is always a wooly area - but for the sake brevity I'm just saying that it doesn't belong in Umbraco.</p>
+<p>So once the separation above is made - one can hopefully go away and forget that the CMS exists just now, and design our application and the interfaces between <em>it</em> and Umbraco. </p>
+<h2><strong>Can I see some code now?</strong></h2>
+<p>Just a second. If you haven't already please buy the following books and read them (then we can continue):</p>
+<ul>
+<li><a href="http://www.amazon.co.uk/Domain-driven-Design-Tackling-Complexity-Software/dp/0321125215">Domain-driven Design: Tackling Complexity in the Heart of Software</a></li>
+<li><a href="http://www.amazon.co.uk/Head-First-Design-Patterns-Freeman/dp/0596007124/ref=sr_1_1?s=books&amp;ie=UTF8&amp;qid=1450036866&amp;sr=1-1&amp;keywords=head+first+design+patterns">Head First Design Patterns</a></li>
+</ul>
+<p>If you've wanted to build complex <a href="https://en.wikipedia.org/wiki/Object-oriented_programming">OO</a> applications and struggled - the first book will change your life (I'm not on commission).</p>
+<h2><strong>Let's go!</strong></h2>
+<p>You may already have an application that you want to move to Umbraco in mind - and you may need to apply some heavy refactoring to make use of the patterns that I'm going to try and demonstrate.</p>
+<p>I'm going to invent an example application to integrate - and it is going to be very trivial. It isn't going to do any <a href="https://en.wikipedia.org/wiki/Create,_read,_update_and_delete">CRUD</a> - it is just going to list out some data.</p>
+<h2><strong>I want some Rock in my Umbraco pages</strong></h2>
+<p>Specifically I'd like to set and pass a <a href="https://our.umbraco.org/documentation/tutorials/creating-basic-site/document-types">document type property</a> from Umbraco to my application that retrieves the name of a rock track and displays it on the page (why? this is the example that came to mind at 3 in the morning).</p>
+<p>I think this is a fairly common pattern - use a CMS editor UI to control application content.</p>
+<p><em><strong>Editor note:</strong></em><strong> </strong><em>While reviewing what I wrote the next day I think that using Product Type to display a specific type of product on a page is a much better example - but too late to rewrite it all!</em></p>
+<p>It is too early to think about the Umbraco part yet:</p>
+<pre class="language-csharp"><code>namespace Moriyama.App.Interfaces
+{
+    public enum RockType
+    {
+        Soft = 0,
+        Hard = 1,
+        Glam  = 2 
+    }
+
+    public interface IRockService
+    {
+        string GetRock(RockType type);
+    }
+}
+</code></pre>
+<p>Like any good developer we start by defining an interface.</p>
+<p>Here is an incredibly simple implementation that we could later refactor - to include the whole <a href="http://www.rockhall.com/">hall of fame</a>.</p>
+<pre class="language-csharp"><code>using Moriyama.App.Interfaces;
+
+namespace Moriyama.App.Services
+{
+    public class SimpleRockService : IRockService
+    {
+        public string GetRock(RockType type)
+        {
+            var track = string.Empty;
+
+            switch (type)
+            {
+                case RockType.Soft:
+                    track = "Boston - More Than a Feeling";
+                    break;
+                case RockType.Glam:
+                    track = "T-Rex - Hot Love";
+                    break;
+                case RockType.Hard:
+                    track = "Led Zeppelin – Whole Lotta Love";
+                    break;
+            }
+
+            return track;
+        }
+    }
+}
+</code></pre>
+<p>So that is my application - that is all I am going to integrate. A quick note on how things are structured.</p>
+<p><img src="/archive/media/2015/screenshot_1.png" width="267" height="337" alt="Structure"></p>
+<p> Do keep your application in a separate project from your Umbraco application (as above). This helps enforce a <a href="https://en.wikipedia.org/wiki/Separation_of_concerns">separation of concerns</a>, it makes it easy to make sure that your application doesn't depend upon Umbraco.</p>
+<p>We've even got a test for my SimpleRockService - which <strong><em>obviously</em> </strong>I wrote before the implementation.</p>
+<pre class="language-csharp"><code>using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moriyama.App.Interfaces;
+using Moriyama.App.Services;
+
+namespace Moriyama.Tests.Services
+{
+    [TestClass]
+    public class SimpleRockServiceTests
+    {
+        [TestMethod]
+        public void DoesReturnCorrectRockTrack()
+        {
+            var simpleRockService = new SimpleRockService();
+
+            Assert.AreEqual(simpleRockService.GetRock(RockType.Soft), "Boston - More Than a Feeling");
+            Assert.AreEqual(simpleRockService.GetRock(RockType.Glam), "T-Rex - Hot Love");
+            Assert.AreEqual(simpleRockService.GetRock(RockType.Hard), "Led Zeppelin – Whole Lotta Love");
+        }
+    }
+}
+</code></pre>
+<h2><strong>Time to integrate</strong></h2>
+<p>Before we move on just a re-cap on what I am trying to emphasise:</p>
+<ul>
+<li>Sit down with a pen and paper before you start coding, work out what is content and what is data</li>
+<li>Design <a href="https://msdn.microsoft.com/en-us/library/87d83y5b.aspx">interfaces</a> to handle any CRUD operations that you need</li>
+<li><em>Sketch</em> out these interfaces in Visual Studio</li>
+<li>Keep them in a separate project to avoid dependencies on Umbraco</li>
+<li>Ideally write some tests (but that is <a href="https://en.wikipedia.org/wiki/Test-driven_development">another topic altogether</a>).</li>
+</ul>
+<p>To allow our editor to choose the type of Rock track that will be displayed on the page we'll create a simple <a href="https://our.umbraco.org/documentation/extending/property-editors/"><em>Property Editor</em></a> called "Rock Type" with options <em>Soft, Hard </em>and <em>Glam</em>.</p>
+<p><img src="/archive/media/2015/screenshot_2_497x335.jpg" width="497" height="335" alt="Property Editor" style="border: 1px solid #cccccc;"></p>
+<p>Next we'll add the <strong><em>Property Editor</em></strong> to our Homepage <a href="https://our.umbraco.org/documentation/tutorials/creating-basic-site/document-types">Document Type</a> as a <strong><em>document type property</em></strong> to allow the editor to select a Rock Type:</p>
+<p><img src="/archive/media/2015/screenshot_3_500x305.jpg" width="500" height="305" alt="Edit Content" style="border: 1px solid #cccccc;"></p>
+<h2>Call a plumber!</h2>
+<p>Our content editor can specify a type of Rock to display in a page and our application can provide it - but how do we glue it together?</p>
+<p>There are a number of ways that you could call our <em>IRockService </em>- and I'm just going to place a call to an <a href="https://our.umbraco.org/documentation/reference/routing/surface-controllers">Umbraco Surface Controller</a> child action on my homepage template.</p>
+<p>Before I do though it is worth mentioning that one could use a <a href="https://our.umbraco.org/documentation/reference/templating/macros/Partial-View-Macros/">Partial View Macro</a> if you'd like the editor to place the Rock track within a rich text area or Umbraco Grid.</p>
+<h2><strong>Show me the template already</strong></h2>
+<pre class="language-javascript"><code>@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+@{
+    Layout = "Master.cshtml";
+}
+
+@Html.Action("Index","Rock")
+</code></pre>
+<p>The <em>Html.Action</em> directive calls the <em>Index</em> action of the following <em>RockController</em>:</p>
+<pre class="language-csharp"><code>using System;
+using System.Web.Mvc;
+using Moriyama.App.Interfaces;
+using Moriyama.Models;
+using Umbraco.Web;
+using Umbraco.Web.Mvc;
+
+namespace Moriyama.Controllers
+{
+    public class RockController : SurfaceController
+    {
+        private readonly IRockService _rockService;
+
+        public RockController()
+        {
+            
+        }
+
+        public RockController(IRockService rockService)
+        {
+            _rockService = rockService;
+        }
+        
+        public ActionResult Index()
+        {
+            var content = Umbraco.TypedContent(UmbracoContext.PageId);
+
+            RockType rockType;
+            Enum.TryParse(content.GetPropertyValue&lt;string&gt;("PageRockType"), out rockType);
+
+            var track = _rockService.GetRock(rockType);
+            var model = new RockViewModel {Track = track};
+            
+            return View(model);
+        }
+    }
+}</code></pre>
+<p> I'll shorten the snippet above to the important part that does the following:</p>
+<ul>
+<li>Get the stored Rock Type (string) from Umbraco</li>
+<li>Convert it to the Enum required by our service</li>
+<li>Call the service to get the rock track</li>
+</ul>
+<pre class="language-csharp"><code>
+public ActionResult Index()
+{
+    var content = Umbraco.TypedContent(UmbracoContext.PageId);
+
+    RockType rockType;
+    Enum.TryParse(content.GetPropertyValue&lt;string&gt;("PageRockType"), out rockType);
+
+    var track = _rockService.GetRock(rockType);
+    .....</code></pre>
+<p>Next we simply instantiate a <em>Model</em> class and pass it to a <em>partial view</em> that displays the result as follows:</p>
+<pre class="language-csharp"><code>var model = new RockViewModel {Track = track};
+            
+return View(model);</code></pre>
+<p>The Model and the partial View are displayed below for completeness but as you'd expect they are pretty trivial.</p>
+<pre class="language-csharp"><code>namespace Moriyama.Models
+{
+    public class RockViewModel
+    {
+        public string Track { get; set; }
+    }
+}
+</code></pre>
+<pre class="language-javascript"><code>@model Moriyama.Models.RockViewModel
+&lt;p&gt;
+    Why don't you go a and put @Model.Track on your stereo.
+&lt;/p&gt;
+
+</code></pre>
+<h2>A couple of points</h2>
+<p>The section above is all about passing Umbraco data to your service to get data from your application onto an Umbraco page.</p>
+<p>What I am trying to emphasise here:</p>
+<ul>
+<li>Use your controller to turn Umbraco content into something the your service expects</li>
+<li>Turn the result into a viewModel to pass back to the presentation layer (partial view)</li>
+</ul>
+<p>The two points above are significant - as our application shouldn't depend upon Umbraco - Umbraco shouldn't depend on our application - specifically we shouldn't pass the return value of our service directly to a view, it should be mapped to a Model.</p>
+<p>If you are thinking why? then go and find your closest MVC hipster bar.</p>
+<p>In the screen shot below you can see that the Controller, (View)Model and the Partial View all belong within our Umbraco solution - but don't depend upon our application in any way.</p>
+<p><img src="/archive/media/2015/screenshot_4.png" width="305" height="477" alt="Solution"></p>
+<h2>We're Done</h2>
+<p>So there we have it - we have a nice pattern for separating our external application into another visual studio project. </p>
+<p>We can define services that are testable and integrate them into Umbraco - or elsewhere for that matter.</p>
+<h2>But you mentioned Ninject!</h2>
+<p>Busted - OK. So you are sharp and notice that my <em>RockController</em> would blow up because I haven't passed an <em>IRockService</em> into the constructor...</p>
+<p>But before we delve into the dark world of dependency injection - you could just instantiate it in your constructor:</p>
+<pre class="language-csharp"><code>namespace Moriyama.Controllers
+{
+    public class RockController : SurfaceController
+    {
+        private readonly IRockService _rockService;
+
+        public RockController()
+        {
+            _rockService = new SimpleRockService();
+        }
+</code></pre>
+<p>Now I'm no code purist - and the above would work just fine for our simple application. It does have some issues though:</p>
+<ul>
+<li>If I want to swap out my implementation of <em>IRockService</em> i need to go and find everywhere it is used and replace it.</li>
+<li>If a new implementation of <em>IRockService</em> depended on other services I'd have to change my Controller everywhere <em>IRockServive</em> is used.</li>
+</ul>
+<p>Yes - it is the same reason twice, because it is really important.</p>
+<h2>Ninject?</h2>
+<p><a href="http://www.ninject.org/">Ninject</a> is a <a href="https://en.wikipedia.org/wiki/Dependency_injection">dependency injection</a> Framework for .NET (there are dozens of alternatives).</p>
+<p>If I tell Ninject about my implementation of <strong><em>IRockService</em> </strong>then it will create and provide it to my controller when it is created (dependency injection):</p>
+<pre class="language-csharp"><code>public class RockController : SurfaceController
+{
+    private readonly IRockService _rockService;
+
+    public RockController(IRockService rockService)
+    {
+         _rockService = rockService
+    }</code></pre>
+<p>Ninject can do much more than this simple instantiation of objects - but we'll focus on <a href="https://github.com/ninject/Ninject/wiki/Injection-Patterns">construcor injection</a> into controllers for now.</p>
+<h2>Getting Setup</h2>
+<p>I'm working with Umbraco 7 - and be aware that there will be nuances in getting set up on older versions of Umbraco.</p>
+<p>Start by installing the nuget package <a href="https://www.nuget.org/packages/Ninject.MVC5/">Ninject.MVC5</a> in your Umbraco project.</p>
+<p>All being well you'll get a new class added to an App_Start folder called <strong><em>NinjectWebCommon</em></strong><em>.</em></p>
+<p><em><img src="/archive/media/2015/screenshot_5.png" width="263" height="260" alt="NinjectAppStart"></em></p>
+<p>This class will automatically register Ninject at application startup. The class has an empty method where we can tell Ninject about our <strong><em>IRockService.</em></strong></p>
+<pre class="language-csharp"><code>private static void RegisterServices(IKernel kernel)
+{
+    kernel.Bind&lt;IRockService&gt;().To&lt;SimpleRockService&gt;();
+}        
+</code></pre>
+<p>That is all there is to do. If we run our application now - Ninject knows that for an <strong><em>IRockService</em> </strong>it should use a <strong><em>SimpleRockService</em></strong>, and it will create and pass one to any controller that requires it.</p>
+<h2>Just one more thing</h2>
+<p>If you want to use Ninject to inject Umbraco API controllers - there is a little trick. I can't claim any credit for this trick it comes courtesy of the following post on the <a href="https://our.umbraco.org/forum/core/general/55057-714-WebApi-and-Unity-IOC-brakes-BackOffice">our.umbraco forum</a>.</p>
+<p>In application startup call the following code:</p>
+<pre class="code"><span class="n">GlobalConfiguration</span><span class="p">.</span><span class="n">Configuration</span><span class="p">.</span><span class="n">Services</span><span class="p">.</span><span class="n">Replace</span><span class="p">(</span><span class="k">typeof</span><span class="p">(</span><span class="n">IHttpControllerActivator</span><span class="p">),</span> <span class="k">new</span> <span class="n">UmbracoWebApiHttpControllerActivator</span><span class="p">(</span><span class="n">kernel</span><span class="p">));<br></span></pre>
+<p>The implementation of UmbracoWebApiHttpControllerActivator is provided in the post - along with a discussion of why it is needed.</p>
+<h2>Further Reading</h2>
+<p>My colleague Gary has gone a step further than I have here and worked out how to mock out some important Umbraco objects so that you can test your Umbraco surface controllers, see: <a href="https://github.com/garydevenay/garydevenay.github.io/wiki/Unit-Testing-Umbraco">https://github.com/garydevenay/garydevenay.github.io/wiki/Unit-Testing-Umbraco</a></p>
+<p>People may be interested in mapping more complex domain/entity objects to ViewModels using AutoMapper - this is a useful read: <a href="http://bengtbe.com/blog/2009/04/14/using-automapper-to-map-view-models-in-asp-net-mvc/">http://bengtbe.com/blog/2009/04/14/using-automapper-to-map-view-models-in-asp-net-mvc/</a></p>
+<h2>Thanks</h2>
+<p>I've been Darren - and if you'd like to get in touch about the article please comment below or drop me a tweet. I'm happy to provide the full solution for this example - just ask.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/visual-studio/" title="See all articles tagged with Visual Studio">Visual Studio</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Darren Ferguson"><img src="//gravatar.com/avatar/34224320ecc5f8d79bd5985105a4122b.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/34224320ecc5f8d79bd5985105a4122b.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Darren Ferguson</h1>
+        <p>Darren is on Twitter as <a href="//twitter.com/darrenferguson" title="Darren Ferguson on Twitter" rel="author">@darrenferguson</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li class="selected"><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

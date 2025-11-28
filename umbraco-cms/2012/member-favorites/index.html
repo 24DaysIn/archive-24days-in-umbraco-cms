@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Umbraco Member Page Favorites</title>
+<meta name="description" content="See how, with Razor, Members and XSLT in Umbraco, you can set up a simple favorites feature for your users.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Favorite Pages for Members</h1>
+      <p class="byline"> by Bob Baty-Barr, <span class="pubdate">posted on <time datetime="2012-12-21">Dec 21, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">So, you have your Umbraco site all wired up for members, they can log in, adjust their profiles, etc. but wouldn't it be great if they could save a list of page favorites with their profile and easily navigate your site when they are logged in?</p>
+<figure>
+  <a href="/archive/media/2012/img01.jpg">
+    <img src="/archive/media/2012/img01.jpg" alt="Front end display" width="396">
+  </a>
+  <figcaption>Front end display</figcaption>
+</figure>
+<p class="intro">There was a recent Umbraco blog post about doing something similar with Umbraco relations - <a href="http://umbraco.com/follow-us/blog-archive/2012/12/7/getting-to-know-umbraco-relations.aspx" title="relations and page favorites">check it out here</a> - which involves using the API and some .Net coding.</p>
+<p>Wouldn't it be even more fun if you did not have to launch Visual Studio to make this all work?</p>
+<p>Below is a brief description of how I achieved just that with the help of some great packages and little bit of razor script and jquery.</p>
+<h2>The tools I used...</h2>
+<ul>
+<li>uComponents Multi-Node Tree Picker</li>
+<li><a href="http://our.umbraco.org/projects/backoffice-extensions/macro-service" target="_blank" title="Casey Neehouse's Macro Service package">Macro Service</a></li>
+</ul>
+<p>If you are not familiar with Macro Service, you should check it out!</p>
+<h2>Setting up the member...</h2>
+<p>In my membership configuration, I created a dataType for myFavorites of type Multi-Node Tree Picker and added it to the memberType with an alias of myFavs. </p>
+<h2>The razor macros... Get to it already!</h2>
+<h3> addFavorite.cshtml</h3>
+<pre class="language-javascript"><code>@using umbraco.cms.businesslogic.member;
+@using umbraco.NodeFactory;
+
+@{
+  var member = Member.GetCurrentMember();
+  String myValue = @Model.Id.ToString();
+  List&lt;string&gt; ListPages = null;
+
+    if (member != null)
+        {
+            if (member.getProperty("myFavs")!= null &amp;&amp; member.getProperty("myFavs").Value != null)
+                {   
+                   string value = member.getProperty("myFavs").Value.ToString();
+                 if(String.IsNullOrEmpty(value)){                 
+                           member.getProperty("myFavs").Value = myValue;
+                                  } else {
+                                        ListPages = value.Split(',').ToList(); 
+                                                 if (!ListPages.Contains(myValue))  
+                                                    {
+                                                     ListPages.Add(myValue);
+                                                     member.getProperty("myFavs").Value = String.Join(",", ListPages.ToArray());
+                                                     }
+                                           }                 
+                  member.Save();
+                  value = member.getProperty("myFavs").Value.ToString();        
+                  ListPages = value.Split(',').ToList();
+                }
+            }        
+  
+}
+
+&lt;ul class="unstyled"&gt;
+
+@foreach (var id in ListPages) {
+                         var name = umbraco.library.GetItem(Int32.Parse(id),"nodeName");      
+                         &lt;li&gt;&lt;a href="#" rel="@id" class="btn btn-mini btn-danger delete"&gt;&amp;times;&lt;/a&gt;&amp;nbsp;&amp;nbsp;&lt;a href="@umbraco.library.NiceUrl(Int32.Parse(id))"&gt;@name&lt;/a&gt;&lt;/li&gt;       
+                                }
+&lt;/ul&gt;
+</code></pre>
+      <p class="snippet-caption">Add Favorite</p>
+<h3>removeFavorite.cshtml</h3>
+<pre class="language-javascript"><code>@using umbraco.cms.businesslogic.member;
+@{
+  
+        var member = Member.GetCurrentMember();
+        String myValue = @Model.Id.ToString();
+        List&lt;string&gt; ListPages = null;
+
+            if (member != null)
+            {
+                if (member.getProperty("myFavs")!= null &amp;&amp; member.getProperty("myFavs").Value != null)
+                {
+                   
+                    string value = member.getProperty("myFavs").Value.ToString();
+                    ListPages = value.Split(',').ToList();
+                 
+                    if (ListPages.Contains(myValue))
+                    {                  
+                        ListPages.Remove(myValue);
+                        member.getProperty("myFavs").Value = String.Join(",", ListPages.ToArray());
+                        member.Save();                      
+                    }
+                }
+            }
+}
+&lt;ul class="unstyled"&gt;
+@foreach (var id in ListPages) {
+                         var name = umbraco.library.GetItem(Int32.Parse(id),"nodeName");                               
+                         &lt;li&gt;&lt;a href="#" rel="@id" class="btn btn-mini btn-danger delete"&gt;&amp;times;&lt;/a&gt;&amp;nbsp;&amp;nbsp;&lt;a href="@umbraco.library.NiceUrl(Int32.Parse(id))"&gt;@name&lt;/a&gt;&lt;/li&gt;       
+                                }
+&lt;/ul&gt;</code></pre>
+      <p class="snippet-caption">Remove Favorite</p>
+<h2>Setting up macro service...</h2>
+<p>So, now that you have the razor macros created, you need to set up the macro service(s). When you install the Macro Service package, it adds a tab to your macros. Simply select the macro you want to turn into a service and set up as you see below. For more info about macro service, please consult the <a href="http://our.umbraco.org/projects/backoffice-extensions/macro-service">package page</a> on our.umbraco.org.</p>
+<figure>
+  <a href="/archive/media/2012/img02.jpg">
+    <img src="/archive/media/2012/img02.jpg" alt="Configure Macro Service" width="481">
+  </a>
+  <figcaption>Configure Macro Service</figcaption>
+</figure>
+<p>and...</p>
+<figure>
+  <a href="/archive/media/2012/img02a.jpg">
+    <img src="/archive/media/2012/img02a.jpg" alt="Parameters Tab" width="481">
+  </a>
+  <figcaption>Parameters Tab</figcaption>
+</figure>
+<h2>Add the button to the page...</h2>
+<p>We use the <span class="code">rel</span> attribute on the link to tell our macro what page to add to the member's favorites.</p>
+<pre class="language-markup"><code>&lt;a class="btn btn-small btn-success" href="#" id="addFav" rel="&lt;umbraco:Item field="pageID" runat="server" /&gt;" &gt;&lt;i class="icon-thumbs-up"&gt;&lt;/i&gt; Add To Favorites&lt;/a&gt;</code></pre>
+      <p class="snippet-caption">The add link</p>
+<h2><span class="js-punctuation">Some jQuery to tie it all together...</span></h2>
+<p><span class="js-punctuation">Use this jQuery snippet to add pages to the favorites box -</span></p>
+<pre class="language-javascript"><code>$('a#addFav').live("click", function(){
+      var theNode = $(this).attr('rel');
+      $('#favList').load('/feeds/addFav?nodeId='+ theNode);
+      })</code></pre>
+      <p class="snippet-caption">jQuery snippet</p>
+<p><span class="js-punctuation">and remove a favorite with this little bit -</span></p>
+<pre class="language-javascript"><code>$('a.delete').live("click", function(){
+      var theNode = $(this).attr('rel');
+      $('#favList').load('/feeds/RemoveFav?nodeId='+ theNode);
+      })</code></pre>
+      <p class="snippet-caption">jQuery snippet</p>
+<p><span class="js-punctuation"><span class="js-punctuation">Oh, and I guess we need a little macro to list the favs too... well, for this, I decided to go back to my old school XSLT roots ;)</span></span></p>
+<pre class="language-markup"><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE xsl:stylesheet [
+  &lt;!ENTITY nbsp "&amp;#x00A0;"&gt;
+  &lt;!ENTITY times "&amp;#215;"&gt;
+]&gt;
+&lt;xsl:stylesheet
+  version="1.0" 
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform" 
+  xmlns:msxml="urn:schemas-microsoft-com:xslt"
+  xmlns:umbraco.library="urn:umbraco.library" xmlns:Exslt.ExsltCommon="urn:Exslt.ExsltCommon" xmlns:Exslt.ExsltDatesAndTimes="urn:Exslt.ExsltDatesAndTimes" xmlns:Exslt.ExsltMath="urn:Exslt.ExsltMath" xmlns:Exslt.ExsltRegularExpressions="urn:Exslt.ExsltRegularExpressions" xmlns:Exslt.ExsltStrings="urn:Exslt.ExsltStrings" xmlns:Exslt.ExsltSets="urn:Exslt.ExsltSets" xmlns:ucomponents.cms="urn:ucomponents.cms" xmlns:ucomponents.dates="urn:ucomponents.dates" xmlns:ucomponents.email="urn:ucomponents.email" xmlns:ucomponents.io="urn:ucomponents.io" xmlns:ucomponents.media="urn:ucomponents.media" xmlns:ucomponents.members="urn:ucomponents.members" xmlns:ucomponents.nodes="urn:ucomponents.nodes" xmlns:ucomponents.random="urn:ucomponents.random" xmlns:ucomponents.request="urn:ucomponents.request" xmlns:ucomponents.search="urn:ucomponents.search" xmlns:ucomponents.strings="urn:ucomponents.strings" xmlns:ucomponents.urls="urn:ucomponents.urls" xmlns:ucomponents.xml="urn:ucomponents.xml" 
+  exclude-result-prefixes="msxml umbraco.library Exslt.ExsltCommon Exslt.ExsltDatesAndTimes Exslt.ExsltMath Exslt.ExsltRegularExpressions Exslt.ExsltStrings Exslt.ExsltSets ucomponents.cms ucomponents.dates ucomponents.email ucomponents.io ucomponents.media ucomponents.members ucomponents.nodes ucomponents.random ucomponents.request ucomponents.search ucomponents.strings ucomponents.urls ucomponents.xml "&gt;
+
+  &lt;xsl:output method="xml" omit-xml-declaration="yes"/&gt;
+
+  &lt;xsl:param name="currentPage"/&gt;
+
+  &lt;xsl:template match="/"&gt;
+    &lt;xsl:variable name="theMember" select="umbraco.library:GetCurrentMember()" /&gt;
+    &lt;xsl:if test="$theMember"&gt;
+      &lt;div class="well well-small"&gt;
+        &lt;h4&gt;My Favorites&lt;/h4&gt;
+        &lt;div id="favList"&gt;
+          &lt;xsl:if test="$theMember/myFavs != ''"&gt; 
+            &lt;ul class="unstyled"&gt;
+              &lt;xsl:for-each select="umbraco.library:Split($theMember/myFavs, ',')/value"&gt;
+                &lt;xsl:if test=". != ''"&gt;
+                  &lt;xsl:variable name="link" select="umbraco.library:NiceUrl(.)" /&gt;
+                    &lt;li&gt;
+                      &lt;a href="#" rel="{.}" class="btn btn-mini btn-danger delete"&gt;&amp;times;&lt;/a&gt;&amp;nbsp;&amp;nbsp;
+                      &lt;a href="{$link}"&gt;&lt;xsl:value-of select="umbraco.library:GetXmlNodeById(.)/@nodeName" /&gt;&lt;/a&gt;
+                    &lt;/li&gt;
+                &lt;/xsl:if&gt;
+              &lt;/xsl:for-each&gt;
+            &lt;/ul&gt;
+          &lt;/xsl:if&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/xsl:if&gt;
+  &lt;/xsl:template&gt;
+
+&lt;/xsl:stylesheet&gt;</code></pre>
+      <p class="snippet-caption">listMyFavs.xslt</p>
+<p>With that we are just about done! There are many modifications and enhancements that I know all of you can make to this, so have fun and enjoy your holiday season!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/razor/" title="See all articles tagged with Razor">Razor</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Bob Baty-Barr"><img src="//gravatar.com/avatar/7185d223016186a136ad56ce218d7e15.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/7185d223016186a136ad56ce218d7e15.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Bob Baty-Barr</h1>
+        <p>Bob is on Twitter as <a href="//twitter.com/bootnumlock" title="Bob Baty-Barr on Twitter" rel="author">@bootnumlock</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li class="selected"><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

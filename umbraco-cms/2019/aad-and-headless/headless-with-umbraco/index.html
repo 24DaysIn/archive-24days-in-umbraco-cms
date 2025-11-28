@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Headless CMS Using Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Headless With Umbraco</h1>
+      <p class="byline"> by David Challener, <span class="pubdate">posted on <time datetime="2019-12-20">Dec 20, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">So what's all this fuss about? It seems to me everyone is talking about Headless and we at <a href="https://uniform.net/">Uniform</a> want to know more.  Can this really be a viable way for creative agencies to design and deliver websites?  Let's take a look...</p>
+<h2>Problem</h2>
+<p class="intro"><span style="font-weight: 400;">Traditional agency development models are set up so that creative work moves from the design team, into the front-end development team to create markup and any JS functionality, and then to a C# developer to wire the site together and create the views.  This is labour intensive often inefficient, which becomes even more pronounced when a UI change comes into the mix and the whole process has to be repeated. The timeline of the whole project is highly vulnerable if team resource schedules end up out of sync and misaligned.<br></span></p>
+<p>Resourcing projects across an agency comes with a number of challenges.  What should come first? Is feature 'X' dependent on feature 'Y' being developed?  What if the client changes their mind, does it need to go back to the design team again?  Hours can be spent on detailed calculations, and a matrix of gantt charts, with the project manager finally happy that we've thought of every possibility, allowing the resource to be scheduled.  Only to find out that we can't map the resource to the plan; or a developer is on annual leave or sick; or a dependency emerges that the web design and front-end development teams need to happen first, but it can't be completed straight away.  The output of which can then be 'sliced and diced'™ into HTML partials, added to Razor views and swapped out for loops and Document Types.</p>
+<p>Front-end development speed is fast in part due to the tooling that is now available and the instant feedback received after making changes.  Task runners (such as <a href="https://github.com/gulpjs/gulp">gulp.js</a>, or <a href="https://webpack.js.org/">webpack</a>) can watch your workspace and when a change is detected rebuild the output for changes to be visualised immediately.  This ability to make changes and see the output straight away means features can be developed fast.</p>
+<p><span style="font-weight: 400;">Back when we used to write web services in <a href="https://en.wikipedia.org/wiki/Windows_Communication_Foundation">Windows Communication Framework (WCF)</a> there was this central tenet to development called <a href="https://docs.microsoft.com/en-us/dotnet/framework/wcf/feature-details/using-data-contracts">Data Contracts</a>.  The idea being, that parties involved in using and providing the service would agree on a fixed implementation.  Then all parties can go off and develop their application in the safe knowledge that everyone is working off an agreed upon data format.  Interfaces for classes are a similar analogy.</span><span style="font-weight: 400;"></span></p>
+<p> </p>
+<h2>Traditional Solutions</h2>
+<p>Either,</p>
+<ol>
+<li>Front Enders learn Razor and build directly into the Umbraco web solution. (FE move more towards BE)</li>
+<li>Back-end developers learn more front-end tooling and prepare more of the front end.  Build more reusable components that can be quickly set up and configured. (BE move more towards FE)</li>
+</ol>
+<p><img style="width: 500px; height: 281.25px;" src="/archive/media/2019/umbraco.jpg?width=500&amp;height=281.25" alt="" data-udi="umb://media/4f27b4bc2fae4d648a7285b88d27d8c5"></p>
+<p>Both of these approaches have drawbacks, pulling the development team into learning more about an area outside of their specialisms.  This isn't an issue with the amount developers are constantly learning but, it does put constraints on the team that can may be avoided.</p>
+<p> </p>
+<h2>Can it be that there is another way?</h2>
+<blockquote>A Headless CMS is a back-office only <a href="https://en.wikipedia.org/wiki/Content_management_system">content management system (CMS)</a> built as a <a href="https://en.wikipedia.org/wiki/Content_repository">content repository</a> that makes content accessible via a <a href="https://en.wikipedia.org/wiki/Representational_state_transfer">RESTful</a> <a href="https://en.wikipedia.org/wiki/Application_programming_interface">API</a> for display on any device.  Other names frequently used such as Hybrid or Decoupled CMS which may also provide a default rendered view as part of the system as well as exposing an API. </blockquote>
+<h3>This post is obviously about Headless...</h3>
+<p><span style="font-weight: 400;">There are many competitive products on the market, including - <a href="https://www.contentful.com/">contentful</a></span><span style="font-weight: 400;">, <a href="https://squidex.io/" title="squidex">squidex</a> and <a href="https://www.storyblok.com/">storyblok</a></span><span style="font-weight: 400;"> to name but a few.  Creating an account and providing some simple content will immediately provide an API (REST or GraphQL) to retrieve this content.  Rapid prototyping helps get to the bottom of key requirements. By following agile processes it’s much easier to get a <a href="https://en.wikipedia.org/wiki/Minimum_viable_product">minimum viable product (MVP)</a> in front of a client so that you can have ‘real’ conversations about how a feature should look and work.</span></p>
+<h3>We love Umbraco though right!?</h3>
+<p><span style="font-weight: 400;">What if we could “<em>switch</em>” Umbraco into a Headless CMS (December 2nd the <a href="https://umbraco.com/products/umbraco-heartcore/">Headless</a> product '<a rel="noopener" href="/umbraco-cms/2019/hello-heartcore/" target="_blank">Umbraco Heartcore</a>' was released as a "software as a service offering" running on <a href="https://umbraco.com/products/umbraco-cloud/">Umbraco Cloud</a> only - This article focuses on turning Umbraco on premise into a headless CMS) </span></p>
+<p><span style="font-weight: 400;">It so happens that this isn’t that difficult to set up ourselves! <a href="https://twitter.com/mattbrailsford">The Matt Brailsford</a>’s excellent <a href="https://github.com/mattbrailsford/umbraco-headrest">HeadRest</a> and <a href="https://github.com/mattbrailsford/umbraco-authu">AuthU</a> package for API and authentication respectively can, with very little configuration take your Umbraco site and change the rendering engine to provide a REST API instead. Using AutoMapper for Umbraco v7 and UmbracoMapper for Umbraco v8 resolvers can be written to translate your content to flowing <a href="https://en.wikipedia.org/wiki/JSON">JSON</a>!</span><span style="font-weight: 400;"></span></p>
+<p>We look at this approach ideally for highly bespoke websites, small in nature maybe with a lot of animation fitting the <a href="https://en.wikipedia.org/wiki/Single-page_application">Single Page Application</a> (SPA) model such as a tool or configurator. </p>
+<pre><code class="language-csharp">﻿public class Bootstrap : ApplicationEventHandler
+{
+    protected override void ApplicationStarted(UmbracoApplicationBase app, ApplicationContext ctx)
+    {
+        // Register CORS
+        GlobalConfiguration.Configure(WebApiConfig.Register);
+
+        // Register API Endpoint and set up routes
+        HeadRest.ConfigureEndpoint("/api/", new HeadRestOptions
+        {
+            CustomRouteMappings = new HeadRestRouteMap()
+                .For("^/(locations)/(?&lt;location&gt;[0-9]+)/?$").MapTo("/$1/")
+                .For("^/(houseTypes)/(?&lt;location&gt;[0-9]+)/?$").MapTo("/$1/")
+                .For("^/(floorTypes)/(?&lt;housetype&gt;[0-9]+)/?$").MapTo("/$1/"),
+            ViewModelMappings = new HeadRestViewModelMap()
+                .For(HomePage.ModelTypeAlias).MapTo&lt;HomePageViewModel&gt;()
+                .For(Locations.ModelTypeAlias).MapTo&lt;LocationsViewModel&gt;()
+                .For(HouseTypes.ModelTypeAlias).MapTo&lt;HouseTypesViewModel&gt;()
+                .For(FloorTypes.ModelTypeAlias).MapTo&lt;FloorTypesViewModel&gt;()
+        });
+
+        // Define mappings
+        Mapper.CreateMap&lt;HomePage, HomePageViewModel&gt;();
+
+        // Locations
+        Mapper.CreateMap&lt;Locations, LocationsViewModel&gt;()
+            .ForMember(dest =&gt; dest.Locations, opt =&gt; opt.ResolveUsing(new FilterResolver()));
+    }
+}</code></pre>
+      <p class="snippet-caption">Umbraco v7 configuration code to setup API using HeadRest</p>
+<p> </p>
+<p>Turns the response into...</p>
+<pre><code class="language-json">{
+    "id": 1160,
+    "name": "Locations",
+    "locations": [{
+        "id": 1162,
+        "name": "Location 1",
+        "price": 285000,
+        "description": "&lt;p&gt;&lt;strong&gt;Our flagship site for our custom-build properties based in Basingstoke.&lt;/strong&gt;&lt;/p&gt;",
+        "image": "https://api.domain.com/media/1003/squirrel-wood-1000x750b.png",
+        "position": {
+            "latitude": 51.277129,
+            "longitude": -1.11617
+        },
+        "locationSlug": "/api/housetypes/1162"
+    }, {
+        "id": 1161,
+        "name": "Location 2",
+        "price": 310000,
+        "description": "&lt;h4&gt;A selection of 2, 3 and 4 bedroom custom-build homes in Swindon. &lt;/h4&gt;",
+        "image": "https://api.domain.com/media/1882/mp-banner-cgi.png",
+        "position": {
+            "latitude": 55.406321,
+            "longitude": 10.387015
+        },
+        "locationSlug": "/api/housetypes/1161"
+    }]
+}</code></pre>
+      <p class="snippet-caption">JSON output from HeadRest API after configuration</p>
+<blockquote>We developed a house configurator which you can watch a short video explaining the tech stack (it's Headless!) and you can have a play - <a href="http://custom.designyourhome.com/locations">Demo</a> (The site uses an Umbraco back-office, HeadRest for the API, Custom caching and AuthU package)<a href="http://custom.designyourhome.com/locations"><span style="font-weight: 400;"></span></a></blockquote>
+<p>
+        <iframe src="https://player.vimeo.com/video/370268374?app_id=122963" allow="autoplay; fullscreen" allowfullscreen="" title="Places For People Configurator" width="770" height="470" frameborder="0"></iframe>
+      </p>
+<p> </p>
+<p>Some minor issues we ran into which I believe have been more ironed out now the libraries are more mature.</p>
+<ul>
+<li>CORS</li>
+</ul>
+<p>There were a few issues to be overcome when working with an API on a different domain to the public website.  The first is <a href="https://en.wikipedia.org/wiki/Cross-origin_resource_sharing">CORS</a> which requires the domains in use to be added to a whitelist.  There is a simple line of configuration code to add any domains required for this.</p>
+<pre><code class="language-csharp">/// &lt;summary&gt;
+/// Required for CORS configuration of API endpoints 
+/// &lt;/summary&gt;
+public static class WebApiConfig
+{
+    public static void Register(HttpConfiguration config)
+    {
+        var corsAttr = new EnableCorsAttribute("*", "*", "*");
+        config.EnableCors(corsAttr);
+    }
+}</code></pre>
+      <p class="snippet-caption">How to add CORS to HeadRest  (* is used for demo purposes only!)</p>
+<ul>
+<li>Caching</li>
+</ul>
+<p>Out of the box there isn't any caching enabled, however you can easily add standard output caching by inheriting from the <span class="code">HeadRestController</span> then override the <span class="code">Index</span> action, adding the output cache directive.  For GraphQL this is more of a limitation because the client is control of the query it's much harder to introduce a bespoke caching layer.</p>
+<p> </p>
+<h2>Headless Driven Development</h2>
+<p>But we can go even further, as there is still a certain amount of time required to set up the configuration of the API endpoints. If the mapping is more than just listing the Document Type properties, then you will need to write your own resolvers.  This is just a fancy way of saying you need to write your own property mapping to be exposed by the API.  For example, return all the children of a specific node stored using the Umbraco repository pattern....</p>
+<p>What if there was a way of exposing your data via some kind of API that front-end developers (React/Vue) already know how to interact with and can retrieve whatever property/fields they need.  Well, there is <a href="https://github.com/rasmusjp/umbraco-graphql">GraphQL</a> and an Umbraco community package created by Rasmus John Pedersen, is currently in development using <a href="https://github.com/graphql-dotnet/graphql-dotnet">GraphQL for .NET</a> port - I'm certainly not the first to speak about this [<a href="https://www.youtube.com/watch?v=vQzcjSDllgY" data-anchor="?v=vQzcjSDllgY">Pete Duncanson, </a> <a href="https://skrift.io/articles/archive/saving-the-world-with-umbraco-and-graphql/">Laura Weatherhead</a>], as for this development workflow it is an ideal API to work with.  To start with, there is just one endpoint.  If we've missed out a field on a RESTful API we would need a C# developer to add this in - using HeadRest this is no more work than adding the field into the configuration/resolver.  However, in GraphQL the front end developer can request the additional field just by changing the client side <span class="code">Select</span> query.  Once GraphQL is set up it can be entirely handed over to the front-end developers making <a href="https://en.wikipedia.org/wiki/Rapid_application_development">Rapid Application Development</a> highly possible.  It minimises the dependency of one team being able to work before another has finished to the amount of time it takes to create enough Document Types the page or site requires which allows features to be iterated rapidly. </p>
+<p> </p>
+<h2>Summary</h2>
+<p>Whichever way you decide to expose an API endpoint, we've found that being able to utilise the robust, "friendly" CMS of Umbraco for the back-office but enable hand crafted, more animation heavy designs on the front end of a website, a winning combination.  The agile nature of the development, allowing the creation of fast prototypes to present to the client for feedback on specific features saves enormous amounts of time and the client is able to think about these smaller feature elements at the correct time in the development process.  The feedback from the client is far more specific and focused, and avoids the "grand reveal" syndrome at the end of the project where a client tries to process everything at once and give feedback on that basis.</p>
+<p>I hope this has provided some food for thought and you'll think about utilising Headless Driven Development, and as we dive into December, I can wish you Merry Christmas! That mince pie has your name on it. Have a play and see what you think, I'd love to hear your thoughts!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/headless/" title="See all articles tagged with Headless">Headless</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="David Challener"><img src="//gravatar.com/avatar/7380df1e424cd55c666b585dc5b9795a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/7380df1e424cd55c666b585dc5b9795a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>David Challener</h1>
+        <p>David is on Twitter as <a href="//twitter.com/firedave1" title="David Challener on Twitter" rel="author">@firedave1</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

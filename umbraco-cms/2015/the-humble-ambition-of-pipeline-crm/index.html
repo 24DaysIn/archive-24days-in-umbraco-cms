@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>The humble ambition of Pipeline CRM</title>
+<meta name="description" content="Pipeline is a CRM for Umbraco published by GrowCreate. In this article, I tell the story behind the product, its use cases and implementation philosophy.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">The humble ambition of Pipeline CRM</h1>
+      <p class="byline"> by Theo Paraskevopoulos, <span class="pubdate">posted on <time datetime="2015-12-08">Dec 8, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><em>If you watched <a href="http://uhangout.co.uk/videos/ep075-with-theo-paraskevopoulos-pipeline-crm/">uHangout a few weeks ago</a>, you'd be aware of Pipeline, a CRM for Umbraco published by my agency, <a href="http://www.growcreate.co.uk/">GrowCreate</a>. With use cases that span content personalisation and marketing automation, our ambition is to pitch Umbraco as a full-scale digital experience platform. In this article, I will tell the story behind the product, its use cases and philosophy.</em></p>
+<p class="intro"> </p>
+<p style="text-align: center;"><img src="/archive/media/2015/pipeline_screenshots.png" alt="Pipeline screenshot"></p>
+<h2>A product is born</h2>
+<p>Like all good ideas, Pipeline was born in a proverbial garage, messing around with code outside office hours. I had created an address book section in Umbraco, which I thought I'd to hook up with our website contact form. Adam, my business partner, asked if we could use it to send automatic replies and add people to a newsletter list. We didn't call it by its name, but we were already working on our the first marketing automation use case.  </p>
+<p>The idea gained traction in CodeGarden 2015 where <a href="http://stream.umbraco.org/video/11663921/selling-umbraco">I did a talk on Selling Umbraco</a> (later transcribed as an <a href="http://skrift.io/articles/archive/selling-umbraco/">article for Skrift</a>). Early in the talk, I discuss how commercial CMSs have a broader focus, addressing the need to deliver in-depth, personalised user experiences. In another part of the talk, I presented a technique on how to neutralise Marketing directors, empowering  IT directors, Umbraco's natural allies, to make our case.</p>
+<p> </p>
+<blockquote>
+<p><span>Long-term, we need to make as strong a case with marketing stakeholders as we do with technical ones. </span></p>
+</blockquote>
+<p> </p>
+<p>It did not escape my attention that this position displayed a lack of ambition: tactics aside, sidestepping marketers is not a strategy. Long-term, we need to make as strong a case with marketing stakeholders as we do with technical ones. Starting with CRM and moving to the wider experience domain, Pipeline is our bid to realise this ambition.  </p>
+<h2>Beyond content management</h2>
+<p>Pipeline aims to fit Umbraco with all the tools needed to execute a user-centric digital strategy, going beyond content management to deal with individuals, rather than audiences. To do this, Pipeline operates in three broad areas: conversions, personalisation and automation.  </p>
+<h3>Conversions to conversations</h3>
+<p>The most basic use case is to capture a form submission and shepherd it along to a successful outcome. Pipeline lets you create Opportunities, assign them to Contacts, track their progress and collaborate with shared Tasks. Dig deeper, and you can also:</p>
+<ul>
+<li>Track abandoned shopping carts, and encourage completion</li>
+<li>Help customers by answering support queries</li>
+<li>Store longer-term leads and re-engage at later stage  </li>
+</ul>
+<h3>Content personalisation</h3>
+<p>Pipeline helps you collect intelligence about your users and improve your profiling and segmentation. Armed with this knowledge, you can personalise your content to improve inbound marketing and generate more conversions by:</p>
+<ul>
+<li>Extend offers and incentives to returning users to re-engage</li>
+<li>Show specific content to users based on their browsing history </li>
+<li>Customise the user's journey, by sending calls-to-action down different paths </li>
+</ul>
+<h3>Marketing automation</h3>
+<p>Finally, Pipeline can be used to automate repetitive and error-prone tasks. Using the Event API, you can execute custom logic, integrate with Umbraco and share data with other systems. This API opens up a world of opportunities:</p>
+<ul>
+<li>Power a portal by auto-creating Umbraco Members from new Contacts</li>
+<li>Use dynamic segmentation and grouping, based on browser history </li>
+<li>Use Pipeline as a bridge, sending Opportunities to other CRMs, e.g. SalesForce or Dynamics</li>
+</ul>
+<h2>Built in Umbraco, for Umbraco builders</h2>
+<p> </p>
+<blockquote>
+<p>The success of a product depends on its implementation philosophy as much as its scope</p>
+</blockquote>
+<p> </p>
+<p>Pipeline's wide range of use cases is our answer to the needs of modern digital marketing. However, the success of a product depends on its implementation philosophy as much as its scope. To make this work, we designed Pipeline to be an Umbraco developer's best friend, by following three rules:</p>
+<h3>1. Use the (Umbraco) force</h3>
+<p>Pipeline lives inside our favourite CMS, so we use Umbraco as much as possible. We've designed a UI that seamlessly fits in; we use Media section for file management; we use the document-type editor for custom properties, and Users and Members for security. </p>
+<h3>2. Love packages</h3>
+<p>Extending the first rule, we will do our best to connect with as many Umbraco packages as possible. You can capture new Opportunities from <a href="http://umbraco.com/products-and-support/forms/">Umbraco Forms</a>, customise content using <a href="https://github.com/AndyButland/UmbracoPersonalisationGroups">Personalisation Groups</a> and track abandoned <a href="http://merchello.com/">Merchello</a> baskets.</p>
+<h3>3. APIs everywhere</h3>
+<p>Extending the second rule, we want to ensure developers never hit a brick wall when deploying Pipeline. Using the granular APIs, you can get  data in and out of Pipeline with ease. Take it further by hooking into the events API to override its rules - and add some of your own.</p>
+<h2>The road ahead<span style="font-size: 14px;"> </span></h2>
+<p>Pipeline has been running on our website for over 6 months now, helping us improve our sales process noticably. We are on track to release a public v1.0 in January 2016. It will be free to use, although a commercial license will unlock all features and release all limits.</p>
+<p>It is too early to commit to a specific roadmap, but our plans for 2016 include a number of releases, each aiming to make Pipeline more engaging and useful to clients and developers: </p>
+<ul>
+<li>A Reporting API for developers to create custom reports</li>
+<li>An Event tracker, so users can create and track automated workflows</li>
+<li>Integrations with popular services (Trello, Slack etc.) and Umbraco packages</li>
+</ul>
+<p> </p>
+<blockquote>
+<p><span>It's time to take a few steps out of our technical comfort zone, and engage with the messy but rewarding world of experiential digital marketing.</span></p>
+</blockquote>
+<p> </p>
+<p>We've decided to make a big deal out of Pipeline, because it can make an even bigger deal out of Umbraco. As developers, it's time to take a few steps out of our technical comfort zone, and engage with the messy but rewarding world of experiential digital marketing. Commercial CMSs have a lead on us, but in 2016 we take the fight to them. </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/api/" title="See all articles tagged with API">API</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/online-marketing/" title="See all articles tagged with Online marketing">Online marketing</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/package/" title="See all articles tagged with Package">Package</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Theo Paraskevopoulos"><img src="//gravatar.com/avatar/700718081cfab03f192962e3317c6134.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/700718081cfab03f192962e3317c6134.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Theo Paraskevopoulos</h1>
+        <p>Theo is on Twitter as <a href="//twitter.com/theotron" title="Theo Paraskevopoulos on Twitter" rel="author">@theotron</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li class="selected"><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

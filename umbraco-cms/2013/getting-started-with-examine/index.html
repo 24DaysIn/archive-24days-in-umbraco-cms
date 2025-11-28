@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>The worlds friendliest post on getting started with Examine</title>
+<meta name="description" content="A post on how to getting started with examine in a hands on fashion.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">The worlds friendliest post on getting started with Examine</h1>
+      <p class="byline"> by Rasmus Fjord, <span class="pubdate">posted on <time datetime="2013-12-08">Dec 8, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span>Everytime I read the word Examine or Lucene it is always combined with doing some crazy data extravaganza that sounds magical but requires 2 strong men, a Tesla Roadster, some squirrels(N amount) and 400 man-hours to get done.</span></p>
+<p class="intro">So once upon a time I got a call from a customer, "We want some simple search thingy on our page", and I was like "sure thing we got packages for that". I installed a brilliant package and they were happy, until they figured out they wanted handling for typos, when their customers searched for products and the speed was also so-so because of the node amount. So I set out to find another way around, and I found it by doing something quite simple with examine.</p>
+<p>I'm no examine/lucene ninja, but I hope my 2 cents here can get people started on playing around on their own because with examine there is so many possibilities to use your content (sorting tons of content based on different parameters, searching etc.).</p>
+<p>So the idea with this is giving you a little intro to what is needed to get started with examine with a very hands-on aproach :)</p>
+<p><span><span>Examine (based on Lucene) is an indexing/search engine that takes our content/data and puts it into a "phonebook" of sorts(index), so that we can search/lookup through it with blazing speed even on large amount of data/content.</span></span></p>
+<p><span><span>So we want to do 2 things, first we are gonna have a look on the configuration (what sort of stuff do we want in our index?), secondly we want to make it searchable.</span></span></p>
+<h2><span><span><span><span>Part 1 : The configuration </span></span></span></span></h2>
+<p dir="ltr"><span>So in every Umbraco installation there is a folder called "Config". Its filled with (you guessed it) configuration files that does tons of different stuff to your solution, and don't worry it's not dangerous to play around in here. </span></p>
+<p>Two of these files we want to pop open and poke around inside.</p>
+<p dir="ltr"><strong>/Config/ExamineIndex.config</strong></p>
+<p dir="ltr"><strong>/Config/ExamineSettings.config</strong></p>
+<p><span><span><span><span><span><span><br></span></span></span></span></span></span><strong>ExamineIndex.config</strong></p>
+<p dir="ltr"><span>In this file we want to define a new indexset, and the indexset contains the info on which doctypes and fields we want to index. For the example it could look something like this:</span></p>
+<pre class="language-markup"><code>  &lt;IndexSet SetName="MySearch" IndexPath="~/App_Data/ExamineIndexes/MySearch/"&gt;
+    &lt;IndexAttributeFields&gt;
+      &lt;add Name="id" /&gt;
+      &lt;add Name="nodeName"/&gt;
+      &lt;add Name="updateDate" /&gt;
+      &lt;add Name="writerName" /&gt;
+      &lt;add Name="nodeTypeAlias" /&gt;
+    &lt;/IndexAttributeFields&gt;
+    &lt;IndexUserFields&gt;
+      &lt;add Name="bodyText"/&gt;
+      &lt;add Name="siteName"/&gt;
+    &lt;/IndexUserFields&gt;
+    &lt;IncludeNodeTypes&gt;
+      &lt;add Name="umbHomePage" /&gt;
+      &lt;add Name="umbNewsItem" /&gt;
+      &lt;add Name="umbTextPage" /&gt;
+    &lt;/IncludeNodeTypes&gt;
+  &lt;/IndexSet&gt;</code></pre>
+<p>This block is just placed under the other &lt;indexset&gt;.</p>
+<p dir="ltr"><strong>SetName </strong><span>is the reference, or the alias if you like that we want to remember when were gonna call the index from our providers.</span></p>
+<p><strong>IndexAttributeFields </strong>defines all the default Umbraco fields that a node contains such as name, nodetype and more.</p>
+<p><strong>IndexUserFields</strong> is the alias of the custom fields you have added to your doctypes.</p>
+<p><strong>IncludeNodeTypes</strong> is the alias of the doctypes you want to search through.</p>
+<p>So now we have defined an indexset that takes 3 doctypes and looks for 2 properties. This is what we can search later on.</p>
+<p>That was one file down and one to go.</p>
+<p dir="ltr"><strong>ExamineSettings.config</strong></p>
+<p>So inside the examinesettings.config file we want to do 2 things, and that's adding a few providers (Index and search provider). These two handles, you guessed it, indexing our data/content and giving us the option to search it.</p>
+<p><strong>Index provider</strong> </p>
+<pre class="language-markup"><code>  &lt;add name="MySearchIndexer" type="UmbracoExamine.UmbracoContentIndexer, UmbracoExamine"
+      supportUnpublished="false"
+      supportProtected="true"
+      interval="10"
+      analyzer="Lucene.Net.Analysis.Standard.StandardAnalyzer, Lucene.Net"
+      indexSet="MySearch"/&gt;</code></pre>
+<p>Paste it in just before</p>
+<p>&lt;/providers&gt;</p>
+<p>&lt;/ExamineIndexProviders&gt;</p>
+<p><span><span>We have different settings here, should it index unpublished or protected nodes? and how often. One thing that is important is the </span><strong>IndexSet </strong><span>equals the Index SetName that we defined inside examineindex.config right before.</span></span></p>
+<p><strong>Search provider</strong></p>
+<p>The next thing we need to config is the search provider.</p>
+<pre class="language-markup"><code>   &lt;add name="MySearchSearcher" type="UmbracoExamine.UmbracoExamineSearcher, UmbracoExamine"
+       analyzer="Lucene.Net.Analysis.Standard.StandardAnalyzer, Lucene.Net" indexSet="MySearch" enableLeadingWildcards="true"/&gt;</code></pre>
+<p>This should just be added right before</p>
+<p>&lt;/providers&gt;<br> &lt;/ExamineSearchProviders&gt;</p>
+<p>Again some settings on how the search works, though not something we will talk about since we just run with defaults, but again we want to reference the <strong>IndexSet</strong> Name and enable leading wildcards.</p>
+<p dir="ltr"><span>If you want to dive deeper into the different params and get a better understanding for all this crazyness I recommend that you read this one :</span></p>
+<p dir="ltr"><a href="http://umbraco.com/follow-us/blog-archive/2011/9/16/examining-examine.aspx">http://umbraco.com/follow-us/blog-archive/2011/9/16/examining-examine.aspx</a></p>
+<h2><span> </span><strong>Part 2 : Let the search begin</strong></h2>
+<p dir="ltr"><span>So now we have configured all the stuff that we need and can start by cooking up a new razor macro called something as magical as "Search" which we can embed into our awesome search template.</span></p>
+<p dir="ltr"><span>So now we want to create a SIMPLE search that can handle some spelling mistakes and does the "basic" job we want.</span></p>
+<p><span><span><strong>First solution</strong><br><span>So lets look at how this can be done in a simple example first:</span></span></span></p>
+<pre class="language-markup"><code>@inherits umbraco.MacroEngines.DynamicNodeContext
+@using Examine.LuceneEngine.SearchCriteria
+@{
+    if (!string.IsNullOrEmpty(Request.QueryString["search"]))
+    {
+
+        //Fetching what eva searchterm some bloke is throwin' our way
+        var q = Request.QueryString["search"];
+
+        //Fetching our SearchProvider by giving it the name of our searchprovider 
+        var Searcher = Examine.ExamineManager.Instance.SearchProviderCollection["MySearchSearcher"];
+        
+        //Searching and ordering the result by score, and we only want to get the results that has a minimum of 0.05(scale is up to 1.)
+        var searchResults = Searcher.Search(q, true).OrderByDescending(x =&gt; x.Score).TakeWhile(x =&gt; x.Score &gt; 0.05f);
+           
+        //Printing the results   
+    &lt;ul&gt;
+        @foreach (var item in searchResults)
+        {
+            var node = Model.NodeById(item.Fields["id"]);
+            &lt;li&gt;
+                &lt;a href="@node.NiceUrl"&gt;
+                    @node.Name 
+                &lt;/a&gt;
+            &lt;/li&gt;
+        }
+    &lt;/ul&gt;
+    }
+}</code></pre>
+<p> Just to do a quick run down the code we 3 things.</p>
+<p>We fetch the term some dude just searched for from our query. We select which searchprovider to use (the one we setup in the config files remember), and last we search, oh yeah and print out (4 things sorry).</p>
+<p>When we do the "search" we ask for results ordered by "score". Everytime we do something with Lucene, it's being returned with a score on how close it was to our search. I'm also asking it that we only want the items above a specific threshold so we ensure some kind of quality to our results.</p>
+<p>So now when the customer searches for "geting started" instead of "getting started" it still finds the results.</p>
+<p>Quite simple.</p>
+<p><em>Little bonus: Also notice that we have something called "fields" where I'm fetching the ID of the node. But inside fields we can add all sorts of properties, so if you just needed to display the name of a page and the URL, we don't need to look up the node to fetch it, we could save some machine powa' by just adding the properties to the list of fields. That is what we did inside examineindex.config.</em></p>
+<p>So this one would probably do it for most simple sites but let's say you wanna dive a bit deeper, you want to control which fields it should search through, and if some fields are more important than others. </p>
+<p><strong>Second solution</strong></p>
+<p>Let's go a bit deeper down the rabbit hole with this one, so let's do something similar just where we have a few more options. </p>
+<p>In Lucene we can build our own queries for content. This can be done in 2 ways, and I will show the "Fluent" (chaining) way, while the other one is writing raw Lucene queries (you can look into this through some of the links at the bottom).</p>
+<p>So this next example is quite similar to the first one but instead we are controlling which fields we wanna look into and if a field is more important.</p>
+<pre class="language-markup"><code>@inherits umbraco.MacroEngines.DynamicNodeContext
+@using Examine.LuceneEngine.SearchCriteria
+@{
+    if (!string.IsNullOrEmpty(Request.QueryString["search"]))
+    {
+
+        //Fetching what eva searchterm some bloke is throwin' our way
+        var q = Request.QueryString["search"].Trim();
+
+        //Fetching our SearchProvider by giving it the name of our searchprovider 
+        var Searcher = Examine.ExamineManager.Instance.SearchProviderCollection["MySearchSearcher"];
+
+        var searchCriteria = Searcher.CreateSearchCriteria(Examine.SearchCriteria.BooleanOperation.Or);
+        var query = searchCriteria.Field("nodeName", q.Boost(3)).Or().Field("bodyText", q.Fuzzy());
+      
+        
+        //Searching and ordering the result by score, and we only want to get the results that has a minimum of 0.05(scale is up to 1.)
+        var searchResults = Searcher.Search(query.Compile()).OrderByDescending(x =&gt; x.Score).TakeWhile(x =&gt; x.Score &gt; 0.05f);
+           
+        //Printing the results   
+    &lt;ul&gt;
+        @foreach (var item in searchResults)
+        {
+            var node = Model.NodeById(item.Fields["id"]);
+            &lt;li&gt;
+                &lt;a href="@node.NiceUrl"&gt;
+                    @node.Name 
+                &lt;/a&gt;
+            &lt;/li&gt;
+        }
+    &lt;/ul&gt;
+    }
+}</code></pre>
+<p>So the difference here is that we can now control which fields we look at.</p>
+<p>We do this trough something we call a SearchCriteria. Inside the SearchCriteria we tell which fields we want to look at like "nodeName" and bodyText.</p>
+<p>Also we are telling the search that if it finds something in nodeName it's more important than bodyText since we are giving it a "boost". To a boost we add a value to buff the "score" of a resultitem.</p>
+<p>We are also saying that we want to look at the bodyText, and we are adding a "fuzzy" option to it. This tells the search it should match on items that "looks like it". This is where we get some sort of spelling help.</p>
+<p>The whole idea here is that we can keep on adding fields, and also if we want something specific to be true (could be inside a certain date range, only look at specific nodetypes etc.).</p>
+<h2>Wanna know more ?</h2>
+<figure class="pull-left">
+  <a href="/archive/media/2013/starship_troopers_neil_patrick_harris.jpg">
+    <img src="/archive/media/2013/starship_troopers_neil_patrick_harris.jpg" alt="Wanna learn more ?" width="320">
+  </a>
+</figure>
+<p> You should really take a look at these pages then :</p>
+<p><a href="http://umbraco.com/follow-us/blog-archive/2011/9/16/examining-examine.aspx">http://umbraco.com/follow-us/blog-archive/2011/9/16/examining-examine.aspx</a></p>
+<p><a href="https://github.com/Shandem/Examine/wiki">https://github.com/Shandem/Examine/wiki</a></p>
+<p>Also ive created a small demo solution you can download and run, it's of course based on Umbraco 7 and one of the new brilliant starter kits :) If you download it you can just run the solution and open up /search</p>
+<p><a href="https://bitbucket.org/Rasmusfjord/24days.in-umbraco-lucene-demo/wiki/Home">https://bitbucket.org/Rasmusfjord/24days.in-umbraco-lucene-demo/wiki/Home</a></p>
+<p>Hope this will get you going on your way with Examine, now go drink some danish "gløgg" and start toying with the awesomeness that is Examine.</p>
+<p>Merry Christmas</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/examine/" title="See all articles tagged with Examine">Examine</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Rasmus Fjord"><img src="//gravatar.com/avatar/e7d55389f3fdb83fa4438562819e71c9.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/e7d55389f3fdb83fa4438562819e71c9.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Rasmus Fjord</h1>
+        <p>Rasmus is on Twitter as <a href="//twitter.com/rasmusfjord" title="Rasmus Fjord on Twitter" rel="author">@rasmusfjord</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li class="selected"><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

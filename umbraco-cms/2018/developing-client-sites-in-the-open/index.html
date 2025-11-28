@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Developing client sites in the open</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Developing client sites in the open</h1>
+      <p class="byline"> by Jamie Pollock &amp; Paul Marden, <span class="pubdate">posted on <time datetime="2018-12-20">Dec 20, 2018</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span style="font-weight: 400;">We're currently working with an existing client - a public policy group - to replace their main marketing website. It's a pretty standard project for us with lots of marking and business development content, along with some useful search integration. What sets this project apart for us, is their policy to make all new systems, including websites, developed by or for them to be Open Source by default.</span></p>
+<p class="intro"> </p>
+<p><span style="font-weight: 400;">Of course, we're not the first agency to develop Open Source software. We've made packages and contributed to the Open Source Umbraco project for over a decade. But this is the first time we've delivered a client site designed from the outset to be Open Source through the life of the project. It's required us to take a step back and approach the project from a different angle than we would usually take and has raised some interesting challenges along the way.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Our development standard is to use a source code repository. Fortunately our client  use our preferred repository tool, GIT. The downside is that because this project is open by design, the GIT repository is publicly accessible, meaning that anyone can browse and view the entire history of every change ever made. It follows then that anyone can make copies of the work and reuse it as they wish.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Depending on your point of view this can be hugely liberating, because all your work is out in the open and as such your progress, triumphs and challenges are there for everyone in the world to see. On the flip side this can be more than a little intimidating if you value your privacy as a dev.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">The biggest practical issue for us, which is a departure from our normal workflow, is the fact that </span><a href="https://www.gov.uk/government/publications/open-source-guidance/when-code-should-be-open-or-closed"><span style="font-weight: 400;">you can't open source everything</span></a><span style="font-weight: 400;">, and so we need to pick and choose what can go into the repository.  </span></p>
+<p> </p>
+<p><span style="font-weight: 400;">This impacts how we store sensitive content - those pieces of information  vital to the running of the system that can't be shared publicly - such as passwords and cryptographic keys - collectively called secrets. Normally we store these in config files in the repository and deploy them as part of our normal deployment processes.  Instead for this project these are now stored outside of the GIT repository. For internal development these files are managed in separate config files. However for deployment to external servers, they’re transformed using Configuration transforms by our client’s build server, Jenkins, and injected using Octopus deploy. This process allows our development team to manage configuration in one place outside of the GIT repository and still make it easy for our client to provide their deployment details with minimum fuss.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Our final challenge is that not all secrets are text based passwords and keys. Some of the Umbraco packages we commonly use, such as Umbraco Forms, Courier and SEO Checker, incorporate license files in the form of binary files stored in the /dll/ folder that unlock premium features. These valuable files would allow anyone to misuse premium packages paid for by us and for that reason can't be shared publicly in the repository. Jenkins and Octopus Deploy would also struggle to easily inject these. Our solution is to store them in a known location on each web server, and </span><a href="https://octopus.com/docs/deployment-examples/custom-scripts#Customscripts-ScriptsinPackagesscripts-in-packages"><span style="font-weight: 400;">configure Octopus Deploy to run a Powershell Script</span></a><span style="font-weight: 400;"> to copy the files each time a deployment takes place.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">What we’ve learnt is that opening a client site as public requires basics of good practice. Good comments and commit messages are fundamental -- no more blaming someone in a commit message. It's also important to ensure that the software is regularly patched and thoroughly security tested because making the software open allows hackers to identify attack vectors in the software.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Despite the challenges of Open Sourcing a client site, there are a number of significant benefits. Conversely the benefits of Open Sourcing a client site are significant - code quality improves when developers know they’re sharing their work openly; the cost of developing projects may reduce as services can work from a shared pool of Open services; and transition from one supplier to another is simplified when the code is written openly from the start.</span></p>
+<p> </p>
+<p><span style="font-weight: 400;">Fundamentally coding in the open requires nothing but a sensible, mindful, approach to development following industry best practice.  While we don't think it will ever likely become the norm for client work, we have found it to be a useful exercise encouraging us to test and review our own processes and underlining our belief that one size doesn’t fit all.</span></p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/continuous-deployment/" title="See all articles tagged with Continuous deployment">Continuous deployment</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jamie Pollock"><img src="//gravatar.com/avatar/e091c2d5c46cb3e8b9d3fcf7b8595105.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/e091c2d5c46cb3e8b9d3fcf7b8595105.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jamie Pollock</h1>
+        <p>Jamie is on Twitter as <a href="//twitter.com/jamiepollock" title="Jamie Pollock on Twitter" rel="author">@jamiepollock</a></p>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="Paul Marden"><img src="//gravatar.com/avatar/e1557511aa338ddcca87b5bb7b7fe670.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/e1557511aa338ddcca87b5bb7b7fe670.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Paul Marden</h1>
+        <p>Paul is on Twitter as <a href="//twitter.com/paulmarden" title="Paul Marden on Twitter" rel="author">@paulmarden</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2018/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2018/catching-a-falling-knife/" title="Catching a falling knife"><span class="scr-text">Catching a falling knife</span></a></li>
+      <li><a href="/umbraco-cms/2018/using-emotional-intelligence-to-lead/" title="Using Emotional Intelligence to lead"><span class="scr-text">Using Emotional Intelligence to lead</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-dry-should-you-be/" title="How DRY should you be?"><span class="scr-text">How DRY should you be?</span></a></li>
+      <li><a href="/umbraco-cms/2018/contributing-to-open-source/" title="Contributing to Open Source"><span class="scr-text">Contributing to Open Source</span></a></li>
+      <li><a href="/umbraco-cms/2018/applications-using-umbraco/" title="Applications using Umbraco"><span class="scr-text">Applications using Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/games-in-umbraco/" title="Games in Umbraco"><span class="scr-text">Games in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/zero-to-tech/" title="Zero to Tech"><span class="scr-text">Zero to Tech</span></a></li>
+      <li><a href="/umbraco-cms/2018/when-you-think-there-is-no-time-for-learning-or-coding/" title="When you think there is no time for learning or coding"><span class="scr-text">When you think there is no time for learning or coding</span></a></li>
+      <li><a href="/umbraco-cms/2018/daydream-driven-development/" title="Daydream Driven Development"><span class="scr-text">Daydream Driven Development</span></a></li>
+      <li><a href="/umbraco-cms/2018/push-notifications-and-umbraco/" title="Push Notifications and Umbraco"><span class="scr-text">Push Notifications and Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-did-the-world-of-testing-change/" title="How did the world of testing change?"><span class="scr-text">How did the world of testing change?</span></a></li>
+      <li><a href="/umbraco-cms/2018/recipe-for-a-delightfully-smooth-editor-experience-in-umbraco/" title="Recipe for a delightfully smooth editor experience in Umbraco"><span class="scr-text">Recipe for a delightfully smooth editor experience in Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/doodles-a-learning-and-communication-superpower/" title="Doodles: A Learning and Communication Superpower"><span class="scr-text">Doodles: A Learning and Communication Superpower</span></a></li>
+      <li><a href="/umbraco-cms/2018/content-apps-gold-rush/" title="Content Apps Gold Rush"><span class="scr-text">Content Apps Gold Rush</span></a></li>
+      <li><a href="/umbraco-cms/2018/life-at-hq/" title="Life at HQ"><span class="scr-text">Life at HQ</span></a></li>
+      <li><a href="/umbraco-cms/2018/how-to-conference/" title="How To Conference"><span class="scr-text">How To Conference</span></a></li>
+      <li><a href="/umbraco-cms/2018/meeting-the-client/" title="Meeting the client"><span class="scr-text">Meeting the client</span></a></li>
+      <li><a href="/umbraco-cms/2018/upgrading-umbraco/" title="Upgrading Umbraco"><span class="scr-text">Upgrading Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2018/more-from-hq/" title="More from HQ"><span class="scr-text">More from HQ</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2018/developing-client-sites-in-the-open/" title="Developing client sites in the open"><span class="scr-text">Developing client sites in the open</span></a></li>
+      <li><a href="/umbraco-cms/2018/managing-crops-of-background-images/" title="Managing Crops of Background Images"><span class="scr-text">Managing Crops of Background Images</span></a></li>
+      <li><a href="/umbraco-cms/2018/deploy-with-gitlab/" title="Deploy with Gitlab"><span class="scr-text">Deploy with Gitlab</span></a></li>
+      <li><a href="/umbraco-cms/2018/reducing-tight-coupling/" title="Reducing Tight-Coupling"><span class="scr-text">Reducing Tight-Coupling</span></a></li>
+      <li><a href="/umbraco-cms/2018/umbraco-pudding/" title="Umbraco Pudding"><span class="scr-text">Umbraco Pudding</span></a></li>
+      <li><a href="/umbraco-cms/2018/automating-your-code-reviews/" title="Automating your code reviews"><span class="scr-text">Automating your code reviews</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

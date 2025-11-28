@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Creating reusable YAML build and deployment pipelines in Azure DevOps with YAML templates</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">YAML templates</h1>
+      <p class="byline"> by Jesper Mayntzhusen, <span class="pubdate">posted on <time datetime="2021-12-17">Dec 17, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <div>
+<h2><span>Making our build YAML pipeline smarter and </span>reusable</h2>
+<div>
+<div><span>NOTE: This article is starting where <a data-udi="umb://document/bec208ca7f0e4030a09a5cc0877ac6f4" href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines">"Setting up YAML based build and deployment pipelines in Azure DevOps"</a> left off; to begin with we have the following build YAML file:</span></div>
+</div>
+<div>
+<pre><code class="language-yml">pr: none # triggers on PRs by default, have to opt out
+trigger:
+  branches:
+    include:
+    - dev
+    - main
+  paths:
+    include:
+    - src
+    - frontend
+  batch: True
+name: Build-$(date:yyyyMMdd)$(rev:.r)
+
+stages: 
+  - stage: build
+    jobs:
+    - job: build
+      displayName: Build and save as artifact
+
+      pool:
+        vmImage: windows-2019
+
+      steps:
+      - checkout: self
+      
+      # Install NuGet to restore packages
+      - task: NuGetToolInstaller@1
+        displayName: 'Use NuGet '
+
+      # Restore packages based on the solution file
+      - task: NuGetCommand@2
+        displayName: NuGet restore
+        inputs:
+          solution: v8-testsite.sln
+
+      # Build the solution using MSBuild
+      - task: VSBuild@1
+        displayName: Build solution v8-testsite.sln
+        inputs:
+          solution: v8-testsite.sln
+          vsVersion: "16.0"
+          msbuildArgs: /p:DeployOnBuild=true 
+            /p:WebPublishMethod=Package 
+            /p:PackageAsSingleFile=true 
+            /p:SkipInvalidConfigurations=true 
+            /p:PackageLocation="$(build.artifactstagingdirectory)\\" 
+            /p:IncludeSetAclProviderOnDestination=False
+          platform: any cpu
+          configuration: release
+
+      # Save the build output as an artifact to use in the deploy pipeline
+      - task: PublishBuildArtifacts@1
+        inputs:
+          PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+          ArtifactName: 'BE'
+          publishLocation: 'Container' 
+
+      # Install node
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '12.x'
+          displayName: 'Install Node.js'
+
+      # Restore node packages
+      - powershell: cd frontend; npm ci
+        displayName: 'Install npm dependencies'
+
+      # Run frontend build
+      - powershell: cd frontend; npm run build
+        displayName: 'Build Frontend'
+
+      # Zip FE files
+      - task: ArchiveFiles@2
+        displayName: Archive frontend/dist
+        inputs:
+          rootFolderOrFile: frontend/dist
+          archiveFile: $(Build.ArtifactStagingDirectory)/FE.zip
+
+      # Save the FE files as artifact
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish Artifact: FE'
+        inputs:
+          PathtoPublish: $(Build.ArtifactStagingDirectory)/FE.zip
+          ArtifactName: FE</code></pre>
+</div>
+</div>
+<div>
+<div><span>Assuming other projects are based on a similar pipeline, here are the values that are specific to this one:</span></div>
+<ul>
+<li><span>The solution path in the NuGet restore task</span></li>
+<li><span> The solution path in the VSBuild task</span></li>
+</ul>
+<div><span>I will assume the frontend path and dist folder would be the same in other projects - but if not the following steps could be added for them too.</span></div>
+<br>
+<div><span>We can introduce a variable to handle the Solution path, and reference it in the tasks. <br><em>Note: referencing variables is done like this - </em></span><em><span class="code">$(varname)</span>:</em></div>
+<div>
+<pre><code class="language-yml">variables:
+- name: SolutionPath
+  value: v8-testsite.sln
+
+stages: 
+  - stage: build
+    jobs:
+    - job: build
+      displayName: Build and save as artifact
+
+      pool:
+        vmImage: windows-2019
+
+      steps:
+      - checkout: self
+      
+      # Install NuGet to restore packages
+      - task: NuGetToolInstaller@1
+        displayName: 'Use NuGet '
+
+      # Restore packages based on the solution file
+      - task: NuGetCommand@2
+        displayName: NuGet restore
+        inputs:
+          solution: $(SolutionPath)
+
+      # Build the solution using MSBuild
+      - task: VSBuild@1
+        displayName: Build solution
+        inputs:
+          solution: $(SolutionPath)
+          vsVersion: "16.0"
+          msbuildArgs: /p:DeployOnBuild=true 
+            /p:WebPublishMethod=Package 
+            /p:PackageAsSingleFile=true 
+            /p:SkipInvalidConfigurations=true 
+            /p:PackageLocation="$(build.artifactstagingdirectory)\\" 
+            /p:IncludeSetAclProviderOnDestination=False
+          platform: any cpu
+          configuration: release</code></pre>
+<div>
+<div><span>Another thing that may change between sites could be the Node version. Right now we run Node version 12.x, but older setups may be different - they could also be set up differently and require different npm commands. For now we can handle the node version problem by assuming there is a </span><span class="code">.nvmrc</span><span> file that specifies the version in each solution.</span></div>
+<br>
+<div><span>We can do that by using a task that reads a file and saves its content as a pipeline variable:</span></div>
+<div>
+<pre><code class="language-yml">- task: FileContenttoVariable@2
+  displayName: File content to variable node-version
+  inputs:
+    FilePath: $(System.DefaultWorkingDirectory)\.nvmrc
+    VariableName: node-version
+    AddNewlines: false
+
+# sets node version based on nvmrc
+- task: NodeTool@0
+  displayName: Use Node $(node-version)
+  inputs:
+    versionSpec: $(node-version)</code></pre>
+<div>
+<div><span>At this point we could include this build.yml file in a boilerplate solution and could get it all set up quite quickly for new sites just by changing the variable values.</span><span></span></div>
+<div>
+<h2><span>Making our deploy YAML pipeline smarter and </span>reusable</h2>
+<p>Let's run through the deploy.yml file as well - this is the starting point:</p>
+<pre><code class="language-yml">trigger: none # have to set it to NOT be triggered "globally" and then the real trigger is under the pipeline resources
+pr: none # triggers on PRs by default, have to opt out
+
+resources:
+  pipelines:
+    - pipeline: build-pipeline # this is sort of an alias that can be used later
+      source: 'build' # the name of the build pipeline in DevOps
+      trigger: true # will trigger once the build on this pipeline is done
+
+stages: 
+  - stage: deploy
+    jobs:
+    - deployment: DeployWeb
+      displayName: deploy to vm
+      pool:
+        vmImage: windows-2019
+      environment: 
+        name: Dev server
+        resourceType: VirtualMachine
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            # Set up the IIS profile we want to deploy to, including hostname bindings
+            - task: IISWebAppManagementOnMachineGroup@0
+              inputs:
+                IISDeploymentType: 'IISWebsite'
+                ActionIISWebsite: 'CreateOrUpdateWebsite'
+                WebsiteName: 'testsite'
+                WebsitePhysicalPath: F:\Websites\testsite
+                WebsitePhysicalPathAuth: 'WebsiteUserPassThrough'
+                AddBinding: true
+                Bindings: '{"bindings":[{"protocol":"http","ipAddress":"All Unassigned","port":"80","hostname":"testsite.domain","sslThumbprint":"","sniFlag":false}]}'
+                CreateOrUpdateAppPoolForWebsite: true
+                AppPoolNameForWebsite: 'testsite'
+                DotNetVersionForWebsite: 'v4.0'
+                PipeLineModeForWebsite: 'Integrated'
+                AppPoolIdentityForWebsite: 'ApplicationPoolIdentity'
+                ParentWebsiteNameForVD: 'testsite'
+                VirtualPathForVD: #leave this empty or it breaks
+                ParentWebsiteNameForApplication: 'testsite'
+                VirtualPathForApplication: #leave this empty or it breaks
+                AppPoolNameForApplication: #leave this empty or it breaks
+                AppPoolName: 'testsite' 
+
+            # Deploy the BE to the site
+            - task: IISWebAppDeploymentOnMachineGroup@0
+              inputs:
+                WebSiteName: 'testsite'
+                Package: '$(Pipeline.Workspace)\build-pipeline\BE\web.zip'
+                RemoveAdditionalFilesFlag: false
+                ExcludeFilesFromAppDataFlag: true
+                TakeAppOfflineFlag: true
+
+            # Deploy the FE to the site
+            - task: IISWebAppDeploymentOnMachineGroup@0
+              inputs:
+                WebSiteName: 'testsite'
+                Package: '$(Pipeline.Workspace)\build-pipeline\FE.zip'
+                RemoveAdditionalFilesFlag: false
+                ExcludeFilesFromAppDataFlag: true
+                TakeAppOfflineFlag: true</code></pre>
+<div>
+<div><span>In the deploy file there are quite a lot more variables we need to introduce:</span></div>
+<ul>
+<li><span>Deployment environment name</span></li>
+<li><span> IIS website name</span></li>
+<li><span> IIS website domain</span></li>
+<li><span> IIS website path</span></li>
+</ul>
+<div><span>Let's add them as variables:</span></div>
+<div>
+<pre><code class="language-yml">variables:
+- name: DeployEnv
+  value: 'Dev server'
+- name: IISWebsiteName
+  value: testsite
+- name: Hostname
+  value: testsite.domain
+
+stages: 
+  - stage: deploy
+    jobs:
+    - deployment: DeployWeb
+      displayName: deploy to vm
+      pool:
+        vmImage: windows-2019
+      environment: 
+        name: $(DeployEnv)
+        resourceType: VirtualMachine
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            # Set up the IIS profile we want to deploy to, including hostname bindings
+            - task: IISWebAppManagementOnMachineGroup@0
+              inputs:
+                IISDeploymentType: 'IISWebsite'
+                ActionIISWebsite: 'CreateOrUpdateWebsite'
+                WebsiteName: '$(IISWebsiteName)'
+                WebsitePhysicalPath: F:\Websites\$(IISWebsiteName)
+                WebsitePhysicalPathAuth: 'WebsiteUserPassThrough'
+                AddBinding: true
+                Bindings: '{"bindings":[{"protocol":"http","ipAddress":"All Unassigned","port":"80","hostname":"$(Hostname)","sslThumbprint":"","sniFlag":false}]}'
+                CreateOrUpdateAppPoolForWebsite: true
+                AppPoolNameForWebsite: '$(IISWebsiteName)'
+                DotNetVersionForWebsite: 'v4.0'
+                PipeLineModeForWebsite: 'Integrated'
+                AppPoolIdentityForWebsite: 'ApplicationPoolIdentity'
+                ParentWebsiteNameForVD: '$(IISWebsiteName)'
+                VirtualPathForVD: #leave this empty or it breaks
+                ParentWebsiteNameForApplication: '$(IISWebsiteName)'
+                VirtualPathForApplication: #leave this empty or it breaks
+                AppPoolNameForApplication: #leave this empty or it breaks
+                AppPoolName: '$(IISWebsiteName)' 
+
+            # Deploy the BE to the site
+            - task: IISWebAppDeploymentOnMachineGroup@0
+              inputs:
+                WebSiteName: '$(IISWebsiteName)'
+                Package: '$(Pipeline.Workspace)\build-pipeline\BE\web.zip'
+                RemoveAdditionalFilesFlag: false
+                ExcludeFilesFromAppDataFlag: true
+                TakeAppOfflineFlag: true
+
+            # Deploy the FE to the site
+            - task: IISWebAppDeploymentOnMachineGroup@0
+              inputs:
+                WebSiteName: '$(IISWebsiteName)'
+                Package: '$(Pipeline.Workspace)\build-pipeline\FE.zip'
+                RemoveAdditionalFilesFlag: false
+                ExcludeFilesFromAppDataFlag: true
+                TakeAppOfflineFlag: true</code></pre>
+<div>
+<div><span>At this point we could include this deploy.yml file in a boilerplate solution and could get it all set up quite quickly for new versions.</span></div>
+<br>
+<div><span>However, let's say you had 20 projects, and suddenly you decide to add a caching command for node-modules because it takes a long time to run npm install each time. This way you would have to run through all 20 repos to add that task - not the smartest way of working..</span><span></span></div>
+<div>
+<h2><span>Using YAML Templates</span></h2>
+<div>
+<div><span>You may at this point think - what if I need to deploy my site to several environments? Well with the setup as we have it now, you could add the other environment(s) in Azure DevOps and then add a new deploy stage to the deploy file:</span></div>
+<div>
+<pre><code class="language-yml">variables:
+- name: DeployLiveEnv
+  value: 'Live server'
+
+stages: 
+  - stage: deploy dev
+    .....
+
+  - stage: deploy live
+    jobs:
+    - deployment: DeployWeb
+      displayName: deploy to vm
+      pool:
+        vmImage: windows-2019
+      environment: 
+        name: $(DeployLiveEnv)
+        resourceType: VirtualMachine
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            # Set up the IIS profile we want to deploy to, including hostname bindings
+            - task: IISWebAppManagementOnMachineGroup@0
+              inputs:
+                IISDeploymentType: 'IISWebsite'
+                ActionIISWebsite: 'CreateOrUpdateWebsite'
+                WebsiteName: '$(IISWebsiteName)'
+                WebsitePhysicalPath: F:\Websites\$(IISWebsiteName)
+                WebsitePhysicalPathAuth: 'WebsiteUserPassThrough'
+                AddBinding: true
+                Bindings: '{"bindings":[{"protocol":"http","ipAddress":"All Unassigned","port":"80","hostname":"$(Hostname)","sslThumbprint":"","sniFlag":false}]}'
+                CreateOrUpdateAppPoolForWebsite: true
+                AppPoolNameForWebsite: '$(IISWebsiteName)'
+                DotNetVersionForWebsite: 'v4.0'
+                PipeLineModeForWebsite: 'Integrated'
+                AppPoolIdentityForWebsite: 'ApplicationPoolIdentity'
+                ParentWebsiteNameForVD: '$(IISWebsiteName)'
+                VirtualPathForVD: #leave this empty or it breaks
+                ParentWebsiteNameForApplication: '$(IISWebsiteName)'
+                VirtualPathForApplication: #leave this empty or it breaks
+                AppPoolNameForApplication: #leave this empty or it breaks
+                AppPoolName: '$(IISWebsiteName)' 
+
+            # Deploy the BE to the site
+            - task: IISWebAppDeploymentOnMachineGroup@0
+              inputs:
+                WebSiteName: '$(IISWebsiteName)'
+                Package: '$(Pipeline.Workspace)\build-pipeline\BE\web.zip'
+                RemoveAdditionalFilesFlag: false
+                ExcludeFilesFromAppDataFlag: true
+                TakeAppOfflineFlag: true
+
+            # Deploy the FE to the site
+            - task: IISWebAppDeploymentOnMachineGroup@0
+              inputs:
+                WebSiteName: '$(IISWebsiteName)'
+                Package: '$(Pipeline.Workspace)\build-pipeline\FE.zip'
+                RemoveAdditionalFilesFlag: false
+                ExcludeFilesFromAppDataFlag: true
+                TakeAppOfflineFlag: true</code></pre>
+<div>
+<div><span>So that means we need a new stage per environment, along with new variables for the environment and potentially things like the domain and IISWebsiteName as well.</span></div>
+<br>
+<div><span>Instead of doing that, we can use YAML templates to split parts of our build or deploy files into their own "template" YAML file - we can even store these YAML files in a separate repository and then just pull them in to use them.</span></div>
+<br>
+<div><span>So on a separate repo you can add your files. I will fx add a build template file:</span></div>
+<div>
+<div><strong>umbraco8/build-tmpl.yml</strong></div>
+<div>
+<pre><code class="language-yml">parameters:
+- name: SolutionPath
+  type: string
+  default: ''
+
+steps:
+# Install NuGet to restore packages
+- task: NuGetToolInstaller@1
+  displayName: 'Use NuGet '
+
+# Restore packages based on the solution file
+- task: NuGetCommand@2
+  displayName: NuGet restore
+  inputs:
+    solution: ${{ parameters.SolutionPath }}
+
+# Build the solution using MSBuild
+- task: VSBuild@1
+  displayName: Build solution
+  inputs:
+    solution: ${{ parameters.SolutionPath }}
+    vsVersion: "16.0"
+    msbuildArgs: /p:DeployOnBuild=true 
+      /p:WebPublishMethod=Package 
+      /p:PackageAsSingleFile=true 
+      /p:SkipInvalidConfigurations=true 
+      /p:PackageLocation="$(build.artifactstagingdirectory)\\" 
+      /p:IncludeSetAclProviderOnDestination=False
+    platform: any cpu
+    configuration: release
+
+# Save the build output as an artifact to use in the deploy pipeline
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'BE'
+    publishLocation: 'Container' 
+
+# Install node
+- task: NodeTool@0
+  inputs:
+    versionSpec: '12.x'
+    displayName: 'Install Node.js'
+
+# Restore node packages
+- powershell: cd frontend; npm ci
+  displayName: 'Install npm dependencies'
+
+# Run frontend build
+- powershell: cd frontend; npm run build
+  displayName: 'Build Frontend'
+
+# Zip FE files
+- task: ArchiveFiles@2
+  displayName: Archive frontend/dist
+  inputs:
+    rootFolderOrFile: frontend/dist
+    archiveFile: $(Build.ArtifactStagingDirectory)/FE.zip
+
+# Save the FE files as artifact
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: FE'
+  inputs:
+    PathtoPublish: $(Build.ArtifactStagingDirectory)/FE.zip
+    ArtifactName: FE</code></pre>
+<div>
+<div><span>So you may notice here that it is all the build steps from our build.yml file, except the variable has been replaced with a </span><strong>Parameter</strong><span>, and it is called slightly differently: </span><span><span class="code">$(SolutionPath)</span></span><span> becomes </span><span><span class="code">${{ parameters.SolutionPath }}</span></span><span>.</span></div>
+<br>
+<div><span>With this change, we can now call the template in our build.yml file instead - to do that we need to first set up a Github Service connection in Azure DevOps though - so go to your project and click "Project Settings" in the bottom left corner:</span></div>
+<div><img style="width: 500px; height: 337.88546255506606px;" src="/archive/media/2021/project-settings.png?width=500&amp;height=337.88546255506606" alt="" data-udi="umb://media/ddb43ec9b54d45858a4e1255cd1a1fad"></div>
+<div><span>Navigate to the "Service Connections" menu, click to add a new service connection. Here you need to choose Github and fill out the fields:</span></div>
+<div><span><img style="width: 327.42155525238746px; height: 500px;" src="/archive/media/2021/gh-serviceconnection.png?width=327.42155525238746&amp;height=500" alt="" data-udi="umb://media/56fc6f1a0d1e4afdb51037f867098c44"></span></div>
+<div><span>Make sure to copy the Service Connection name, we will need that in a moment!</span></div>
+<br>
+<div><span>Now let's edit our build.yml file to use our new template instead:</span></div>
+<div>
+<pre><code class="language-yml">pr: none # triggers on PRs by default, have to opt out
+trigger:
+  branches:
+    include:
+    - dev
+    - main
+  paths:
+    include:
+    - src
+    - frontend
+  batch: True
+name: Build-$(date:yyyyMMdd)$(rev:.r)
+
+variables:
+- name: SolutionPath
+  value: v8-testsite.sln
+
+resources: 
+  repositories: 
+  - repository: PipelineTemplates # Your given name of the resource, can be used to access items from it further down
+    name: jemayn/Yaml-Pipelines # org/repo name
+    endpoint: github.com_jemayn # Service connection name
+    type: github
+    ref: main # Branch / tag / commit to pull
+
+stages: 
+  - stage: build
+    jobs:
+    - job: build
+      displayName: Build and save as artifact
+
+      pool:
+        vmImage: windows-2019
+
+      steps:
+      - checkout: self
+      
+      # Get template with pathtofile@repositoryname
+      - template: umbraco8/build-tmpl.yml@PipelineTemplates
+        parameters:
+          SolutionPath: $(SolutionPath)</code></pre>
+<div>
+<div><span>So as you can see we added a new "resource" section where we get the YAML template repository, then in the stage we can replace all the tasks with just a template where we can pass the needed parameters in.</span></div>
+<br>
+<div><span>You may note that for the repo it has a </span><strong>ref</strong><span> parameter - so we could even version our templates with release tags, or something similar. We could also have different build/deploy files for many different types of sites or for v7, 8, 9. Just split them in folders and call the correct path when you call your template.</span></div>
+<br>
+<div><span>Let's do the same for the deploy file:</span></div>
+<div>
+<div><strong>umbraco8/deploy-tmpl.yml</strong></div>
+<div>
+<pre><code class="language-yml">parameters:
+- name: IISWebsiteName
+  type: string
+  default: ''
+- name: Hostname
+  type: string
+  default: ''
+
+steps:
+# Set up the IIS profile we want to deploy to, including hostname bindings
+- task: IISWebAppManagementOnMachineGroup@0
+  inputs:
+    IISDeploymentType: 'IISWebsite'
+    ActionIISWebsite: 'CreateOrUpdateWebsite'
+    WebsiteName: '${{ parameters.IISWebsiteName }}'
+    WebsitePhysicalPath: F:\Websites\${{ parameters.IISWebsiteName }}
+    WebsitePhysicalPathAuth: 'WebsiteUserPassThrough'
+    AddBinding: true
+    Bindings: '{"bindings":[{"protocol":"http","ipAddress":"All Unassigned","port":"80","hostname":"${{ parameters.Hostname }}","sslThumbprint":"","sniFlag":false}]}'
+    CreateOrUpdateAppPoolForWebsite: true
+    AppPoolNameForWebsite: '${{ parameters.IISWebsiteName }}'
+    DotNetVersionForWebsite: 'v4.0'
+    PipeLineModeForWebsite: 'Integrated'
+    AppPoolIdentityForWebsite: 'ApplicationPoolIdentity'
+    ParentWebsiteNameForVD: '${{ parameters.IISWebsiteName }}'
+    VirtualPathForVD: #leave this empty or it breaks
+    ParentWebsiteNameForApplication: '${{ parameters.IISWebsiteName }}'
+    VirtualPathForApplication: #leave this empty or it breaks
+    AppPoolNameForApplication: #leave this empty or it breaks
+    AppPoolName: '${{ parameters.IISWebsiteName }}' 
+
+# Deploy the BE to the site
+- task: IISWebAppDeploymentOnMachineGroup@0
+  inputs:
+    WebSiteName: '${{ parameters.IISWebsiteName }}'
+    Package: '$(Pipeline.Workspace)\build-pipeline\BE\web.zip'
+    RemoveAdditionalFilesFlag: false
+    ExcludeFilesFromAppDataFlag: true
+    TakeAppOfflineFlag: true
+
+# Deploy the FE to the site
+- task: IISWebAppDeploymentOnMachineGroup@0
+  inputs:
+    WebSiteName: '${{ parameters.IISWebsiteName }}'
+    Package: '$(Pipeline.Workspace)\build-pipeline\FE.zip'
+    RemoveAdditionalFilesFlag: false
+    ExcludeFilesFromAppDataFlag: true
+    TakeAppOfflineFlag: true</code></pre>
+<div>
+<div><span>And we will call it from our deploy.yml file:</span></div>
+<pre><code class="language-yml">trigger: none # have to set it to NOT be triggered "globally" and then the real trigger is under the pipeline resources
+pr: none # triggers on PRs by default, have to opt out
+
+resources:
+  pipelines:
+    - pipeline: build-pipeline # this is sort of an alias that can be used later
+      source: 'build' # the name of the build pipeline in DevOps
+      trigger: true # will trigger once the build on this pipeline is done
+
+stages: 
+  - stage: deploy dev
+    jobs:
+    - deployment: DeployWeb
+      displayName: deploy to vm
+      pool:
+        vmImage: windows-2019
+      environment: 
+        name: Dev server
+        resourceType: VirtualMachine
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            - template: umbraco8/deploy-tmpl.yml@PipelineTemplates
+              parameters:
+                IISWebsiteName: testsite
+                Hostname: testsite.domain
+
+  - stage: deploy live
+    jobs:
+    - deployment: DeployWeb
+      displayName: deploy to vm
+      pool:
+        vmImage: windows-2019
+      environment: 
+        name: Live server
+        resourceType: VirtualMachine
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+            # Set up the IIS profile we want to deploy to, including hostname bindings
+            - template: umbraco8/deploy-tmpl.yml@PipelineTemplates
+              parameters:
+                IISWebsiteName: testsite
+                Hostname: testsite.com</code></pre>
+<div>
+<div><span>As you can see we have removed the variables as now they are no longer reused - instead for each deployment environment we can simply pass in the env name and the template params specific to that environment.</span></div>
+</div>
+<div>
+<h2><span>Controlling conditions and environment access</span></h2>
+<div>
+<div><span>One final thing to note is that you can set conditions on stages and tasks - so fx if you set the build up to track on a </span><strong>dev</strong><span> and </span><span><strong>main</strong></span><span> branch you may not want it to deploy to the live env but only to the dev one if the triggered branch is </span><span><strong>dev</strong></span><span>. You can do that by adding a single <strong>condition</strong> line on the live stage:</span></div>
+</div>
+</div>
+<pre><code class="language-yml"> - stage: deploy live
+    condition: and(succeeded(), eq(variables['resources.pipeline.build-pipeline.sourceBranch'], 'refs/heads/main'))
+    jobs:</code></pre>
+<div>
+<div><span>This will make sure the stage only runs if the previous stage succeeds, and if the build-pipeline was triggered from the main branch.</span></div>
+<br>
+<div>
+<div><span>I hope this article has been helpful. Feel free to write me on twitter <a rel="noopener" href="https://twitter.com/JesperMayn" target="_blank">@JesperMayn</a> with any comments, questions or feedback 😊</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/azure/" title="See all articles tagged with Azure">Azure</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/continuous-deployment/" title="See all articles tagged with Continuous deployment">Continuous deployment</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/devops/" title="See all articles tagged with Devops">Devops</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/templates/" title="See all articles tagged with Templates">Templates</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Jesper Mayntzhusen"><img src="//gravatar.com/avatar/c49c3968c2c5a35a49b295dbba7c3a8c.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c49c3968c2c5a35a49b295dbba7c3a8c.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Jesper Mayntzhusen</h1>
+        <p>Jesper is on Twitter as <a href="//twitter.com/JesperMayn" title="Jesper Mayntzhusen on Twitter" rel="author">@JesperMayn</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

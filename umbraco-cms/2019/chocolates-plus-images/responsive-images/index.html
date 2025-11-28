@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Implementing Responsive Images in Umbraco</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Responsive Images</h1>
+      <p class="byline"> by Niels Swimberghe, <span class="pubdate">posted on <time datetime="2019-12-24">Dec 24, 2019</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">For many years, the web platform had responsive image capabilities such as the <strong>srcset-attribute</strong>, <strong>sizes-attribute</strong>, and the <strong>picture-element</strong>. Major browsers also have supported these capabilities for some time now. (Caniuse: <a rel="noopener" href="https://caniuse.com/#feat=srcset" target="_blank" title="Browser Support for srcset-attribute" data-anchor="#feat=srcset">srcset &amp; sizes</a>, <a rel="noopener" href="https://caniuse.com/#feat=picture" target="_blank" title="Browser Support for Picture-element" data-anchor="#feat=picture">picture</a>)</p>
+<p class="intro">Unfortunately, these capabilities are often not used because they seem daunting at first and become a lot of work to maintain. In this blog post we’ll learn the basics of these responsive image capabilities and how to make them available and maintainable to Umbraco content editors.</p>
+<h2>Why should we care</h2>
+<p>Mobile devices often don’t have the same screen size, processing power, and internet speed that desktops/laptops enjoy. Using responsive image capabilities we can serve images optimized for specific device resolutions &amp; sizes.</p>
+<p>For a powerful large screen laptop we can serve a high resolution image . For a small screen phone we can serve a smaller resolution version of that image. We can also serve alternative versions that are better optimized and will have a smaller download size such as WebP-images. This way our <strong>websites load faster, consume less battery and use less data</strong>.</p>
+<p>Some devices have very high DPI screens such as Apple devices with Retina screens. When not optimized for high DPI screens, images will look blurry. Using the responsive image capabilities we can provide higher resolution images that look crisp on High DPI screens.</p>
+<p>Ultimately, responsive images help us deliver the best image experience possible catering to any device.</p>
+<h2>Responsive Images</h2>
+<h3>Srcset &amp; sizes attribute</h3>
+<p>Let’s start from the following HTML displaying the Umbraco logo (taken from <a rel="noopener" href="https://umbraco.com/about-us/press/" target="_blank" title="Umbraco Press value">Umbraco press page</a>) in a very large resolution without using any of the responsive image capabilities:</p>
+<pre><code class="language-markup">&lt;img 
+    src="UmbracoLogoLarge.png" 
+    width="1081" height="1081" 
+    alt="Umbraco Logo" /&gt;</code></pre>
+<p><a rel="noopener" href="https://codepen.io/swimburger/full/XWrLjXq" target="_blank" title="Codepen of &quot;Large Umbraco Logo image&quot;">See result in Codepen</a></p>
+<p>To serve multiple versions of the Umbraco logo, we can use the <strong>srcset-attribute</strong> and <strong>sizes-attribute</strong> as shown below:</p>
+<pre><code class="language-markup">&lt;img 
+    srcset="UmbracoLogoExtraSmall.png 270w,
+            UmbracoLogoSmall.png 540w,
+            UmbracoLogoLarge.png 1081w"
+    sizes="(max-width: 270px) 270px,
+           (max-width: 540px) 540px,
+           1081px"  
+    src="UmbracoLogoLarge.png" 
+    alt="Umbraco Logo" 
+/&gt;</code></pre>
+<p><a rel="noopener" href="https://codepen.io/swimburger/full/KKPjgav" target="_blank" title="Link to codepen &quot;Responsive Umbraco Logo image&quot;">See result in Codepen</a></p>
+<p>The <strong>srcset-attribute</strong> accepts a <strong>comma separated list</strong> where each item in the list is a <strong>combination of a URL to an image</strong> and the <strong>pixel width of that image</strong>. The browser will use this data together with the data in the sizes-attribute and decide which image is best suited.</p>
+<p>The <strong>sizes-attribute</strong> also accepts a <strong>comma separated list</strong>. Each item in the list take a <strong>combination of a <a rel="noopener" href="https://developer.mozilla.org/en-US/docs/Web/CSS/Media_Queries" target="_blank" title="MDN Documentation on Media Query">media query</a></strong> and the <strong>desired width to display the image as</strong>. The desired width can be specified using <strong>px, em, or vw</strong>.</p>
+<p><a rel="noopener" href="https://developer.mozilla.org/en-US/docs/Learn/HTML/Multimedia_and_embedding/Responsive_images" target="_blank" title="MDN documentation on Responsive Images">Mozilla’s documentation</a> does a really good job at explaining the logic the browser will follow, so I’ll quote it below:</p>
+<blockquote>1. Look at its device width<br>2. Work out which media condition in the sizes list is the first one to be true<br>3. Look at the slot size given to that media query<br>4. Load the image referenced in the srcset list that most closely matches the chosen slot size</blockquote>
+<p>There’s another srcset capability which we haven’t addressed. The ability to change resolutions while maintaining the same size rendered on screen. This is used for high DPI screens that will emulate a smaller screen size for compatibility reasons, but still want to display the images at the highest resolution the device supports. This high DPI support applies to many Apple products with "Retina" displays. To use this capability, instead of specifying the image width (270w), we can use the x-descriptors:</p>
+<pre><code class="language-markup">&lt;img 
+    srcset="UmbracoLogoExtraSmall.png 1x
+            UmbracoLogoSmall.png 2x"
+    src="UmbracoLogoExtraSmall.png"
+    width="270" height="270" 
+    alt="Umbraco Logo" 
+/&gt;</code></pre>
+<p><a rel="noopener" href="https://codepen.io/swimburger/full/NWKZbXO" target="_blank" title="Codepen for &quot;Responsive Umbraco Logo High DPI support&quot;">See result in Codepen</a></p>
+<p>Unfortunately, there’s no way to combine srcset w-descriptors and x-descriptors. If we do have a need for that, we can use the picture-element instead.</p>
+<p><a rel="noopener" href="https://developer.mozilla.org/en-US/docs/Learn/HTML/Multimedia_and_embedding/Responsive_images" target="_blank" title="MDN Documentation on responsive images">Mozilla has great documentation that explains srcset &amp; sizes in more details</a>. Consider reading MDN for more details.</p>
+<h3>Picture-element</h3>
+<p>The picture-element builds on top of the capabilities of the srcset-attribute but expands it even further. We can wrap our img-element with the picture-element and instead of using the srcset-attribute on the img-element, we can insert multiple source-elements within the picture-element.</p>
+<p>Both the picture-element and the source-elements don’t have any visualization, but they help the browser determine which image source to use for the img-element. Here’s a sample of what that would look like:</p>
+<pre><code class="language-markup">&lt;picture&gt;
+    &lt;source srcset="UmbracoLogoExtraSmall.png" media="(max-width: 270px)" sizes="270px" /&gt;
+    &lt;source srcset="UmbracoLogoSmall.png" media="(max-width: 540px)" sizes="540px" /&gt;
+    &lt;source srcset="UmbracoLogoLarge.png" sizes="1081px" /&gt;
+    &lt;img src="UmbracoLogoLarge.png" alt="Umbraco Logo" /&gt;
+&lt;/picture&gt;</code></pre>
+<p><a rel="noopener" href="https://codepen.io/swimburger/full/BaBXbdG" target="_blank" title="Codepend for &quot;Responsive Umbraco Logo image using picture&quot;">See result Codepen</a></p>
+<p>Similarly to how the srcset-attribute on the img-element works, source-elements will provide hints to the browser. The browser will evaluate all options and pick the best suited source for the img-element. The source-element takes the same srcset-attribute and sizes-attribute, but because we can create a source-element for each variation we don’t need to set comma-separated lists into the attributes. We still can though!</p>
+<p>In addition to the srcset-attribute and sizes-attribute, there’s also a <strong>media-attribute</strong> and the type-attribute. The media-attribute will take a <strong>media query</strong> to specify which source to use.</p>
+<p><strong>NOTE: Both media queries in the sizes-attribute and media-attribute don’t support the full media query spec</strong>. The most important aspect of media queries such as querying width &amp; height of the viewport are supported.</p>
+<p>Using the <strong>type-attribute</strong> we can specify the <strong>MIME type of the source</strong>. This is commonly used to provide <strong>WebP-images which are better optimized than jpg and png images</strong>. Not all browsers support WebP, but the browser will fallback to other sources in that case. Here’s an updated sample including WebP-images:</p>
+<pre><code class="language-markup">  &lt;picture&gt;
+    &lt;source type="image/webp" srcset="UmbracoLogoExtraSmall.webp" media="(max-width: 270px)" sizes="270px" /&gt;
+    &lt;source type="image/webp" srcset="UmbracoLogoSmall.webp" media="(max-width: 540px)" sizes="540px" /&gt;
+    &lt;source type="image/webp" srcset="UmbracoLogoLarge.webp" sizes="1081px" /&gt;
+    &lt;source srcset="UmbracoLogoExtraSmall.png" media="(max-width: 270px)" sizes="270px" /&gt;
+    &lt;source srcset="UmbracoLogoSmall.png" media="(max-width: 540px)" sizes="540px" /&gt;
+    &lt;source srcset="UmbracoLogoLarge.png" sizes="1081px" /&gt;
+    &lt;img src="UmbracoLogoLarge.png" alt="Umbraco Logo" /&gt;
+  &lt;/picture&gt;</code></pre>
+<p><a rel="noopener" href="https://codepen.io/swimburger/full/ExxxYRM" target="_blank" title="Codepen for &quot;Responsive Umbraco Logo image using picture including webp images&quot;">See result in Codepen</a></p>
+<p>Using <a rel="noopener" href="https://squoosh.app/" target="_blank" title="Squoosh App for optimizing images">squoosh.app</a> to optimize the above images using WebP, the file size of the images have been reduced by 40-50%.</p>
+<p>I tried to keep this section as short and informative as possible. For more details, check out <a rel="noopener" href="https://developer.mozilla.org/en-US/docs/Learn/HTML/Multimedia_and_embedding/Responsive_images" target="_blank" title="MDN documentation on Responsive Images">Mozilla’s Developer Network’s excellent documentation on Responsive Images</a>.</p>
+<h2>Creating a Responsive Image Macro in Umbraco</h2>
+<p>The responsive image features above are very powerful, but constructing the HTML is not intuitive enough for most content editors. Using sensible defaults and Umbraco’s powerful Content Editing capabilities we can <strong>make these responsive image capabilities accessible to content editors using an Umbraco Macro</strong>.</p>
+<p>NOTE: This step-by-step guide will be using <strong>Umbraco 8.1.5</strong>. Newer and older versions of Umbraco can accomplish the same results, though implementation will vary.</p>
+<h3>Basic Responsive Image Macro</h3>
+<p>Follow these steps to create the Responsive Image Macro:</p>
+<ol>
+<li>Navigate to the "Settings" dashboard in the Umbraco backoffice</li>
+<li>Right Click on "Partial View Macro Files" under the "Templating" section and click the "Create" menu in the fly-out menu</li>
+<li>Click "New partial view macro"<br><img src="/archive/media/2019/1-create-partial-view-macro-edited.png" alt="Create Partial View Macro" width="1411" height="712" data-udi="umb://media/226a39f6b7a14989b665157f0ed6639d"></li>
+<li>Set the name as "ResponsiveImage.cshtml" but leave the code section empty for now<br><img src="/archive/media/2019/2-create-responsive-image-macro.png" alt="Create Responsive Image Macro Details" width="1411" height="712" data-udi="umb://media/38a38d39a71546d291e5e80c19358f65"></li>
+<li>Navigate to "ResponsiveImage" under "Settings" &gt; "Macros" and click on the "Parameters" tab located top right<br><img src="/archive/media/2019/3-setup-macro-parameters.png" alt="Setup Macro Parameters" width="1411" height="712" data-udi="umb://media/6790bf501dc8471ebcac66f61b514a86"></li>
+<li>Match the parameters with the list below and the screenshot above:
+<ul>
+<li><strong>Image: The image parameter will be used to select which image to render.</strong></li>
+<ul>
+<li>Name: Image</li>
+<li>Alias: image</li>
+<li>Editor: Media Picker</li>
+</ul>
+<li><strong>Image Display Width: The width in pixels that the image should be displayed as. When scaling occurs, the height will be resized to maintain original aspect ratio.</strong></li>
+<ul>
+<li>Name: Image Display Width</li>
+<li>Alias: imageDisplayWidth</li>
+<li>Editor: Numeric</li>
+</ul>
+<li><strong>Image Display Width Tablet: This parameter serves the same purpose as "Image Display Width" but for tablet sized screens.</strong></li>
+<ul>
+<li>Name: Image Display Width Tablet</li>
+<li>Alias: imageDisplayWidthTablet</li>
+<li>Editor: Numeric</li>
+</ul>
+<li><strong>Image Display Width Phone: This parameter serves the same purpose as "Image Display Width" but for phone sized screens.</strong></li>
+<ul>
+<li>Name: Image Display Width Phone</li>
+<li>Alias: imageDisplayWidthPhone</li>
+<li>Editor: Numeric</li>
+</ul>
+<li><strong>Alt: Used to provide an alternate description for accessibility purposes. </strong></li>
+<ul>
+<li>Name: Alt</li>
+<li>Alias: alt</li>
+<li>Editor: Textbox</li>
+</ul>
+</ul>
+</li>
+<li>Navigate back to the "Partial View Macro Files" &gt; "ResponsiveImage.cshtml" and paste the below code into the Razor file.</li>
+</ol>
+<pre><code class="language-javascript">﻿@inherits Umbraco.Web.Macros.PartialViewMacroPage
+@using Umbraco.Web.Models
+@using ContentModels = Umbraco.Web.PublishedModels;
+@{
+    var image = Umbraco.Media(Model.GetParameterValue&lt;string&gt;("image")) as ContentModels.Image;
+
+    var displayWidth = Model.GetParameterValue&lt;int&gt;("imageDisplayWidth", 0);
+    var displayWidthTablet = Model.GetParameterValue&lt;int&gt;("imageDisplayWidthTablet", 0);
+    var displayWidthPhone = Model.GetParameterValue&lt;int&gt;("imageDisplayWidthPhone", 0);
+
+    var alt = Model.GetParameterValue&lt;string&gt;("alt");
+    alt = alt == null ? string.Empty : string.Format("alt=\"{0}\"", alt);
+}
+&lt;picture&gt;
+    @if(displayWidthPhone &gt; 0){
+        &lt;source 
+            srcset="@Html.Raw(image.Url.GetCropUrl(width: displayWidthPhone))" 
+            media="(max-width: 480px)" 
+            sizes="@(displayWidthPhone)px" /&gt;
+    }
+    @if(displayWidthTablet &gt; 0){
+        &lt;source 
+            srcset="@Html.Raw(image.Url.GetCropUrl(width: displayWidthTablet))" 
+            media="(max-width: 768px)" 
+            sizes="@(displayWidthTablet)px" /&gt;
+    }
+    @if(displayWidth &gt; 0){
+        &lt;source 
+            srcset="@Html.Raw(image.Url.GetCropUrl(width: displayWidth))" 
+            sizes="@(displayWidth)px" /&gt;
+    }
+    &lt;img src="@image.Url" @Html.Raw(alt) /&gt;
+&lt;/picture&gt;</code></pre>
+<p><a rel="noopener" href="https://github.com/Swimburger/ResponsiveUmbracoImages" target="_blank" title="Link to ResponsiveUmbracoImages solution on GitHub">Full Umbraco solution on GitHub</a></p>
+<p>The code will do the following:</p>
+<ol>
+<li>Fetch all Macro parameter values which will be used to generate the picture+source-elements</li>
+<li>For Mobile and Tablet sizes, if the width has been set a source-element will be generated with the following attributes:</li>
+<ol type="a">
+<li><strong>Srcset</strong>: We’ll use <span class="code">GetCropUrl</span> method to create a URL to the image with the specified width</li>
+<li><strong>Media</strong>: We’ll use the media query <span class="code">(max-width: 480px)</span> to target mobile devices</li>
+<li><strong>Sizes</strong>: We’ll print the desired Image Width suffixed with "px"</li>
+</ol>
+<li>If the fallback Display Width has been specified we’ll generate another source-element, but without the media-attribute.</li>
+<li>Lastly, we’ll print the img-element with the alt-attribute coming from the alt-parameter.<br>Usually it is recommended to specify the width and height for an img-element, but in this case we won’t because that would stop the sizes-attribute from working.</li>
+</ol>
+<p>Note: The order of the source-elements can impact the browser behaviour.</p>
+<p>Now that our Macro is ready, let’s use it in a Rich Text Editor as below:<br><img src="/archive/media/2019/create-responsive-image.png" alt="Create Responsive Image in Rich Text Editor" width="1647" height="1045" data-udi="umb://media/388a4c5faba74dee835625554acd1000"></p>
+<p>The rendered Macro output will be the following:</p>
+<pre><code class="language-markup">&lt;picture&gt;
+    &lt;source srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=420" media="(max-width: 480px)" sizes="420px" /&gt;
+    &lt;source srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=720" media="(max-width: 768px)" sizes="720px" /&gt;
+    &lt;source srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=960" sizes="960px" /&gt;
+    &lt;img src="/media/bdpjq2s3/umbracologolarge.png" alt="Umbraco logo" /&gt;
+&lt;/picture&gt;</code></pre>
+<p>As a result, a lower resolution image will be served to small screen devices, saving data and enhancing site performance.</p>
+<h3>Adding High DPI support</h3>
+<p>Let’s update our Macro code to support High DPI screens:</p>
+<pre><code class="language-javascript">﻿@inherits Umbraco.Web.Macros.PartialViewMacroPage
+@using Umbraco.Web.Models
+@using System.Text
+@using ContentModels = Umbraco.Web.PublishedModels;
+@{
+    var image = Umbraco.Media(Model.GetParameterValue&lt;string&gt;("image")) as ContentModels.Image;
+
+    var displayWidth = Model.GetParameterValue&lt;int&gt;("imageDisplayWidth", 0);
+    var displayWidthTablet = Model.GetParameterValue&lt;int&gt;("imageDisplayWidthTablet", 0);
+    var displayWidthPhone = Model.GetParameterValue&lt;int&gt;("imageDisplayWidthPhone", 0);
+
+    var alt = Model.GetParameterValue&lt;string&gt;("alt");
+    alt = alt == null ? string.Empty : string.Format("alt=\"{0}\"", alt);
+}
+&lt;picture&gt;
+    @RenderSource(image, displayWidthPhone, "(max-width: 480px)")
+    @RenderSource(image, displayWidthTablet, "(max-width: 768px)")
+    @RenderSource(image, displayWidth)
+    &lt;img src="@image.Url" @Html.Raw(alt) /&gt;
+&lt;/picture&gt;
+
+@helper RenderSource(ContentModels.Image image, int displayWidth, string mediaQuery = null)
+{
+    int nativeWidth = image.Value&lt;int&gt;("umbracoWidth");
+    mediaQuery = mediaQuery == null ? string.Empty : string.Format("media=\"{0}\"", mediaQuery);
+    if (displayWidth &gt; 0)
+    {
+        StringBuilder srcSetBuilder = new StringBuilder();
+        srcSetBuilder.AppendFormat("{0} 1x", image.Url.GetCropUrl(width: displayWidth));
+
+        int widthx1point5 = Convert.ToInt32(Math.Truncate(displayWidth * 1.5));
+        if (widthx1point5 &lt;= nativeWidth)
+        {
+            srcSetBuilder.AppendFormat(",{0} 1.5x", image.Url.GetCropUrl(width: widthx1point5));
+        }
+
+        int widthx2 = (int)displayWidth * 2;
+        if (widthx2 &lt;= nativeWidth)
+        {
+            srcSetBuilder.AppendFormat(",{0} 2x", image.Url.GetCropUrl(width: widthx2));
+        }
+
+        &lt;source srcset="@Html.Raw(srcSetBuilder.ToString())"
+                @Html.Raw(mediaQuery)
+                sizes="@(displayWidth)px" /&gt;
+    }
+}</code></pre>
+<p><a rel="noopener" href="https://github.com/Swimburger/ResponsiveUmbracoImages" target="_blank" title="Link to ResponsiveUmbracoImages solution on GitHub">Full Umbraco solution on GitHub</a></p>
+<p>We’ve refactored the code to generate source-elements to a reusable Razor HTML helper called <span class="code"><strong>RenderSource</strong></span>. <strong>For each source element, we calculate whether we can provide a higher resolution of the image for 1.5x and 2x DPI screens.</strong></p>
+<p>For 1.5x, we check whether the <strong><span class="code">displayWidth</span> x 1.5 is less or equal to the original image width.</strong></p>
+<p>If so, we serve the 150% larger resolution image. We do the same for 2x resolutions. This way we provide <strong>High DPI images when possible without burdening our content editors with the complexity.</strong></p>
+<p>The output of our updated Macro would look something like this:</p>
+<pre><code class="language-markup">&lt;picture&gt;
+    &lt;source
+        srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=420 1x,/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=630 1.5x,/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=840 2x"
+        media="(max-width: 480px)" sizes="420px" /&gt;
+    &lt;source
+        srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=720 1x,/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=1080 1.5x"
+        media="(max-width: 768px)" sizes="720px" /&gt;
+    &lt;source srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=960 1x" sizes="960px" /&gt;
+    &lt;img src="/media/bdpjq2s3/umbracologolarge.png" alt="Umbraco Logo" /&gt;
+&lt;/picture&gt;</code></pre>
+<p>Notice how we’re able to serve 1x, 1.5x, and 2x images for mobile devices. For tablets 1x and 1.5x. For larger screens only 1x due to the specified widths. If the original image was a higher resolution, all srcset-attributes could have a 1x, 1.5x, and 2x image URL.</p>
+<h3>Adding WebP support</h3>
+<p>Out of the box, Umbraco does not support converting images to WebP-images on the fly. Luckily, the underlying image library for Umbraco -<a rel="noopener" href="https://imageprocessor.org/imageprocessor/" target="_blank" title="Image Processor .NET Library website">ImageProcessor</a>- has a <a rel="noopener" href="https://imageprocessor.org/imageprocessor/plugins/webp/" target="_blank" title="Image Process WebP-plugin page">plugin for WebP</a>.</p>
+<p>Let’s install the WebP NuGet package using the following command in the NuGet console:</p>
+<pre><code class="language-markup">Install-Package ImageProcessor.Plugins.WebP</code></pre>
+<p>To request the WebP version of an image in Umbraco, we can pass in <span class="code">furtherOptions: "&amp;format=webp&amp;quality=90"</span> to the <span class="code">GetCropUrl</span> function.</p>
+<p>Let’s update our Macro code to provide WebP-sources as well:</p>
+<pre><code class="language-javascript">﻿@inherits Umbraco.Web.Macros.PartialViewMacroPage
+@using Umbraco.Web.Models
+@using System.Text
+@using ContentModels = Umbraco.Web.PublishedModels;
+@{
+    var image = Umbraco.Media(Model.GetParameterValue&lt;string&gt;("image")) as ContentModels.Image;
+
+    var displayWidth = Model.GetParameterValue&lt;int&gt;("imageDisplayWidth", 0);
+    var displayWidthTablet = Model.GetParameterValue&lt;int&gt;("imageDisplayWidthTablet", 0);
+    var displayWidthPhone = Model.GetParameterValue&lt;int&gt;("imageDisplayWidthPhone", 0);
+
+    var alt = Model.GetParameterValue&lt;string&gt;("alt");
+    alt = alt == null ? string.Empty : string.Format("alt=\"{0}\"", alt);
+}
+&lt;picture&gt;
+    @RenderSources(image, displayWidthPhone, "(max-width: 480px)")
+    @RenderSources(image, displayWidthTablet, "(max-width: 768px)")
+    @RenderSources(image, displayWidth)
+    &lt;img src="@image.Url" @Html.Raw(alt) /&gt;
+&lt;/picture&gt;
+
+@helper RenderSources(ContentModels.Image image, int displayWidth, string mediaQuery = null)
+{
+    int nativeWidth = image.Value&lt;int&gt;("umbracoWidth");
+    mediaQuery = mediaQuery == null ? string.Empty : string.Format("media=\"{0}\"", mediaQuery);
+    if (displayWidth &gt; 0)
+    {
+        StringBuilder srcSetBuilder = new StringBuilder();
+        StringBuilder srcSetWebpBuilder = new StringBuilder();
+        srcSetBuilder.AppendFormat("{0} 1x", image.Url.GetCropUrl(width: displayWidth));
+        srcSetWebpBuilder.AppendFormat("{0} 1x", image.Url.GetCropUrl(width: displayWidth, furtherOptions: "&amp;format=webp&amp;quality=90"));
+
+        int widthx1point5 = Convert.ToInt32(Math.Truncate(displayWidth * 1.5));
+        if (widthx1point5 &lt;= nativeWidth)
+        {
+            srcSetBuilder.AppendFormat(",{0} 1.5x", image.Url.GetCropUrl(width: widthx1point5));
+            srcSetWebpBuilder.AppendFormat(",{0} 1.5x", image.Url.GetCropUrl(width: widthx1point5, furtherOptions: "&amp;format=webp&amp;quality=90"));
+        }
+
+        int widthx2 = (int)displayWidth * 2;
+        if (widthx2 &lt;= nativeWidth)
+        {
+            srcSetBuilder.AppendFormat(",{0} 2x", image.Url.GetCropUrl(width: widthx2));
+            srcSetWebpBuilder.AppendFormat(",{0} 2x", image.Url.GetCropUrl(width: widthx2, furtherOptions: "&amp;format=webp&amp;quality=90"));
+        }
+
+        &lt;source type="image/webp"
+                srcset="@Html.Raw(srcSetWebpBuilder.ToString())"
+                @Html.Raw(mediaQuery)
+                sizes="@(displayWidth)px" /&gt;
+        &lt;source srcset="@Html.Raw(srcSetBuilder.ToString())"
+                @Html.Raw(mediaQuery)
+                sizes="@(displayWidth)px" /&gt;
+    }
+}
+</code></pre>
+<p><a rel="noopener" href="https://github.com/Swimburger/ResponsiveUmbracoImages" target="_blank" title="Link to ResponsiveUmbracoImages solution on GitHub">Full Umbraco solution on GitHub</a></p>
+<p>Rename <span class="code">RenderSource</span> to <span class="code">RenderSources</span> as we’ll be printing out two source-elements, one source-element for the normal image and one for the WebP-version.</p>
+<p>Let’s duplicate the StringBuilder code and adjust the second one for the WebP-image. We’ll pass in <span class="code">furtherOptions: "&amp;format=webp&amp;quality=90"</span> to the <span class="code">GetCropUrl</span> function when appending to the WebP-StringBuilder.</p>
+<p>For the WebP-source we need to specify the type-attribute as <span class="code">image/webp</span>.</p>
+<p>The output will look something like this:</p>
+<pre><code class="language-markup">&lt;picture&gt;
+    &lt;source type="image/webp"
+        srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=420&amp;format=webp&amp;quality=90 1x,/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=630&amp;format=webp&amp;quality=90 1.5x,/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=840&amp;format=webp&amp;quality=90 2x"
+        media="(max-width: 480px)" sizes="420px" /&gt;
+    &lt;source
+        srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=420 1x,/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=630 1.5x,/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=840 2x"
+        media="(max-width: 480px)" sizes="420px" /&gt;
+    &lt;source type="image/webp"
+        srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=720&amp;format=webp&amp;quality=90 1x,/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=1080&amp;format=webp&amp;quality=90 1.5x"
+        media="(max-width: 768px)" sizes="720px" /&gt;
+    &lt;source
+        srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=720 1x,/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=1080 1.5x"
+        media="(max-width: 768px)" sizes="720px" /&gt;
+    &lt;source type="image/webp" srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=960&amp;format=webp&amp;quality=90 1x"
+        sizes="960px" /&gt;
+    &lt;source srcset="/media/bdpjq2s3/umbracologolarge.png?mode=pad&amp;width=960 1x" sizes="960px" /&gt;
+    &lt;img src="/media/bdpjq2s3/umbracologolarge.png" alt="Umbraco logo" /&gt;
+&lt;/picture&gt;</code></pre>
+<h2>Summary</h2>
+<p>Responsive image features such as the srcset-attribute and picture-attribute are well supported by browsers. These features allow us to optimize our websites to save mobile data and improve performance. For High DPI displays we can also serve beautiful high resolution images.</p>
+<p>Combining the picture-element and Umbraco’s Macro capabilities we can provide an intuitive way for content editors to provide responsive images that:</p>
+<ul>
+<li>Serve <strong>different resolutions depending on screen width</strong></li>
+<li>Serve <strong>higher resolutions for high DPI devices</strong></li>
+<li>Serve <strong>WebP optimized images</strong></li>
+</ul>
+<p>Thank you to the 24days team for letting me contribute this blog post. Follow me on <a rel="noopener" href="https://twitter.com/RealSwimburger" target="_blank" title="Twitter of Niels Swimberghe (Swimburger)">Twitter (@RealSwimburger)</a> and check out <a rel="noopener" href="https://swimburger.net/" target="_blank" title="Niels Swimberghe's Blog Website">my blog (swimburger.net)</a> covering Umbraco and many other software development topics. Cheers!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/v8/" title="See all articles tagged with v8">v8</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/adaptive/" title="See all articles tagged with Adaptive">Adaptive</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/content/" title="See all articles tagged with Content">Content</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/frontend/" title="See all articles tagged with Frontend">Frontend</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/media/" title="See all articles tagged with Media">Media</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/performance/" title="See all articles tagged with Performance">Performance</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/responsive/" title="See all articles tagged with Responsive">Responsive</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/templates/" title="See all articles tagged with Templates">Templates</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/views/" title="See all articles tagged with Views">Views</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Niels Swimberghe"><img src="//gravatar.com/avatar/c7e9177193a6d32087227c2e0d889b95.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/c7e9177193a6d32087227c2e0d889b95.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Niels Swimberghe</h1>
+        <p>Niels is on Twitter as <a href="//twitter.com/RealSwimburger" title="Niels Swimberghe on Twitter" rel="author">@RealSwimburger</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2019/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2019/hello-heartcore/" title="Hello Heartcore"><span class="scr-text">Hello Heartcore</span></a></li>
+      <li><a href="/umbraco-cms/2019/setting-the-stage/" title="Setting the stage"><span class="scr-text">Setting the stage</span></a></li>
+      <li><a href="/umbraco-cms/2019/evolution-of-the-umbraco-developer/" title="Evolution of the Umbraco Developer"><span class="scr-text">Evolution of the Umbraco Developer</span></a></li>
+      <li><a href="/umbraco-cms/2019/how-to-keep-up/" title="How To Keep Up"><span class="scr-text">How To Keep Up</span></a></li>
+      <li><a href="/umbraco-cms/2019/front-end-or-back-end/" title="Front-End or Back-End"><span class="scr-text">Front-End or Back-End</span></a></li>
+      <li><a href="/umbraco-cms/2019/know-better-do-better/" title="Know Better, Do Better"><span class="scr-text">Know Better, Do Better</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-sass-loops/" title="Umbraco Sass loops"><span class="scr-text">Umbraco Sass loops</span></a></li>
+      <li><a href="/umbraco-cms/2019/estimations/" title="Estimations"><span class="scr-text">Estimations</span></a></li>
+      <li><a href="/umbraco-cms/2019/getting-to-grips-with-umbraco-8/" title="Getting to grips with Umbraco 8"><span class="scr-text">Getting to grips with Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/separation-and-integration/" title="Separation and Integration"><span class="scr-text">Separation and Integration</span></a></li>
+      <li><a href="/umbraco-cms/2019/hybrid-headless-approach/" title="Hybrid Headless Approach"><span class="scr-text">Hybrid Headless Approach</span></a></li>
+      <li><a href="/umbraco-cms/2019/rapid-prototyping/" title="Rapid Prototyping"><span class="scr-text">Rapid Prototyping</span></a></li>
+      <li><a href="/umbraco-cms/2019/why-use-umbraco/" title="Why Use Umbraco"><span class="scr-text">Why Use Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2019/multilingual-websites-in-umbraco-8/" title="Multilingual websites in Umbraco 8"><span class="scr-text">Multilingual websites in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/responsive-hybrid-navigation/" title="Responsive Hybrid Navigation"><span class="scr-text">Responsive Hybrid Navigation</span></a></li>
+      <li><a href="/umbraco-cms/2019/contentfinder-in-umbraco-8/" title="ContentFinder in Umbraco 8"><span class="scr-text">ContentFinder in Umbraco 8</span></a></li>
+      <li><a href="/umbraco-cms/2019/get-to-know-your-editor/" title="Get to know your editor"><span class="scr-text">Get to know your editor</span></a></li>
+      <li><a href="/umbraco-cms/2019/features-in-production/" title="Features in production"><span class="scr-text">Features in production</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraco-packages-2019/" title="Umbraco Packages 2019"><span class="scr-text">Umbraco Packages 2019</span></a></li>
+      <li><a href="/umbraco-cms/2019/aad-and-headless/" title="AAD and Headless"><span class="scr-text">AAD and Headless</span></a></li>
+      <li><a href="/umbraco-cms/2019/vue-plus-push/" title="Vue + Push"><span class="scr-text">Vue + Push</span></a></li>
+      <li><a href="/umbraco-cms/2019/umbraccess/" title="Umbraccess"><span class="scr-text">Umbraccess</span></a></li>
+      <li><a href="/umbraco-cms/2019/dashboards-plus-migration/" title="Dashboards + Migration"><span class="scr-text">Dashboards + Migration</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2019/chocolates-plus-images/" title="Chocolates + Images"><span class="scr-text">Chocolates + Images</span></a></li>
+      <li><a href="/umbraco-cms/2019/package-team-favorites/" title="Package Team Favorites"><span class="scr-text">Package Team Favorites</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

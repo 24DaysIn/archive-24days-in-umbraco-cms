@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>When Public Access isn't quite enough</title>
+<meta name="description" content="Get a Membership site up and running quickly, with a decidedly Level 1 Developer focus.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">When Public Access isn't quite enough</h1>
+      <p class="byline"> by Paul Marden, <span class="pubdate">posted on <time datetime="2015-12-19">Dec 19, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser"><span>Much has been written in the last few days about Membership sites on Umbraco.  </span><a href="/umbraco-cms/2015/membership-apis-investigation/"><span>Mike</span></a><span> and </span><a href="/umbraco-cms/2015/extending-membership/"><span>Pawel</span></a><span>'s articles focus on the APIs needed for creating and updating Members in Umbraco at a fairly detailed and complex level.  </span></p>
+<p class="intro"><span>Here I'm going  to take a step back from their deep dive and show that it is possible to get a Membership site up and running quickly, with a decidedly Level 1 Developer focus (my comfort zone).  I'll also show that with just a little extra code you can extend Umbraco's 2-state Public Access feature to allow </span><span>n</span><span>-states of access for a page.</span></p>
+<p dir="ltr"><span>We're big fans of Umbraco Public Access feature - even though it's name is counter intuitive to most of the Editors we work with.  Public Access is a great way to secure content to certain parts of a site to only Logged in and Authorised Members.  Essentially Editors need to be provided with a Login Page and an Error Page and then Locking down access to a secured area is an entirely Editor managed task.</span></p>
+<p dir="ltr"><span>In early, WebForms versions of Umbraco creating the Login Page was simple, just dropping a &lt;ASP:Login/&gt; control on a template was good enough.</span></p>
+<p dir="ltr"><span>Life is a little more complex in today's MVC world, but the code to create registration, login and logout pages is there as out of the box code in Umbraco.  Steve Morgan wrote about </span><a href="http://siempresolutions.co.uk/blog/Umbraco_Members_Protected_Area_of_Website"><span>how to setup a site with Public Access without Coding</span></a><span>.  It's still very relevant today if you've got some Level 1 developer skills and aren't comfortable in writing controllers and the like (me included).</span></p>
+<p dir="ltr"><span>Getting your site up and running with Public access simply involves the creation of couple of Partial Views to show a Login Form and a Logout Button, using code snippets provided in Umbraco by default.  These make use of controllers that are already available in the Umbraco core (have a look if you want to learn a little more about the core code </span><a href="https://github.com/umbraco/Umbraco-CMS/blob/d50e49ad37fd5ca7bad2fd6e8fc994f3408ae70c/src/Umbraco.Web/Controllers/UmbLoginController.cs"><span>UmbLoginController.cs</span></a><span> and </span><a href="https://github.com/umbraco/Umbraco-CMS/blob/d50e49ad37fd5ca7bad2fd6e8fc994f3408ae70c/src/Umbraco.Web/Controllers/UmbLoginStatusController.cs"><span>UmbLoginStatusController.cs</span></a><span>). You then need to create Login and Error pages.</span></p>
+<p dir="ltr"><span>I've built a really simple demo site built in a couple of hours that includes all the DocTypes, Views, Partials to get a simple membership site up and running without any real coding required.  The critical login, logout and registration code was provided by the Snippets in Umbraco and I only edited them to add a bit of styling to work with the Foundation framework.</span></p>
+<p dir="ltr"><span>The demo site is available on the </span><a href="https://bitbucket.org/orcare/24dayspublicaccess/branch/2StateMembership"><span>2StateMembership branch</span></a><span> of my </span><a href="https://bitbucket.org/orcare/24dayspublicaccess"><span>repo</span></a><span>.</span></p>
+<p dir="ltr"><span>This gives each Course page controlled by Public Access two states:</span></p>
+<ul>
+<li>
+<p dir="ltr"><span>Logged in &amp; authorised:  Umbraco will display the default template for the page</span></p>
+</li>
+<li>
+<p dir="ltr"><span>Not logged in, or not authorised:</span></p>
+</li>
+<ul>
+<li>
+<p dir="ltr"><span>Not logged in -- Umbraco will display the Login Page of the editors choice</span></p>
+</li>
+<li>
+<p dir="ltr"><span>Logged in, not authorised -- Umbraco will display the Error Page of the editors choice</span></p>
+</li>
+</ul>
+</ul>
+<p>However, we've found on a couple of recent sites that the two states that Public Access provides are not enough to encompass the functionality we wanted to implement.</p>
+<p>To give an example, we're currently building a learning management system that incorporates part sales function (transacted through Merchello) and part course delivery system. I wanted to maintain a single course directory with a node for each course, that node should present different content depending on the state of the current member.</p>
+<ul>
+<li>
+<p dir="ltr"><span>Not logged in -- Umbraco will display the "Sales" view of the content node</span></p>
+</li>
+<li>
+<p dir="ltr"><span>Logged in, course not purchased -- Ditto above</span></p>
+</li>
+<li>
+<p dir="ltr"><span>Logged in, course purchased -- Umbraco will display the "Deliver course" view of the node</span></p>
+</li>
+</ul>
+<p>It is the fact that the page is always accessible but showing different content depending on the current state of the logged in member and their properties, that means simple public access isn't any good.  </p>
+<p dir="ltr"><span>We could have achieved this by maintaining a set of publicly accessible course directory content nodes and a corresponding set of course content nodes secured using Public Access, but we'd need to maintain relationships between them.  But that's a complexity for Editors which we've done in previous sites we've built that we wanted to improve on.</span></p>
+<p><span><span>The simplest solution we've found is to do away with allowing Editors to manage access using Public Access.  Instead the default template on the n-State Public Access pages checks the current state of the Membership and displays different code as a result.</span></span></p>
+<pre class="language-markup"><code>@using Umbraco.Core;
+@using Umbraco.Core.Models;
+@using Umbraco.Core.Services;
+@inherits Umbraco.Web.Mvc.UmbracoTemplatePage
+
+@{
+    Layout = "ContentMaster.cshtml";
+
+    // Check if logged in and if authorised
+    bool loggedIn = false;
+    bool authorised = false;
+
+    if (loggedIn = Members.IsLoggedIn())
+    {
+        // Retrieve all the members with a Role matching the current page name
+        // Then check if the current member is a part of that set
+        
+        var memberService = ApplicationContext.Current.Services.MemberService;
+
+        string pageName = CurrentPage.Name;
+        var matchingMembers = memberService.GetMembersInRole(pageName);
+        authorised = matchingMembers.Any(x =&gt; x.Id == Members.GetCurrentMember().Id);
+    }
+}
+&lt;div class="row"&gt;
+    &lt;div class="large-12 columns"&gt;
+        &lt;div class="callout large"&gt;
+            &lt;h2&gt;@Umbraco.Field("coursetitle")&lt;/h2&gt;
+
+            @if (loggedIn &amp;&amp; authorised)
+            {
+                @Umbraco.Field("coursecontent")
+            }
+            else
+            {
+                @Umbraco.Field("salesdescription")
+                
+                &lt;h3&gt;Next steps&lt;/h3&gt;
+                if (!loggedIn)
+                {
+                    &lt;p&gt;To access this course you need to login&lt;/p&gt;
+                    &lt;a href="~/login" class="button"&gt;login&lt;/a&gt;
+                }
+                else
+                {
+                    &lt;p&gt;To access this course you need to arrange for access&lt;/p&gt;
+                    &lt;a href="mailto:no-reply@orcare.com" class="button"&gt;Email us&lt;/a&gt;
+                }
+            }
+
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/div&gt;</code></pre>
+<p dir="ltr"><span>The updated demo can be found on the </span><a href="https://bitbucket.org/orcare/24dayspublicaccess/branch/3StateMembership"><span>3StateMembership branch of the repo</span></a><span>.</span></p>
+<p dir="ltr"><span>My example above is a much simplified version of what we use in the real world.  For example, we wouldn't normally use Member Groups as a mechanism for fine grain page authorisation.  Instead on our current project we use a table of Course Licenses, to determine if a Member is authorised to view a page.</span></p>
+<p dir="ltr"><span>Hopefully, this small example has helped to show that it is possible to get a Membership based Umbraco site up and running with little coding and out of the box functionality, then extend this to enable pages to have n-State Public Access.  As we use this n-State Public Access pattern more, we're seeing more use cases for it, e.g. on a different ecommerce site we add additional functionality to our product pages depending on the logged in state, and add an additional level of data on pages depending on attributes of the Member.</span></p>
+<p>A big thanks and Merry Christmas to <a href="https://uk.linkedin.com/in/alexmeyers1">Alex Meyers</a> and <a href="https://uk.linkedin.com/in/jacobpolden">Jacob Polden</a> who helped me put this article together.</p>
+<p> </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/members/" title="See all articles tagged with Members">Members</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Paul Marden"><img src="//gravatar.com/avatar/655ef4d0c289f6eb3691928e8b8ce35a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/655ef4d0c289f6eb3691928e8b8ce35a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Paul Marden</h1>
+        <p>Paul is on Twitter as <a href="//twitter.com/orcare" title="Paul Marden on Twitter" rel="author">@orcare</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li class="selected"><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

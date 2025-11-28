@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Dashboard overload</title>
+<meta name="description" content="Building a custom dashboard for the editors">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Dashboard overload</h1>
+      <p class="byline"> by Mads Krohn, <span class="pubdate">posted on <time datetime="2013-12-23">Dec 23, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Hi there! I'm Mads and I work at <a href="http://www.eksponent.com" target="_blank">Eksponent</a>. Today, I'm going to show off yet another dashboard for the backoffice.</p>
+<p class="intro">Chriztian already <a href="/umbraco-cms/2013/empty-tabs/" target="_blank">covered the topic</a> some days ago with a few awesome dashboards of his own, but a dashboard can be many different things, and I believe there is still plenty of ways that we can help make the life easier for our clients.</p>
+<p>The dashboard I'm building today consists of a datagrid containing useful information on all the pages in the content tree. For this demo I've used one of the default starterkits with minimal content, but as I'm using Examine as the data store, the dashboard can easily support thousands of nodes making it ideal for both small and large sites.</p>
+<p>I have chosen to separate the post into two parts. The first part is fairly basic and makes use of what we got available in Umbraco out of the box. In the second part I will go into more advanced topics extending on the things covered in the first part. There is a lot to cover, so without further ado, lets get started.</p>
+<h2>Part 1</h2>
+<h3>Installing Umbraco</h3>
+<p>You can run Umbraco in any way you like, but for this demo I installed it straight from Nuget in Visual Studio. To simplify the setup I'm running on an embedded SQL CE database. Since this demo is based on v6, I'm using the new api whenever I can, though everything can be backported to the v4 api if need be.</p>
+<figure>
+  <a href="/archive/media/2013/default_dashboard.png">
+    <img src="/archive/media/2013/default_dashboard.png" width="1278" alt="A vanilla Umbraco install complete with all the default dashboard stuff.">
+  </a>
+  <figcaption>A vanilla Umbraco install complete with all the default dashboard stuff.</figcaption>
+</figure>
+<h3>Registering a user control</h3>
+<p>First I need a new User Control that will act as my dashboard container. Umbraco (conveniently) already has a folder named "usercontrols" so that is where I'm gonna put it. Depending on your developer setup, there are different ways to create a user control, so I won't go in to that here.</p>
+<pre class="language-markup"><code>&lt;%@ Control Language="C#" AutoEventWireup="true" CodeBehind="View.ascx.cs" Inherits="Demo.usercontrols.dashboards.PageOverview.View" %&gt;
+&lt;p&gt;This will be our dashboard container&lt;/p&gt;</code></pre>
+      <p class="snippet-caption">That is one fine user control!</p>
+<p>Next I need to register it in the Dashboard.config file located in the config folder. I add the new dashboard control and get rid of the other default ones.</p>
+<pre class="language-markup"><code>&lt;section alias="StartupDashboardSection"&gt;
+    &lt;access&gt;
+        &lt;deny&gt;translator&lt;/deny&gt;
+    &lt;/access&gt;
+    &lt;areas&gt;
+        &lt;area&gt;content&lt;/area&gt;
+    &lt;/areas&gt;
+    &lt;tab caption="Dashboard"&gt;
+        &lt;control panelCaption=""&gt;/usercontrols/dashboards/PageOverview/View.ascx&lt;/control&gt;
+    &lt;/tab&gt;        
+    &lt;tab caption="Change Password"&gt;
+        &lt;control addPanel="true"&gt;/umbraco/dashboard/changepassword.ascx&lt;/control&gt;
+    &lt;/tab&gt;
+&lt;/section&gt;</code></pre>
+      <p class="snippet-caption">Let's keep the dashboard for changing password, that one is handy!</p>
+<p>Now that the dashboard container is done, let's put in some content.</p>
+<h3>Setting up the datagrid</h3>
+<p>A datagrid is basically an enhanced table with data in it. A good datagrid provides functionality such as paging, sorting, filtering and searching. There are lots of different datagrids out there and they can vary hugely in functionality and ease of use. For this demo I have chosen to use <a href="http://exacttarget.github.io/fuelux/" target="_blank">a framework called Fuelux</a> that builds upon Bootstrap. Fuelux offers a really simple and stylish yet very flexible data grid, just what I need.</p>
+<p>I'll admit though, that the structure of the framework is a bit hard to figure out, and I ended up having to load the entire thing. Apparently, the datagrid component uses a lot of different stuff from other components, so it can be hard to break them apart. Luckily, script size isn't that much of a concern in the backoffice, so let's accept that for now and move on.</p>
+<p>To load the datagrid assets I'm using the Umbraco Client Dependency Framework. CDF helps manage css and javascript dependencies and handles all the boring stuff like minification, compression, caching and so on. You can read more about CDF <a href="https://github.com/Shandem/ClientDependency" target="_blank">here</a>.</p>
+<pre class="language-markup"><code>&lt;%@ Control Language="C#" AutoEventWireup="true" CodeBehind="View.ascx.cs" Inherits="Demo.usercontrols.dashboards.PageOverview.View" %&gt;
+&lt;%@ Register TagPrefix="CD" Namespace="ClientDependency.Core.Controls" Assembly="ClientDependency.Core" %&gt;
+&lt;CD:CssInclude runat="server" FilePath="/userControls/dashboards/PageOverview/fuelux.css" /&gt;
+&lt;CD:JsInclude runat="server" FilePath="/userControls/dashboards/PageOverview/underscore.min.js" /&gt;
+&lt;CD:JsInclude runat="server" FilePath="/userControls/dashboards/PageOverview/fuelux.loader.js" /&gt;
+&lt;CD:JsInclude runat="server" FilePath="/userControls/dashboards/PageOverview/fuelux.datagrid.datasource.js" /&gt;
+&lt;!-- Just a few custom styles I'm going to need, nothing fancy .. --&gt;
+&lt;style&gt;
+    .fuelux .datagrid { margin: 10px 0 0 0; }
+    .fuelux .datagrid-header-right &gt; .select,
+    .fuelux .datagrid-header-right &gt; .input-append { float: left; }
+    .fuelux .datagrid tbody tr.odd { background-color: #f9f9f9; }
+&lt;/style&gt;</code></pre>
+      <p class="snippet-caption">Note that I'm also including underscore.js, which is used by Fuelux per default.</p>
+<p>To set up the datagrid I'm taking a starting point in the example provided on the Fuelux <a href="http://exacttarget.github.io/fuelux/#datagrid" target="_blank">demo site</a>. I have left out most of the html boilerplate code here since it's quite lengthy, but you can find it in the <a href="https://github.com/sniffdk/UmbracoCalendar.Dashboard/blob/master/Demo/usercontrols/dashboards/PageOverview/View.ascx" target="_blank">Github repository accompanying this demo</a>.</p>
+<pre class="language-markup"><code>&lt;div class="container fuelux"&gt;
+    &lt;table id="DashboardDatagrid" class="table table-bordered datagrid"&gt;
+        &lt;thead&gt;
+            ...
+        &lt;/thead&gt;
+        &lt;tfoot&gt;
+            ...
+        &lt;/tfoot&gt;
+    &lt;/table&gt;
+&lt;/div&gt;</code></pre>
+<p><span>Basically I need to set up the header and footer html and then let the datagrid component render some rows and columns for me. </span>To do this I need to provide it with a data source and a few options. Let's take a closer look at the data source.</p>
+<p>The data source for the datagrid needs a defined set of columns and some data. I also provide it with a custom formatter to transform the name of the page into a link, so I can navigate directly to the given page in the content tree.</p>
+<pre class="language-markup"><code>&lt;script&gt;
+    var payload = &lt;%= Payload %&gt;;
+    var dataSource = new DataGridDataSource({
+        columns: [
+            {
+                property: "PageName",
+                label: "Page name",
+                sortable: true
+            },
+            {
+                property: "PageType",
+                label: "Page type",
+                sortable: true
+            },
+            {
+                property: "Updated",
+                label: "Last updated",
+                sortable: true
+            },
+            {
+                property: "WriterName",
+                label: "Last updated by",
+                sortable: true
+            },
+            {
+                property: "CreatorName",
+                label: "Created by",
+                sortable: true
+            }
+        ],
+        formatter: function (items) {
+            $.each(items, function (index, item) {                
+                item.PageName = "&lt;a href='javascript:UmbClientMgr.mainWindow().openContent(\"" + item.PageId + "\")'&gt;" + item.PageName + "&lt;/a&gt;";
+            });
+        },
+        data: payload
+    });
+&lt;/script&gt;</code></pre>
+      <p class="snippet-caption">Payload? We'll get to that shortly, don't worry.</p>
+<p>The data source is also responsible for configuring things like searching, filtering, sorting and paging the data. Most of the code is boilerplate taken from <a href="https://github.com/ExactTarget/fuelux/blob/master/sample/datasource.js" target="_blank"><span>the samples at Github</span></a>. Again, the code is rather lengthy so I left it out here.</p>
+<p>There is one thing I need to customize though. One of the things I want to show on the dashboard is the date for the last time the pages were updated. But per default the datagrid will sort all columns alphabetically either ascending or descending. I need to tell the datagrid that I want the "Updated" column to sort on a date instead of text. This snippet expects the date to be in a certain format (da-DK). If you use a different date or time format just change your code accordingly.</p>
+<pre class="language-javascript"><code>if (options.sortProperty === "Updated") {
+    data = _.sortBy(data, function (item) {
+        var parts = item.Updated.split(' ');
+        var dateParts = parts[0].split('-');
+        var timeParts = parts[1].split(':');
+        var date = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeParts[0], timeParts[1]);
+        return date.getTime();
+    });
+} else {
+    data = _.sortBy(data, options.sortProperty);
+}
+
+if (options.sortDirection === 'desc') data.reverse();</code></pre>
+<p>The datagrid by default uses underscore.js to do the sorting. We don't need to worry much about this, but if you are interested in knowing more about underscore.js and it's sorting capabilities, you can <a href="http://underscorejs.org/#sortBy" target="_blank">read more about it here</a>.</p>
+<p>Now that I got a configured data source I can initialize the datagrid itself.</p>
+<pre class="language-javascript"><code>$("#DashboardDatagrid").datagrid({
+    dataSource: dataSource,
+    dataOptions: {
+        pageIndex: 0, 
+        pageSize: 30,
+        sortProperty: "Updated",
+        sortDirection : "desc",
+        filter: true
+    }
+}).on("loaded", function(e) {
+    $(e.target).find("tr:odd").addClass("odd");
+});</code></pre>
+      <p class="snippet-caption">All the options provided should be fairly self-explanatory.</p>
+<p>The "loaded" event will be triggered when the datagrid is first loaded and then every time it's paged. Whenever this event is triggered I want to add a class to every odd row to add some styling so it's easier to tell the rows apart.</p>
+<p>So now that the setup for the datagrid is done, let's look at how we can provide it with some data from the server.</p>
+<h3>Introducing Examine</h3>
+<p><span>You probably already heard of Examine. It's been the topic of many talks and blog posts lately, and I can understand why as it's basically awesome. </span></p>
+<p><span>If you somehow missed all the fuzz about Examine, I strongly suggest you go read about it now. Why not start with another entry in this years calendar, <a href="/umbraco-cms/2013/getting-started-with-examine/" target="_blank">it's really friendly</a>. And while you're at it, y</span>ou might also want to familiarize yourself a bit with Lucene. Aaron Powell (@slace) has <a href="http://www.aaron-powell.com/posts/2010-04-14-lucene-net-overview.html" target="_blank">an excellent overview</a> that I highly recommend you read. Go on, I'll be here patiently awaiting your return.</p>
+<h3>Fetching data from Examine</h3>
+<p>Ok, time to get to work and find some pages to display on the dashboard.</p>
+<p>Most sites consists of content that is made up by a lot of different content types. Since I want the dashboard to show an overview of all the pages in the content tree, I need to know which content types that are actually considered to be content pages. <span>For this demo I am assuming that all pages have a content type with an alias that is ending in "page" but your logic may vary, ajust accordingly.</span></p>
+<pre class="language-csharp"><code>using System;
+using System.Linq;
+using Umbraco.Core;
+using Umbraco.Core.Services;
+
+namespace Demo.usercontrols.dashboards.PageOverview
+{
+    public partial class View : System.Web.UI.UserControl
+    {        
+        protected IContentTypeService ContentTypeService = ApplicationContext.Current.Services.ContentTypeService;
+        protected string Payload;
+
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            var pageContentTypes = ContentTypeService
+                .GetAllContentTypes()
+                .Where(x =&gt; x.Alias.EndsWith("page"))
+                .ToList();
+        }
+    }
+}</code></pre>
+<p>I use the new services api to get all the relevant content types. This is really nice because now, if I ever add another page type to the site, I just need to adhere to my naming scheme and the new page type will automatically be fetched along with the others.</p>
+<p>With the page content types in place, I can now begin to build my search criteria using the Examine fluent api.</p>
+<pre class="language-csharp"><code>var searcher = ExamineManager.Instance.SearchProviderCollection["InternalSearcher"];
+
+var query = searcher
+    .CreateSearchCriteria()                
+    .GroupedOr(new[] { "nodeTypeAlias" }, pageContentTypes.Select(x =&gt; x.Alias).ToArray());
+
+var results = searcher.Search(query.Compile());</code></pre>
+<p>When I compile the search query Examine will go to work and return a collection of SearchResult objects that I can iterate through. Each result contains a relevance score, a node id and a dictionary with data from the index.</p>
+<p>What I need to do now is serialize the results to a JSON string and dump it somewhere the datagrid can reach it. This is what the Payload variable is for.</p>
+<p>I'm using Json.NET, which is included in newer Umbraco versions, to serialize my IEnumerable of anonymous objects into json. If you don't have access to Json.NET you can just use any other build in json serializer.</p>
+<p>Note that I have to explicitly declare how to parse the date returned from Examine. I use the danish culture here but you can of course adjust that to suit your needs. </p>
+<pre class="language-csharp"><code>var culture = new CultureInfo("da-DK");
+
+Payload = JsonConvert.SerializeObject(results.Select(x =&gt;
+{
+    var fields = x.Fields;
+    var updated = DateTime.ParseExact(fields["updateDate"], "yyyyMMddHHmmssfff", culture);
+
+    return new
+    {                    
+        PageId = x.Id,
+        PageName = fields["nodeName"],
+        PageType = pageContentTypes.First(y =&gt; y.Alias == fields["nodeTypeAlias"]).Name,
+        Updated = updated.ToString("dd-MM-yyyy HH:mm"),
+        WriterName = fields["writerName"],
+        CreatorName = fields["creatorName"]
+    };
+}));</code></pre>
+<p>And that's it! I now have a functioning dashboard with a datagrid showing a useful, <span>easily sortable</span> overview of all the pages in the content tree.</p>
+<figure>
+  <a href="/archive/media/2013/page_overview_dashboard_step1.png">
+    <img src="/archive/media/2013/page_overview_dashboard_step1.png" width="1216" alt="Somethings not right!">
+  </a>
+  <figcaption>Somethings not right!</figcaption>
+</figure>
+<h2>Part 2</h2>
+<h3>Extending the dashboard</h3>
+<p>While I now have a working dashboard I did manage to introduce a potential security issue. You see, with the current search query I use, Examine is returning every single page in the content tree regardless if the current Umbraco user has access to those pages. Whoops..</p>
+<p>To fix this little mistake I have to restrict my search to only fetch results among pages that is a descendant to the start node of the current Umbraco user. The only problem is that out of the box I can't do that. That's because, out of the box, Examine has no data stored on the ancestors of a node, it only indexes a nodes parent id. Luckily, it's easy to extend Examine to support this.</p>
+<p>What I need to do is tell Examine to add some custom data every time a node is indexed in Lucene. This is achieved by hooking into the DocumentWriting event that Examine provides. This event is trigged every time Examine writes something to the index. Here I can access the dictionary with the values that Examine is going to put into the index, and I also get access to the raw Lucene document, so that I can add my own custom fields. All I need to do now is to find all the ancestor ids for a given node, and index them in a way that makes it possible to use them as a search criteria later on.</p>
+<p>I can wire up this event hook in any class that implements the IApplicationEventHandler interface or I can tell the <span>Global.asax file to inherit from the UmbracoApplication class and do it there. For this demo I have chosen the latter.</span></p>
+<pre class="language-csharp"><code>using System;
+using Umbraco.Web;
+
+namespace Demo
+{
+    public class Global : UmbracoApplication
+    {
+        protected override void OnApplicationStarted(object sender, EventArgs e)
+        {
+            base.OnApplicationStarted(sender, e);
+
+            RegisterIndexRules();
+        }
+
+        protected static void RegisterIndexRules()
+        {
+            ...
+        }
+    }
+}</code></pre>
+      <p class="snippet-caption">There are many ways to hook into application start in Umbraco.</p>
+<p>So how do I get all ancestors of a given node? Actually, Examine is already indexing the full path of the node as a comma separated string of ids. T<span><span>o be able to search efficiently on these ids,<span> </span><span>I need to make sure that they are separated by whitespaces instead</span>. This is because </span></span>the default internal index uses a whitespace analyzer, so when we use a whitespace as the delimiter the ids are split up into easily searchable terms.</p>
+<p>I can then add the new whitespace delimited string to the Lucene document. There is no need to store the actual value though, we just want it analyzed and indexed without norms or term vectors.</p>
+<pre class="language-csharp"><code>var draftIndexer = ((LuceneIndexer)ExamineManager.Instance.IndexProviderCollection["InternalIndexer"]);
+
+draftIndexer.DocumentWriting += (sender, args) =&gt;
+{
+    var pathParts = string.Join(" ", args.Fields["path"].Split(','));
+    var pathPartsField = new Field(
+        "__PathParts", 
+        pathParts, 
+        Field.Store.NO, 
+        Field.Index.ANALYZED_NO_NORMS, 
+        Field.TermVector.NO
+    );
+
+    args.Document.Add(pathPartsField);
+};</code></pre>
+<p>This may all sound a bit confusing if you haven't worked with Lucene before. I won't go into details on the different ways to index data in Lucene here, but if you are interested in reading more about analyzers Aaron has <a href="http://www.aaron-powell.com/posts/2010-05-27-lucene-analyzer.html" target="_blank">a nice little intro</a> to get you started.</p>
+<h3>A sidenode for Lucene nerds</h3>
+<p>Normally I would have added the ancestor ids as separate number fields and given them all the same field name without analyzing them. Unfortunately, as Examine uses a Dictionary&lt;string, string&gt; to map values from Lucene documents this means that if we have more fields with the same name, Examine will simply throw an exception when trying to add the same key multiple times. So for now it's necessary to index all ancestor ids as one white space analyzed string to be able to search on the individual ids.</p>
+<p>I also realize that I could get by with a wildcard query that allows leading wildcards, which is actually what Examine does a few places <span>itself</span>, but I do not think that is a best practice approach, so I've chosen not to do that here.</p>
+<h3>Back on track</h3>
+<p>Whenever we change the way Examine should index nodes it's <span>necessary to either re-save all the nodes to have them re-indexed or simply rebuild the index. In newer Umbraco versions there is a built-in dashboard to do this. For older versions a few packages exist to help you out (as far as I remember).</span></p>
+<p><span>The dashboard for rebuilding the indexes is located in the developer section.</span></p>
+<figure>
+  <a href="/archive/media/2013/umbraco_rebuild_index.png">
+    <img src="/archive/media/2013/umbraco_rebuild_index.png" width="1208" alt="Developer rebuild index">
+  </a>
+</figure>
+<p><span>With a fresh index I can now refine my search to only include pages that the current Umbraco user has access to.</span></p>
+<pre class="language-csharp"><code>var me = User.GetCurrent();
+
+var query = searcher
+    .CreateSearchCriteria()
+    .GroupedOr(new[] { "nodeTypeAlias" }, pageContentTypes.Select(x =&gt; x.Alias).ToArray())
+    .And()
+    .GroupedOr(new[] { "__PathParts" }, me.StartNodeId.ToString());</code></pre>
+<p>When we take a look at the dashboard now, the pages are indeed filtered as we would expect.</p>
+<figure>
+  <a href="/archive/media/2013/page_overview_dashboard_step2.png">
+    <img src="/archive/media/2013/page_overview_dashboard_step2.png" width="1201" alt="Dashboard page overview step 2">
+  </a>
+</figure>
+<p>Next up I would like to add some data showing if the pages are published or not. Again, the only problem is, that I can't do that out of the box. I simply lack data about the state of a page since Examine does not index that information per default. This is because Examine makes the (fair) assumption that the published state of a node is determined by the index type (internal or external) that is used to search in.</p>
+<p>Fortunately, it's easy to add the missing data to the index. The flexibility of Umbraco still continues to amaze me.</p>
+<p>The logic I'm using is pretty trivial. If a node has a published version then it is considered published. This time I'm storing the values as I want to be able to retrieve them from the index. I've also chosen not to analyze it. That's because when no analyzer is used the value will be indexed as a single term which is useful if I need to do a search on this field at some point.</p>
+<pre class="language-csharp"><code>var hasPublishedVersion = contentService.HasPublishedVersion(args.NodeId);
+var hasPublishedVersionField = new Field(
+    "__HasPublishedVersion", 
+    hasPublishedVersion ? "1" : "0", 
+    Field.Store.YES, 
+    Field.Index.NOT_ANALYZED_NO_NORMS, 
+    Field.TermVector.NO
+);
+
+args.Document.Add(hasPublishedVersionField);</code></pre>
+<p>Next, I have to rebuild the index again. And then all I have to do is add a Published property to the objects in the Payload data and add a column in the datagrids data source.</p>
+<pre class="language-csharp"><code>/* View.ascx.cs */
+return new
+{                    
+    ...
+    CreatorName = fields["creatorName"],
+    Published = fields["__HasPublishedVersion"] == "1"
+};
+
+/* View.ascx */
+columns: [
+    { .... },
+    {
+        property: "Published",
+        label: "Published",
+        sortable: true
+    }
+]</code></pre>
+<p>If we take a look at the dashboard now we have a column that shows if pages are published or not.</p>
+<figure>
+  <a href="/archive/media/2013/page_overview_dashboard_step3.png">
+    <img src="/archive/media/2013/page_overview_dashboard_step3.png" width="1399" alt="Such error, much issues, very buggy, wow!">
+  </a>
+  <figcaption>Such error, much issues, very buggy, wow!</figcaption>
+</figure>
+<h3>Examine, we have a problem</h3>
+<p>But wait, what is that? If you look closely, there <span>clearly </span>are some issues with the data shown. I put in some extra test data and triggered a few scenarios that will cause our current setup to show data about the pages published state that is <span>out of sync with the database. What gives?</span></p>
+<p>Remember that we are using an internal index. An internal index in Examine terms means that it's configured to support unpublished content. Examine has different logic for updating internal indexes than it does for external indexes, that is, indexes that doesn't support unpublished content. Let's investigate.</p>
+<p><span>Whenever a single node is published, Umbraco will trigger the following events in order:</span></p>
+<ul>
+<li>Saved</li>
+<li>Published</li>
+<li>AfterUpdateDocumentCache</li>
+</ul>
+<p>The first two should be self-explanatory and the AfterUpdateDocumentCache is triggered once per node when the xml cache is updated with that node. </p>
+<p>However, if a node is published along with its descendants then the Saved event won't be triggered since only the published state will be changed. This means that only the Published and AfterUpdateDocumentCache events will be triggered. Examine will update nodes in the internal index whenever the Saved event is triggered. For the external index it will update nodes on the AfterUpdateDocumentCache event.</p>
+<p>So, if we publish multiple nodes then the internal index simply won't be updated because the Saved event isn't triggered. This means that the internal index won't know about the pages being published and I end up with an index that is out of sync.</p>
+<p><span>Let's look at another problem. Whenever a node is unpublished, Umbraco will trigger the following events in order:</span></p>
+<ul>
+<li>Unpublished</li>
+<li>AfterClearDocumentCache</li>
+</ul>
+<p>Examine will update nodes in the external index whenever the AfterClearDocumentCache event is triggered. But that's it! By default the internal index won't be updated when a node is unpublished, so again <span>I end up with an index that is out of sync.</span></p>
+<p>The last issue has to do with the Trashed event, which is triggered every time a node is trashed. <span>Examine has a hook on this event, h</span>owever, the event is only triggered for the selected node, not it's descendants. Yet another thing that will cause the internal index to go out of sync.</p>
+<h3>A sidenode on events</h3>
+<p>There are several more events available in Umbraco than included here, but these here are the only ones relevant for this demo. So, for brevity, I left out the rest.</p>
+<h3>Back on track</h3>
+<p>To make sure my internal index is kept in sync, I have to manually tell Examine when to update it. Luckily it's pretty easy to do. For this demo I've wired it all up in the Global.asax file, just like the custom indexing stuff.</p>
+<p>Examine needs an XElement to reindex a node. Fortunately it's easy to convert our IContent items via an extension method.</p>
+<pre class="language-csharp"><code>ContentService.UnPublished += (sender, args) =&gt;
+{
+    foreach (var publishedEntity in args.PublishedEntities)
+    {
+        draftIndexer.ReIndexNode(publishedEntity.ToXml(), "content");
+    }
+};
+
+ContentService.Trashed += (sender, args) =&gt;
+{
+    /* The Trashed event is only triggered for the selected node. 
+       Get all descendants and re-index them as well. */
+    var descendants = sender.GetDescendants(args.Entity);
+    foreach (var descendant in descendants)
+    {
+        draftIndexer.ReIndexNode(descendant.ToXml(), "content");
+    }
+};
+
+content.AfterUpdateDocumentCache += (sender, args) =&gt;
+{
+    /* The AfterUpdateDocumentCache is part of the old api, so we are given a Document. 
+       Get the IContent equivalent instead. */
+    var contentItem = ApplicationContext.Current.Services.ContentService.GetById(sender.Id);
+    draftIndexer.ReIndexNode(contentItem.ToXml(), "content");
+};</code></pre>
+<p>With these hooks in place I now have a consistent way of keeping the internal index in sync. Now I just need to rebuild the index as shown earlier and I'm good to go.</p>
+<p>There is one last issue that I need to deal with though. While it might not be obvious from the screenshots, Examine will always keep trashed nodes in the internal index. But I don't want the dashboard to include pages in the recycle bin. To avoid that, I can modify the search query to exclude all pages that has an ancestor with the id of -20. This id is a universal constant for the content recycle bin and can be safely hardcoded in.</p>
+<pre class="language-csharp"><code>var query = searcher
+    .CreateSearchCriteria()
+    .GroupedOr(new[] {"nodeTypeAlias"}, pageContentTypes.Select(x =&gt; x.Alias).ToArray())
+    .And()
+    .GroupedOr(new[] {"__PathParts"}, me.StartNodeId.ToString())
+    .Not()
+    .GroupedOr(new[] {"__PathParts"}, "-20");</code></pre>
+<p>With the modification to the search query, I no longer have pages in the recycle bin popping up in the dashboard, nice!</p>
+<figure>
+  <a href="/archive/media/2013/page_overview_dashboard_step4.png">
+    <img src="/archive/media/2013/page_overview_dashboard_step4.png" width="1466" alt="Dashboard page overview step 4">
+  </a>
+</figure>
+<h3>One last thing</h3>
+<p>There is one last piece of funtionality, that I want to add to the dashboard. Noticed the dropdown just left of the search field? At the moment it's a useless filter with some dummy options. I want to setup a new filter that actually does something.</p>
+<p>On several of the dashboards I have built for clients I have introduced the concept of page owners. The rules are simple. If the current Umbraco user created or edited a given page at some point in time, then that user is considered one of the owners of that page. There is a reasonable chance that the user only cares about the pages that the user owns, so it would be useful to get a filtered view of those pages only.</p>
+<p>Out of the box Examine will only index the last editor of a given page. Therefore, I need to add data about all the users who have edited the page at any point in time. To get the data I need, I have to get all known versions of the page in question and collect a distinct list of the editor ids.</p>
+<pre class="language-csharp"><code>var writerIds = contentService
+    .GetVersions(args.NodeId)
+    .Select(x =&gt; x.WriterId)
+    .Distinct();
+
+var writerIdsField = new Field(
+    "__AllWriterIds", 
+    string.Join(" ", writerIds), 
+    Field.Store.YES, 
+    Field.Index.ANALYZED_NO_NORMS, 
+    Field.TermVector.NO
+);
+
+args.Document.Add(writerIdsField);</code></pre>
+<p>I need to rebuild the index again now, and then I can add a new boolean property (MyPage) to the objects in the payload on the server. This boolean determines if the page is owned by the current Umbraco user or not.</p>
+<pre class="language-csharp"><code>Payload = JsonConvert.SerializeObject(results.Select(x =&gt;
+{
+    var fields = x.Fields;
+
+    var creatorId = int.Parse(fields["creatorID"]);
+    var writerIds = fields["__AllWriterIds"].Split(' ').Select(int.Parse);
+    ...
+
+    return new
+    {
+        MyPage = me.Id == creatorId || writerIds.Contains(me.Id),
+        PageId = x.Id,
+        ...
+    };
+}));</code></pre>
+<p>In the datagrids data source I can now modify the existing boilerplate filter to filter on the MyPage property instead.</p>
+<pre class="language-javascript"><code>if (options.filter) {
+    data = _.filter(data, function (item) {
+        var match;
+        switch (options.filter.value) {
+            case "all":
+                match = true;
+                break;
+            default:
+                match = item.MyPage === true;
+                break;
+        }
+        return match;
+    });
+}</code></pre>
+<p>I also need to change the html appropriately. I'm just showing a small snippet of the html here, check out the <a href="https://github.com/sniffdk/UmbracoCalendar.Dashboard/blob/master/Demo/usercontrols/dashboards/PageOverview/View.ascx" target="_blank">Github repository</a> for the complete code.</p>
+<pre class="language-markup"><code>&lt;div class="select filter" data-resize=""&gt;
+    &lt;button type="button" data-toggle="dropdown" class="btn dropdown-toggle"&gt;
+        &lt;span class="dropdown-label"&gt;&lt;/span&gt;
+        &lt;span class="caret"&gt;&lt;/span&gt;
+    &lt;/button&gt;
+    &lt;ul class="dropdown-menu"&gt;
+        &lt;li data-value="mypages" data-selected="true"&gt;&lt;a href="#"&gt;My pages only&lt;/a&gt;&lt;/li&gt;
+        &lt;li data-value="all"&gt;&lt;a href="#"&gt;All pages&lt;/a&gt;&lt;/li&gt;
+    &lt;/ul&gt;
+&lt;/div&gt;</code></pre>
+      <p class="snippet-caption">You can just shift the two li elements if you want to show all pages by default.</p>
+<p>With the new filter in place, the editors can easily switch between their own pages and all pages, while still only seeing pages that they have access to, awesome!</p>
+<p>Hopefully you will find this dashboard useful, and hopefully you can see a potential for extending it with more data valuable to your clients.</p>
+<p>I'll be happy to answer any questions you might have regarding all this, and in case you missed it, here is the link to <a href="https://github.com/sniffdk/UmbracoCalendar.Dashboard" target="_blank">the Github repository</a> again.</p>
+<p>Merry Christmas everybody :)</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/backoffice/" title="See all articles tagged with Backoffice">Backoffice</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/examine/" title="See all articles tagged with Examine">Examine</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Mads Krohn"><img src="//gravatar.com/avatar/9089f770a9d86c08d13fe5fd2d02dd6a.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/9089f770a9d86c08d13fe5fd2d02dd6a.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Mads Krohn</h1>
+        <p>Mads is on Twitter as <a href="//twitter.com/sniffdk" title="Mads Krohn on Twitter" rel="author">@sniffdk</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li class="selected"><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

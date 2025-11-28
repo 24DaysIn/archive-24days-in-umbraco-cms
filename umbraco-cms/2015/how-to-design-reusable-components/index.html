@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>How to Design Reusable Components for Umbraco - 6 Steps to Better, More Fun Code</title>
+<meta name="description" content="Wouldn't it be great if you didn't have to recreate similar code over and over again? Sure you probably are smart enough to use Copy &amp; Paste, but there is an even better way to handle this issue. The key is to think about the component parts of your project in a certain way - to consider the code you are creating from a larger perspective than the immediate need at hand. Follow these steps when architecting a piece of functionality for your current project, and see how large a library of reusable code you can create and use in your next project!">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</h1>
+      <p class="byline"> by Heather Floyd, <span class="pubdate">posted on <time datetime="2015-12-02">Dec 2, 2015</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Especially in a development shop/agency environment you will likely be building similar functionality for multiple clients or sites, wouldn't it be great if you didn't have to recreate similar code over and over again? Sure you probably are smart enough to use Copy &amp; Paste, but there is an even better way to handle this issue.</p>
+<p class="intro">The key is to think about the component parts of your project in a certain way - to consider the code you are creating from a larger perspective than the immediate need at hand.</p>
+<p>Why would you want to do this? I see several reasons:</p>
+<ol>
+<li>Deliver a more functional and elegant solution to your current project - which would be easier to update if the project requirements expand.</li>
+<li>Write code once, and use it on a future project - saving time and maximizing profitability.</li>
+<li>Do more interesting coding - who wants to solve the SAME problem over and over again? Boring! Let's do something a little more challenging, and learn new skills and IMPROVE our coding skills with each project.</li>
+</ol>
+<p>Follow these steps when architecting a piece of functionality for your current project, and see how large a library of reusable code you can create and use in your next project!</p>
+<h2 id="1-define-the-necessary-functionality-for-this-project-s-need">1 - Define the necessary functionality for this project's need</h2>
+<p>In the example of a basic website "Contact Us" form, let's suppose that our current project requirements include the following:</p>
+<ul>
+<li>The form will have a name field, an email field, and a message field.</li>
+<li>There will be a drop-down box of 3 different inquiry categories ("Technical Support", "Sales Support", "Other") which will determine who at the company should receive the message.</li>
+<li>When submitted, an email needs to go out to the appropriate person, based on the drop-down, with the form data included.</li>
+<li>The Content Editors need to be able to edit the email addresses which will receive the emails, in case of future staff changes.</li>
+<li>We are not planning on using Umbraco Forms (fka "Contour")</li>
+</ul>
+<h2 id="2-next-think-about-the-same-sort-of-general-functionality-being-used-by-a-different-company-website-">2 - Next, think about the same sort of general functionality being used by a different company/website.</h2>
+<p>What might be different about their needs or workflow? What parts of the UI would be different? Where would the common functionality possibly diverge? Some possibilities for our Contact form:</p>
+<ul>
+<li>They might want a first name and last name field separately, or other additional fields</li>
+<li>They will certainly have different categories or departments where emails should be routed than the three specific options on this current project.</li>
+<li>Perhaps some of those emails might need to go into an automated system, rather than to a person's inbox, and need to be formatted in a specific way which is different between types.</li>
+<li>Perhaps there could be a need for the person filling out the form to receive a copy of the message as well.</li>
+<li>Maybe we don't need the data to go to an email box at all, but to be added to a database, or sent to a 3rd party system via an API.</li>
+</ul>
+<h2 id="3-now-we-need-to-start-thinking-a-bit-about-the-implementation-and-breaking-out-the-parts-which-would-need-to-be-configurable-">3 - Now we need to start thinking a bit about the implementation and breaking out the parts which would need to be configurable.</h2>
+<p>How can we abstract the functionality in a way that allows exact code reuse, with configuration options? The key here is not to explode out <strong>all</strong> the possibilities to the point that you are building something which will be just as complicated to use in a new project as to start from scratch, but would allow for reasonable re-use in generally similar use-cases. Perhaps it makes sense to create a completely "pluggable" architecture, or perhaps you can create something with quite a bit of functionality to handle 80% of your common use cases. You don't want to lose sight of the immediate goal - which is to create a contact form for a specific project right now, and you don't want to go overboard with a "perfectly abstracted architecture" which will take too much time to create now, and too much code to manage for the future. We want to go for a middle ground of reusable, with simple, flexible configuration. So start brainstorming ideas about how you could build it in a reusable/configurable way:</p>
+<ul>
+<li>Each category for the drop down could be separately configured with its own email address, message template, and additional options related to how the message is handled - perhaps a custom "from" address or subject line, etc.</li>
+<li>The fields that are displayed on the form could be configurable.</li>
+</ul>
+<p>During this process, don't get too hung up on the difficulty of implementing each possible feature, but do consider that <strong>IF</strong> you wanted to implement the feature, <strong>where</strong> you would need to build it in.</p>
+<p>For instance, would we want to make our Contact form so flexible that it could send an email, pass data via a web service, or input data into a database? It would certainly be possible for it to have that much flexibility, so <strong>IF</strong> it did, where would that need to be configured? We could configure it on the form itself - or we could configure it at the level of the separate categories. The advantage of being configured on the categories is that different categories on the same form could do different things, like selecting 'Sales' could send the data into a CRM system via a web service or custom function, while selecting 'Support' would add data to an internal SQL database, or send an email into a ticketing system. The disadvantage would be complexity and possibly having to duplicate settings in actual usage which has simpler requirements.</p>
+<p>In terms of configurable form fields, you might not be able to abstract all the possibilities in a way which wouldn't be much too complex for the current project's needs, so that might be something you don't make configurable right now, but <strong>IF</strong> you wanted to have that, it could be configurable at the "form" level - so that all the defined categories would use the same form fields (which makes sense from a UI perspective - the categories are just a drop-down on a single form). If a website needed more flexibility, we could add more than one "form" to the site, each with its own form fields, and separate set of categories. These are the things you need to consider during this "design" phase.</p>
+<h2 id="4-build-for-your-immediate-needs-but-with-the-possible-end-in-mind-">4 - Build for your immediate needs - but with the possible end in mind.</h2>
+<p>Based on the ideas generated in the previous step, you can start to build out the functionality for the current project. Since right now our needs are somewhat simple - just sending emails to different addresses - we don't need to add on (and code!) all the possible alternative options, but we might leave the possibility of adding those items open in the future.</p>
+<p>For our hypothetical example, Let's start by creating the DocumentTypes we'd need. We will have two:</p>
+<ol>
+<li><strong>Contact Form</strong> - Since we aren't making the fields configurable right now, this won't need any special properties, it will just allow for child nodes of our second DocumentType - but in the future we <strong>could</strong> add additional form-level options here.</li>
+<li><strong>Contact Category</strong> - Properties will include: "Category Display Name" (textstring), "To Address" (textstring) and "Subject Line" (textstring). In the future we <strong>could</strong> add additional properties to handle other processing options, such as API Url, Database Stored Procedure name, Message Format (with "merge" fields delegated), etc. Along with a drop-down of available processing options (Email, Api, DB, etc.)</li>
+</ol>
+<p>When we program the partial view/controller which will render and handle the form, we can use a looping structure to read out the child "Contact Category" nodes - fetching their "Category Display Name" to use in the Category drop-down, and perhaps the Node ID as the "Value" of the drop-down. On form Submit, the selected "Contact Category" node can be looked-up via its ID, and the email message constructed using the specific "To Address" and "Subject Line". If you have extra time, you might write out the code to handle generating the message from the form fields using a generic field-looping structure, rather than calling specific fields by name - which would make it easier for you to implement the custom fields functionality in a future iteration. If you don't have time now, you can add some code comments about it.</p>
+<h2 id="5-keep-track-of-the-pieces-needed-to-re-create-the-component-in-another-project">5 - Keep track of the pieces needed to re-create the component in another project</h2>
+<p>You will want to devise some sort of storage/documentation mechanism to keep all the necessary "bits" for reuse together. Depending on your organization's code management structure/systems, this could take many possible forms. You could create a package with the DocumentTypes and files needed, which would make insertion into a new project simple... Or you might export the DocumentTypes as UDT files, and copy the other code files into a directory together inside a git project. Whatever your system includes, add some code comments and notes so that you know what the component can currently do - and what it could possibly do in the future with certain enhancements and additions.</p>
+<h2 id="6-as-you-have-time-or-future-project-needs-refine-the-component-with-the-additional-functionality-customization-you-have-designed-">6 - As you have time or future project needs, refine the component with the additional functionality/customization you have designed.</h2>
+<p>When your next project has a somewhat similar requirement, rather than starting from scratch, copy over your component bits, and spend your time building in the extra functionality. (Perhaps this project needs to support the "Message Format" option for automatically parsed emails sent to a ticketing or CRM system, or needs to support an API call for this Category, and a basic email for this other Category...)</p>
+<p>When adding the new functionality, do your best to maintain the original functionality, and only enhance it, with additional configuration options and dynamism. Once complete, update the component in your separate code management system, so the next project will start with this enhanced version.</p>
+<p>As you begin to consider every design/code challenge this way, you will slowly be building up a library of "plug-n-play" components which will save you time and effort in the future, and can be shared across your development team to improve everyone's work.</p>
+<hr>
+<p><strong>Heather Floyd</strong> has been involved in website and software development for over 15 years and using Umbraco since 2006, specializing in information architecture and development efficiency. Heather speaks internationally about Umbraco and is a co-organizer for the NYC Umbraco Meetup group. Find her online at <a rel="noreferrer" href="http://heatherfloyd.com/" target="_blank">HeatherFloyd.com</a> and <a href="https://twitter.com/HFloyd" target="_blank">@HFloyd</a>.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/information-architecture/" title="See all articles tagged with Information architecture">Information architecture</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Heather Floyd"><img src="//gravatar.com/avatar/e987a7108f5687d9fd4c25aec9fd322b.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/e987a7108f5687d9fd4c25aec9fd322b.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Heather Floyd</h1>
+        <p>Heather is on Twitter as <a href="//twitter.com/HFloyd" title="Heather Floyd on Twitter" rel="author">@HFloyd</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2015/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Umbraco Zeitgeist: Effective Umbraco Development in 2016" href="/umbraco-cms/2015/umbraco-zeitgeist/"><span class="scr-text">Umbraco Zeitgeist: Effective Umbraco Development in 2016</span></a></li>
+      <li class="selected"><a title="How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code" href="/umbraco-cms/2015/how-to-design-reusable-components/"><span class="scr-text">How to Design Reusable Components for Umbraco: 6 Steps to Better, More Fun Code</span></a></li>
+      <li><a title="Creating and releasing Umbraco packages for multiple platforms using Grunt" href="/umbraco-cms/2015/grunt-all-the-things!/"><span class="scr-text">Creating and releasing Umbraco packages for multiple platforms using Grunt</span></a></li>
+      <li><a title="Strongly typed vs. Dynamic Content Access" href="/umbraco-cms/2015/strongly-typed-vs-dynamic-content-access/"><span class="scr-text">Strongly typed vs. Dynamic Content Access</span></a></li>
+      <li><a title="Recreating the listview in a custom section" href="/umbraco-cms/2015/custom-listview/"><span class="scr-text">Recreating the listview in a custom section</span></a></li>
+      <li><a title="SEO in Umbraco" href="/umbraco-cms/2015/seo-controls/"><span class="scr-text">SEO in Umbraco</span></a></li>
+      <li><a title="Umbraco REST API" href="/umbraco-cms/2015/umbraco-rest-api/"><span class="scr-text">Umbraco REST API</span></a></li>
+      <li><a title="The humble ambition of Pipeline CRM" href="/umbraco-cms/2015/the-humble-ambition-of-pipeline-crm/"><span class="scr-text">The humble ambition of Pipeline CRM</span></a></li>
+      <li><a title="Using a CDN with Umbraco" href="/umbraco-cms/2015/using-a-cdn-with-umbraco/"><span class="scr-text">Using a CDN with Umbraco</span></a></li>
+      <li><a title="1-1 Multilingual websites with Vorto and Nested Content" href="/umbraco-cms/2015/multilingual-vorto-nested-content/"><span class="scr-text">1-1 Multilingual websites with Vorto and Nested Content</span></a></li>
+      <li><a title="The Code That Changed My Life" href="/umbraco-cms/2015/the-code-that-changed-my-life/"><span class="scr-text">The Code That Changed My Life</span></a></li>
+      <li><a title="An Investigation into the Umbraco Membership APIs" href="/umbraco-cms/2015/membership-apis-investigation/"><span class="scr-text">An Investigation into the Umbraco Membership APIs</span></a></li>
+      <li><a title="Everything you need to know about MembershipProvider" href="/umbraco-cms/2015/extending-membership/"><span class="scr-text">Everything you need to know about MembershipProvider</span></a></li>
+      <li><a title="Tweaking Umbraco 7 Back Office" href="/umbraco-cms/2015/umbraco-7-back-office-tweaks/"><span class="scr-text">Tweaking Umbraco 7 Back Office</span></a></li>
+      <li><a title="How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally" href="/umbraco-cms/2015/a-diverse-umbraco-community-equates-to-success/"><span class="scr-text">How Diverse Umbraco Community Involvement Can Lead to Greater Success Both Personally &amp; Professionally</span></a></li>
+      <li><a title="So whats up with Angular these days..." href="/umbraco-cms/2015/so-whats-up-with-angular-these-days/"><span class="scr-text">So whats up with Angular these days...</span></a></li>
+      <li><a title="Integrating an application into Umbraco (Using Ninject)" href="/umbraco-cms/2015/integrating-an-application-into-umbraco-(using-ninject)/"><span class="scr-text">Integrating an application into Umbraco (Using Ninject)</span></a></li>
+      <li><a title="May The Tools Be With You" href="/umbraco-cms/2015/may-the-tools-be-with-you/"><span class="scr-text">May The Tools Be With You</span></a></li>
+      <li><a title="When Public Access isn't quite enough" href="/umbraco-cms/2015/when-public-access-isnt-quite-enough/"><span class="scr-text">When Public Access isn't quite enough</span></a></li>
+      <li><a title="Hacking around with search and strong typed models." href="/umbraco-cms/2015/hacking-around-with-search-and-strong-typed-models/"><span class="scr-text">Hacking around with search and strong typed models.</span></a></li>
+      <li><a title="'A web for everyone'" href="/umbraco-cms/2015/a-web-for-everyone/"><span class="scr-text">'A web for everyone'</span></a></li>
+      <li><a title="Ode to Joy (of the community contributor)" href="/umbraco-cms/2015/ode-to-joy/"><span class="scr-text">Ode to Joy (of the community contributor)</span></a></li>
+      <li><a title="Turbo charging websites with PJAX" href="/umbraco-cms/2015/turbo-charging-websites-with-pjax/"><span class="scr-text">Turbo charging websites with PJAX</span></a></li>
+      <li><a title="Not another Grid Layouts post" href="/umbraco-cms/2015/not-another-grid-layouts-post/"><span class="scr-text">Not another Grid Layouts post</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

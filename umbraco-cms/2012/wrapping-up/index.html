@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Wrapping Up "24 Days In Umbraco": Building this Site</title>
+<meta name="description" content="Final day - Chriztian shares some insight into the way the site came together and wraps it up for this year.">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Wrapping Up: Building this Site</h1>
+      <p class="byline"> by Chriztian Steinmeier, <span class="pubdate">posted on <time datetime="2012-12-24">Dec 24, 2012</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">Hi, my name is Chriztian; I'm a Frontend Developer at <a href="http://vokseverk.dk" target="_blank" title="Visit Vokseværk">Vokseværk</a> where I work almost exclusively with Umbraco websites every day. It's total bliss :-)</p>
+<h2>How this came to be</h2>
+<figure class="pull-right">
+  <a href="/archive/media/2012/24daysinumbraco_icon.png">
+    <img src="/archive/media/2012/24daysinumbraco_icon.png" alt="#MadeWithPaper" width="309">
+  </a>
+  <figcaption>#MadeWithPaper</figcaption>
+</figure>
+<p class="intro">I registered this domain a couple of years ago, thinking it would be cool to do some kind of calendar thing with it. </p>
+<p>This year I finally got the right idea (in time, too) and started putting it together. This post will highlight a couple of things from the experience that I think would be of interest to you...</p>
+<h2>Renaming the /umbraco folder</h2>
+<p>Hey, don't do it unless you <em>really</em> have to - I'm pedantic about some things, which meant that because I wanted the calendar to be on the <span class="code">24days.in/umbraco/</span> URL (which is usually where you log in to the Back-office), I had to do it. Let me repeat: <em>Don't do it</em> - Umbraco is not built for that yet. I had to literally do "search and replace" through the Umbraco source code to find some of the places where that URL was hard-coded.</p>
+<p>Yes, there <em>is</em> a key in <span class="code">web.config</span> named <span class="code">umbracoPath</span> which <em>does</em> tell some parts of the system where Umbraco is installed, but it's <em>not</em> used everywhere so you're going to do some manual tweaking to get it to work. And <em>yes</em>, some of it can be "fixed" using URL rewrites, but...</p>
+<p>Even though you've sent that folder back in time - to way before it was created - as soon as you install a package that is supposed to put files somewhere below it (could be icons for <strong>DocTypes</strong> or some code in the <span class="code">/umbraco/plugins</span> folder) you'll have the umbraco folder back, safe and sound in 2012!</p>
+<p>Worst part though: uComponents' keyboard navigation in the trees didn't work anymore, which was a major pain - I heavily rely on the arrow keys when I'm walking around in all of the trees of the Back-office! Thank God, <a href="http://twitter.com/leekelleher" target="_blank" title="Visit Lee on Twitter">Lee Kelleher</a> got me a patched DLL with a fix for that bug - <em>#h5yr</em>, Lee.</p>
+<h2>Notifications</h2>
+<figure class="pull-right">
+  <a href="/archive/media/2012/notifications.png">
+    <img src="/archive/media/2012/notifications.png" width="312" alt="Notifications, built-in">
+  </a>
+  <figcaption>Notifications, built-in</figcaption>
+</figure>
+<p>Umbraco has a built-in system for notifications with regard to a content node, so you can easily be notified whenever an editor performs a specific action on the node. On this project every author is a User in the system, with access to only their own article node, and a designated media folder. They are not allowed to Publish, but only to "Send for approval" as it's called. This way I just got an email whenever an author deemed their article ready for proofreading and publishing.</p>
+<p><strong>Note:</strong> To get notifications to work, you need to configure the <span class="code">&lt;smtp&gt;</span> section in <span class="code">web.config</span>, and set an email address under the <span class="code">&lt;notifications&gt;</span> setting in <span class="code">umbracoSettings.config</span>.</p>
+<h2>Code Snippets</h2>
+<p>I knew from the start that many articles would contain code snippets and I really wanted to make them easy to manage. We used the awesome <a href="http://prismjs.com" target="_blank" title="Awesome and easy syntax highlighting">Prism</a> for doing the syntax highlighting but still, I knew working with them in the WYSIWYG was going to be a pain. I did <strong>not</strong> want to ask authors to convert their code samples to any kind of HTML which would ensure we'd have loads of possibilities for errors in them.</p>
+<p>Fortunately I found a simple but powerful solution using a macro and (of course) an XSLT extension from uComponents:</p>
+<p>You create a Code Snippet in the Media section, upload your file to it and insert it in the WYSIWYG with the macro - here's the relevant XSLT:</p>
+<pre class="language-markup"><code>&lt;xsl:template match="CodeSnippet"&gt;
+	&lt;xsl:variable name="lang" select="$lexer[@ext = current()/umbracoExtension]" /&gt;
+	&lt;pre class="language-{$lang}"&gt;&lt;code&gt;
+		&lt;xsl:value-of select="ucom.IO:LoadFile(umbracoFile)" /&gt;
+	&lt;/code&gt;&lt;/pre&gt;
+	&lt;xsl:apply-templates select="caption[normalize-space()]" /&gt;
+&lt;/xsl:template&gt;</code></pre>
+      <p class="snippet-caption">The template that renders a code snippet (this is so meta :-)</p>
+<p>The <span class="code">LoadFile()</span> method simply does that (loads a file) and when we use an XSLT <span class="code">value-of</span> instruction, the processor will do all the output-escaping necessary for especially HTML, XML &amp; XSLT samples to "just work" with no preprocessing.</p>
+<p><em>(The <span class="code">$lexer</span> variable serves as a proxy for choosing the file's language based on its file extension, because some files needed to be mapped to a specific language.)</em> </p>
+<p>Using a macro also had the fantastic sideeffect of an author being able to update his codesnippets just by uploading a new file. If they were just content in the WYSIWYG they'd have to wait for me to actually publish their changes.</p>
+<h2>Thank you, thank you, thank you</h2>
+<p>I'd really like to thank a few people, so here goes:</p>
+<p>Initially, I figured I'd alert HQ about this, just to be sure I wasn't botching one of their secret plans, or misusing the Umbraco name for something they didn't comply with. Fortunately they thought it was an excellent idea, and encouraged me to go ahead, so <em><strong>thanks for that Niels!</strong></em></p>
+<p>I also want to thank <a href="http://twitter.com/JSkovgaard" target="_blank" title="Jan's on Twitter!">Jan</a> and <a href="http://twitter.com/dammark" target="_blank" title="- so's Sebastian :-)">Sebastian</a> for instantly agreeing to do this when asked if they'd like to team up and do an "Umbraco themed" christmas calendar. This wouldn't have happened had they not agreed, thereby encouraging me to go ahead. <em><strong>Thanks guys!</strong></em></p>
+<p>Finally, a huge <em><strong>thank you</strong></em> to all the authors for joining the project - it's been a joy reading another surprising article day after day, <em>#h5yr</em> to all of you!</p>
+<h2><br>Now go have a Merry Christmas</h2>
+<p>We're going to release the source code of this site on GitHub, but <strong>not</strong> until we've all had a nice break from coding and what other things we do everyday, so have a lovely Christmas and thank you <strong>very</strong> much for following along this month.</p>
+<p>/Chriztian </p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/xslt/" title="See all articles tagged with XSLT">XSLT</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Chriztian Steinmeier"><img src="//gravatar.com/avatar/286ea7abe73e582c6254956992406a0f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/286ea7abe73e582c6254956992406a0f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Chriztian Steinmeier</h1>
+        <p>Chriztian is on Twitter as <a href="//twitter.com/greystate" title="Chriztian Steinmeier on Twitter" rel="author">@greystate</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2012/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="The Tale of the 3 CMSs" href="/umbraco-cms/2012/the-tale/"><span class="scr-text">The Tale of the 3 CMSs</span></a></li>
+      <li><a title="Using DocTypeMixins" href="/umbraco-cms/2012/doctypemixins/"><span class="scr-text">Using DocTypeMixins</span></a></li>
+      <li><a title="1-1 Multilingual Websites in Umbraco" href="/umbraco-cms/2012/multilingual-1-1/"><span class="scr-text">1-1 Multilingual Websites in Umbraco</span></a></li>
+      <li><a title="How to view source with pride" href="/umbraco-cms/2012/how-to-view-source-with-pride/"><span class="scr-text">How to view source with pride</span></a></li>
+      <li><a title="Introducing The umbraco:image Control" href="/umbraco-cms/2012/introducing-the-umbraco-image-control/"><span class="scr-text">Introducing The umbraco:image Control</span></a></li>
+      <li><a title="Ajax Paging Using AltTemplates" href="/umbraco-cms/2012/ajax-paging-using-alttemplates/"><span class="scr-text">Ajax Paging Using AltTemplates</span></a></li>
+      <li><a title="Post build events for Package devs" href="/umbraco-cms/2012/post-build-events-for-package-devs/"><span class="scr-text">Post build events for Package devs</span></a></li>
+      <li><a title="How to extend the back-office..." href="/umbraco-cms/2012/extending-the-back-office/"><span class="scr-text">How to extend the back-office...</span></a></li>
+      <li><a title="Community engagement" href="/umbraco-cms/2012/community-engagement/"><span class="scr-text">Community engagement</span></a></li>
+      <li><a title="DAMP Gallery" href="/umbraco-cms/2012/damp-gallery/"><span class="scr-text">DAMP Gallery</span></a></li>
+      <li><a title="Give me JSON" href="/umbraco-cms/2012/give-me-json/"><span class="scr-text">Give me JSON</span></a></li>
+      <li><a title="Optimising Umbraco for speed" href="/umbraco-cms/2012/optimise-for-speed/"><span class="scr-text">Optimising Umbraco for speed</span></a></li>
+      <li><a title="Remember the Editors!" href="/umbraco-cms/2012/remember-the-editors/"><span class="scr-text">Remember the Editors!</span></a></li>
+      <li><a title="On Being a Superhero" href="/umbraco-cms/2012/superhero/"><span class="scr-text">On Being a Superhero</span></a></li>
+      <li><a title="Bulk-Assigning Media Items" href="/umbraco-cms/2012/bulk-assigning-media/"><span class="scr-text">Bulk-Assigning Media Items</span></a></li>
+      <li><a title="The importance of great images ... and how you achieve them" href="/umbraco-cms/2012/great-images/"><span class="scr-text">The importance of great images ... and how you achieve them</span></a></li>
+      <li><a title="Media Query opt-out with Umbraco" href="/umbraco-cms/2012/media-query-opt-out/"><span class="scr-text">Media Query opt-out with Umbraco</span></a></li>
+      <li><a title="Who Picked This ?" href="/umbraco-cms/2012/who-picked-this/"><span class="scr-text">Who Picked This ?</span></a></li>
+      <li><a title="Razor and Faceted Search In Umbraco" href="/umbraco-cms/2012/razor-faceted-search/"><span class="scr-text">Razor and Faceted Search In Umbraco</span></a></li>
+      <li><a title="Creating a Login form with Umbraco MVC SurfaceController" href="/umbraco-cms/2012/creating-a-login-form-with-umbraco-mvc-surfacecontroller/"><span class="scr-text">Creating a Login form with Umbraco MVC SurfaceController</span></a></li>
+      <li><a title="Favorite Pages for Members" href="/umbraco-cms/2012/member-favorites/"><span class="scr-text">Favorite Pages for Members</span></a></li>
+      <li><a title="AutoIcons, Conventions in Umbraco" href="/umbraco-cms/2012/autoicons-conventions-in-umbraco/"><span class="scr-text">AutoIcons, Conventions in Umbraco</span></a></li>
+      <li><a title="Quick Tips for Improving your Callouts" href="/umbraco-cms/2012/improving-callouts/"><span class="scr-text">Quick Tips for Improving your Callouts</span></a></li>
+      <li class="selected"><a title="Wrapping Up: Building this Site" href="/umbraco-cms/2012/wrapping-up/"><span class="scr-text">Wrapping Up: Building this Site</span></a></li>
+      <li><a title="One more thing..." href="/umbraco-cms/2012/one-more-thing/"><span class="scr-text">One more thing...</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>How And Why We Do Umbraco MVC</title>
+<meta name="description" content="Umbraco MVC, Umbraco MVC Validators, Umbraco MVC Models, Umbraco Razor">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">How And Why We Do Umbraco MVC</h1>
+      <p class="byline"> by Kasper Holm &amp; Niels Ellegaard, <span class="pubdate">posted on <time datetime="2013-12-11">Dec 11, 2013</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">As a .NET developer the introduction of MVC in Umbraco was a huge step in the right direction for us, so we dived head first into the wonderful world of Umbraco MVC.</p>
+<p class="intro">We had already switched most of our code over to Razor in macroscripts, but having to go through a masterpage for template was kinda redundant and old fashioned. However with MVC we could realize a long time dream of leaving all that behind and stick with our good buddy Razor!</p>
+<p dir="ltr">With MVC comes a pattern of separation of concerns. Which of course is one of the main reason why we love MVC, this allows us to completely separate the views from the logic.</p>
+<h2>STORY TIME!</h2>
+<p dir="ltr">We started out as pioneers into the Umbraco MVC immediately upon release.</p>
+<p dir="ltr">As this was in the early MVC releases there wasn't a whole lot of documentation on the subject.</p>
+<p dir="ltr">We tried a lot of things trying to create custom controllers, including the black arts of custom routing in the early Umbraco MVC days.</p>
+<p dir="ltr"><a href="http://our.umbraco.org/forum/developers/api-questions/38048-Umbraco-411-MVC-Custom-Routing-Content-is-null-How-can-I-load-content?p=1">http://our.umbraco.org/forum/developers/api-questions/38048-Umbraco-411-MVC-Custom-Routing-Content-is-null-How-can-I-load-content?p=1</a></p>
+<p dir="ltr">However, in time, there was this one link from our lovely Umbraco HQ, leading us on a righteous path.</p>
+<p dir="ltr">We used this to create our first project in Umbraco MVC.</p>
+<p dir="ltr"><a href="http://our.umbraco.org/documentation/Reference/Templating/Mvc/custom-controllers">http://our.umbraco.org/documentation/Reference/Templating/Mvc/custom-controllers</a></p>
+<p dir="ltr">It was built around a BaseRenderModel which inherits the RenderModel and was used in the layout.</p>
+<p dir="ltr">And a BaseController which inherits the Umbraco.Web.Mvc.RenderMvcController, setting all the global stuff, like Navigation bars, Google analytics script and SEO parameters.</p>
+<p dir="ltr">Then all we had to do was always to inherit from those.</p>
+<p dir="ltr">It worked just fine, but we wanted more!</p>
+<h2 dir="ltr">Clean Views!</h2>
+<p dir="ltr">The RenderModel gave full access to Umbraco methods and as such we could still do all the logic in the view.</p>
+<p dir="ltr">Now we really wanted a clean separation and being able to dig directly into Umbraco from the view, violates that. So we grabbed our pirate hat and went into uncharted waters! Yarr!</p>
+<p dir="ltr">What we did was creating a View with a custom Model, only containing the data that the View needs.</p>
+<p dir="ltr">With this we now had clean and strongly typed Views that only knew about the Model being passed, just like regular MVC.</p>
+<p dir="ltr">With clean Views the next stop to a great coding standard in MVC is, in our humble opinion, Don't Repeat Yourself (DRY) code. With stuff like News being shown on more than one page we found ourselves writing some of the same code and some of the same property aliases more than once. So we created a Mapper for each DocType so we could just call the mapper and get a model back filled with the data we needed. This way, if we ever needed to change the DocType, we only had to update the mapper.</p>
+<p dir="ltr">This was also very easy with inherited doctypes as their model just inherited exactly as they do in Umbraco and then pass them through the mappers needed.</p>
+<p dir="ltr">Our dear colleague Nick Frederiksen made a blogpost on this back in May.</p>
+<p dir="ltr"><a href="http://ndesoft.dk/2013/05/25/how-to-create-a-real-mvc-app-using-umbraco/">http://ndesoft.dk/2013/05/25/how-to-create-a-real-mvc-app-using-umbraco/</a> </p>
+<h2 dir="ltr">How we do it now</h2>
+<p dir="ltr">After a few projects we realized that we had left our Controllers barren and moved all of that code to the mappers. So we refactored it a bit, still having a clear definition of when to use what.</p>
+<p dir="ltr">So now we've moved the code back in the Controllers, unless the data is on more than one page or if the DocType doesn't have a template, then we make a mapper. We keep the DRY principle of only having the code in one place. So if you at some point need an additional property on your news, you only have to change it a single place, regardless of how many pages you use it in. The same concept goes for partial views!</p>
+<p dir="ltr">It is a relatively small change we made, but Nick did make a blog post about the change as the first one generated a lot of debate.</p>
+<p dir="ltr"><a href="http://ndesoft.dk/2013/08/10/real-mvc-app-using-umbraco-revisited/">http://ndesoft.dk/2013/08/10/real-mvc-app-using-umbraco-revisited/</a></p>
+<p dir="ltr"></p>
+<h2 id="docs-internal-guid-16f73df9-cd71-8874-e9b8-9c011e1a53c7" dir="ltr"><span>Can we do it better?</span></h2>
+<p><span></span></p>
+<p id="docs-internal-guid-16f73df9-cd72-ea8e-50ac-010fa97787a1" dir="ltr"><span>There is generally always room for improvements so naturally we haven't stopped trying to improve this and neither should you. Pick up the telescope and look in the horisont!</span></p>
+<p dir="ltr"><span><br class="kix-line-break">As it is now we always only have one model for each DocType, however sometimes we use the DocType somewhere else and only need a few of the properties on that page.<br class="kix-line-break">For example we have an article page and want to pull the top 3 articles into the frontpage. However on the frontpage we only want a small teaser text and a headline, not the whole bodytext nor the images and what else might be attached to the article.</span></p>
+<p dir="ltr"><span>So here we ideally want a smaller viewmodel just with the properties that we need in the given context.</span></p>
+<p dir="ltr"><span>While this isn't so difficult, we simply create another model and map it in either a mapper or in the controller depending on the amount of places it is used. There is one glaring issue.</span></p>
+<p dir="ltr"><span>Our property alias, those pesky magic strings, are now in more than once place.</span></p>
+<p dir="ltr"><span>It is still up for debate internally but the proposed solution is to replace the mapper class with a DocType class.</span></p>
+<p dir="ltr"><span>It would look something like this.</span></p>
+<p><span></span></p>
+<pre class="language-csharp"><code>public static class ArticleDocType
+{
+	public const string TeaserPropertyAlias = "teaser";
+        public const string HeaderPropertyAlias = "header";
+        public const string BodyTextPropertyAlias = "bodyText";
+
+        public static T Map&lt;T&gt;(IPublishedContent content, UmbracoHelper helper, T model)
+            where T : ArticleModel
+        {
+            model.Header = content.GetPropertyValue&lt;string&gt;(HeaderPropertyAlias);
+            model.Body = content.GetPropertyValue&lt;IHtmlString&gt;(BodyTextPropertyAlias);
+            model.Teaser = content.GetPropertyValue&lt;string&gt;(TeaserPropertyAlias);
+            
+            return model;
+        }
+
+        public static ArticleModel Map(IPublishedContent content, UmbracoHelper helper)
+        {
+            return Map(content, helper, new ArticleModel());
+        }
+
+
+        public static IEnumerable&lt;ArticleModel&gt; Map(IEnumerable&lt;IPublishedContent&gt; contents, UmbracoHelper helper)
+        {
+            return contents.Select(x =&gt; Map(x, helper)).WhereNotNull();
+        }
+}
+</code></pre>
+<p dir="ltr"></p>
+<p dir="ltr"></p>
+<p id="docs-internal-guid-63223038-cd75-566d-eb5b-74f3103a3982" dir="ltr"><span>The DocType class will still be a static class with all the mappers regarding that specific DocType, just like the old mappers. The addition is constant strings for all the property aliases.</span></p>
+<p dir="ltr"><span>Then in any controller or in a mapper on this class we can reference those constants, keeping the property aliases in check.</span></p>
+<p dir="ltr"><span>So, is this the final revision? <br class="kix-line-break">Probably not, we always want to improve on the way we code and as Umbraco MVC gets a bit more established best practices will settle. So this is our, current, proposition for a best practice in Umbraco MVC. As always this is completely open for debate for anyone so if you have anything to add or comment, you are more than welcome to hop aboard!</span></p>
+<p dir="ltr"></p>
+<h2 dir="ltr">But why go through all this trouble?</h2>
+<p dir="ltr">It might seem like a lot of work right off the bat, but once you get into the flow it makes things a lot easier. So we'll summarize some of the positive things about it.</p>
+<ul>
+<li>
+<p>Code is not being compiled at runtime. Because of this you will notice code mistakes faster because your solution simply won't build.</p>
+</li>
+<li>
+<p>You get Unobtrusive validation out of the box with data annotations in the models!<br>Having been used to the ASP.NET validators and custom JavaScript this is a huge deal. Being able to slam a dataannotation on the model properties and having the validation "Just Work!". That is truly amazing.<br><br>All you have to do is add these two lines to your appSettings in the config file.</p>
+<pre class="language-markup"><code>&lt;add key="ClientValidationEnabled" value="true" /&gt;
+&lt;add key="UnobtrusiveJavaScriptEnabled" value="true" /&gt;</code></pre>
+<p dir="ltr">We did run into a small speedbump as we generally have validationmessages in the dictionary for multi-lingual sites. The best way we found around this was to create our own data annotations and have them inherit from the original and extend them with a dictionary name.<br><br></p>
+<pre class="language-csharp"><code>[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter, AllowMultiple = false)]
+public class UmbracoRangeAttribute : RangeAttribute, IClientValidatable
+{
+	public UmbracoRangeAttribute(int minimum, int maximum, string dictionaryKey)
+		: base(minimum, maximum)
+	{
+		this.ErrorMessage = dictionaryKey;
+	}
+
+	public override string FormatErrorMessage(string name)
+	{
+		return umbraco.library.GetDictionaryItem(base.FormatErrorMessage(name));
+	}
+
+
+	public IEnumerable&lt;ModelClientValidationRule&gt; GetClientValidationRules(ModelMetadata metadata, ControllerContext context)
+	{
+		// Kodus to "Chad" http://stackoverflow.com/a/9914117
+		var rule = new ModelClientValidationRule
+		{
+			ErrorMessage = umbraco.library.GetDictionaryItem(this.ErrorMessage),
+			ValidationType = "range"
+		};
+
+		rule.ValidationParameters.Add("min", this.Minimum);
+		rule.ValidationParameters.Add("max", this.Maximum);
+		yield return rule;
+	}
+}</code></pre>
+          <p class="snippet-caption">Rangevalidator Example</p>
+<p dir="ltr">A quick guide and walkthrough of this can be found here.</p>
+<p dir="ltr"><a href="http://ndesoft.dk/2013/04/20/how-to-make-localized-models-in-umbraco-mvc/">http://ndesoft.dk/2013/04/20/how-to-make-localized-models-in-umbraco-mvc/</a><br><br></p>
+</li>
+<li>
+<p><span>Also with the MVC and the MVC routing, creating forms and Ajax posts and calls is insanely easy. Most of the time you won't even have to write any JavaScript. If needed it is very easy to extend it with OnCompleted events etc.<br><br></span></p>
+<pre class="language-javascript"><code>@using (Ajax.BeginForm("Order", "ShopSurface", new AjaxOptions() { HttpMethod = "POST", OnSuccess = "OnSuccess", OnBegin = "Showoverlay" }))
+{
+   @Html.Partial("_LibaryInfo", Model.Library)
+   &lt;input type="submit" value="Order now"/&gt;
+}</code></pre>
+<p><span> </span></p>
+</li>
+<li>
+<p><span><span>Keeping the code DRY makes the code much easier to maintain. Because you won't have to search through the whole solution for each small change.</span></span></p>
+</li>
+<li>
+<p><span><span><span>Last but not least. This is one your boss will love! Having a better separation of code makes it easier to divide the tasks and work multiple people on the same project, speeding up the development process. For example being able to mock the model before the controller is completed. Thus making it possible for a developer to create the view without the logic being done.</span></span></span></p>
+</li>
+</ul>
+<p dir="ltr">Now we know there is a steep learning curve for MVC, but we firmly believe it is a more efficient way of working with the web.</p>
+<p dir="ltr">That being said, we are not saying this is the only way of creating an Umbraco MVC site, but it helped us immensely and hope it can help you create even better Umbraco sites than you did before!</p>
+<p dir="ltr">Merry Christmas &amp; Happy coding!</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/mvc/" title="See all articles tagged with MVC">MVC</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v4/" title="See all articles tagged with v4">v4</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v6/" title="See all articles tagged with v6">v6</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/v7/" title="See all articles tagged with v7">v7</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Kasper Julius Holm"><img src="//gravatar.com/avatar/1bf4453adfd76cc4920042fec0b495c3.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/1bf4453adfd76cc4920042fec0b495c3.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Kasper Julius Holm</h1>
+        <p>Kasper is on Twitter as <a href="//twitter.com/JuliusHolm" title="Kasper Julius Holm on Twitter" rel="author">@JuliusHolm</a></p>
+      </div>
+      <div class="bio">
+        <div class="gravatar" title="Niels Ellegaard"><img src="//gravatar.com/avatar/96de5607d60495b158ab8bbab4446ac0.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/96de5607d60495b158ab8bbab4446ac0.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Niels Ellegaard</h1>
+        <p>Niels is on Twitter as <a href="//twitter.com/NJEllegaard" title="Niels Ellegaard on Twitter" rel="author">@NJEllegaard</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2013/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a title="Editor-proofing Umbraco" href="/umbraco-cms/2013/editor-proofing-umbraco/"><span class="scr-text">Editor-proofing Umbraco</span></a></li>
+      <li><a title="All your logs are belong to log4net" href="/umbraco-cms/2013/log4net-in-umbraco/"><span class="scr-text">All your logs are belong to log4net</span></a></li>
+      <li><a title="Bust a cache" href="/umbraco-cms/2013/cache-busting/"><span class="scr-text">Bust a cache</span></a></li>
+      <li><a title="Get More Out of Umbraco Using Server-Side Caching Strategies" href="/umbraco-cms/2013/get-more-out-of-umbraco-using-server-side-caching-strategies/"><span class="scr-text">Get More Out of Umbraco Using Server-Side Caching Strategies</span></a></li>
+      <li><a title="How GitHub Snippets for Umbraco 7 was built" href="/umbraco-cms/2013/github-snippets-for-umbraco/"><span class="scr-text">How GitHub Snippets for Umbraco 7 was built</span></a></li>
+      <li><a title="6 Easy Configuration Tweaks" href="/umbraco-cms/2013/6-easy-configuration-tweaks/"><span class="scr-text">6 Easy Configuration Tweaks</span></a></li>
+      <li><a title="Mapping Umbraco content to POCOs for strongly typed views" href="/umbraco-cms/2013/mapping-content-to-pocos/"><span class="scr-text">Mapping Umbraco content to POCOs for strongly typed views</span></a></li>
+      <li><a title="The worlds friendliest post on getting started with Examine" href="/umbraco-cms/2013/getting-started-with-examine/"><span class="scr-text">The worlds friendliest post on getting started with Examine</span></a></li>
+      <li><a title="Creating reusable code in MVC apps" href="/umbraco-cms/2013/creating-reusable-code-in-mvc-apps/"><span class="scr-text">Creating reusable code in MVC apps</span></a></li>
+      <li><a title="Why you should care about emotions when building a web shop" href="/umbraco-cms/2013/emotional-commerce/"><span class="scr-text">Why you should care about emotions when building a web shop</span></a></li>
+      <li class="selected"><a title="How And Why We Do Umbraco MVC" href="/umbraco-cms/2013/how-and-why-we-do-umbraco-mvc/"><span class="scr-text">How And Why We Do Umbraco MVC</span></a></li>
+      <li><a title="The Dictionary Secrets" href="/umbraco-cms/2013/the-dictionary-secrets/"><span class="scr-text">The Dictionary Secrets</span></a></li>
+      <li><a title="Data = Knowledge" href="/umbraco-cms/2013/data-=-knowledge/"><span class="scr-text">Data = Knowledge</span></a></li>
+      <li><a title="Content-First in Umbraco" href="/umbraco-cms/2013/content-first/"><span class="scr-text">Content-First in Umbraco</span></a></li>
+      <li><a title="Hybrid Framework" href="/umbraco-cms/2013/hybrid-framework/"><span class="scr-text">Hybrid Framework</span></a></li>
+      <li><a title="The uSync Soft Shoe Shuffle" href="/umbraco-cms/2013/the-usync-soft-shoe-shuffle/"><span class="scr-text">The uSync Soft Shoe Shuffle</span></a></li>
+      <li><a title="No More Empty Tabs, Please " href="/umbraco-cms/2013/empty-tabs/"><span class="scr-text">No More Empty Tabs, Please </span></a></li>
+      <li><a title="Sharing is caring - The 301 Url Tracker" href="/umbraco-cms/2013/sharing-is-caring/"><span class="scr-text">Sharing is caring - The 301 Url Tracker</span></a></li>
+      <li><a title="Umbraco V7 Compatible packages" href="/umbraco-cms/2013/v7-packages/"><span class="scr-text">Umbraco V7 Compatible packages</span></a></li>
+      <li><a title="What's in a Document Type anyway?" href="/umbraco-cms/2013/documenttypes/"><span class="scr-text">What's in a Document Type anyway?</span></a></li>
+      <li><a title="One member to rule them all" href="/umbraco-cms/2013/one-member-to-rule-them-all/"><span class="scr-text">One member to rule them all</span></a></li>
+      <li><a title="Injecting the backoffice into the backoffice" href="/umbraco-cms/2013/injecting-the-backoffice-into-the-backoffice/"><span class="scr-text">Injecting the backoffice into the backoffice</span></a></li>
+      <li><a title="Dashboard overload" href="/umbraco-cms/2013/dashboard-overload/"><span class="scr-text">Dashboard overload</span></a></li>
+      <li><a title="Christmas Edition" href="/umbraco-cms/2013/christmas-edition/"><span class="scr-text">Christmas Edition</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>

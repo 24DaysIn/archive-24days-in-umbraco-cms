@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+
+
+	<title>Mitigating the Bus factor with a Self-sufficient Umbraco Site (SSUS)</title>
+<meta name="description" content="">
+
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="/assets/24days-archive.css">
+	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
+		
+	
+	
+</head>
+<body>
+	
+
+
+
+<section class="page"><main class="article"><header><h1 class="header">Bus Factor Mitigation</h1>
+      <p class="byline"> by Mario Lopez, <span class="pubdate">posted on <time datetime="2021-12-09">Dec 9, 2021</time></span></p></header><div class="notification warning">
+      <h2>Heads Up!</h2>
+      <p>
+					This article is several years old now, and much has happened since then,
+					so please keep that in mind while reading it.
+				</p>
+    </div>
+    <div class="content-column">
+      <p class="teaser">With the release of Umbraco 9, there have been some conversations around how easy and quick it is to start a new Umbraco site. There’s even <a href="https://www.youtube.com/watch?v=KVKVboOzTFM">a video</a> related to this.</p>
+<p class="intro">That’s all pretty cool for the first person who sets up the site for a new project, but the reality is that the rest of the developers who will work on the project are more forgotten than <a href="https://eternitymarketing.com/blog/the-best-place-to-hide-a-dead-body-is-page-2-of-google">the second page of Google</a>.</p>
+<p><strong>Disclaimer</strong>: There are many ways of dealing with the following issues and everybody has a different approach or tools they use to overcome them. For example, you can store your secrets in different ways, even as environment variables. The goal of this article is to find the path of least friction.</p>
+<h2>The problem</h2>
+<p>When a new developer starts working on a project that is already underway, they need access to a bunch of resources to get the site up and running on their local machine. All those resources need to be retrieved and configured in specific ways to have a working site that a developer can start coding on. I have classified these resources into a few categories and each one needs a different approach to be shared with the involved developers.</p>
+<h3>Code</h3>
+<p>Someone has to tell you where to find the code for your project. We can’t get around this. </p>
+<h3>Database</h3>
+<p>The second most important resource on a Umbraco site is the database. Your site won’t run without one. When you install a new site, one solution is to get a working database copy from one of the developers already working on the project. But what if they are not available? Do we have a second contact? We also need to be sure that the database is up-to-date with the latest doctypes and content.</p>
+<h3>Media</h3>
+<p>Media files are those files, like documents, images or videos, that are part of the content of the site and not actual design assets. Because these files are not part of the solution and don’t need to be source controlled, they shouldn’t be included in the repository along with the rest of our code. Many times, those files are missing when you install a project on your computer for the first time and you need to ask a developer to give you those files in order to render the pages properly on your local machine.</p>
+<h3>Credentials</h3>
+<p>Another wall I sometimes hit on new projects is not having access to the back office for the first time. Sure, you can ask another developer, or you can even try to restore the admin password. The other option is to have a company-wide enterprise-level password management system.</p>
+<h3>Secrets</h3>
+<p>What about other types of settings like API keys or passwords? Surely, you are not storing those on the web.config and pushing them to the repo, right? Right!? 🙈</p>
+<p>As you can see from the points above, there’s a bottleneck here. We will always need someone to help us set up  an existing project on our local machine.</p>
+<p> </p>
+<h2>Making the site self-sufficient</h2>
+<p>The goal of this article is to find, which collection of techniques and tools we can use to make a <strong>Self-Sufficient Umbraco Site</strong> (SSUS, just because everything sounds cooler with acronyms).</p>
+<p>I’m going to define SSUS as:</p>
+<blockquote>A site, that once we have the code, we can run it on our computer without the involvement of another person.</blockquote>
+<h2>Code</h2>
+<p>There are many services that offer source code repositories where you can upload your code. <a href="https://github.com/">GitHub</a>, <a href="https://bitbucket.org/">Bitbucket</a>, and <a href="https://about.gitlab.com/">Gitlab</a> are a few of the most commonly used. To access these services you usually need a username and password or you can use other types of credentials like SSH keys. The best way of accessing this without the help of others is having access to proper documentation that describes where and how to access the code. At Luminary, each project has a playbook and a dedicated confluence page which makes this easier for us.</p>
+<h2>Database</h2>
+<p>Of course, the most basic solution to grab a copy of the database is getting someone to give you one. But there are some other techniques that can help us to have a working database without having a backup.</p>
+<h3>Unattended Install</h3>
+<p>Umbraco ships with one great feature called <a href="https://our.umbraco.com/Documentation/Fundamentals/Setup/Install/Unattended-Install">Unattended Install</a>. When you configure and enable this option, the Umbraco site will install itself without stopping to ask for any details. These details can come pre-configured in the project’s appsettings.json file, or via environment variables. If the credentials are on the appsettings file it will be a good idea to modify them after the installation is done. Probably configuring these details as environment variables instead sounds like a more secure way. Take a look at the Umbraco docs to see all the available options when you create your project.</p>
+<p>This step, apart from installing a fresh new Umbraco database, will also create the admin user with the given credentials. This will effectively spare us from hounding anyone to give us the credentials to log into the back office (sweet!).</p>
+<h3>LocalDB</h3>
+<p>LocalDB is a lightweight SQL server that runs on request instead of as a service. This uses less of the computer’s resources. I strongly recommend you use this type of server, instead of SQL Express, for example. As an added benefit, when you run the unattended install and use LocalDB, it will create the database on the fly for you automatically if it doesn’t exist, so you don’t need to create the database beforehand.</p>
+<h2>Structure and content</h2>
+<p>At this point, we would have an empty database. We will need to restore all our site’s data like doctypes, data types, or content. To help us with this, we have chosen the <a href="https://www.jumoo.co.uk/usync/">amazing uSync</a>. uSync can export all of our Umbraco content and data into files that we can push to our repo. It’s out of the scope of this article to explain how to use uSync, but the website has some <a href="https://usync.readthedocs.io/getting-started/">easy to follow instructions</a>.</p>
+<h2>Media</h2>
+<p>The best way I have found to share media items without relying on someone else is to use Azure Storage. Multiple developers running the same site can share the same Azure Storage account. To configure your site to use Azure Storage, you can follow <a href="https://our.umbraco.com/documentation/Extending/FileSystemProviders/Azure-Blob-Storage/">these instructions</a>. Having the media in a shared location frees us from having to include them in our repositories or sharing zip files with other people.</p>
+<h2>Secrets</h2>
+<p>With the previous steps, you should be able to get a site up and running. This is true if you don’t have any external integrations, but we all know this is normally not the case. Our sites most of the time have external dependencies like keys, passwords, or any other secure dependency you can think of. These types of secrets <a href="https://blog.gitguardian.com/secrets-credentials-api-git/">shouldn’t be stored in our repositories</a>. Even if our repos are private, there’s always the risk of someone getting access to them and all the information about our sites.</p>
+<h3>Azure Vault</h3>
+<p>There are a few techniques to store these secrets. For our SSUS, we don’t want to depend on other developers or managers to give us those secrets. The best solution to solve this is to use something like <a href="https://docs.microsoft.com/en-us/azure/key-vault/general/overview">Azure Vault</a>. Vault stores your secrets on the cloud and they can only be accessed through proper authentication. On Azure, this authentication is provided by Active Directory (AD).</p>
+<p>At Luminary, this is very convenient, as we have all our internal resources protected by AD. So having access to a shared Azure Vault is a no-brainer. In our case, we would create a Vault for our project and store all the secrets in it. Then we would give read and write access to the AD team that is going to work on the project. This way, any user belonging to that team would have access to the secrets straight away. In order for our site to grab those secrets, either from our local machine or from a web app, we need to configure it in a certain way that will make it run in both environments.</p>
+<h3>Creating the Key Vault</h3>
+<p>First, you will need to <a href="https://docs.microsoft.com/en-us/azure/key-vault/general/quick-create-portal#:~:text=%20Create%20a%20vault%20%201%20From%20the,and%20enter%20a%20resource%20group%20name.%20More%20">create a Key Vault in Azure</a>. </p>
+<p>Once you have that, you will need to create your secrets in there.</p>
+<p><img style="width: 185px; height: 226px;" src="/archive/media/2021/image1.png?width=185&amp;height=226" alt="" data-udi="umb://media/5d50d058771640878a90b25f94f6e54e"></p>
+<p>Be sure that you properly configure your access policies and give permission to read your secrets to the right users or groups.</p>
+<p><img style="width: 500px; height: 257.05939629990263px;" src="/archive/media/2021/image2.png?width=500&amp;height=257.05939629990263" alt="" data-udi="umb://media/9e5f30be5d4c4582b9a2737a87b98d9a"></p>
+<p> </p>
+<h2>Managed Identities</h2>
+<p>The recommended way of accessing protected Azure resources is using ‘<a href="https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/services-support-managed-identities#:~:text=Azure%20services%20that%20support%20Azure%20AD%20authentication%20Managed,AD%20authentication%20without%20having%20credentials%20in%20your%20code.">Managed Identities</a>’. Managed Identities allows a ‘source’ resource to access a ‘target’ resource without needing to use any credentials. When you have your Vault protected with Managed Identities, your app will try to authenticate using your Visual Studio account if you are running the app for development or, a system-managed or user-managed identity if you are running the app from a different environment, like a WebApp.</p>
+<p>I’m going to show you quickly how to set up your local environment to connect to a protected Key Vault. There are more in-depth tutorials out there, but this should give you the main steps to start off.</p>
+<h3>Creating the Managed Identity</h3>
+<p>There are two types of Managed Identity:</p>
+<ul>
+<li aria-level="1">System-assigned: belongs only to a resource, for example, the web app, but it cannot be used to authenticate any other resource. This is deleted if the web app is removed.</li>
+<li aria-level="1">User-assigned: can be shared between different resources, for example, the web app and an Azure Function.</li>
+</ul>
+<p>To stay within the scope of this article and because we are running the site locally, our identity is validated by our AD account. So, we don’t need to create a managed identity.</p>
+<h3>Accessing the secrets</h3>
+<p>Now that we have our secrets in a secure place, we need to be able to access them from our Umbraco site. To be able to access your secrets you will need to install Azure Identity which comes as a <a href="https://github.com/Azure/azure-sdk-for-net/blob/Azure.Identity_1.5.0/sdk/identity/Azure.Identity/README.md">NuGet package</a>. This will offer the required classes to identify yourself.</p>
+<p>Also, you will have to install the client to access the Key Vault. This comes in <a href="https://github.com/Azure/azure-sdk-for-net/blob/Azure.Security.KeyVault.Secrets_4.2.0/sdk/keyvault/Azure.Security.KeyVault.Secrets/README.md">another NuGet package.</a></p>
+<p>Once you have these two libraries installed, the code to access your secret goes like this:</p>
+<pre><code class="language-csharp">public class InitSecrets : IComposer
+{
+    public void Compose(IUmbracoBuilder builder)
+    {
+        var vaultUri = builder.Config["vaultUri"];
+        var client = new SecretClient(vaultUri: new Uri(vaultUri), credential: new DefaultAzureCredential());
+        var secret = client.GetSecret("mykey");
+    }
+}</code></pre>
+<p>As you can see in the example, we need our vault URI. You can get this value from your Key vault:</p>
+<p> </p>
+<p><img style="width: 566px; height: 112px;" src="/archive/media/2021/image4.png?width=566&amp;height=112&amp;mode=max" alt="" data-udi="umb://media/b7d14fce4abc40699869aff19ae40ecf"></p>
+<p> </p>
+<p>For testing purposes, I have used a Composer to grab my secret, but this is not the recommended approach!</p>
+<p>You could use the IOption interface, <a href="https://docs.microsoft.com/en-us/dotnet/core/extensions/options">following the Options pattern</a>, and inject your settings where you are going to need them or register some type of service that has access to those secrets. That’s totally up to you. </p>
+<p>If you intend to host your app on Azure, the preferred way of authenticating is using the DefaultAzureCredential of this library. When we use this, the app will fall back between different ways of authentication until it finds a suitable one.</p>
+<p><img style="width: 730px; height: 181px;" src="/archive/media/2021/image3.png?width=730&amp;height=181&amp;mode=max" alt="" data-udi="umb://media/0343775f680847908a0a7f0d1974194a"></p>
+<p><br>Awesome! Now all the devs can access the secrets without having to share any files, which would be a big security risk. The vault URI can be a part of the codebase and checked in to source control. Only authorized users or team members can access the key vault.</p>
+<h2>Conclusion</h2>
+<p>When starting to work on an existing project that another developer has already installed, it’s not always very straightforward to get all the required resources to have the site running locally.</p>
+<p>We have seen that there are a few key areas where we will need assistance from someone else to provide some required assets. We have identified those areas as code, database, media, credentials, and secrets.</p>
+<p>We have defined a Self-Sufficient Umbraco Site (SSUS) as a site that is configured in a certain way, following some techniques and using external tools to potentially allow a developer to run a site locally without any external assistance.</p>
+<p>This article offers a potential solution but it is not the only possible solution. The most important part is identifying that we have a problem, and finding ways to overcome that problem.</p>
+<p>Hopefully, this opens a discussion around the topic and we can identify other approaches collaboratively.</p>
+<p> </p>
+<p>Thanks to Emmanuel Tissera from Luminary for the idea which lead to this article.</p>
+    </div><footer><ul class="tags">
+        <li><a rel="tag" href="/umbraco-cms/tags/configuration/" title="See all articles tagged with Configuration">Configuration</a></li>
+        <li><a rel="tag" href="/umbraco-cms/tags/developer/" title="See all articles tagged with Developer">Developer</a></li>
+      </ul></footer><section class="bios"><div class="bio">
+        <div class="gravatar" title="Mario Lopez"><img src="//gravatar.com/avatar/28c062e5ef2e27aa30918b86274daf9f.jpg?d=mm&amp;s=150" srcset="//gravatar.com/avatar/28c062e5ef2e27aa30918b86274daf9f.jpg?d=mm&amp;s=300 2x" width="150" height="150"></div>
+        <h1>Mario Lopez</h1>
+        <p>Mario is on Twitter as <a href="//twitter.com/skartknet" title="Mario Lopez on Twitter" rel="author">@skartknet</a></p>
+      </div></section><section class="comments"><div id="disqus_thread"></div></section></main><nav class="dates-navbar"><a href="/umbraco-cms/2021/" class="home-link"><span class="scr-text">Home</span></a><ol>
+      <li><a href="/umbraco-cms/2021/friendly-umbraco/" title="Friendly Umbraco"><span class="scr-text">Friendly Umbraco</span></a></li>
+      <li><a href="/umbraco-cms/2021/scripting-azure-deployment/" title="Scripting Azure Deployment"><span class="scr-text">Scripting Azure Deployment</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-tips-for-content-apps/" title="Advanced Tips For Content Apps"><span class="scr-text">Advanced Tips For Content Apps</span></a></li>
+      <li><a href="/umbraco-cms/2021/perfect-imperfection/" title="Perfect Imperfection"><span class="scr-text">Perfect Imperfection</span></a></li>
+      <li><a href="/umbraco-cms/2021/heartcore-christmas-bingo/" title="Heartcore Christmas Bingo"><span class="scr-text">Heartcore Christmas Bingo</span></a></li>
+      <li><a href="/umbraco-cms/2021/magic-strings/" title="Magic strings"><span class="scr-text">Magic strings</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-9-server-variables/" title="Umbraco 9 Server Variables"><span class="scr-text">Umbraco 9 Server Variables</span></a></li>
+      <li><a href="/umbraco-cms/2021/small-changes/" title="Small Changes"><span class="scr-text">Small Changes</span></a></li>
+      <li class="selected"><a href="/umbraco-cms/2021/bus-factor-mitigation/" title="Bus Factor Mitigation"><span class="scr-text">Bus Factor Mitigation</span></a></li>
+      <li><a href="/umbraco-cms/2021/upgrading-1000-sites/" title="Upgrading 1000 sites"><span class="scr-text">Upgrading 1000 sites</span></a></li>
+      <li><a href="/umbraco-cms/2021/100daysofcode-umbraco9/" title="100DaysOfCode Umbraco9"><span class="scr-text">100DaysOfCode Umbraco9</span></a></li>
+      <li><a href="/umbraco-cms/2021/authenticating-members-with-discord/" title="Authenticating Members With Discord"><span class="scr-text">Authenticating Members With Discord</span></a></li>
+      <li><a href="/umbraco-cms/2021/diagnostic-tools-for-web/" title="Diagnostic Tools for web"><span class="scr-text">Diagnostic Tools for web</span></a></li>
+      <li><a href="/umbraco-cms/2021/azure-load-balancing/" title="Azure Load Balancing"><span class="scr-text">Azure Load Balancing</span></a></li>
+      <li><a href="/umbraco-cms/2021/umbraco-cqrs/" title="Umbraco CQRS"><span class="scr-text">Umbraco CQRS</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-pipelines/" title="YAML pipelines"><span class="scr-text">YAML pipelines</span></a></li>
+      <li><a href="/umbraco-cms/2021/yaml-templates/" title="YAML templates"><span class="scr-text">YAML templates</span></a></li>
+      <li><a href="/umbraco-cms/2021/advanced-blocklist-editor/" title="Advanced BlockList Editor"><span class="scr-text">Advanced BlockList Editor</span></a></li>
+      <li><a href="/umbraco-cms/2021/hacking-your-career/" title="Hacking your career"><span class="scr-text">Hacking your career</span></a></li>
+      <li><a href="/umbraco-cms/2021/reading-time/" title="Reading Time"><span class="scr-text">Reading Time</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part1/" title="Micro-Architectures Part1"><span class="scr-text">Micro-Architectures Part1</span></a></li>
+      <li><a href="/umbraco-cms/2021/micro-architectures-part2/" title="Micro-Architectures Part2"><span class="scr-text">Micro-Architectures Part2</span></a></li>
+      <li><a href="/umbraco-cms/2021/christmas-crossword/" title="Christmas Crossword"><span class="scr-text">Christmas Crossword</span></a></li>
+      <li><a href="/umbraco-cms/2021/10-years-of-sharing/" title="10 Years of Sharing"><span class="scr-text">10 Years of Sharing</span></a></li>
+    </ol></nav></section>
+
+
+	<script type="module" src="/assets/ipuzzler.js"></script>
+	<script defer src="/assets/libs.min.js"></script>
+	<script defer src="/assets/app.js"></script>
+	
+</body>
+</html>
