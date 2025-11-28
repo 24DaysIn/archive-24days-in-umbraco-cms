@@ -1,7 +1,7 @@
 # 24 Days In Umbraco Archive
 
 This is the static archive of all the articles from 2012 to 2021,
-which are being served on http://archive.24days.in/umbraco-cms/
+which are being served on https://archive.24days.in/umbraco-cms/
 
 Originally, this design used fonts from Typekit (Adobe Fonts) but we
 decided to selfhost a couple of close(-ish) fonts from Google Fonts
