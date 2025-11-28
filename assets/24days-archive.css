@@ -1215,8 +1215,18 @@ body {
   -webkit-margin-before: 1.6em;
           margin-block-start: 1.6em;
 }
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #070726;
+    color: #9d9d9d;
+  }
+}
 .notification.warning h2 {
   color: inherit;
+}
+.site-nav ul {
+  justify-content: start;
+  view-transition-name: --sitenav;
 }
 .article-index li a,
 .article-index li .byline {
