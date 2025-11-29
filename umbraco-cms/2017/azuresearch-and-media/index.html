@@ -28,45 +28,45 @@
 				</p>
     </div>
     <div class="content-column">
-      <p class="teaser"><span style="font-weight: 400;">At the start of this year i got to start on my third Umbraco project ever. And one of the things we needed to build was a search functionality. After some time checking the options:</span></p>
+      <p class="teaser"><span>At the start of this year i got to start on my third Umbraco project ever. And one of the things we needed to build was a search functionality. After some time checking the options:</span></p>
 <ul>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Examine</span></li>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Solr</span></li>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Azure Search</span></li>
+<li><span>Examine</span></li>
+<li><span>Solr</span></li>
+<li><span>Azure Search</span></li>
 </ul>
-<p class="intro"><span style="font-weight: 400;">We decided to use Azure search.</span></p>
+<p class="intro"><span>We decided to use Azure search.</span></p>
 <p>The main reason behind that decision is that it is scalable, a colleague was already using it on another project, the website was going to be hosted on Azure and the media files are saved in Azure Blob storage so that was a win-win.</p>
-<p><span style="font-weight: 400;">This article will focus on getting Azure search to work with indexing media content in the likes of word docs and pdf’s. The indexing of media like this is not part of the base project we used to get AzureSearch working. </span></p>
-<h2><span style="font-weight: 400;">The Base</span></h2>
-<p><span style="font-weight: 400;">First of all the base of our code is the Azure Project by Darren Ferguson, which you can find here:</span></p>
+<p><span>This article will focus on getting Azure search to work with indexing media content in the likes of word docs and pdf’s. The indexing of media like this is not part of the base project we used to get AzureSearch working. </span></p>
+<h2><span>The Base</span></h2>
+<p><span>First of all the base of our code is the Azure Project by Darren Ferguson, which you can find here:</span></p>
 <ul>
-<li style="font-weight: 400;"><a href="https://our.umbraco.org/projects/developer-tools/moriyama-azure-search/"><span style="font-weight: 400;">https://our.umbraco.org/projects/developer-tools/moriyama-azure-search/</span></a></li>
+<li><a href="https://our.umbraco.org/projects/developer-tools/moriyama-azure-search/"><span>https://our.umbraco.org/projects/developer-tools/moriyama-azure-search/</span></a></li>
 </ul>
-<p><span style="font-weight: 400;">This gave us the basic gist of what we wanted to accomplish but still missed some elements we needed. We had to copy the project because at the time we started using it the package was not yet available. The major difference is that the project uses JSON to store its configuration. This did not work for us as that cannot be transformed in Visual Studio like XML can. So we replaced the JSON with a XML structure file.</span></p>
+<p><span>This gave us the basic gist of what we wanted to accomplish but still missed some elements we needed. We had to copy the project because at the time we started using it the package was not yet available. The major difference is that the project uses JSON to store its configuration. This did not work for us as that cannot be transformed in Visual Studio like XML can. So we replaced the JSON with a XML structure file.</span></p>
 <p>After we changed the config from JSON to an XML structure we had the search up and running in no time, however we needed three more things that we not present in the project:</p>
 <ul>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Keyword highlighting</span></li>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Search PDF</span></li>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Search Office docs; Word &amp; excel</span></li>
+<li><span>Keyword highlighting</span></li>
+<li><span>Search PDF</span></li>
+<li><span>Search Office docs; Word &amp; excel</span></li>
 </ul>
-<p><span style="font-weight: 400;">The rest of this article will focus on the three functions mentioned above, and i will assume you have some knowledge about AzureSearch and Darrens Project. If you do not please read the readme file of Darrens Project.</span></p>
-<h2><span style="font-weight: 400;">Keyword Highlighting</span></h2>
-<p><span style="font-weight: 400;">Keyword Highlighting is a built in feature in Azure Search. So that’s just some config changes and we are good to go right? Well no you still need to do some minor coding.</span></p>
-<p><span style="font-weight: 400;">There are two steps to take to activate it.</span></p>
+<p><span>The rest of this article will focus on the three functions mentioned above, and i will assume you have some knowledge about AzureSearch and Darrens Project. If you do not please read the readme file of Darrens Project.</span></p>
+<h2><span>Keyword Highlighting</span></h2>
+<p><span>Keyword Highlighting is a built in feature in Azure Search. So that’s just some config changes and we are good to go right? Well no you still need to do some minor coding.</span></p>
+<p><span>There are two steps to take to activate it.</span></p>
 <ol>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Config.</span></li>
-<li style="font-weight: 400;"><span style="font-weight: 400;">Display highlighted keywords</span></li>
+<li><span>Config.</span></li>
+<li><span>Display highlighted keywords</span></li>
 </ol>
 <p>Config</p>
-<p><span style="font-weight: 400;">First of all we need to tell Azure Search which indexed fields in can use as it’s source. This is done in the config file.</span></p>
-<p><span class="code" style="font-weight: 400;">&lt;HighlightFields&gt;pageTitle,articleIntro,articleText,contentRowsPicker,mediaText&lt;/HighlightFields&gt;</span></p>
-<p><span style="font-weight: 400;">In the example above you can see the names of the fields we look have the keyword.</span></p>
-<p><span style="font-weight: 400;">This is the first part, it tells Azure Search in what fields it can look for the keyword. Next we need to tell it how the Search result text should look like when it is present in one of those fields.</span></p>
-<p><span style="font-weight: 400;">This can be done by setting the following parameters in the SearchParameters object.</span></p>
-<p><span style="font-weight: 400;">The code below can be directly added to the “GetSearchParameters” method. </span></p>
-<p><span style="font-weight: 400;">Right about here:</span></p>
+<p><span>First of all we need to tell Azure Search which indexed fields in can use as it’s source. This is done in the config file.</span></p>
+<p><span class="code">&lt;HighlightFields&gt;pageTitle,articleIntro,articleText,contentRowsPicker,mediaText&lt;/HighlightFields&gt;</span></p>
+<p><span>In the example above you can see the names of the fields we look have the keyword.</span></p>
+<p><span>This is the first part, it tells Azure Search in what fields it can look for the keyword. Next we need to tell it how the Search result text should look like when it is present in one of those fields.</span></p>
+<p><span>This can be done by setting the following parameters in the SearchParameters object.</span></p>
+<p><span>The code below can be directly added to the “GetSearchParameters” method. </span></p>
+<p><span>Right about here:</span></p>
 <ul>
-<li style="font-weight: 400;"><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/AzureSearchClient.cs#L91"><span style="font-weight: 400;">https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/AzureSearchClient.cs#L91</span></a></li>
+<li><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/AzureSearchClient.cs#L91"><span>https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/AzureSearchClient.cs#L91</span></a></li>
 </ul>
 <pre><code class="language-csharp">﻿sp.HighlightPreTag = HttpUtility.HtmlEncode("&lt;span class='highlight'&gt;");
 sp.HighlightPostTag = HttpUtility.HtmlEncode("&lt;/span&gt;");
@@ -84,21 +84,21 @@ if (!string.IsNullOrEmpty(this._config.HighlightFields))
     }
 }</code></pre>
       <p class="snippet-caption">Setup of the Highlights</p>
-<p><span style="font-weight: 400;">Here we see three things:</span></p>
+<p><span>Here we see three things:</span></p>
 <ol>
-<li style="font-weight: 400;"><span style="font-weight: 400;">You can use any HTML you want to denote the keyword</span></li>
-<li style="font-weight: 400;"><span style="font-weight: 400;">You have to HTML Encode the HTML because it will be passed to the AzureSearch API in HTML.</span></li>
-<li style="font-weight: 400;"><span style="font-weight: 400;">We take the value from the config file, and add all the FieldNames to the HighlightFields list.</span></li>
+<li><span>You can use any HTML you want to denote the keyword</span></li>
+<li><span>You have to HTML Encode the HTML because it will be passed to the AzureSearch API in HTML.</span></li>
+<li><span>We take the value from the config file, and add all the FieldNames to the HighlightFields list.</span></li>
 </ol>
 <p>We have now added the basic config needed for Keyword Highlighting, now we need to make sure we display it.</p>
-<h3><span style="font-weight: 400;">Display</span></h3>
-<p><span style="font-weight: 400;">When looping through your search results we now have a choice.<br></span><span style="font-weight: 400;">We can either use the default Title and Text of a SearchItem, or if the searchItem has Highlights use them.</span></p>
-<p><span style="font-weight: 400;">Now the standard SearchResult class did not have a “HitHighlights” property we added this.<br></span><span style="font-weight: 400;">When using Darrens project it’s best to add the property in the following class and interface</span></p>
+<h3><span>Display</span></h3>
+<p><span>When looping through your search results we now have a choice.<br></span><span>We can either use the default Title and Text of a SearchItem, or if the searchItem has Highlights use them.</span></p>
+<p><span>Now the standard SearchResult class did not have a “HitHighlights” property we added this.<br></span><span>When using Darrens project it’s best to add the property in the following class and interface</span></p>
 <ul>
-<li style="font-weight: 400;"><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Models/SearchResult.cs"><span style="font-weight: 400;">https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Models/SearchResult.cs</span></a></li>
-<li style="font-weight: 400;"><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Interfaces/ISearchResult.cs"><span style="font-weight: 400;">https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Interfaces/ISearchResult.cs</span></a></li>
+<li><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Models/SearchResult.cs"><span>https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Models/SearchResult.cs</span></a></li>
+<li><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Interfaces/ISearchResult.cs"><span>https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Interfaces/ISearchResult.cs</span></a></li>
 </ul>
-<p><br><span style="font-weight: 400;">In our case we choose to loop through the search results and check if the “Highlights” property has any hits for highlights and if so loop through them and populate the fields we want/need.</span></p>
+<p><br><span>In our case we choose to loop through the search results and check if the “Highlights” property has any hits for highlights and if so loop through them and populate the fields we want/need.</span></p>
 <pre><code class="language-csharp">﻿// If we have highlights get a title and a text to show
 if (searchResult.Highlights != null)
 {
@@ -120,34 +120,34 @@ if (searchResult.Highlights != null)
 <p>This also is a risk since the all text is HtmlDecoded, this would also mean that if you’re Text contains other HTML beside the HTML for the highlighting it will also be displayed and might break the presentation. Keep in mind when indexing the content!</p>
 <p>For the non-dutch speakers, we see a searchresult with the keyword highlighted in the intro-text</p>
 <p><img style="width: 500px; height: 170.40731504571903px;" src="/archive/media/2017/highlight_snippet.png?width=500&amp;height=170.40731504571903" alt="Keyword highlighting is working!" data-udi="umb://media/587f3dced71547939273828eb76c899a"></p>
-<h2><span style="font-weight: 400;"></span><span style="font-weight: 400;">Indexing Media</span></h2>
-<p><span style="font-weight: 400;">Darren’s project has a method where it takes a Node and uploads it to the Cloud index. In this event you can alter what information is stored and where.<br></span>The event is Umbraco’s MediaService.Saved event.</p>
+<h2><span></span><span>Indexing Media</span></h2>
+<p><span>Darren’s project has a method where it takes a Node and uploads it to the Cloud index. In this event you can alter what information is stored and where.<br></span>The event is Umbraco’s MediaService.Saved event.</p>
 <p>In the ‘CustomApplicationEventHandler’ class there is the MediaServiceSaved method that triggers each time a Media node is saved in Umbraco.<br>The method is linked here:</p>
 <ul>
-<li style="font-weight: 400;"><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Umbraco/CustomApplicationEventHandler.cs#L34"><span style="font-weight: 400;">https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Umbraco/CustomApplicationEventHandler.cs#L34</span></a></li>
+<li><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Umbraco/CustomApplicationEventHandler.cs#L34"><span>https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Umbraco/CustomApplicationEventHandler.cs#L34</span></a></li>
 </ul>
 <p>The method reindexing the Media node can be found here:</p>
 <ul>
-<li style="font-weight: 400;"><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Umbraco/CustomApplicationEventHandler.cs#L119"><span style="font-weight: 400;">https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Umbraco/CustomApplicationEventHandler.cs#L119</span></a></li>
+<li><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Umbraco/CustomApplicationEventHandler.cs#L119"><span>https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/Umbraco/CustomApplicationEventHandler.cs#L119</span></a></li>
 </ul>
-<p><span style="font-weight: 400;">The altering of information is done in the “FromUmbracoMedia” method which can be found here.</span></p>
+<p><span>The altering of information is done in the “FromUmbracoMedia” method which can be found here.</span></p>
 <ul>
-<li style="font-weight: 400;"><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/AzureSearchServiceClient.cs#L307"><span style="font-weight: 400;">https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/AzureSearchServiceClient.cs#L307</span></a></li>
+<li><a href="https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/AzureSearchServiceClient.cs#L307"><span>https://github.com/darrenferguson/UmbracoAzureSearch/blob/master/Moriyama.AzureSearch.Umbraco.Application/AzureSearchServiceClient.cs#L307</span></a></li>
 </ul>
 <p>Unfortunately that method ‘only’ support general Media and does not save enough information to make certain media types searchable.</p>
-<p><span style="font-weight: 400;">In our case we wanted to be able to search PDF and Office documents. To enable this I went for a simple approach, I wanted a single custom field called “</span><span style="font-weight: 400;">mediaText</span><span style="font-weight: 400;">” where I could store the contents of the files as plaintext.</span></p>
+<p><span>In our case we wanted to be able to search PDF and Office documents. To enable this I went for a simple approach, I wanted a single custom field called “</span><span>mediaText</span><span>” where I could store the contents of the files as plaintext.</span></p>
 <p>To ensure the Azure Index would know this field you add it in the configuration like this:</p>
-<p><span class="code" style="font-weight: 400;">&lt;SearchField&gt;</span></p>
-<p><span class="code" style="font-weight: 400;">&lt;Name&gt;mediaText&lt;/Name&gt;</span></p>
-<p><span class="code"><span style="font-weight: 400;">    </span> <span style="font-weight: 400;">&lt;Type&gt;string&lt;/Type&gt;</span></span></p>
-<p><span class="code"><span style="font-weight: 400;">    </span> <span style="font-weight: 400;">&lt;IsSearchable&gt;true&lt;/IsSearchable&gt;</span></span></p>
-<p><span class="code" style="font-weight: 400;">&lt;/SearchField&gt;</span></p>
-<p><span style="font-weight: 400;">Please note the “IsSearchable”  attribute, it denotes that the field can be searched if you do not add this and still search it it will result in an Exception.</span></p>
+<p><span class="code">&lt;SearchField&gt;</span></p>
+<p><span class="code">&lt;Name&gt;mediaText&lt;/Name&gt;</span></p>
+<p><span class="code"><span>    </span> <span>&lt;Type&gt;string&lt;/Type&gt;</span></span></p>
+<p><span class="code"><span>    </span> <span>&lt;IsSearchable&gt;true&lt;/IsSearchable&gt;</span></span></p>
+<p><span class="code">&lt;/SearchField&gt;</span></p>
+<p><span>Please note the “IsSearchable”  attribute, it denotes that the field can be searched if you do not add this and still search it it will result in an Exception.</span></p>
 <p> </p>
-<h3><span style="font-weight: 400;">Search PDF</span></h3>
-<p><span style="font-weight: 400;">When parsing a Media file for upload it is easy to check if it’s a PDF file.<br></span>When it’s a PDF use a ThridParty Tool to open the PDF and transform its contents to plain text.</p>
+<h3><span>Search PDF</span></h3>
+<p><span>When parsing a Media file for upload it is easy to check if it’s a PDF file.<br></span>When it’s a PDF use a ThridParty Tool to open the PDF and transform its contents to plain text.</p>
 <p>For the PDF i used the free version of iTextSharp. It will easily let you open the PDF file read all the pages and put that content into a single string.</p>
-<p><span style="font-weight: 400;">The code below shows how to get the contents, where the “</span><span style="font-weight: 400;">content</span><span style="font-weight: 400;">” item is a Umbraco IMedia object.</span></p>
+<p><span>The code below shows how to get the contents, where the “</span><span>content</span><span>” item is a Umbraco IMedia object.</span></p>
 <pre><code class="language-csharp">﻿
     // this block of code is part of the "FromUmbracoMedia(IMedia content, IEnumerable&lt;SearchField&gt; searchFields)" method.
     // IsPDF() is psudocode and should be replaced by a filetype check.
@@ -170,12 +170,12 @@ if (searchResult.Highlights != null)
 </code></pre>
       <p class="snippet-caption">Excerpt of how to read the PDF file</p>
 <p> </p>
-<p><span style="font-weight: 400;">Running the code above will result in a AzureIndex where if the search element is a PDF file the “mediaText” field will be filled with the contents of the PDF for easy searching.</span></p>
-<h2><span style="font-weight: 400;">Search Office docs</span></h2>
-<p><span style="font-weight: 400;">The support of Office document was a bit harder since we had to support word and excel.<br></span>This required the use of the “DocumentFormat.OpenXml” Nuget package.</p>
+<p><span>Running the code above will result in a AzureIndex where if the search element is a PDF file the “mediaText” field will be filled with the contents of the PDF for easy searching.</span></p>
+<h2><span>Search Office docs</span></h2>
+<p><span>The support of Office document was a bit harder since we had to support word and excel.<br></span>This required the use of the “DocumentFormat.OpenXml” Nuget package.</p>
 <p>Again our goal is to have the document as a plaintext string and stored in the “mediaText” field in the index.</p>
-<h3><span style="font-weight: 400;">Word</span></h3>
-<p><span style="font-weight: 400;">After doing some impressive google-ing i found the following code.</span></p>
+<h3><span>Word</span></h3>
+<p><span>After doing some impressive google-ing i found the following code.</span></p>
 <pre><code class="language-csharp">﻿
     // this block of code is part of the "FromUmbracoMedia(IMedia content, IEnumerable&lt;SearchField&gt; searchFields)" method.
     var result = this.FromUmbracoContent((ContentBase)content, searchFields);
@@ -201,8 +201,8 @@ if (searchResult.Highlights != null)
     }
     </code></pre>
       <p class="snippet-caption">Excerpt of how to read a word file</p>
-<p><span style="font-weight: 400;">The code above takes the Umbraco IMedia object’s ‘path’ and uses it to get the Stream to open it using the WordprocessingDocument.Open method.</span></p>
-<p><span style="font-weight: 400;">After that a helper method “GetPlainText” will take the contents of the word document and transform it to plain text.</span></p>
+<p><span>The code above takes the Umbraco IMedia object’s ‘path’ and uses it to get the Stream to open it using the WordprocessingDocument.Open method.</span></p>
+<p><span>After that a helper method “GetPlainText” will take the contents of the word document and transform it to plain text.</span></p>
 <pre><code class="language-csharp">﻿private string GetPlainText(OpenXmlElement element)
 {
     StringBuilder PlainTextInWord = new StringBuilder();
@@ -241,9 +241,9 @@ if (searchResult.Highlights != null)
 }</code></pre>
       <p class="snippet-caption">Transform a word element to a string</p>
 <p> </p>
-<p><span style="font-weight: 400;">The method above gets a element and proceeds to go through all the elements it can find and adding the results to the StringBuilder. </span></p>
+<p><span>The method above gets a element and proceeds to go through all the elements it can find and adding the results to the StringBuilder. </span></p>
 <p>The result of the StringBuilder will be saved in the Azure Index.</p>
-<h3><span style="font-weight: 400;">Excel</span></h3>
+<h3><span>Excel</span></h3>
 <p>For excel we needed to use an other method of getting the content since it of course does not have pages we can loop through.</p>
 <pre><code class="language-csharp">﻿    // this block of code is part of the "FromUmbracoMedia(IMedia content, IEnumerable&lt;SearchField&gt; searchFields)" method.
     // ISExcel() is psudocode and should be replaced by a proper filetype check.
@@ -290,11 +290,11 @@ if (searchResult.Highlights != null)
     </code></pre>
       <p class="snippet-caption">Excerpt of the way to read an excel file.</p>
 <p> </p>
-<p><span style="font-weight: 400;">The code above takes the Umbraco IMedia item’s ‘path’ and turns it in a Spreadsheet object.<br></span>We can then get the first worksheet in that file and loop through all the rows and columns, each time adding the value of the cell to the ‘excelContent’ string.</p>
+<p><span>The code above takes the Umbraco IMedia item’s ‘path’ and turns it in a Spreadsheet object.<br></span>We can then get the first worksheet in that file and loop through all the rows and columns, each time adding the value of the cell to the ‘excelContent’ string.</p>
 <p>The excelContent string is than later saved in the “mediaText” field in the AzureIndex.</p>
 <p>Please note that when using this option to store the media as plain text you are increasing the size of your index quite fast ( depending on how much media you or your customers might upload ). This may require you to not use the free option of AzureSearch but go for the paid option(s).</p>
 <p> </p>
-<p><span style="font-weight: 400;">I hope this article helps some of you when getting started with AzureSearch and Media.</span></p>
+<p><span>I hope this article helps some of you when getting started with AzureSearch and Media.</span></p>
     </div><footer><ul class="tags">
         <li><a rel="tag" href="https://24days.in/umbraco-cms/tags/media/" title="See all articles tagged with Media">Media</a></li>
         <li><a rel="tag" href="https://24days.in/umbraco-cms/tags/search/" title="See all articles tagged with Search">Search</a></li>

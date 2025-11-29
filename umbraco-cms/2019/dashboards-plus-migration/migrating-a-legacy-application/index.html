@@ -41,19 +41,19 @@
 <p><strong>The Website</strong> - This is the main point of interaction with customers for browsing and placing orders. Originally built on Classic ASP, despite helping get the business growth to where it is today it’s definitely showing its age.</p>
 <p><strong>The Back Office Systems </strong>- Here everything is managed using a multitude of in-house and a few third party tools including :-</p>
 <ul>
-<li style="font-weight: 400;">A Retail <a rel="noopener" href="https://www.netsuite.com/portal/resource/articles/erp/what-is-erp.shtml" target="_blank">ERP</a> system for managing products, suppliers, customers, sales channels</li>
-<li style="font-weight: 400;">A basic in-house CRM system for customer management of our trade customers</li>
-<li style="font-weight: 400;">A Pricing system for managing our various channels, both in-house and third party</li>
-<li style="font-weight: 400;">A custom in-house CMS for managing the product catalogue pages on the website</li>
-<li style="font-weight: 400;">And a Wordpress blog</li>
+<li>A Retail <a rel="noopener" href="https://www.netsuite.com/portal/resource/articles/erp/what-is-erp.shtml" target="_blank">ERP</a> system for managing products, suppliers, customers, sales channels</li>
+<li>A basic in-house CRM system for customer management of our trade customers</li>
+<li>A Pricing system for managing our various channels, both in-house and third party</li>
+<li>A custom in-house CMS for managing the product catalogue pages on the website</li>
+<li>And a Wordpress blog</li>
 </ul>
 <p><strong>The Warehouse Systems</strong> - The heart of the business, where all stock is managed, moved, picked, packed, labels printed and dispatched, and where returns are handled, and a small amount of in-house production happens. Uses a combination of :</p>
 <ul>
-<li style="font-weight: 400;">PCs with barcode scanners at packing stations</li>
-<li style="font-weight: 400;">IPads for reporting and monitoring</li>
-<li style="font-weight: 400;">Handheld barcode scanners running a custom built Xamarin App running on both iOs and Android</li>
-<li style="font-weight: 400;">Thermal Label printers for courier postage labels</li>
-<li style="font-weight: 400;">Industrial Laser printers connected to windows apps for printing invoices</li>
+<li>PCs with barcode scanners at packing stations</li>
+<li>IPads for reporting and monitoring</li>
+<li>Handheld barcode scanners running a custom built Xamarin App running on both iOs and Android</li>
+<li>Thermal Label printers for courier postage labels</li>
+<li>Industrial Laser printers connected to windows apps for printing invoices</li>
 </ul>
 <p>The software written on a mix of technologies - some modern, some quite old. The documentation is sporadic at best and liberally distributed over a range of intranets, wikis and word docs on various network shares. Test coverage is … not quite where we would like it. Making any changes is not always an easy thing, automated testing is a challenge. Whole swathes of code refer to business functions which no longer exist, and with the exception of a few, most only understand how their specific business function should work - nobody had an overall. All of this to be done without losing any of the SEO we had built up on our old site - We had our work cut out.</p>
 <h2>The Plan</h2>
@@ -78,8 +78,8 @@
 <p>Since we were launching a replacement for an existing eCommerce site, with an existing Category tree, existing products, brands all with an existing management system we had to plan how we would transition from a custom application into Umbraco. Some of these were brought into umbraco and some remained separate</p>
 <h3>Categories and Brands</h3>
 <p><img style="width: 500px; height: 228.7598944591029px;" src="/archive/media/2019/admin-category-manager.png?width=500&amp;height=228.7598944591029" alt="" data-udi="umb://media/b6c130fa727748f6b72a0f81e8014338"></p>
-<p><span style="font-weight: 400;">In the previous system categories were managed with hierarchies, and each maintained lists of products which were presented on the front end site. These were most simply imported into umbraco as we simply defined the document types and allowed them to be created in the right hierarchy. </span></p>
-<p><span style="font-weight: 400;">We need to keep a one-to-one link between the categories in Umbraco and the categories in the older system for one reason - products. The existing system, at current count, has over 28,000 individual products. These are already managed with a full back end which allows the creation of product variants, to set prices for the website, Amazon, Ebay, to manage the attributes etc.</span></p>
+<p><span>In the previous system categories were managed with hierarchies, and each maintained lists of products which were presented on the front end site. These were most simply imported into umbraco as we simply defined the document types and allowed them to be created in the right hierarchy. </span></p>
+<p><span>We need to keep a one-to-one link between the categories in Umbraco and the categories in the older system for one reason - products. The existing system, at current count, has over 28,000 individual products. These are already managed with a full back end which allows the creation of product variants, to set prices for the website, Amazon, Ebay, to manage the attributes etc.</span></p>
 <p>One of the great things we can do is build a <a rel="noopener" href="https://our.umbraco.com/documentation/Extending/Property-Editors/" target="_blank" title="Custom property editor">custom property editor</a>, and by building one which allowed us to query the categories table from the old system and store it as an ID in the new system, we were able to map the categories in Umbraco to their counterparts in the old system. Sprinkle on a bit of server side validation to ensure each category was unique and we had everything we needed to render categories.</p>
 <p><img style="width: 500px; height: 262.80120481927713px;" src="/archive/media/2019/admin-cat-picker.png?width=500&amp;height=262.80120481927713" alt="" data-udi="umb://media/f40fca214494405e968507f0a1db9583"></p>
 <p>On top of this, we used <a rel="noopener" href="https://our.umbraco.com/documentation/Reference/Routing/custom-controllers" target="_blank">Route Hijacking</a> to allow us to augment the category controllers and add additional properties to the base model (using the excellent <a rel="noopener" href="https://our.umbraco.com/documentation/reference/templating/modelsbuilder/" target="_blank">Models Builder</a>) - this allows us to include products in the Category model. So for example for the category pages, our view model looked like this :</p>
@@ -94,14 +94,14 @@
 <p><strong>Additional features</strong></p>
 <p>One of the key features of the existing system is information dashboards. These are built for each team to specifically have key information to help them do their jobs. The number of useful reports we can use across our business is vast, and a mechanism to quickly and easily put these together is fantastic. Some examples (not even close to the full list) of reports we currently generate are</p>
 <ul>
-<li style="font-weight: 400;">Number of products awaiting approval before being launched</li>
-<li style="font-weight: 400;">Number of orders from each of the sales channels, and broken down by delivery service</li>
-<li style="font-weight: 400;">Number of orders with issues raised by customers</li>
-<li style="font-weight: 400;">Lists of supplier purchase orders and due-in dates for stock management</li>
-<li style="font-weight: 400;">Gross Profit percentage per product</li>
-<li style="font-weight: 400;">Total numbers of breakages in the warehouse</li>
-<li style="font-weight: 400;">Average time to pick an order</li>
-<li style="font-weight: 400;">Total numebr of picks per warehouse user</li>
+<li>Number of products awaiting approval before being launched</li>
+<li>Number of orders from each of the sales channels, and broken down by delivery service</li>
+<li>Number of orders with issues raised by customers</li>
+<li>Lists of supplier purchase orders and due-in dates for stock management</li>
+<li>Gross Profit percentage per product</li>
+<li>Total numbers of breakages in the warehouse</li>
+<li>Average time to pick an order</li>
+<li>Total numebr of picks per warehouse user</li>
 </ul>
 <p>There were a vast number of these dashboards that were needed, and again Umbraco provides, with the ability to use custom dashboards into the back end. The article by <a rel="noopener" data-udi="umb://document/40a9d4da007e48b1bb30cc6f7f0b483e" href="/umbraco-cms/2019/dashboards-plus-migration/dashboards-and-sections/" target="_blank" title="Dashboards and Sections">poornima</a> as well as the documentation from Umbraco provides some really useful tips and examples on how to do this. </p>
 <h2>Conclusion points and Discussion</h2>
@@ -110,17 +110,17 @@
 <p>Whilst this does look more complex, it’s actually separating the behemoth that we had before into the two key areas for the business - the Umbraco website and the back office and warehouse application - it’s all about separation of concerns.</p>
 <p>The Umbraco website is customer facing and handles all the ecommerce application aspects including</p>
 <ul>
-<li style="font-weight: 400;">Listing Products, categories, brands</li>
-<li style="font-weight: 400;">Basket and checkout functionality</li>
-<li style="font-weight: 400;">Customer registration, order history, account management</li>
+<li>Listing Products, categories, brands</li>
+<li>Basket and checkout functionality</li>
+<li>Customer registration, order history, account management</li>
 </ul>
 <p>The back end application is responsible for a lot of the back office operations including</p>
 <ul>
-<li style="font-weight: 400;">Inventory, product management</li>
-<li style="font-weight: 400;">Order fulfilment (warehouse dispatch operations)</li>
-<li style="font-weight: 400;">Stock management</li>
-<li style="font-weight: 400;">Supplier management and ordering</li>
-<li style="font-weight: 400;">Reporting</li>
+<li>Inventory, product management</li>
+<li>Order fulfilment (warehouse dispatch operations)</li>
+<li>Stock management</li>
+<li>Supplier management and ordering</li>
+<li>Reporting</li>
 </ul>
 <p>There is obviously inter-application communication going on, since the Umbraco site doesn’t maintain knowledge of the product database, or stock information, just as the back end application has no knowledge of the blog, or any of the other front end content.</p>
 <p>Umbraco here has allowed us to do several things in our business - it’s kept the core back-end operations separate from the presentation and sales portion of the business. Each is catered to being the best it can be. We get to benefit from all the awesome CMS features of Umbraco to build an eCommerce application and slot it neatly into our business. </p>
@@ -128,9 +128,9 @@
 <p>One thing I am really hoping for is some discussion around what we’re doing, and I would love to compare what other people are doing when integrating applications into Umbraco, especially eCommerce. Please drop me a line with your thoughts - I genuinely appreciate them.</p>
 <p>Thanks to :</p>
 <ul>
-<li style="font-weight: 400;"><a rel="noopener" href="https://twitter.com/PoornimaNayar" target="_blank">Poornima</a> - for her assistance in writing this article, and for her excellent article on dashboards</li>
-<li style="font-weight: 400;">The excellent Umbraco 8 training courses which brought our team up to speed with the v8 changes - particularly <a rel="noopener" href="https://twitter.com/crumpled_jeavon" target="_blank">Jeavon</a> and <a rel="noopener" href="https://twitter.com/GabrielBrumea" target="_blank">Gabriel</a></li>
-<li style="font-weight: 400;">The umbraco community at large for all the excellent blog articles and discussions which helped us in more ways than we can count (and continue to rely on)</li>
+<li><a rel="noopener" href="https://twitter.com/PoornimaNayar" target="_blank">Poornima</a> - for her assistance in writing this article, and for her excellent article on dashboards</li>
+<li>The excellent Umbraco 8 training courses which brought our team up to speed with the v8 changes - particularly <a rel="noopener" href="https://twitter.com/crumpled_jeavon" target="_blank">Jeavon</a> and <a rel="noopener" href="https://twitter.com/GabrielBrumea" target="_blank">Gabriel</a></li>
+<li>The umbraco community at large for all the excellent blog articles and discussions which helped us in more ways than we can count (and continue to rely on)</li>
 </ul>
 <p> </p>
     </div><footer><ul class="tags">

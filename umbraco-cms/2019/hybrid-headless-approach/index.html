@@ -57,7 +57,7 @@
 <p> </p>
 <pre><code class="language-javascript">&lt;navigation-data :data='@(Html.Raw(Model))'&gt;&lt;/navigation-data&gt;</code></pre>
 <p> </p>
-<p><span style="font-weight: 400;">The VueJS component is very readable and elegant. Since the Vue component’s data is provided via rendered JSON, we call this a Hybrid Headless approach. A fully headless approach would supply the data via ajax API requests. One benefit of this hybrid approach means that we do not require the creation of APIs to be consumed. The same Vue component with it's rendered JSON can be seen below. </span></p>
+<p><span>The VueJS component is very readable and elegant. Since the Vue component’s data is provided via rendered JSON, we call this a Hybrid Headless approach. A fully headless approach would supply the data via ajax API requests. One benefit of this hybrid approach means that we do not require the creation of APIs to be consumed. The same Vue component with it's rendered JSON can be seen below. </span></p>
 <p> </p>
 <pre><code class="language-markup">&lt;navigation-data :data="{
     'logo': {'text': 'SiteName','href': '/'
@@ -86,13 +86,13 @@
     ]
 }"&gt;</code></pre>
 <p> </p>
-<p><span style="font-weight: 400;">One of the biggest advantages of this approach is that the integration with Umbraco is very quick. Traditionally backend developers would need to copy and paste various chunks of HTML into MVC partial views. This becomes problematic when parts of the markup need to change. In our approach this is dramatically reduced.</span></p>
-<p><span style="font-weight: 400;">When working with Vue, the UI developers work only on their .vue files. Subsequent changes to a component’s corresponding Vue file will be built into javascript. Therefore the backend developers will not need to touch the “already implemented” MVC partial views.</span></p>
+<p><span>One of the biggest advantages of this approach is that the integration with Umbraco is very quick. Traditionally backend developers would need to copy and paste various chunks of HTML into MVC partial views. This becomes problematic when parts of the markup need to change. In our approach this is dramatically reduced.</span></p>
+<p><span>When working with Vue, the UI developers work only on their .vue files. Subsequent changes to a component’s corresponding Vue file will be built into javascript. Therefore the backend developers will not need to touch the “already implemented” MVC partial views.</span></p>
 <p> </p>
 <h3>Generic MVC View For Droppable Modules</h3>
-<p><span style="font-weight: 400;">Using strongly typed Models Builder models means that corresponding MVC partials can be created which house the related Vue components. </span><span style="font-weight: 400;">Since the modules may be dropped on any page in any order, we need our MVC rendering to facilitate this in a non-verbose way. This mapping is very intuitive, however the challenge was to ensure that all partial views could be rendered in any combination.</span><span style="font-weight: 400;"></span></p>
-<p><span style="font-weight: 400;">In our solution, we use a naming convention to determine the modules to be rendered. We then use a single generic MVC partial view on the page.</span><span style="font-weight: 400;"></span></p>
-<p><span style="font-weight: 400;">Here is the MVC partial view. It is very clean. </span></p>
+<p><span>Using strongly typed Models Builder models means that corresponding MVC partials can be created which house the related Vue components. </span><span>Since the modules may be dropped on any page in any order, we need our MVC rendering to facilitate this in a non-verbose way. This mapping is very intuitive, however the challenge was to ensure that all partial views could be rendered in any combination.</span><span></span></p>
+<p><span>In our solution, we use a naming convention to determine the modules to be rendered. We then use a single generic MVC partial view on the page.</span><span></span></p>
+<p><span>Here is the MVC partial view. It is very clean. </span></p>
 <p> </p>
 <pre><code class="language-javascript">&lt;main role="main"&gt;
     @foreach (var module in Model.Body)
@@ -101,7 +101,7 @@
     }
 &lt;/main&gt;</code></pre>
 <p> </p>
-<p><span style="font-weight: 400;">The end result is some generic MVC View code which calls a child action, which in turn calls the actual MVC partial for the module. The MVC partial in turn renders a Vue component with the required JSON data. </span><span style="font-weight: 400;">Here is an example child action method:</span></p>
+<p><span>The end result is some generic MVC View code which calls a child action, which in turn calls the actual MVC partial for the module. The MVC partial in turn renders a Vue component with the required JSON data. </span><span>Here is an example child action method:</span></p>
 <p> </p>
 <pre><code class="language-csharp">[ChildActionOnly]
 public ActionResult GetModuleSimpleQuote(ModuleSimpleQuote content)
@@ -109,11 +109,11 @@ public ActionResult GetModuleSimpleQuote(ModuleSimpleQuote content)
 	return PartialView("~/Views/Modules/_SimpleQuote.cshtml", content.Text);
 }</code></pre>
 <p> </p>
-<p><span style="font-weight: 400;">On a side note, you may decide that non-interactive components are standard MVC views.</span></p>
+<p><span>On a side note, you may decide that non-interactive components are standard MVC views.</span></p>
 <p> </p>
 <h2>Strange View Models</h2>
 <p>One strange thing about this approach is that our View Models are not actually traditional view models per se. The line is a little blurry, as the content was being rendered as JSON on MVC partials. To keep the Views clean, we serialise the View Models before we pass them (as a string) to the View. So there is some murkiness here. If this was a totally headless approach, then we would call these Data Models.</p>
-<p><span style="font-weight: 400;">Another oddity is that sometimes your frontend Vue component data field names will not match up totally with the backoffice Element type names. Therefore the view models might need to be attributed with JsonProperty[“&lt;insert name&gt;”]. You may even consider attributing all of your model properties for consistency, however this really makes the model more of a Data Model, rather than a View Model. An example of this is below.</span></p>
+<p><span>Another oddity is that sometimes your frontend Vue component data field names will not match up totally with the backoffice Element type names. Therefore the view models might need to be attributed with JsonProperty[“&lt;insert name&gt;”]. You may even consider attributing all of your model properties for consistency, however this really makes the model more of a Data Model, rather than a View Model. An example of this is below.</span></p>
 <p> </p>
 <pre><code class="language-csharp">public class LinkWrapper
 {
@@ -128,9 +128,9 @@ public ActionResult GetModuleSimpleQuote(ModuleSimpleQuote content)
 }
 
 </code></pre>
-<p><span style="font-weight: 400;"> </span></p>
+<p><span> </span></p>
 <h3>View Model Hydration</h3>
-<p><span style="font-weight: 400;">The construction of view models can sometimes be a little complex. In our approach, we gain clean MVC views, however the tradeoff is potentially complex or unconventional view model hydration. One such scenario is where the Vue component requires content from the CMS node, and dictionary items.</span><span style="font-weight: 400;"></span></p>
+<p><span>The construction of view models can sometimes be a little complex. In our approach, we gain clean MVC views, however the tradeoff is potentially complex or unconventional view model hydration. One such scenario is where the Vue component requires content from the CMS node, and dictionary items.</span><span></span></p>
 <p>In the following two code snippets, the controller uses a service to create the view model, then another class is used to hydrate dictionary items.</p>
 <p>Controller: </p>
 <pre><code class="language-csharp">public override ActionResult Index(ContentModel model)
@@ -156,13 +156,13 @@ public ActionResult GetModuleSimpleQuote(ModuleSimpleQuote content)
 
     return viewModel;
 }</code></pre>
-<p><span style="font-weight: 400;"><br>Note: The problem can become more complex if you have nesting of models which also require dictionary items.</span></p>
+<p><span><br>Note: The problem can become more complex if you have nesting of models which also require dictionary items.</span></p>
 <p> </p>
 <h2>Final Thoughts</h2>
-<p>In our approach, a totally modular design was realised by using a combination Nested Content, Models Builder, a generic MVC partial, VueJS components, and content rendered as JSON. This resulted in very clean MVC views, where the actual component HTML is maintained only as .vue files by UI developers.<span style="font-weight: 400;"></span></p>
-<p><span style="font-weight: 400;">There are some oddities in this approach. Namely the fact that our view models don’t really seem like traditional MVC view models. They feel more like data models which would typically be consumed via a WebAPI.</span><span style="font-weight: 400;"></span></p>
-<p><span style="font-weight: 400;">One unintended side effect of this approach is an incredibly fast time to first byte. We found that our pages can typically respond in under 100ms, without any caching. This is due to the fact that server side rendering of HTML is very limited, hence the response time is incredibly fast.</span><span style="font-weight: 400;"></span></p>
-<p><span style="font-weight: 400;">We look forward to improving this approach, and may look into Vue server-side rendering in the future.</span></p>
+<p>In our approach, a totally modular design was realised by using a combination Nested Content, Models Builder, a generic MVC partial, VueJS components, and content rendered as JSON. This resulted in very clean MVC views, where the actual component HTML is maintained only as .vue files by UI developers.<span></span></p>
+<p><span>There are some oddities in this approach. Namely the fact that our view models don’t really seem like traditional MVC view models. They feel more like data models which would typically be consumed via a WebAPI.</span><span></span></p>
+<p><span>One unintended side effect of this approach is an incredibly fast time to first byte. We found that our pages can typically respond in under 100ms, without any caching. This is due to the fact that server side rendering of HTML is very limited, hence the response time is incredibly fast.</span><span></span></p>
+<p><span>We look forward to improving this approach, and may look into Vue server-side rendering in the future.</span></p>
 <p> </p>
 <p> </p>
     </div><footer><ul class="tags">

@@ -28,36 +28,36 @@
 				</p>
     </div>
     <div class="content-column">
-      <p class="teaser"><span style="font-weight: 400;">To me, </span><span style="font-weight: 400;">Umbraco has always been about creating a good content editing experience and therefore one of </span><span style="font-weight: 400;">my favorite features in Umbraco is the custom property editor. </span><span style="font-weight: 400;">This makes it possible to tailor the editing experience for a specific piece of content so it becomes easy to understand and helps the editor through the editing process.</span></p>
-<p class="intro"><span style="font-weight: 400;">With Umbraco 7.4 a new feature was introduced - the custom list view layout. It’s a feature that haven’t got much attention and it might be the lack of documentation, guilty as charged. It is a feature which, with very little effort, can be really powerful. Custom list view layouts gives us all the features of a list view - copy, delete, search, pagination etc. but with the possibility to make a custom layout that is 100% tailored the data we want to present.</span></p>
-<p><span style="font-weight: 400;">Umbraco already ships with four list view layouts today and I am pretty sure you already know about them. Two for the content section and two for the media section.</span></p>
+      <p class="teaser"><span>To me, </span><span>Umbraco has always been about creating a good content editing experience and therefore one of </span><span>my favorite features in Umbraco is the custom property editor. </span><span>This makes it possible to tailor the editing experience for a specific piece of content so it becomes easy to understand and helps the editor through the editing process.</span></p>
+<p class="intro"><span>With Umbraco 7.4 a new feature was introduced - the custom list view layout. It’s a feature that haven’t got much attention and it might be the lack of documentation, guilty as charged. It is a feature which, with very little effort, can be really powerful. Custom list view layouts gives us all the features of a list view - copy, delete, search, pagination etc. but with the possibility to make a custom layout that is 100% tailored the data we want to present.</span></p>
+<p><span>Umbraco already ships with four list view layouts today and I am pretty sure you already know about them. Two for the content section and two for the media section.</span></p>
 <h3>Content list view</h3>
 <p>For the content section we have the well known “table”-layout and in version 7.4 a new “card”-layout was introduced.</p>
-<p><span style="font-weight: 400;"><img style="width: 770px; height: 402px;" src="/archive/media/2016/umbraco-content-list-view.jpg?width=770&amp;height=402" alt="" rel="1332" data-id="1332"></span></p>
+<p><span><img style="width: 770px; height: 402px;" src="/archive/media/2016/umbraco-content-list-view.jpg?width=770&amp;height=402" alt="" rel="1332" data-id="1332"></span></p>
 <p><img style="width: 770px; height: 402px;" src="/archive/media/2016/umbraco-content-list-view-cards.jpg?width=770&amp;height=402" alt="" rel="1329" data-id="1329"></p>
 <h3>Media list view</h3>
-<p><span style="font-weight: 400;">The media section comes with a media grid, which is rewritten and redesigned in Umbraco 7.4, and a “table”-layout, similar to the content section, for fast and easy image data comparison.</span></p>
-<p><span style="font-weight: 400;"><img style="width: 770px; height: 402px;" src="/archive/media/2016/umbraco-media-list-view.jpg?width=770&amp;height=402" alt="" rel="1338" data-id="1338"></span></p>
+<p><span>The media section comes with a media grid, which is rewritten and redesigned in Umbraco 7.4, and a “table”-layout, similar to the content section, for fast and easy image data comparison.</span></p>
+<p><span><img style="width: 770px; height: 402px;" src="/archive/media/2016/umbraco-media-list-view.jpg?width=770&amp;height=402" alt="" rel="1338" data-id="1338"></span></p>
 <p><img style="width: 770px; height: 402px;" src="/archive/media/2016/umbraco-media-list-view-grid.jpg?width=770&amp;height=402" alt="" rel="1337" data-id="1337"></p>
-<p><span style="font-weight: 400;">One of the cool things about those four layouts is they are all built on the same foundation as we are going to use when we make our own list view layout. This </span><span style="font-weight: 400;">gives us idea of how flexible they are and how much we are able to customise them. </span><span style="font-weight: 400;">This also means that if you don’t like how the default layouts looks/works, it is easy to swap them out with your own.</span></p>
-<p><span style="font-weight: 400;">Today we are going to set up a custom list view layout for a custom list view. In this small example we will bring the christmas spirit into Umbraco with a collection of famous christmas songs.</span></p>
+<p><span>One of the cool things about those four layouts is they are all built on the same foundation as we are going to use when we make our own list view layout. This </span><span>gives us idea of how flexible they are and how much we are able to customise them. </span><span>This also means that if you don’t like how the default layouts looks/works, it is easy to swap them out with your own.</span></p>
+<p><span>Today we are going to set up a custom list view layout for a custom list view. In this small example we will bring the christmas spirit into Umbraco with a collection of famous christmas songs.</span></p>
 <h2>Setting up the document types</h2>
-<p><span style="font-weight: 400;">First we are going to set up two super basic document types. One to collect information about a christmas song and one as a repository for the list view.</span></p>
-<p><span style="font-weight: 400;">Our first document type is called “Song” and has properties for artist, album, release year, genre and an image. It looks like this:</span></p>
-<p><span style="font-weight: 400;"><img style="width: 770px; height: 402px;" src="/archive/media/2016/umbraco-document-type-song.jpg?width=770&amp;height=402" alt="" rel="1336" data-id="1336"></span></p>
-<p><span style="font-weight: 400;">The second document type is called “Songs”. For this document type we set up a custom list view.</span></p>
-<p><span style="font-weight: 400;"><img style="width: 770px; height: 402px;" src="/archive/media/2016/umbraco-document-type-list-view.jpg?width=770&amp;height=402" alt="" rel="1335" data-id="1335"></span></p>
+<p><span>First we are going to set up two super basic document types. One to collect information about a christmas song and one as a repository for the list view.</span></p>
+<p><span>Our first document type is called “Song” and has properties for artist, album, release year, genre and an image. It looks like this:</span></p>
+<p><span><img style="width: 770px; height: 402px;" src="/archive/media/2016/umbraco-document-type-song.jpg?width=770&amp;height=402" alt="" rel="1336" data-id="1336"></span></p>
+<p><span>The second document type is called “Songs”. For this document type we set up a custom list view.</span></p>
+<p><span><img style="width: 770px; height: 402px;" src="/archive/media/2016/umbraco-document-type-list-view.jpg?width=770&amp;height=402" alt="" rel="1335" data-id="1335"></span></p>
 <p> </p>
 <h3>Adding the custom layout</h3>
-<p><span style="font-weight: 400;">To add our custom layout we find the layouts section in the list view configuration. We are able to pick an icon, give the layout a name and enter the path to the html file we will add in a moment. If we want our new list view as the default view for this document type, we can reorder the list view layouts so our new layout is the first in the list and if we didn’t want the other two layouts available for the editor, we could easily uncheck these so they will not show up in the list view.</span></p>
+<p><span>To add our custom layout we find the layouts section in the list view configuration. We are able to pick an icon, give the layout a name and enter the path to the html file we will add in a moment. If we want our new list view as the default view for this document type, we can reorder the list view layouts so our new layout is the first in the list and if we didn’t want the other two layouts available for the editor, we could easily uncheck these so they will not show up in the list view.</span></p>
 <p><img style="width: 770px; height: 228px;" src="/archive/media/2016/umbraco-document-type-list-view-layout-settings.jpg?width=770&amp;height=228" alt="" rel="1334" data-id="1334"></p>
 <h3>Configuring the correct data to show in the view</h3>
-<p><span style="font-weight: 400;">Another important thing for our custom list view is the data we want to present. In the list view configuration we are able to show the data we have entered for each song. We do this by adding the fields from our “song” document type. In my example I want to show the artist, release year, genre and the image. This is how the configuration looks like when it’s done.</span></p>
-<p><span style="font-weight: 400;"><img style="width: 772px; height: 301px;" src="/archive/media/2016/umbraco-document-type-list-view-column-settings.jpg?width=772&amp;height=301" alt="" rel="1333" data-id="1333"></span></p>
+<p><span>Another important thing for our custom list view is the data we want to present. In the list view configuration we are able to show the data we have entered for each song. We do this by adding the fields from our “song” document type. In my example I want to show the artist, release year, genre and the image. This is how the configuration looks like when it’s done.</span></p>
+<p><span><img style="width: 772px; height: 301px;" src="/archive/media/2016/umbraco-document-type-list-view-column-settings.jpg?width=772&amp;height=301" alt="" rel="1333" data-id="1333"></span></p>
 <h2>Show me some code</h2>
-<p><span style="font-weight: 400;">Now the foundation is in place and we are ready to start to add some code. For this layout we need a package manifest to load in our javascript and css, a html view with a controller and some css to make it all look pretty. If you are new to how to extend the back office please take a look at the <a rel="noopener" href="https://our.umbraco.com/documentation/Tutorials/Creating-a-Property-Editor/" target="_blank">documentation for adding a custom property editor</a>. We follow the same principles in this example.</span></p>
+<p><span>Now the foundation is in place and we are ready to start to add some code. For this layout we need a package manifest to load in our javascript and css, a html view with a controller and some css to make it all look pretty. If you are new to how to extend the back office please take a look at the <a rel="noopener" href="https://our.umbraco.com/documentation/Tutorials/Creating-a-Property-Editor/" target="_blank">documentation for adding a custom property editor</a>. We follow the same principles in this example.</span></p>
 <h3>The package manifest</h3>
-<p><span style="font-weight: 400;">A super basic manifest which loads in the javascript and css file.</span></p>
+<p><span>A super basic manifest which loads in the javascript and css file.</span></p>
 <pre><code class="language-json">{
     javascript: [
         '~/App_Plugins/SongsLayout/songslayout.controller.js'
@@ -68,7 +68,7 @@
 }
 </code></pre>
 <h3>The HTML</h3>
-<p><span style="font-weight: 400;">The view is also pretty straight forward. First we bind the controller to the view and then loops through all the available items in the list. I have added click handler for selecting the item and a click handler for opening the item details.</span></p>
+<p><span>The view is also pretty straight forward. First we bind the controller to the view and then loops through all the available items in the list. I have added click handler for selecting the item and a click handler for opening the item details.</span></p>
 <pre><code class="language-markup">&lt;div ng-controller="My.ListView.Layout.SongsLayoutController as vm"
      ng-if="items"
      class="my-songs-layout__cards"&gt;
@@ -150,7 +150,7 @@
 })();
 </code></pre>
 <h3>The CSS</h3>
-<p><span style="font-weight: 400;">And some css. I do not have that much to say about this :)</span></p>
+<p><span>And some css. I do not have that much to say about this :)</span></p>
 <pre><code class="language-css">.my-songs-layout__cards {
     display: flex;
     flex-wrap: wrap;

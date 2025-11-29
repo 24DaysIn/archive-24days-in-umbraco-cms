@@ -10,12 +10,12 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<link rel="stylesheet" href="/assets/24days-archive.css">
 	<link rel="apple-touch-icon" href="/assets/24days-touch-icon.png">
-		
 	
-	
+
+
 </head>
 <body>
-	
+
 
 
 
@@ -38,7 +38,7 @@
 </figure>
 <p>So how do you stop the client from deleting, copying and moving things that they shouldn't? Handily, the API exposes a bunch of methods that you can hook into to remove menu items etc. You can code this for each project you do, but it's REALLY boring (trust me, I used to do it for each project, and it sucked). So I wrote a package that would allow me to do it in a config file, no coding required!!!</p>
 <p>You can download the package from it's our.umbraco <a href="http://our.umbraco.org/projects/backoffice-extensions/attackmonkey-custom-menus">project page</a>. Install it just like you would with any other package, and you're good to go. <em><strong>Note: the package is not currently compatible with Umbraco 7</strong></em>. I'm working on a compatible version at the moment.</p>
-<p>Here's an example site content tree with some settings nodes. Notice the context menu contains all sorts of things that we probably don't want the editors to do with the node, like delete, copy set hostnames etc.<a style="font-size: 10px;" href="/archive/media/2013/untitled_3.png"><br></a></p>
+<p>Here's an example site content tree with some settings nodes. Notice the context menu contains all sorts of things that we probably don't want the editors to do with the node, like delete, copy set hostnames etc.<a href="/archive/media/2013/untitled_3.png"><br></a></p>
 <figure>
   <a href="/archive/media/2013/untitled_3.png">
     <img src="/archive/media/2013/untitled_3.png" alt="Look at all those nasty options! *shudder*" width="500">
@@ -62,7 +62,7 @@ You can add as many rules as you like, each rule has the following properties:
   removeMenuItems - a comma separated list of menu items to remove (Case sensitive, see list below for common values)
 
 This package should support any menu items that are installed in your application and applicable to contet items.
-You should use the Alias of the menu actions, for reference, I have include the list of default content actions that come 
+You should use the Alias of the menu actions, for reference, I have include the list of default content actions that come
 with Umbraco here:
 
 assignDomain - assign host name
@@ -158,7 +158,7 @@ Example 3: remove delete option from the "homePage" docType
 		&lt;add docTypeAlias="" nodeId="1196" clickAction="" removeMenuItems="delete,copy,move" /&gt;
 		&lt;add docTypeAlias="" nodeId="1207" clickAction="" removeMenuItems="delete,copy,move" /&gt;
 		&lt;add docTypeAlias="" nodeId="1211" clickAction="" removeMenuItems="delete,copy,move" /&gt;
-		
+
 		&lt;!-- general settings section rules --&gt;
 		&lt;add docTypeAlias="Settings" nodeId="" clickAction="javascript:UmbClientMgr.appActions().openDashboard('content');" menuItems="refreshNode" /&gt;
 		&lt;!-- lhs sidebar boxes rules --&gt;
@@ -211,7 +211,7 @@ Example 3: remove delete option from the "homePage" docType
   &lt;onlyShowToRoot&gt;false&lt;/onlyShowToRoot&gt;
   &lt;disableHiddenValidators&gt;true&lt;/disableHiddenValidators&gt;
   &lt;hideRules&gt;
-    &lt;!-- 
+    &lt;!--
     For each tab that you want to hide, include an entry here, the format is:
 
     &lt;add tabName="" hideFrom="" docTypeAliases="" /&gt;

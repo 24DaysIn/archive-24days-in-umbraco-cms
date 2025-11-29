@@ -140,14 +140,14 @@ newMember.RawPasswordAnswerValue = "AWESOME";</code></pre>
 <pre class="language-csharp"><code>service.Save(newMember);
 service.SavePassword(newMember, "24DaysInUmbraco");</code></pre>
       <p class="snippet-caption">Calling SavePassword on the MemberService</p>
-<p><em>Roles</em> or Umbraco member groups can be applied to a member using the <span class="code">MemberService</span> like so:<span style="font-size: 1.17em;"><br></span></p>
+<p><em>Roles</em> or Umbraco member groups can be applied to a member using the <span class="code">MemberService</span> like so:<span><br></span></p>
 <pre class="language-csharp"><code>service.AssignRole(newMember.Id, "MyMemberGroup");
 
 // or multiple role assignment.
     
 service.AssignRoles(new [] { newMember.Id }, new [] { "MyMemberGroup", "MyOtherMemberGroup" });</code></pre>
       <p class="snippet-caption">Adding member groups (roles) to a member</p>
-<h3><span style="font-size: 1.17em;">Which to use?</span></h3>
+<h3><span>Which to use?</span></h3>
 <p>In my first draft of this article I actually choose <span class="code">MemberService</span>. Perhaps controversial, but I feel the API as whole is more consistent, familiar and requires less uncomfortable hoop jumping than the front end APIs.</p>
 <p>Just instantiating and configuring <span class="code">RegisterModel</span> correctly<span class="code"> </span>is an awkward process hiding a few alarming edge cases. Far too much is dependant on the state of the model and what properties may or may not be set when using it in conjunction with the <span class="code">MembershipHelper.RegisterMember</span> method.</p>
 <p>Using the <span class="code">MemberService</span> <span>also </span>just <em>feels</em> more natural. Creating members <em>should</em> logically be a "<em>backend</em>" operation, rather than something exposed on an frontend API.</p>
